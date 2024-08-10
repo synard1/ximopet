@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/adigdesfrontend",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\AdigdesFrontend\\": "app/",
+            "Modules\\AdigdesFrontend\\Database\\Factories\\": "database/factories/",
+            "Modules\\AdigdesFrontend\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\AdigdesFrontend\\Tests\\": "tests/"
+        }
+    }
+}

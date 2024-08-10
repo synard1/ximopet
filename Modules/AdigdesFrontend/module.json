@@ -1,0 +1,11 @@
+{
+    "name": "AdigdesFrontend",
+    "alias": "adigdesfrontend",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\AdigdesFrontend\\Providers\\AdigdesFrontendServiceProvider"
+    ],
+    "files": []
+}
