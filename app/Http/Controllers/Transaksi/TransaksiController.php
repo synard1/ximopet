@@ -7,6 +7,7 @@ use App\Models\Transaksi;
 use Illuminate\Http\Request;
 use App\DataTables\DocsDataTable;
 use App\DataTables\PembelianStoksDataTable;
+use App\DataTables\PemakaianStoksDataTable;
 
 class TransaksiController extends Controller
 {
@@ -22,6 +23,12 @@ class TransaksiController extends Controller
     {
         addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
         return $dataTable->render('pages/transaksi.pembelian-stok.list');
+    }
+
+    public function stokPakaiIndex(PemakaianStoksDataTable $dataTable)
+    {
+        addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
+        return $dataTable->render('pages/transaksi.pemakaian-stok.list');
     }
 
     /**

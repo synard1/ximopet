@@ -400,7 +400,8 @@
                             </div>
                             <!--end::Row--> --}}
 
-                            <button type="submit" href="#" class="btn btn-primary w-100" wire:click="store()"><i class="ki-outline ki-triangle fs-3"></i> Save Changes
+                            <button type="button" class="btn btn-secondary" wire:click="close()">Close</button>
+                            <button type="submit" href="#" class="btn btn-primary" wire:click="store()"><i class="ki-outline ki-triangle fs-3"></i> Save Changes
                             </button>
                         </div>
                         <!--end::Actions-->

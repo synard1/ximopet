@@ -126,56 +126,30 @@ class AppApi
         // return response()->json(['operators' => $operators]);
     }
 
+    public function getFarmStoks($farmId)
+    {
+        // Get the operator IDs already associated with the selected farm
+        $data = TransaksiDetail::where('farm_id', $farmId)->get();
+
+        // return $data->count();
+
+        if ($data->isEmpty()) {
+            // No results found
+            return response()->json([
+                'error' => 'No data found for the specified farm ID.'
+            ], 404); // 404 Not Found is a suitable status code for this scenario    
+
+        } else {
+            // Results found, you can work with $data here
+            $result = ['stock' => $data];
+            return response()->json($result);
+        }
+    }
+
     public function deleteFarmOperator($id)
     {
         return FarmOperator::destroy($id);
     }
-
-    // public function datatableList(Request $request)
-    // {
-    //     $draw = $request->input('draw', 0);
-    //     $start = $request->input('start', 0);
-    //     $length = $request->input('length', 10);
-    //     $columns = $request->input('columns');
-    //     $searchValue = $request->input('search.value');
-
-    //     $orderColumn = $request->input('order.0.column', 0); // Get the order column index
-    //     $orderDir = $request->input('order.0.dir', 'asc'); // Get the order direction (ASC or DESC)
-
-    //     $query = User::query()->with('roles');
-
-    //     if ($searchValue) {
-    //         $searchColumns = ['name', 'email'];
-    //         $query->where(function ($query) use ($searchValue, $searchColumns) {
-    //             foreach ($searchColumns as $column) {
-    //                 $query->orWhere(DB::raw("LOWER($column)"), 'LIKE', '%' . strtolower($searchValue) . '%');
-    //             }
-    //         });
-    //     }
-
-    //     // Get the column name for ordering based on the orderColumn index
-    //     $orderColumnName = $columns[$orderColumn]['data'] ?? 'id';
-
-    //     // exclude core user for demo purpose
-    //     $query->whereNotIn('id', [1]);
-
-    //     // Apply ordering to the query
-    //     $query->orderBy($orderColumnName, $orderDir);
-
-    //     $totalRecords = $query->count();
-
-    //     $records = $query->offset($start)->limit($length)->get();
-
-    //     $data = [
-    //         'draw' => $draw,
-    //         'recordsTotal' => $totalRecords,
-    //         'recordsFiltered' => $totalRecords,
-    //         'data' => $records,
-    //         'orderColumnName' => $orderColumnName,
-    //     ];
-
-    //     return $data;
-    // }
 
     public function create(Request $request)
     {

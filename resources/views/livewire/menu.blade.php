@@ -148,9 +148,9 @@
 							{{-- <button class="btn btn-sm btn-icon btn-action" wire:click="openModal">
 								<i class="ki-outline ki-plus fs-4"></i>
 							</button> --}}
-							<button class="btn btn-sm btn-icon btn-action" data-kt-action="new_user">
-								{{-- <button class="btn btn-sm btn-icon btn-action"> --}}
-									<i class="ki-outline ki-plus fs-4"></i>
+							{{-- <button class="btn btn-sm btn-icon btn-action" data-kt-action="new_user"> --}}
+								<button class="btn btn-sm btn-icon btn-action">
+									<a href="/master-data/users"><i class="ki-outline ki-plus fs-4"></i></a>
 								</button>
 								{{-- <a href="{{ route('supplier.create') }}" class="btn btn-light-primary"><i
 										class="ki-outline ki-plus fs-4"></i></a> --}}
@@ -363,7 +363,7 @@
 						<span class="menu-badge">
 							<button class="btn btn-sm btn-icon btn-action" data-bs-toggle="modal"
 								data-bs-target="#kt_modal_top_up_wallet">
-								<i class="ki-outline ki-plus fs-4"></i>
+								<a href="/transaksi/pakai"><i class="ki-outline ki-plus fs-4"></i></a>
 							</button>
 						</span>
 					</span>

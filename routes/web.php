@@ -75,6 +75,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::name('transaksi.')->group(function () {
         Route::get('/transaksi/stoks', [TransaksiController::class, 'stokIndex'])->name('stoks.index');
+        Route::get('/transaksi/pakai', [TransaksiController::class, 'stokPakaiIndex'])->name('stoks.pakai.index');
         Route::get('/transaksi/docs', [TransaksiController::class, 'docIndex'])->name('docs.index');
     });
 

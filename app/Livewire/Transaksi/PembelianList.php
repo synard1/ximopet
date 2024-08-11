@@ -67,7 +67,7 @@ class PembelianList extends Component
     public function addItem()
     {
         $this->items[] = ['name' => '', 'qty' => 1, 'harga' => 0];
-        $this->dispatch('reinitialize-select2'); // Trigger Select2 initialization
+        // $this->dispatch('reinitialize-select2'); // Trigger Select2 initialization
     }
 
     public function createPembelian()
