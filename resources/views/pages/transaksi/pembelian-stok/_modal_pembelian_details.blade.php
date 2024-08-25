@@ -21,6 +21,10 @@
                     </tr>
                 </thead>
             </table>
+            <p>* Hanya <b>Jumlah</b> dan <b>Harga</b> yang bisa di ubah secara langsung</br>
+            * Data hanya bisa diubah jika belum memiliki data transaksi</br>
+            * Klik pada kolom data yang akan di ubah untuk membuka fungsi ubah secara langsung</p>
+
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeDetails()">Close</button>
@@ -51,7 +55,7 @@
                     { data: 'qty', className: 'editable', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
                     { data: 'terpakai', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
                     { data: 'sisa', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
-                    { data: 'harga', render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) },
+                    { data: 'harga', className: 'editable', render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) },
                     { data: 'sub_total', render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) }
                 ]
             });
