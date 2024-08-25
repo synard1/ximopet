@@ -68,9 +68,12 @@
 
                     $('#supplierDropdown').select2();
 
-                    Livewire.on('reinitialize-select2-pemakaianStok', function () {
-                        $('.select2').select2();
-                    });
+                    // Livewire.on('reinitialize-select2-pemakaianStok', function () {
+                    //     // updateDropdowns();
+                    //     console.log('test update dropdown');
+                    //     // $('#itemsSelect').select2();
+                        
+                    // });
 
                     // console.log('form loaded');
                     Livewire.dispatch('createPemakaianStok');

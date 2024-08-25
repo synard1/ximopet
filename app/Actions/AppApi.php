@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\TransaksiDetail;
+use App\Models\Transaksi;
+
 
 class AppApi
 {
@@ -71,7 +73,7 @@ class AppApi
 
     public function getTransaksiDetail($id)
     {
-        $options = TransaksiDetail::where('transaksi_id', $id)->get(['jenis','jenis_barang','nama','qty','terpakai', 'sisa', 'harga','sub_total']);
+        $options = TransaksiDetail::where('transaksi_id', $id)->get(['id','jenis','jenis_barang','nama','qty','terpakai', 'sisa', 'harga','sub_total']);
 
         // Map over the collection to calculate the 'sisa' field for each record
         $formattedOptions = $options->map(function ($item) {
@@ -129,7 +131,18 @@ class AppApi
     public function getFarmStoks($farmId)
     {
         // Get the operator IDs already associated with the selected farm
-        $data = TransaksiDetail::where('farm_id', $farmId)->get();
+        // $data = TransaksiDetail::where('farm_id', $farmId)
+        //         ->groupBy('farm_id')
+        //         ->distinct('nama')
+        //         ->get();
+        $data = TransaksiDetail::where('farm_id', $farmId)
+                ->select('item_id', 'nama', DB::raw('SUM(qty) as total')) // Replace 'column_to_sum' with the actual column you want to sum
+                ->groupBy('item_id','nama')
+                ->get();
+
+        // Separate query to get the oldest date
+        $oldestDate = TransaksiDetail::where('farm_id', $farmId)
+                ->min('tanggal'); 
 
         // return $data->count();
 
@@ -140,8 +153,14 @@ class AppApi
             ], 404); // 404 Not Found is a suitable status code for this scenario    
 
         } else {
+            //refractor $data
+            $a['oldestDate'] = $oldestDate;
+
             // Results found, you can work with $data here
-            $result = ['stock' => $data];
+            $result = [
+                'stock' => $data,
+                'parameter' => $a
+            ];
             return response()->json($result);
         }
     }
@@ -166,6 +185,56 @@ class AppApi
         }
 
         $updated = User::create($user);
+
+        return response()->json(['success' => $updated]);
+    }
+
+    public function postStockEdit(Request $request)
+    {
+        $id = $request->input('id');
+        $value = $request->input('value');
+        $column = $request->input('column');
+
+        try {
+            // Wrap database operation in a transaction (if applicable)
+            DB::beginTransaction();
+
+            // Update Detail Items
+            $transaksiDetail = TransaksiDetail::findOrFail($id);
+            $transaksiDetail->update(
+                [
+                    $column => $value,
+                    'sub_total' => $value * $transaksiDetail->harga
+                ]
+            );
+
+
+            //Update Parent Transaksi
+            // $transaksi = Transaksi::where('id', $transaksiDetail->transaksi_id)->first();
+
+            $transaksi = Transaksi::findOrFail($transaksiDetail->transaksi_id);
+            $sumQty = TransaksiDetail::where('transaksi_id',$transaksiDetail->transaksi_id)->sum('qty');
+            $sumHarga = TransaksiDetail::where('transaksi_id',$transaksiDetail->transaksi_id)->sum('harga');
+            $transaksi->update(
+                [
+                    'qty' => $sumQty,
+                    'harga' => $sumHarga,
+                    'sub_total' => $sumHarga * $sumQty
+                ]
+                );
+
+            // Commit the transaction
+            DB::commit();
+
+            // return response()->json(['success' => true,'message'=>'Berhasil Update Data']);
+            return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success' ]);
+
+        } catch (\Throwable $th) {
+            //throw $th;
+            DB::rollBack();
+        }
+
+
 
         return response()->json(['success' => $updated]);
     }

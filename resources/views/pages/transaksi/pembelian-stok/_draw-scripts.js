@@ -75,12 +75,16 @@ document.querySelectorAll('[data-kt-action="update_row_stok"]').forEach(function
             //     defaultDate: '{{ $tanggal }}',
             // });
 
+            getDetailsPurchasing(transaksiId);
+
             const cardList = document.getElementById(`stokTableCard`);
             cardList.style.display = 'none';
             // cardList.classList.toggle('d-none');
 
             const cardForm = document.getElementById(`stokFormCard`);
             cardForm.style.display = 'block';
+
+            
         });
         
     });

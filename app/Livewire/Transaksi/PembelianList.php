@@ -24,6 +24,8 @@ class PembelianList extends Component
     public $transaksi_id;
 
     public $isOpen = 0;
+    public $editMode = false;
+
 
     protected $rules = [
         'faktur' => 'required',
@@ -203,8 +205,10 @@ class PembelianList extends Component
         $this->tanggal = $formattedTanggal;
         $this->faktur = $pembelian->faktur;
         $this->selectedSupplier = $pembelian->rekanan_id;
+        $this->selectedFarm = $pembelian->farm_id;
         $this->items = $items;
 
+        $this->editMode = true;
         $this->openModal();
     }
 

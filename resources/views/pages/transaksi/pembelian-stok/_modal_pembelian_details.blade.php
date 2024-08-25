@@ -38,28 +38,86 @@
     <script>
         function getDetails(param) {
             console.log(param);
-            new DataTable('#detailsTable', {
+            const table = new DataTable('#detailsTable', {
                 ajax: `/api/v1/transaksi/details/${param}`,
                 columns: [
-                    { data: '#',
+                    { data: 'id', title:'#',
                         render: function (data, type, row, meta) {
                         return meta.row + meta.settings._iDisplayStart + 1;
                         } 
                     },
                     { data: 'jenis_barang' },
                     { data: 'nama' },
-                    { data: 'qty', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
+                    { data: 'qty', className: 'editable', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
                     { data: 'terpakai', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
                     { data: 'sisa', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
                     { data: 'harga', render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) },
                     { data: 'sub_total', render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) }
                 ]
             });
+
+            // Enable inline editing
+    // Make cells editable (using a simple approach for now)
+    table.on('click', 'tbody td.editable', function() {
+        var cell = $(this);
+        var originalValue = cell.text();
+        console.log(originalValue);
+
+        // Create an input field for editing
+        var input = $('<input type="text" value="' + originalValue + '">');
+        cell.html(input);
+        input.focus();
+
+        // Handle saving the edit
+        input.blur(function() {
+            var newValue = input.val();
+            if (newValue !== originalValue) {
+
+                // Get the row and column data
+                var rowData = table.row(cell.closest('tr')).data();
+                var columnIndex = table.cell(cell).index().column;
+                var columnData = table.settings().init().columns[columnIndex];
+                
+                // Send AJAX request to update the data
+                $.ajax({
+                    url: '/api/v1/stocks-edit', // Replace with your actual Laravel route
+                    method: 'POST',
+                    data: { 
+                        // Include the row's ID or other identifiers
+                        id: rowData.id, 
+                        column: columnData.data, // Get the column's data property
+                        value: newValue 
+                    },
+                    success: function(response) {
+                        // Handle successful update
+                        cell.text(newValue); 
+                        toastr.success(response.message); 
+                        table.ajax.reload();
+                    },
+                    error: function(error) {
+                        // Handle errors
+                        // cell.text(originalValue); 
+                        // cell.data('originalValue', originalValue); // Store original value in data attribute
+                        table.ajax.reload();
+                        alert('Error updating value.'); 
+                    }
+                });
+            }else if(newValue == ''){
+                alert('Error value cannot blank'); 
+                table.ajax.reload();
+
+            }else {
+                // No change, revert to original value
+                table.ajax.reload();
+            }
+        });
+    });
         }
 
         function closeDetails() {
           var table = new DataTable('#detailsTable');
           table.destroy();
+          window.LaravelDataTables['pembelianStoks-table'].ajax.reload();
           // console.log('tables destroy');
         }
 

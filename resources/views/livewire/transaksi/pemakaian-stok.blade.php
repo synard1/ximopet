@@ -4,9 +4,10 @@
             <!--begin::Layout-->
             <div class="d-flex flex-column flex-lg-row">
                 <!--begin::Content-->
-                <div class="flex-lg-row-fluid mb-10 mb-lg-0 me-lg-7 me-xl-10" style="display: none;" id="formDiv">
+                {{-- <div class="flex-lg-row-fluid mb-10 mb-lg-0 me-lg-7 me-xl-10" style="display: none;" id="formDiv"> --}}
+                <div class="flex-lg-row-fluid mb-10 mb-lg-0 me-lg-7 me-xl-10" id="formDiv">
                     <!--begin::Card-->
-                    <div class="card">
+                    <div class="card" id="formDiva">
                         <!--begin::Card body-->
                         <div class="card-body p-12">
                             <!--begin::Form-->
@@ -24,12 +25,11 @@
                                         <!--begin::Input-->
                                         <div class="position-relative d-flex align-items-center w-150px">
                                             <!--begin::Datepicker-->
-                                            <input class="form-control form-control-transparent fw-bold pe-5 flatpickr-input" placeholder="Pilih Tanggal" wire:model="tanggal" name="tanggal" id="tanggalPembelian" type="text" readonly="readonly"
+                                            <input class="form-control form-control-transparent fw-bold pe-5 flatpickr-input" placeholder="Pilih Tanggal" wire:model="tanggal" name="tanggal" id="tanggal" type="text" readonly="readonly"
                                             x-data 
                                             x-init="flatpickr($el, {
-                                                enableTime: true,
+                                                enableTime: false,
                                                 dateFormat: 'Y-m-d H:i',
-                                                defaultDate: '{{ $tanggal }}', // Set initial date from Livewire
                                             })">
                                             <!--end::Datepicker-->
                                             
@@ -54,65 +54,7 @@
                                 <!--end::Separator-->
     
                                 <!--begin::Wrapper-->
-                                <div class="mb-0">
-                                    {{-- <!--begin::Row-->
-                                    <div class="row gx-10 mb-5">
-                                        <!--begin::Col-->
-                                        <div class="col-lg-6">
-                                            <label class="form-label fs-6 fw-bold text-gray-700 mb-3">Bill From</label>
-    
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <input type="text" class="form-control form-control-solid"
-                                                    placeholder="Name">
-                                            </div>
-                                            <!--end::Input group-->
-    
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <input type="text" class="form-control form-control-solid"
-                                                    placeholder="Email">
-                                            </div>
-                                            <!--end::Input group-->
-    
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <textarea name="notes" class="form-control form-control-solid" rows="3"
-                                                    placeholder="Who is this invoice from?"></textarea>
-                                            </div>
-                                            <!--end::Input group-->
-                                        </div>
-                                        <!--end::Col-->
-    
-                                        <!--begin::Col-->
-                                        <div class="col-lg-6">
-                                            <label class="form-label fs-6 fw-bold text-gray-700 mb-3">Bill To</label>
-    
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <input type="text" class="form-control form-control-solid"
-                                                    placeholder="Name">
-                                            </div>
-                                            <!--end::Input group-->
-    
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <input type="text" class="form-control form-control-solid"
-                                                    placeholder="Email">
-                                            </div>
-                                            <!--end::Input group-->
-    
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <textarea name="notes" class="form-control form-control-solid" rows="3"
-                                                    placeholder="What is this invoice for?"></textarea>
-                                            </div>
-                                            <!--end::Input group-->
-                                        </div>
-                                        <!--end::Col-->
-                                    </div>
-                                    <!--end::Row--> --}}
-    
+                                <div class="mb-0">    
                                     <!--begin::Table wrapper-->
                                     <div class="table-responsive mb-10">
                                         <!--begin::Table-->
@@ -134,13 +76,11 @@
                                                 @foreach($items as $index => $item)
                                                     <tr class="border-bottom border-bottom-dashed" data-kt-element="item">
                                                         <td>
-                                                            <select wire:model="items.{{ $index }}.name" class="form-select select2">
+                                                            <select wire:model="items.{{ $index }}.name" class="form-select select2 item-select" id="itemsSelect">
                                                                 <option value="">Select Item</option>
                                                                 @foreach($allItems as $availableItem)
                                                                     <option value="{{ $availableItem->id }}">{{ $availableItem->nama }}</option>
-                                                                    {{-- <option value="{{ $availableItem->id }}" @if($availableItem->id == $item) selected @endif>{{ $availableItem->nama }}</option> --}}
                                                                 @endforeach
-                                                                {{-- {!! $items[$index]['qty'] !!} --}}
                                                             </select>
                                                             <input type="hidden" wire:model="items.{{ $index }}.item_id">
                                                         </td>
@@ -151,7 +91,7 @@
                                                             <input type="text" class="form-control form-control-solid text-end" wire:model="items.{{ $index }}.harga" placeholder="0.00" data-kt-element="harga" >
                                                         </td>
                                                         <td class="pt-8 text-end text-nowrap">
-                                                            Rp<span data-kt-element="total">{{ number_format($item['qty'] * $item['harga'], 2) }}</span>
+                                                            Rp<span data-kt-element="total"></span>
                                                         </td>
                                                         <td class="pt-5 text-end">
                                                             <button type="button" class="btn btn-sm btn-icon btn-active-color-primary" wire:click="removeItem({{ $index }})">
@@ -168,7 +108,8 @@
                                                 <tr
                                                     class="border-top border-top-dashed align-top fs-6 fw-bold text-gray-700">
                                                     <th class="text-primary">
-                                                        <button class="btn btn-link py-1" data-kt-element="add-item" wire:click="addItem">Add item</button>
+                                                        {{-- <button class="btn btn-link py-1" data-kt-element="add-item">Add item</button> --}}
+                                                        <button class="btn btn-link py-1" data-kt-element="add-item" wire:click="addItem" id="addItem">Add item</button>
                                                     </th>
     
                                                     <th colspan="2" class="border-bottom border-bottom-dashed ps-0">
@@ -298,7 +239,7 @@
                             <!--begin::Actions-->
                             <div class="mb-0">
                                 <button type="button" class="btn btn-secondary" wire:click="close()">Close</button>
-                                <button type="submit" href="#" class="btn btn-primary" wire:click="store()"><i class="ki-outline ki-triangle fs-3"></i> Save Changes
+                                <button type="submit" href="#" class="btn btn-primary" wire:click="store()" id="saveChangesButton"><i class="ki-outline ki-triangle fs-3"></i> Save Changes
                                 </button>
                             </div>
                             <!--end::Actions-->
@@ -313,13 +254,36 @@
         </div>
         <!--end::Content container-->
     </div>
+    @push('styles')
+    <style>
+        .grey-block {
+            background-color: lightgrey; 
+            pointer-events: none; 
+        }
+    
+        .warning {
+            color: red;
+            font-weight: bold;
+            padding: 10px;
+        }
+    </style>
+    @endpush
     @push('scripts')
     <script>
         $(document).ready(function() {
+            var updateArea = $('#formDiva'); 
+            updateArea.addClass('grey-block'); 
+
+            // Get the button element
+            const saveChangesButton = document.getElementById('saveChangesButton');
+
+            // Disable the button
+            saveChangesButton.disabled = true;
+
             $('#selectedFarm').change(function() {
                 var farmId = $(this).val();
-                var updateArea = $('#update-area'); 
-                const div = document.getElementById('formDiv');
+                const updateArea = $('#formDiva'); 
+                // const div = document.getElementById('formDiv');
 
                 Swal.fire({
                 html: `Memuat Data`,
@@ -332,7 +296,30 @@
                             url: '/api/v1/get-farm-stocks/' + farmId, 
                             type: 'GET',
                             success: function(data) {
-                                div.style.display = 'block'
+                                // div.style.display = 'block'
+                                updateArea.removeClass('grey-block'); 
+
+                                let minDat = data.parameter.oldestDate;
+
+                                flatpickr("#tanggal", {
+                                    minDate: minDat, // Assuming $minDate is available in your Blade view
+                                    // Other Flatpickr options...
+                                });
+
+                                // Get the Select2 instance
+                                const itemSelect = $('#items');
+    
+                                // Clear existing options
+                                itemSelect.empty();
+
+                                // Add new options based on the fetched data
+                                data.stock.forEach(item => {
+                                    const option = new Option(item.nama, item.item_id);
+                                    itemSelect.append(option);
+                                });
+
+                                // Disable the button
+                                saveChangesButton.disabled = false;
                             },
                             error: function(xhr) { 
                                 Swal.fire({
@@ -341,12 +328,105 @@
                                     buttonsStyling: true,
                                     showConfirmButton: true,
                                 })
-                                div.style.display = 'none';
+                                // div.style.display = 'none';
+                                updateArea.addClass('grey-block'); 
+
+                                // Disable the button
+                                saveChangesButton.disabled = true;
                             }
                         });
 
                 });
             });
         });
+
+        $(document).ready(function() {
+
+
+
+
+
+// // When adding a new item dynamically
+// $('#add-item-btn').on('click', function() {
+//     // Your logic to add a new row with a dropdown
+//     // After adding, ensure the new dropdown has the .item-select class
+//     updateDropdowns();
+// });
+
+// // When adding a new item dynamically
+// $('#addItem').on('click', function() {
+//     console.log('button click');
+//     // Your logic to add a new row with a dropdown
+//     // After adding, ensure the new dropdown has the .item-select class
+//     updateDropdowns();
+// });
+});
+
+document.addEventListener('livewire:init', function () {
+    function updateDropdowns() {
+    var selectedItems = [];
+
+    // Gather all selected items
+    $('select.item-select').each(function() {
+        var selectedValue = $(this).val();
+        if (selectedValue !== "") {
+            selectedItems.push(selectedValue);
+        }
+    });
+
+    // Update options in all dropdowns
+    $('select.item-select').each(function() {
+        var currentSelect = $(this);
+
+        currentSelect.find('option').each(function() {
+            var optionValue = $(this).val();
+
+            // Disable option if it's selected in another dropdown
+            if (optionValue !== "" && selectedItems.includes(optionValue) && optionValue !== currentSelect.val()) {
+                $(this).attr('disabled', true);
+            } else {
+                $(this).attr('disabled', false);
+            }
+        });
+    });
+}
+
+// Event listener for change on the dropdowns
+// $(document).on('change', 'select.item-select', function() {
+//     updateDropdowns();
+// });
+
+// Initial call to disable already selected options
+// updateDropdowns();
+                // Livewire.on('closeForm', function () {
+                //     showLoadingSpinner();
+                //     const cardList = document.getElementById(`stokTableCard`);
+                //     cardList.style.display = 'block';
+
+                //     const cardForm = document.getElementById(`stokFormCard`);
+                //     cardForm.style.display = 'none';
+
+                //     // Reload DataTables
+                //     $('.table').each(function() {
+                //         if ($.fn.DataTable.isDataTable(this)) {
+                //             $(this).DataTable().ajax.reload();
+                //         }
+                //     });
+
+                    
+                // });
+                Livewire.on('reinitialize-select2-pemakaianStok', function () {
+
+
+        // Update the dropdowns to reflect the current selections
+        updateDropdowns();
+                        console.log('test update dropdown');
+                        // $('#itemsSelect').select2();
+                        
+                    });
+            });
+
+
+
     </script>
     @endpush

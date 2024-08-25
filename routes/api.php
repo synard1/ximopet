@@ -118,8 +118,6 @@ Route::prefix('v1')->group(function () {
         return app(AppApi::class)->datatableListFarm($request);
     });
 
-    
-
     Route::post('/farms-list', function (Request $request) {
         return app(AppApi::class)->datatableListFarm($request);
     });
@@ -155,5 +153,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/get-operators/{farm}', [AppApi::class, 'getOperators']);
     Route::get('/get-farm-stocks/{farm}', [AppApi::class, 'getFarmStoks']);
 
+    Route::post('/stocks-edit', function (Request $request) {
+        return app(AppApi::class)->postStockEdit($request);
+    });
 
 });

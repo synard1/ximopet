@@ -1,5 +1,8 @@
 <div class="card" id="stokFormCard" tabindex="-1" style="display: none;" wire:ignore.self>
             <div class="card-body">
+                @if($editMode == true)
+                    
+                @else
                 <form id="kt_pembelian_stok_form">
                     <!--begin::Wrapper-->
                     <div class="d-flex flex-column align-items-start flex-xxl-row">
@@ -16,7 +19,7 @@
                                 x-data 
                                 x-init="flatpickr($el, {
                                     enableTime: true,
-                                    dateFormat: 'Y-m-d H:i',
+                                    dateFormat: 'Y-m-d',
                                     defaultDate: '{{ $tanggal }}', // Set initial date from Livewire
                                 })">
                                 <!--end::Datepicker-->
@@ -228,6 +231,8 @@
                     </div>   
                     <!--end::Wrapper-->          
                 </form>
+                @endif
+                
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" wire:click="close()">Close</button>

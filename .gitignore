@@ -6,7 +6,7 @@
 /public/mix-manifest.json
 /storage/*.key
 /vendor
-/.history
+/.history/*
 .env
 .env.backup
 .phpunit.result.cache

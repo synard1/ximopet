@@ -10,8 +10,8 @@ use App\Models\FarmOperator;
 class PemakaianStok extends Component
 {
     public $isOpenPemakaian = 0;
-    public $faktur, $tanggal, $suppliers, $supplier, $name =[], $quantity=[], $allItems, $farms, $selectedFarm, $selectedSupplier;
-    public $items = [['name' => '', 'qty' => 1, 'harga' => 0]]; // Initial empty item
+    public $faktur, $tanggal, $suppliers, $supplier, $name =[], $quantity=[], $harga =[], $allItems, $farms, $selectedFarm, $selectedSupplier;
+    public $items = [['name' => '', 'qty' => 1]]; // Initial empty item
 
 
     protected $listeners = [
@@ -53,7 +53,8 @@ class PemakaianStok extends Component
 
     public function addItem()
     {
+        $this->dispatch('reinitialize-select2-pemakaianStok'); // Trigger Select2 initialization
+
         $this->items[] = ['name' => '', 'qty' => 1, 'harga' => 0];
-        // $this->dispatch('reinitialize-select2-pemakaianStok'); // Trigger Select2 initialization
     }
 }

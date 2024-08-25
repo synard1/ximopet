@@ -12,17 +12,13 @@
     </div>
     <!--end::Menu item--> --}}
 
-    <!--begin::Menu item-->
+    {{-- <!--begin::Menu item-->
     <div class="menu-item px-3">
-        {{-- <a href="#" class="menu-link px-3" wire:click="edit('{{ $transaksi->id }}')"> --}}
-        {{-- <a href="#" class="menu-link px-3" data-kt-transaksi-id="{{ $transaksi->id }}" data-bs-toggle="modal" data-bs-target="#kt_modal_master_transaksi" data-kt-action="update_row"> --}}
         <a href="#" class="menu-link px-3" data-kt-transaksi-id="{{ $transaksi->id }}" data-kt-action="update_row_stok">
             Edit
         </a>
-        {{-- <button wire:click="edit('{{ $transaksi->id }}')" class="btn btn-sm btn-info">Edit</button> --}}
-
     </div>
-    <!--end::Menu item-->
+    <!--end::Menu item--> --}}
 
     <!--begin::Menu item-->
     <div class="menu-item px-3">
