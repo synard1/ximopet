@@ -67,7 +67,7 @@ class FarmModal extends Component
             // Optionally log the error: Log::error($e->getMessage());
         } finally {
             // Reset the form in all cases to prepare for new data
-            $this->reset();
+            // $this->reset();
         }
     }
 

@@ -508,7 +508,7 @@
                             <label class="form-label fw-bold fs-6 text-gray-700">Farm</label>
                             <!--end::Label-->
 
-                            <select id="selectedFarm" name="selectedFarm" class="form-control" wire:model="selectedFarm" disabled>
+                            <select id="selectedFarm" name="selectedFarm" class="form-control" wire:model="selectedFarm" @if ($editMode) disabled @endif>
                                 <option value="">=== Pilih Farm ===</option>
                                 @foreach($farms as $farm)
                                     <option value="{{ $farm->farm_id }}" @if($farm->id == $selectedFarm) selected @endif>{{ $farm->nama_farm }}</option>

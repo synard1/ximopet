@@ -25,6 +25,8 @@ class KandangModal extends Component
     protected $rules = [
         'kode_kandang' => 'required|unique:master_kandangs,kode',
         'nama' => 'required|string',
+        'kapasitas' => 'required|numeric',
+        'selectedFarm' => 'required',
     ];
 
     public function mount()
@@ -83,7 +85,7 @@ class KandangModal extends Component
             // Optionally log the error: Log::error($e->getMessage());
         } finally {
             // Reset the form in all cases to prepare for new data
-            $this->reset();
+            // $this->reset();
         }
     }
 

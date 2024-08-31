@@ -34,7 +34,7 @@
                 <!--end::Toolbar--> --}}
 
                 <!--begin::Modal-->
-                <livewire:master-data.kandang-list />
+                {{-- <livewire:transaksi.pembelian-d-o-c /> --}}
                 <!--end::Modal-->
             </div>
             <!--end::Card toolbar-->
@@ -56,17 +56,17 @@
         {{ $dataTable->scripts() }}
         <script>
             document.getElementById('mySearchInput').addEventListener('keyup', function () {
-                window.LaravelDataTables['kandangs-table'].search(this.value).draw();
+                window.LaravelDataTables['docs-table'].search(this.value).draw();
             });
-            document.addEventListener('livewire:init', function () {
-                Livewire.on('success', function () {
-                    $('#kt_modal_add_user').modal('hide');
-                    window.LaravelDataTables['kandangs-table'].ajax.reload();
-                });
-            });
-            $('#kt_modal_add_user').on('hidden.bs.modal', function () {
-                Livewire.dispatch('new_user');
-            });
+            // document.addEventListener('livewire:init', function () {
+            //     Livewire.on('success', function () {
+            //         $('#kt_modal_add_user').modal('hide');
+            //         window.LaravelDataTables['kandangs-table'].ajax.reload();
+            //     });
+            // });
+            // $('#kt_modal_add_user').on('hidden.bs.modal', function () {
+            //     Livewire.dispatch('new_user');
+            // });
         </script>
     @endpush
 </x-default-layout>

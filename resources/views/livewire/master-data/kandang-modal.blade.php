@@ -31,9 +31,9 @@
                                     @endforeach --}}
                                 </select>
                                 <!--end::Select2-->
-                                @error('farm_id')
+                                @error('selectedFarm')
                                 <span class="text-danger">{{ $message }}</span> @enderror
-                                @error('farm_id')
+                                @error('selectedFarm')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>

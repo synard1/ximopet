@@ -151,6 +151,7 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/get-operators/{farm}', [AppApi::class, 'getOperators']);
+    Route::get('/get-farms', [AppApi::class, 'getFarms']);
     Route::get('/get-farm-stocks/{farm}', [AppApi::class, 'getFarmStoks']);
 
     Route::post('/stocks-edit', function (Request $request) {

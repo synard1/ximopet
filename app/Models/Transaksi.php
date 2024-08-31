@@ -45,4 +45,9 @@ class Transaksi extends Model
     {
         return $this->belongsTo(Farm::class, 'farm_id','id');
     }
+
+    public function kandangs()
+    {
+        return $this->belongsTo(Kandang::class, 'kandang_id','id');
+    }
 }

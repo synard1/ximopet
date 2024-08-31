@@ -26,8 +26,7 @@
 
     <!--begin::Menu item-->
     <div class="menu-item px-3">
-        <a href="#" class="menu-link px-3" data-kt-transaksi-id="{{ $transaksi->id }}" data-kt-action="delete_row">
-        {{-- <a href="#" class="menu-link px-3" wire:click="delete({{ $transaksi->id }})"> --}}
+        <a href="#" class="menu-link px-3" data-kt-transaksi-id="{{ $transaksi->id }}" data-kt-action="delete_row_doc">
             Delete
         </a>
     </div>

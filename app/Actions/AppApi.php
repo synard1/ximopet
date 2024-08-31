@@ -105,6 +105,21 @@ class AppApi
         return response()->json($result);
     }
 
+    public function getFarms()
+    {
+        // Fetch operators not associated with the selected farm
+        $farms = Farm::where('status', 'Aktif')->get(['id', 'nama']);
+
+        // $operators = User::where('role', 'Operator')
+        //     ->whereNotIn('id', $existingOperatorIds)
+        //     ->get(['id', 'name']);
+        $result = ['farms' => $farms];
+
+
+        return response()->json($result);
+        // return response()->json(['operators' => $operators]);
+    }
+
     public function getOperators($farmId)
     {
         // Get the operator IDs already associated with the selected farm

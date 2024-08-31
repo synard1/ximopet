@@ -71,9 +71,41 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-    // Select the farm dropdown
-    const farmSelect = document.getElementById('farms');
-    const operatorSelect = document.getElementById('operators');
+        // Select the farm dropdown
+        const farmSelect = document.getElementById('farms');
+        const operatorSelect = document.getElementById('operators');
+        var modal = document.getElementById('kt_modal_tambah_operator_farm');
+
+
+        modal.addEventListener('show.bs.modal', function (event) {
+            // Clear existing options in the farmSelect dropdown
+            while (farmSelect.options.length > 0) {
+                farmSelect.remove(0);
+            }
+
+            // Reset operator dropdown
+            farmSelect.innerHTML = '<option value="">=== Pilih Farm ===</option>';
+
+            // Fetch operators for the selected farm via AJAX
+            fetch(`/api/v1/get-farms/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.farms && data.farms.length > 0) {
+                        data.farms.forEach(farm => {
+                            const option = document.createElement('option');
+                            option.value = farm.id;
+                            option.text = farm.nama;
+                            farmSelect.appendChild(option);
+                        });
+                    }
+                    console.log(data);
+                })
+                .catch(error => console.error('Error fetching operators:', error));
+            });
+
+
+
+
 
     farmSelect.addEventListener('change', function () {
         const selectedFarm = this.value;

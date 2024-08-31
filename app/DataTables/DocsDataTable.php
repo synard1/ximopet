@@ -45,6 +45,12 @@ class DocsDataTable extends DataTable
             //     }
                 
             // })
+            ->editColumn('farm_id', function (Transaksi $transaksi) {
+                return $transaksi->farms->nama;
+            })
+            ->editColumn('kandang_id', function (Transaksi $transaksi) {
+                return $transaksi->kandangs->nama;
+            })
             ->editColumn('harga', function (Transaksi $transaksi) {
                 return $this->formatRupiah($transaksi->harga);
             })
@@ -92,7 +98,7 @@ class DocsDataTable extends DataTable
             ->setTableId('docs-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            // ->dom('Bfrtip')
+            ->dom('Bfrtip')
             // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
             // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
@@ -100,7 +106,12 @@ class DocsDataTable extends DataTable
             ->orderBy(1)
             ->parameters([
                 'scrollX'      =>  true,
-                'searching'      =>  false,
+                'searching'       =>  false,
+                'lengthMenu' => [
+                        [ 10, 25, 50, -1 ],
+                        [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+                ],
+                'buttons'      => ['export', 'print', 'reload','colvis'],
             ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaksi/pembelian-doc/_draw-scripts.js')) . "}");
     }
@@ -114,11 +125,13 @@ class DocsDataTable extends DataTable
             Column::make('faktur')->searchable(true),
             Column::make('tanggal')->title('Tanggal Pembelian')->searchable(true),
             Column::make('rekanan_id')->title('Nama Supplier')->searchable(true),
-            // Column::computed('payload.doc.nama')->title('Nama DOC')->searchable(true),
-            Column::make('jumlah')->searchable(true),
+            Column::make('payload.doc.nama')->title('Nama DOC')->searchable(true),
+            Column::make('qty')->searchable(false),
             Column::make('harga')->searchable(true),
             Column::make('sub_total')->searchable(true),
             Column::make('periode')->searchable(true),
+            Column::make('farm_id')->title('Farm'),
+            Column::make('kandang_id')->title('Kandang'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
             Column::computed('action')
                 // ->addClass('text-end text-nowrap')

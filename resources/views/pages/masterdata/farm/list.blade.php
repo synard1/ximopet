@@ -170,9 +170,9 @@
 
                 });
             });
-            $('#kt_modal_add_user').on('hidden.bs.modal', function () {
-                Livewire.dispatch('new_user');
-            });
+            // $('#kt_modal_add_user').on('hidden.bs.modal', function () {
+            //     Livewire.dispatch('new_user');
+            // });
 
             function getOperators() {
                 new DataTable('#operatorsTable', {

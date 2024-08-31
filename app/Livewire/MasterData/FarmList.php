@@ -5,6 +5,7 @@ namespace App\Livewire\MasterData;
 use Livewire\Component;
 use Illuminate\Support\Str;
 use App\Models\Farm;
+use App\Models\FarmOperator;
 use App\Models\Kandang;
 use Ramsey\Uuid\Uuid; // Import the UUID library
 
@@ -48,29 +49,40 @@ class FarmList extends Component
 
     public function store()
     {
-        $this->validate();
-        Farm::updateOrCreate(['id' => $this->farm_id], [
-            'jenis' => "FarmList",
-            'kode' => $this->kode,
-            'nama' => $this->nama,
-            'alamat' => $this->alamat,
-            'telp' => $this->telp,
-            'pic' => $this->pic,
-            'telp_pic' => $this->telp_pic,
-            'status' => 'Aktif',
-        ]);
+        try {
+            $this->validate();
+            $farm = Farm::updateOrCreate(['id' => $this->farm_id], [
+                'jenis' => "FarmList",
+                'kode' => $this->kode,
+                'nama' => $this->nama,
+                'alamat' => $this->alamat,
+                'telp' => $this->telp,
+                'pic' => $this->pic,
+                'telp_pic' => $this->telp_pic,
+                'status' => 'Aktif',
+            ]);
 
-        if($this->farm_id){
-            $this->dispatch('success', __('Data FarmList Berhasil Diubah'));
+            if($this->farm_id){
+                $farmOperator = FarmOperator::where('farm_id', $this->farm_id)
+                ->update([
+                    'nama_farm' => $farm->nama,
+                ]);
+                $this->dispatch('success', __('Data FarmList Berhasil Diubah'));
 
-        }else{
-            $this->dispatch('success', __('Data FarmList Berhasil Dibuat'));
+            }else{
+                $this->dispatch('success', __('Data FarmList Berhasil Dibuat'));
+            }
+            $this->closeModal();
+            $this->resetInputFields();
+        } catch (\Throwable $th) {
+            // Handle validation and general errors
+            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ');
         }
+        
 
         // session()->flash('message', 
         // $this->farm_id ? 'Farm updated successfully.' : 'Farm created successfully.');
-        $this->closeModal();
-        $this->resetInputFields();
+        
     }
 
     public function editFarm($id)

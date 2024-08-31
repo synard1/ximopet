@@ -41,7 +41,6 @@ class PemakaianStok extends Component
     {
         $this->isOpenPemakaian = false;
         $this->dispatch('closeFormPemakaian');
-
     }
 
     public function store()
