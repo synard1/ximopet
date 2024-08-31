@@ -76,6 +76,7 @@ class PembelianStoksDataTable extends DataTable
         // return $model->newQuery();
         $query = $model::where('jenis','Pembelian')
             ->where('jenis_barang','!=','DOC')
+            ->where('user_id',auth()->user()->id)
             ->orderBy('tanggal', 'DESC')
             ->newQuery();
 

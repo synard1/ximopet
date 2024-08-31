@@ -219,7 +219,11 @@ class AppApi
             $transaksiDetail->update(
                 [
                     $column => $value,
-                    'sub_total' => $value * $transaksiDetail->harga
+                ]
+            );
+            $transaksiDetail->update(
+                [
+                    'sub_total' => $transaksiDetail->qty * $transaksiDetail->harga
                 ]
             );
 

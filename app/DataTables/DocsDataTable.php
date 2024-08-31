@@ -35,21 +35,25 @@ class DocsDataTable extends DataTable
                 return $transaksi->tanggal->format('d-m-Y');
             })
             ->editColumn('rekanan_id', function (Transaksi $transaksi) {
-                return $transaksi->rekanans->nama;
+                return $transaksi->rekanans->nama ?? '';
             })
-            // ->editColumn('payload.doc.nama', function (Transaksi $transaksi) {
-            //     if($transaksi->payload){
-            //         return $transaksi->payload['doc']['kode'] .' - '.$transaksi->payload['doc']['nama'];
-            //     }else{
-            //         return null;
-            //     }
+            ->editColumn('payload.doc.nama', function (Transaksi $transaksi) {
+                if($transaksi->payload){
+                    if (isset($transaksi->payload['doc']) && !empty($transaksi->payload['doc'])) {
+                        // The array exists and is not empty
+                        return $transaksi->payload['doc']['kode'] .' - '.$transaksi->payload['doc']['nama'] ?? '';
+
+                    }
+                }else{
+                    return '';
+                }
                 
-            // })
+            })
             ->editColumn('farm_id', function (Transaksi $transaksi) {
-                return $transaksi->farms->nama;
+                return $transaksi->farms->nama ?? '';
             })
             ->editColumn('kandang_id', function (Transaksi $transaksi) {
-                return $transaksi->kandangs->nama;
+                return $transaksi->kandangs->nama ?? '';
             })
             ->editColumn('harga', function (Transaksi $transaksi) {
                 return $this->formatRupiah($transaksi->harga);
