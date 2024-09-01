@@ -158,4 +158,6 @@ Route::prefix('v1')->group(function () {
         return app(AppApi::class)->postStockEdit($request);
     });
 
+    Route::get('/resetDemo', [AppApi::class, 'resetDemo']);
+
 });

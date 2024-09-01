@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\TransaksiDetail;
 use App\Models\Transaksi;
-
+use Illuminate\Support\Facades\Artisan;
 
 class AppApi
 {
@@ -263,21 +263,21 @@ class AppApi
         return Farm::findOrFail($id);
     }
 
-    // public function update($id, Request $request)
-    // {
-    //     $data = $request->validate([
-    //         'name' => 'required|string',
-    //         'email' => 'required|email|unique:users,email,' . $id,
-    //         'role' => 'required|string',
-    //     ]);
+    public function resetDemo()
+    {
+        try {
+            //code...
+            Artisan::call('migrate:refresh --seed');
+            // Artisan::call('db:seed');
+            return response()->json(['message' => 'Data Berhasil Direset', 'status' => 'success']);
 
-    //     $user = User::findOrFail($id);
-    //     $user->update($data);
+        } catch (\Throwable $th) {
+            //throw $th;
+            return response()->json(['errors' => 'Reset Error'], 400);
 
-    //     $user->assignRole($request->role);
+        }
 
-    //     return response()->json(['success' => true]);
-    // }
+    }
 
     // public function delete($id)
     // {

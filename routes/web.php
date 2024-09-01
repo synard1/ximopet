@@ -54,6 +54,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/administrator', function () {
             return view('test3');
         });
+        Route::get('/setting', function () {
+            return view('pages.system.setting.index');
+        });
         Route::resource('/master-data/users', UserManagementController::class);
         Route::resource('/user-management/roles', RoleManagementController::class);
         Route::resource('/user-management/permissions', PermissionManagementController::class);

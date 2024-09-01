@@ -575,6 +575,19 @@
                             <!--end:Menu link-->
                         </div>
                         <!--end:Menu item-->
+
+                        <!--begin:Menu item-->
+                        <div class="menu-item">
+                            <!--begin:Menu link-->
+                            <a class="menu-link" href="/setting">
+                                <span class="menu-icon">
+                                    <i class="ki-outline ki-gear fs-3"></i>
+                                </span>
+                                <span class="menu-title">Setting</span>
+                            </a>
+                            <!--end:Menu link-->
+                        </div>
+                        <!--end:Menu item-->
                     </div>
                     <!--end:Menu sub-->
                 </div>
