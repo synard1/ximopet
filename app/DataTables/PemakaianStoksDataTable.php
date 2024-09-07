@@ -2,12 +2,13 @@
 
 namespace App\DataTables;
 
-use App\Models\Transaksi;
+use App\Models\StokMutasi;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Carbon\Carbon;
 
 class PemakaianStoksDataTable extends DataTable
 {
@@ -28,32 +29,39 @@ class PemakaianStoksDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
-            ->editColumn('created_at', function (Transaksi $transaksi) {
-                return $transaksi->created_at->format('d M Y, h:i a');
+            ->editColumn('created_at', function (StokMutasi $stokMutasi) {
+                return $stokMutasi->created_at->format('d M Y, h:i a');
             })
-            ->editColumn('tanggal', function (Transaksi $transaksi) {
-                return $transaksi->tanggal->format('d-m-Y');
+            ->editColumn('tanggal', function (StokMutasi $stokMutasi) {
+                // $tanggal = Carbon::parse($stokMutasi->tanggal);
+                // $tanggal->format('d-m-Y');
+                // return $tanggal;
+                    return $stokMutasi->tanggal->format('d-M-Y');
+
             })
-            ->editColumn('farm_id', function (Transaksi $transaksi) {
-                return $transaksi->farms->nama;
+            ->editColumn('farm_id', function (StokMutasi $stokMutasi) {
+                return $stokMutasi->farms->nama;
             })
-            ->editColumn('rekanan_id', function (Transaksi $transaksi) {
-                return $transaksi->rekanans->nama;
+            ->editColumn('rekanan_id', function (StokMutasi $stokMutasi) {
+                return $stokMutasi->rekanans->nama;
             })
-            // ->editColumn('payload.doc.nama', function (Transaksi $transaksi) {
-            //     return $transaksi->payload['doc']['kode'] .' - '.$transaksi->payload['doc']['nama'];
+            ->editColumn('item_id', function (StokMutasi $stokMutasi) {
+                return $stokMutasi->items->nama;
+            })
+            // ->editColumn('payload.doc.nama', function (StokMutasi $stokMutasi) {
+            //     return $stokMutasi->payload['doc']['kode'] .' - '.$stokMutasi->payload['doc']['nama'];
             // })
-            ->editColumn('harga', function (Transaksi $transaksi) {
-                return $this->formatRupiah($transaksi->harga);
+            ->editColumn('harga', function (StokMutasi $stokMutasi) {
+                return $this->formatRupiah($stokMutasi->harga);
             })
-            ->editColumn('sub_total', function (Transaksi $transaksi) {
-                return $this->formatRupiah($transaksi->sub_total);
+            ->editColumn('sub_total', function (StokMutasi $stokMutasi) {
+                return $this->formatRupiah($stokMutasi->sub_total);
             })
             // ->editColumn('created_at', function (Kandang $kandang) {
             //     return $kandang->created_at->format('d M Y, h:i a');
             // })
-            ->addColumn('action', function (Transaksi $transaksi) {
-                return view('pages/transaksi.pembelian-stok._actions', compact('transaksi'));
+            ->addColumn('action', function (StokMutasi $stokMutasi) {
+                return view('pages/transaksi.pemakaian-stok._actions', compact('stokMutasi'));
             })
             // ->filterColumn('farm', function($query, $keyword) {
             //     $query->whereHas('farms', function($query) use ($keyword) { // Assuming you have a 'farm' relationship on your model
@@ -69,13 +77,12 @@ class PemakaianStoksDataTable extends DataTable
     /**
      * Get the query source of dataTable.
      */
-    public function query(Transaksi $model): QueryBuilder
+    public function query(StokMutasi $model): QueryBuilder
     {
         $query = $model->newQuery();
 
         // return $model->newQuery();
-        $query = $model::where('jenis','Pemakaian')
-            ->where('jenis_barang','!=','DOC')
+        $query = $model::where('jenis','Keluar')
             ->orderBy('tanggal', 'DESC')
             ->newQuery();
 
@@ -102,7 +109,7 @@ class PemakaianStoksDataTable extends DataTable
                 'scrollX'      =>  true,
                 'searching'      =>  false,
             ])
-            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaksi/pembelian-stok/_draw-scripts.js')) . "}");
+            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaksi/pemakaian-stok/_draw-scripts.js')) . "}");
     }
 
     /**
@@ -111,14 +118,16 @@ class PemakaianStoksDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('faktur')->searchable(true),
+            // Column::make('faktur')->searchable(true),
             Column::make('farm_id')->title('Farm')->searchable(true),
             Column::make('tanggal')->title('Tanggal Pembelian')->searchable(true),
-            Column::make('rekanan_id')->title('Nama Supplier')->searchable(true),
-            // Column::make('payload.doc.nama')->title('Nama DOC')->searchable(true),
-            Column::make('qty')->searchable(true),
+            // Column::make('rekanan_id')->title('Nama Supplier')->searchable(true),
+            Column::make('item_id')->title('Nama Item')->searchable(true),
+            Column::make('qty')->title('Terpakai'),
             Column::make('harga')->searchable(true),
-            Column::make('sub_total')->searchable(true),
+            Column::make('terpakai')->title('Total Terpakai')->searchable(true),
+            Column::make('sisa')->searchable(true),
+            // Column::make('sub_total')->searchable(true),
             // Column::make('periode')->searchable(true),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
             Column::computed('action')

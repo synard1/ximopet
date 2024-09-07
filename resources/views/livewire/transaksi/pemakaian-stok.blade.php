@@ -58,15 +58,14 @@
                                     <!--begin::Table wrapper-->
                                     <div class="table-responsive mb-10">
                                         <!--begin::Table-->
-                                        <table class="table g-5 gs-0 mb-0 fw-bold text-gray-700" data-kt-element="items">
+                                        {{-- <table class="table g-5 gs-0 mb-0 fw-bold text-gray-700" data-kt-element="items">
                                             <!--begin::Table head-->
                                             <thead>
                                                 <tr class="border-bottom fs-7 fw-bold text-gray-700 text-uppercase">
                                                     <th class="min-w-300px w-475px">Item</th>
                                                     <th class="min-w-100px w-100px">QTY</th>
-                                                    <th class="min-w-150px w-150px">Price</th>
-                                                    <th class="min-w-100px w-150px text-end">Total</th>
-                                                    <th class="min-w-75px w-75px text-end">Action</th>
+                                                    <th class="min-w-150px w-150px">Stock</th>
+                                                    <th class="min-w-100px w-150px text-end">Sub Total</th>
                                                 </tr>
                                             </thead>
                                             <!--end::Table head-->
@@ -88,15 +87,10 @@
                                                             <input type="number" class="form-control form-control-solid" min="1" wire:model="items.{{ $index }}.qty" placeholder="1" data-kt-element="quantity">
                                                         </td>
                                                         <td>
-                                                            <input type="text" class="form-control form-control-solid text-end" wire:model="items.{{ $index }}.harga" placeholder="0.00" data-kt-element="harga" >
+                                                            <input type="text" class="form-control form-control-solid text-end" wire:model="items.{{ $index }}.total"  data-kt-element="harga" >
                                                         </td>
                                                         <td class="pt-8 text-end text-nowrap">
-                                                            Rp<span data-kt-element="total"></span>
-                                                        </td>
-                                                        <td class="pt-5 text-end">
-                                                            <button type="button" class="btn btn-sm btn-icon btn-active-color-primary" wire:click="removeItem({{ $index }})">
-                                                                <i class="ki-outline ki-trash fs-3"></i>
-                                                            </button>
+                                                            <span data-kt-element="total"></span>
                                                         </td>
                                                     </tr>
                                                 @endforeach
@@ -108,7 +102,6 @@
                                                 <tr
                                                     class="border-top border-top-dashed align-top fs-6 fw-bold text-gray-700">
                                                     <th class="text-primary">
-                                                        {{-- <button class="btn btn-link py-1" data-kt-element="add-item">Add item</button> --}}
                                                         <button class="btn btn-link py-1" data-kt-element="add-item" wire:click="addItem" id="addItem">Add item</button>
                                                     </th>
     
@@ -134,7 +127,22 @@
                                                 </tr>
                                             </tfoot>
                                             <!--end::Table foot-->
-                                        </table>
+                                        </table> --}}
+                                        <div id="formDiva"> 
+                                            <table class="table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Nama Barang</th>
+                                                        <th>Stok Tersedia</th>
+                                                        <th>Digunakan</th>
+                                                        <th>Sisa Stok</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="stockTableBody">
+                                                    {{-- Stock data will be populated here dynamically --}} 
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                     <!--end::Table-->
     
@@ -159,13 +167,6 @@
     
                                                 <td class="pt-8 text-end">
                                                     Rp<span data-kt-element="total">0.00</span>
-                                                </td>
-    
-                                                <td class="pt-5 text-end">
-                                                    <button type="button"
-                                                        class="btn btn-sm btn-icon btn-active-color-primary"
-                                                        data-kt-element="remove-item">
-                                                        <i class="ki-outline ki-trash fs-3"></i> </button>
                                                 </td>
                                             </tr>
                                         </tbody>
@@ -217,7 +218,7 @@
                                 <label class="form-label fw-bold fs-6 text-gray-700">Farm</label>
                                 <!--end::Label-->
     
-                                <select id="selectedFarm" name="selectedFarm" class="form-control" wire:model="selectedFarm">
+                                <select id="selectedFarm" name="selectedFarm" class="form-control" wire:model="selectedFarm" data-control="select2">
                                     <option value="">=== Pilih Farm ===</option>
                                     @foreach($farms as $farm)
                                         <option value="{{ $farm->farm_id }}">{{ $farm->nama_farm }}</option>
@@ -231,6 +232,22 @@
                                 @enderror 
                             </div>
                             <!--end::Input group-->
+
+                            <!--begin::Input group-->
+                            <div class="mb-10">
+                                <!--begin::Label-->
+                                <label class="form-label fw-bold fs-6 text-gray-700">Kandang</label>
+                                <!--end::Label-->
+    
+                                <select wire:model="selectedKandang" class="js-select2 form-control" id="kandangs">
+                                    <option value="">=== Pilih Kandang ===</option>
+                                    @foreach ($kandangs as $kandang)
+                                    <option value="{{ $kandang->id }}">{{ $kandang->nama }}</option>
+                                    @endforeach
+                                </select>
+                                @error('selectedKandang') <span class="text-danger error">{{ $message }}</span>@enderror
+                            </div>
+                            <!--end::Input group-->
     
                             <!--begin::Separator-->
                             <div class="separator separator-dashed mb-8"></div>
@@ -239,7 +256,7 @@
                             <!--begin::Actions-->
                             <div class="mb-0">
                                 <button type="button" class="btn btn-secondary" wire:click="close()">Close</button>
-                                <button type="submit" href="#" class="btn btn-primary" wire:click="store()" id="saveChangesButton"><i class="ki-outline ki-triangle fs-3"></i> Save Changes
+                                <button type="submit" href="#" class="btn btn-primary" id="saveChangesButton"><i class="ki-outline ki-triangle fs-3"></i> Save Changes
                                 </button>
                             </div>
                             <!--end::Actions-->
@@ -270,18 +287,24 @@
     @endpush
     @push('scripts')
     <script>
+        let farmId, kandangId = '';
         $(document).ready(function() {
             var updateArea = $('#formDiva'); 
             updateArea.addClass('grey-block'); 
 
             // Get the button element
             const saveChangesButton = document.getElementById('saveChangesButton');
+            let jsonData = '';
+            const farmSelect = document.getElementById('farms');
+
+
+            // let farmId = '';
 
             // Disable the button
             saveChangesButton.disabled = true;
 
             $('#selectedFarm').change(function() {
-                var farmId = $(this).val();
+                farmId = $(this).val();
                 const updateArea = $('#formDiva'); 
                 // const div = document.getElementById('formDiv');
 
@@ -296,6 +319,10 @@
                             url: '/api/v1/get-farm-stocks/' + farmId, 
                             type: 'GET',
                             success: function(data) {
+                                jsonData = data;
+
+
+
                                 // div.style.display = 'block'
                                 updateArea.removeClass('grey-block'); 
 
@@ -307,19 +334,29 @@
                                 });
 
                                 // Get the Select2 instance
-                                const itemSelect = $('#items');
+                                const itemSelect = $('#itemsSelect');
     
                                 // Clear existing options
                                 itemSelect.empty();
 
                                 // Add new options based on the fetched data
                                 data.stock.forEach(item => {
-                                    const option = new Option(item.nama, item.item_id);
+                                    const option = new Option(item.item_nama, item.item_id);
                                     itemSelect.append(option);
                                 });
 
                                 // Disable the button
                                 saveChangesButton.disabled = false;
+
+                                // Parse the JSON string into a JavaScript object
+                                // const tempData = JSON.parse(jsonData);
+
+                                // Now you can access and work with the data
+                                // console.log(jsonData.stock[0].nama); // Output: Nama StokObat
+
+                                updateTableBody(data); 
+                                updateKandang(farmId);
+
                             },
                             error: function(xhr) { 
                                 Swal.fire({
@@ -339,6 +376,152 @@
                 });
             });
         });
+
+    // Function to update the table body with stock data
+    function updateKandang(farmId) {
+        console.log('cek data kandang');
+        const kandangSelect = document.getElementById('kandangs');
+
+        // Clear existing options in the farmSelect dropdown
+        while (kandangSelect.options.length > 0) {
+                kandangSelect.remove(0);
+        }
+
+        kandangSelect.innerHTML = '<option value="">=== Pilih Kanndang ===</option>';
+
+
+        // Fetch operators for the selected farm via AJAX
+        fetch(`/api/v1/get-kandangs/${farmId}/used`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.kandangs && data.kandangs.length > 0) {
+                        // console.log(data.kandangs);
+
+                        data.kandangs.forEach(kandang => {
+                            const option = document.createElement('option');
+                            option.value = kandang.id;
+                            option.text = kandang.nama;
+                            kandangSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching kandangs:', error));
+    }
+
+    // Function to update the table body with stock data
+    function updateTableBody(jsonData) {
+        const tableBody = $('#stockTableBody');
+        tableBody.empty(); // Clear existing rows
+
+        jsonData.stock.forEach(item => {
+            const newRow = `
+                <tr>
+                    <td>${item.item_nama}</td>
+                    <td id="availableStock_${item.item_id}">${item.total}</td>
+                    <td>
+                        <input type="number" class="form-control qty-input" data-item-id="${item.item_id}" min="0" max="${item.total}" placeholder="0" ${item.total === 0 ? 'disabled' : ''}>
+                    </td>
+                    <td id="remainingStock_${item.item_id}">${item.total}</td>
+                </tr>
+            `;
+            tableBody.append(newRow);
+        });
+
+        // Attach event listeners to qty inputs for dynamic calculation and validation
+        $('.qty-input').on('input', function() {
+            const itemId = $(this).data('item-id');
+            const availableStock = parseInt($(`#availableStock_${itemId}`).text());
+            let qtyUsed = parseInt($(this).val()) || 0;
+
+            // Ensure qtyUsed doesn't exceed availableStock
+            if (qtyUsed > availableStock) {
+                qtyUsed = availableStock;
+                $(this).val(qtyUsed); // Update the input field to reflect the corrected value
+            }
+
+            const remainingStock = availableStock - qtyUsed;
+            $(`#remainingStock_${itemId}`).text(remainingStock);
+        });
+    }
+
+    // Submit function to collect data and potentially send it via AJAX
+    function submitStockData() {
+        const updatedStockData = [];
+        // Get the select element
+        const kandangSelect = document.getElementById('kandangs');
+        const tanggal = document.getElementById('tanggal');
+
+        // Iterate through each row in the table body
+        $('#stockTableBody tr').each(function() {
+            const itemId = $(this).find('.qty-input').data('item-id');
+            const qtyUsed = parseInt($(this).find('.qty-input').val()) || 0;
+            const isDisabled = $(this).find('.qty-input').is(':disabled');
+
+            // Skip if qtyUsed is 0 or input is disabled
+            if (qtyUsed === 0 || isDisabled) {
+                return; // Continue to the next iteration (skip this item)
+            }
+
+            updatedStockData.push({
+                item_id: itemId,
+                qty_used: qtyUsed 
+            });
+        });
+        // $('#stockTableBody tr').each(function() {
+        //     const itemId = $(this).find('.qty-input').data('item-id');
+        //     const qtyUsed = parseInt($(this).find('.qty-input').val()) || 0;
+
+        //     // Create an object for each item with updated qtyUsed
+        //     updatedStockData.push({
+        //         item_id: itemId,
+        //         qty_used: qtyUsed 
+        //     });
+        // });
+
+        // Prepare the final JSON data to be sent
+        const finalData = {
+            farm_id: farmId,
+            kandang_id: kandangSelect.value,
+            tanggal: tanggal.value,
+            stock: updatedStockData,
+            // ... other data you might need to include (e.g., 'parameter', 'tanggal')
+        };
+
+        // You can now send this 'finalData' to your server using AJAX or other methods
+        console.log(JSON.stringify(finalData)); // Example: Log the JSON data to the console
+
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+
+        // Example AJAX call (you'll need to adjust the URL and other settings)
+        $.ajax({
+            url: '/reduce-stock', // Replace with your actual endpoint
+            type: 'POST',
+            data: JSON.stringify(finalData),
+            contentType: 'application/json', 
+            success: function(response) {
+                // Handle the successful response from the server
+                console.log('Stock data updated successfully!', response);
+                toastr.success(response.message); 
+                // table.ajax.reload();
+                Livewire.dispatch('closeFormPemakaian');
+            },
+            error: function(xhr) {
+                // Handle errors during the AJAX call
+                console.error('Error updating stock data:', xhr.responseText);
+                // console.log(xhr.responseJSON.message);
+                // console.log(xhr.errors);
+                // console.log(xhr.message);
+                toastr.error(xhr.responseJSON.message); 
+            }
+        });
+    }
+
+    // Attach the submit function to your button click
+    $('#saveChangesButton').on('click', submitStockData);
 
         $(document).ready(function() {
 
@@ -428,5 +611,20 @@ document.addEventListener('livewire:init', function () {
 
 
 
+    </script>
+    <script>
+        const qtyInputs = document.querySelectorAll('.qty-input');
+        qtyInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                const itemId = this.dataset.itemId;
+                const initialStock = parseInt(document.getElementById(`initial_${itemId}`).textContent);
+                const usedQty = parseInt(this.value) || 0; 
+                const totalUsed = document.getElementById(`used_${itemId}`);
+                const remainingStock = document.getElementById(`remaining_${itemId}`);
+
+                totalUsed.textContent = usedQty;
+                remainingStock.textContent = initialStock - usedQty; 
+            });
+        });
     </script>
     @endpush

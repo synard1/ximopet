@@ -152,10 +152,15 @@ Route::prefix('v1')->group(function () {
 
     Route::get('/get-operators/{farm}', [AppApi::class, 'getOperators']);
     Route::get('/get-farms', [AppApi::class, 'getFarms']);
+    Route::get('/get-kandangs/{farm}/{status}', [AppApi::class, 'getKandangs']);
     Route::get('/get-farm-stocks/{farm}', [AppApi::class, 'getFarmStoks']);
 
     Route::post('/stocks-edit', function (Request $request) {
         return app(AppApi::class)->postStockEdit($request);
+    });
+
+    Route::post('/stoks/mutasi', function (Request $request) {
+        return app(AppApi::class)->createMutasiStok($request);
     });
 
     Route::get('/resetDemo', [AppApi::class, 'resetDemo']);

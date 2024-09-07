@@ -22,7 +22,7 @@ return new class extends Migration
             $table->uuid('farm_id');
             $table->uuid('kandang_id')->nullable();
             $table->uuid('item_id');
-            $table->string('nama');
+            $table->string('item_nama');
             $table->string('harga');
             $table->string('qty');
             $table->string('terpakai');
@@ -37,7 +37,7 @@ return new class extends Migration
 
             $table->foreign('user_id')->references('id')->on('users');
             $table->foreign('rekanan_id')->references('id')->on('master_rekanan');
-            $table->foreign('item_id')->references('id')->on('master_stoks');
+            // $table->foreign('item_id')->references('id')->on('master_stoks');
             $table->foreign('farm_id')->references('id')->on('master_farms');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
             $table->foreign('transaksi_id')->references('id')->on('transaksis');

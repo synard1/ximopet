@@ -37,7 +37,6 @@ return new class extends Migration
             $table->foreign('rekanan_id')->references('id')->on('master_rekanan');
             $table->foreign('farm_id')->references('id')->on('master_farms');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
-
         });
     }
 

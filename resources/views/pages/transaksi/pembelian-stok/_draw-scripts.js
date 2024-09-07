@@ -35,7 +35,7 @@ document.querySelectorAll('[data-kt-action="delete_row"]').forEach(function (ele
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                Livewire.dispatch('delete_transaksi_stok', [this.getAttribute('data-kt-transaksi-id')]);
+                Livewire.dispatch('delete_transaksi_pembelian', [this.getAttribute('data-kt-transaksi-id')]);
             }
         });
     });

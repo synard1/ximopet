@@ -7,6 +7,8 @@ use Faker\Generator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use App\Jobs\SendEmailJob;
+use App\Models\FarmOperator;
+use App\Models\Farm;
 
 
 class UsersSeeder extends Seeder
@@ -46,6 +48,8 @@ class UsersSeeder extends Seeder
             'password'          => Hash::make('demo'),
             'email_verified_at' => now(),
         ]);
+
+        
 
         // Create 1000 users using the factory
         // User::factory()->count(1000)->create();

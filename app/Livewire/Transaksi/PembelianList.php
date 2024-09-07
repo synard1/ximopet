@@ -35,7 +35,7 @@ class PembelianList extends Component
     ];
 
     protected $listeners = [
-        'delete_transaksi_stok' => 'deleteTransaksi',
+        'delete_transaksi_pembelian' => 'deleteTransaksiPembelian',
         'editPembelian' => 'editPembelian',
     ];
 
@@ -107,6 +107,7 @@ class PembelianList extends Component
                     'nama' => $items->name,
                     'jenis' => $items->jenis,
                     'item_id' => $items->id,
+                    'item_nama' => $items->nama,
                 ];
             }
 
@@ -152,6 +153,7 @@ class PembelianList extends Component
                     'farm_id' => $this->selectedFarm,
                     'kandang_id' => null,
                     'item_id' => $item->id,
+                    'item_nama' => $item->nama,
                     'nama' => $item->nama,
                     'harga' => $itemData['harga'],
                     'qty' => $itemData['qty'],
@@ -172,6 +174,7 @@ class PembelianList extends Component
             // Emit success event if no errors occurred
             $this->dispatch('success', 'Data Pembelian Stok berhasil ditambahkan');
             $this->dispatch('closeForm');
+            $this->reset();
         } catch (ValidationException $e) {
             $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
             $this->setErrorBag($e->validator->errors());
@@ -212,19 +215,27 @@ class PembelianList extends Component
         $this->openModal();
     }
 
-    public function deleteTransaksi($id)
+    public function deleteTransaksiPembelian($id)
     {
         try {
             // Wrap database operation in a transaction (if applicable)
             DB::beginTransaction();
 
-            // Delete the user record with the specified ID
-            Transaksi::destroy($id);
-            $deleted = TransaksiDetail::where('transaksi_id', $id)->delete();
+            $detail = TransaksiDetail::where('transaksi_id', $id)->first();
 
-            DB::commit();
-            // Emit a success event with a message
-            $this->dispatch('success', 'Data berhasil dihapus');
+            if($detail->terpakai > 0){
+                $this->dispatch('error', 'Sudah ada data transaksi yang terpakai.');
+            }else{
+                // Delete the user record with the specified ID
+                Transaksi::destroy($id);
+                $deleted = TransaksiDetail::where('transaksi_id', $id)->delete();
+
+                DB::commit();
+                // Emit a success event with a message
+                $this->dispatch('success', 'Data berhasil dihapus');
+            }
+
+            
 
         } catch (\Throwable $th) {
             DB::rollBack();

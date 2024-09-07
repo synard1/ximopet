@@ -100,6 +100,12 @@ class PembelianDOC extends Component
             ];
 
             $transaksi = Transaksi::updateOrCreate(['id' => $this->transaksi_id], $data);
+            $kandang->update(
+                [
+                    'status' => 'Digunakan',
+                    'jumlah' => $transaksi->qty,
+                ]
+            );
 
         
             // $transaksi = Transaksi::where('id', $this->transaksi_id)->first() ?? Transaksi::create($data);
@@ -154,11 +160,42 @@ class PembelianDOC extends Component
 
     public function deleteTransaksiDoc($id)
     {
-        // Delete the user record with the specified ID
-        Transaksi::destroy($id);
+        try {
+                // Wrap database operation in a transaction (if applicable)
+                DB::beginTransaction();
+    
+                $transaksi = Transaksi::where('id', $id)->first();
+                $kandang = Kandang::where('id', $transaksi->kandang_id)->first();
 
-        // Emit a success event with a message
-        $this->dispatch('success', 'Data berhasil dihapus');
+                // Delete the user record with the specified ID
+                Transaksi::destroy($id);
+    
+                $kandang->update(
+                    [
+                        'status' => 'Aktif',
+                        'jumlah' => '0',
+                    ]
+                );
+    
+                DB::commit();
+                // Emit a success event with a message
+                $this->dispatch('success', 'Data berhasil dihapus');
+        
+                // Emit success event if no errors occurred
+                $this->reset();
+            } catch (ValidationException $e) {
+                $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
+                $this->setErrorBag($e->validator->errors());
+            } catch (\Exception $e) {
+                DB::rollBack();
+        
+                // Handle validation and general errors
+                $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ');
+                // Optionally log the error: Log::error($e->getMessage());
+            } finally {
+                // Reset the form in all cases to prepare for new data
+                // $this->reset();
+            }
     }
 
     public function resetFormAndErrors()

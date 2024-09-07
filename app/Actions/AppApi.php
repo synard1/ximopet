@@ -73,7 +73,7 @@ class AppApi
 
     public function getTransaksiDetail($id)
     {
-        $options = TransaksiDetail::where('transaksi_id', $id)->get(['id','jenis','jenis_barang','nama','qty','terpakai', 'sisa', 'harga','sub_total']);
+        $options = TransaksiDetail::where('transaksi_id', $id)->get(['id','jenis','jenis_barang','item_nama','qty','terpakai', 'sisa', 'harga','sub_total']);
 
         // Map over the collection to calculate the 'sisa' field for each record
         $formattedOptions = $options->map(function ($item) {
@@ -120,6 +120,45 @@ class AppApi
         // return response()->json(['operators' => $operators]);
     }
 
+    public function getKandangs($farmId, $status)
+    {
+        // Fetch operators not associated with the selected farm
+        if( $status == 'used'){
+            $kandangs = Kandang::where('farm_id', $farmId)->where('status', 'Digunakan')->get(['id', 'nama']);
+        // }else{
+        //     $kandangs = Kandang::where('status', 'Tidak Aktif')->get(['id', 'nama']);
+        }
+
+        $result = ['kandangs' => $kandangs];
+
+
+        return response()->json($result);
+    }
+
+    public function createMutasiStok(Request $request)
+    {
+        dd($request->all());
+        // Get the operator IDs already associated with the selected farm
+        $existingOperatorIds = FarmOperator::where('farm_id', $farmId)->pluck('nama_operator');
+
+        // Fetch operators not associated with the selected farm
+        $operators = User::role('Operator') // Get users with 'Operator' role
+                    ->whereDoesntHave('farmOperators', function ($query) use($farmId) {
+                        $query->where('farm_id', $farmId);
+                    })
+                    // ->pluck('name', 'id');
+                    ->get(['id','name']);
+
+        // $operators = User::where('role', 'Operator')
+        //     ->whereNotIn('id', $existingOperatorIds)
+        //     ->get(['id', 'name']);
+        $result = ['operators' => $operators];
+
+
+        return response()->json($result);
+        // return response()->json(['operators' => $operators]);
+    }
+
     public function getOperators($farmId)
     {
         // Get the operator IDs already associated with the selected farm
@@ -151,12 +190,15 @@ class AppApi
         //         ->distinct('nama')
         //         ->get();
         $data = TransaksiDetail::where('farm_id', $farmId)
-                ->select('item_id', 'nama', DB::raw('SUM(qty) as total')) // Replace 'column_to_sum' with the actual column you want to sum
-                ->groupBy('item_id','nama')
+                ->whereIn('jenis_barang',['Pakan','Obat'])
+                ->select('item_id', 'item_nama', DB::raw('SUM(sisa) as total')) // Replace 'column_to_sum' with the actual column you want to sum
+                ->groupBy('item_id','item_nama')
                 ->get();
 
         // Separate query to get the oldest date
         $oldestDate = TransaksiDetail::where('farm_id', $farmId)
+                ->where('sisa','>',0)
+                ->groupBy('item_id')
                 ->min('tanggal'); 
 
         // return $data->count();
@@ -277,6 +319,23 @@ class AppApi
 
         }
 
+    }
+
+    public function showVersion()
+    {
+        $gitCommitHash = trim(exec('git rev-parse --short HEAD'));
+        $gitBranch = trim(exec('git rev-parse --abbrev-ref HEAD'));
+        $gitTag = trim(exec('git describe --tags --abbrev=0 2>/dev/null')); // May be empty if no tag exists
+
+        // You can customize this logic to determine if the latest release is running
+        $isLatestRelease = true; // Replace with your actual logic
+
+        return view('version', [
+            'commitHash' => $gitCommitHash,
+            'branch' => $gitBranch,
+            'tag' => $gitTag,
+            'isLatestRelease' => $isLatestRelease,
+        ]);
     }
 
     // public function delete($id)

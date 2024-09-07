@@ -370,7 +370,7 @@
 					<!--end:Menu link-->
 				</div>
 				<!--end:Menu item-->
-				<!--begin:Menu item-->
+				{{-- <!--begin:Menu item-->
 				<div class="menu-item menu-accordion menu-fit">
 					<!--begin:Menu link-->
 					<span class="menu-link">
@@ -387,7 +387,7 @@
 					</span>
 					<!--end:Menu link-->
 				</div>
-				<!--end:Menu item-->
+				<!--end:Menu item--> --}}
 				@endif
 			</div>
 			<!--end:Menu sub-->
@@ -405,6 +405,19 @@
 		@endif
 
 		{{-- @include('modal') --}}
+		@if(auth()->user()->hasRole(['SuperAdmin','Administrator']))
+			{{-- <p>Commit Hash: {{ trim(exec('git rev-parse --short HEAD')); }}</p>
+			<p>Branch: {{ trim(exec('git rev-parse --abbrev-ref HEAD')); }}</p>
+			@if (!empty(trim(exec('git describe --tags --abbrev=0 2>/dev/null'))))
+				<p>Tag/Release: {{ trim(exec('git describe --tags --abbrev=0 2>/dev/null')); }}</p>
+			@endif --}}
+			
+			{{-- @if ($isLatestRelease)
+				<p style="color: green;">You are running the latest release!</p>
+			@else
+				<p style="color: red;">An update is available. Please update your application.</p>
+			@endif --}}
+		@endif
 	</div>
 	<!--end::sidebar menu-->
 

@@ -87,6 +87,8 @@ class DocsDataTable extends DataTable
 
         // return $model->newQuery();
         $query = $model::orderBy('tanggal', 'DESC')
+            ->where('jenis','Pembelian')
+            ->where('jenis_barang','DOC')
             ->newQuery();
 
         return $query;
