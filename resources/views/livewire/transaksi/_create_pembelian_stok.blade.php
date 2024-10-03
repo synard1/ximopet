@@ -38,7 +38,7 @@
 
                         <div class="d-flex flex-center flex-equal fw-row text-nowrap order-1 order-xxl-2 me-4" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-original-title="Enter invoice number" data-kt-initialized="1">
                             <span class="fs-2x fw-bold text-gray-800">Invoice #</span> 
-                            <input type="text" class="form-control form-control-flush fw-bold text-muted fs-3 w-125px" wire:model="faktur" name="faktur" placehoder="2021001">
+                            <input type="text" class="form-control form-control-flush fw-bold text-muted fs-3 w-125px" wire:model="faktur" name="faktur" placeholder="{{ $fakturPlaceholder }}">
                             @error('faktur')
                             <span class="text-danger">{{ $message }}</span> @enderror
                             @error('faktur')

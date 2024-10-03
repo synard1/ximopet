@@ -64,4 +64,17 @@ class KandangController extends Controller
     {
         //
     }
+
+    public function getKandangs(Request $request)
+    {
+        $type = $request->type;
+        $status = $request->status;
+
+        $result = Kandang::where('status', $status)->get(['id','kode','nama','kapasitas','jumlah']);
+
+        // dd($request->all());
+
+
+        return response()->json($result);
+    }
 }

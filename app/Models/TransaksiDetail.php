@@ -28,6 +28,7 @@ class TransaksiDetail extends Model
         'terpakai',
         'sisa',
         'sub_total',
+        'konversi',
         'periode',
         'status',
         'user_id',
@@ -36,4 +37,9 @@ class TransaksiDetail extends Model
     protected $casts = [
         'tanggal' => 'datetime',
     ];
+
+    public function items()
+    {
+        return $this->belongsTo(Stok::class, 'item_id','id');
+    }
 }

@@ -36,7 +36,7 @@ class PembelianStok extends Component
     {
         $this->docs = Stok::where('jenis','DOC')->get();
         $this->suppliers = Rekanan::where('jenis','Supplier')->get();
-        $this->farms = FarmOperator::where('user_id', auth()->user()->id)->where('status','Aktif')->get();
+        $this->farms = FarmOperator::where('user_id', auth()->user()->id)->get();
         $this->kandangs = Kandang::where('status','Aktif')->get();
         return view('livewire.transaksi.pembelian-stok',[
             'docs' => $this->docs,
@@ -69,7 +69,7 @@ class PembelianStok extends Component
                 'kandang_id' => $this->selectedKandang,
                 'rekanan_nama' => $supplier->nama ?? '',
                 'harga' => $this->harga,
-                'qty' => $this->qty,
+                'qty' => $this->qty * $doc->konversi,
                 'sub_total' => $this->qty * $this->harga,
                 'periode' => $this->periode,
                 'user_id' => auth()->user()->id,
@@ -81,7 +81,7 @@ class PembelianStok extends Component
         
             $transaksi = Transaksi::where('id', $this->transaksi_id)->first() ?? Transaksi::create($data);
 
-            dd($transaksi);
+            // dd($transaksi);
         
         //     DB::commit();
     

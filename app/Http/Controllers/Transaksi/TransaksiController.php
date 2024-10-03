@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\DataTables\DocsDataTable;
 use App\DataTables\PembelianStoksDataTable;
 use App\DataTables\PemakaianStoksDataTable;
+use App\Models\TransaksiDetail;
 
 class TransaksiController extends Controller
 {
@@ -27,7 +28,7 @@ class TransaksiController extends Controller
 
     public function stokPakaiIndex(PemakaianStoksDataTable $dataTable)
     {
-        addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
+        addJavascriptFile('assets/js/custom/pages/transaksi/pemakaian-stok.js');
         return $dataTable->render('pages/transaksi.pemakaian-stok.list');
     }
 
@@ -77,5 +78,65 @@ class TransaksiController extends Controller
     public function destroy(Transaksi $transaksi)
     {
         //
+    }
+
+    public function getTransaksi(Request $request)
+    {
+        $bentuk = $request->bentuk;
+        // $status = $request->status;
+        $jenis = $request->jenis;
+        $task = $request->task;
+        $id = $request->id;
+        $value = $request->input('value');
+        $column = $request->input('column');
+
+        if($task == 'UPDATE'){
+            // dd($request->all());
+            // Update Detail Items
+            $transaksiDetail = TransaksiDetail::findOrFail($id);
+            if($column == 'qty'){
+                $transaksiDetail->update(
+                    [
+                        $column => $value * $transaksiDetail->items->konversi,
+                    ]
+                );
+            }else{
+                $transaksiDetail->update(
+                    [
+                        $column => $value,
+                    ]
+                );
+            }
+
+            return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success' ]);
+        }
+
+        // $result = Transaksi::where('status', $status)->get(['id','kode','nama','kapasitas','jumlah']);
+
+        $transactions = Transaksi::with('transaksiDetail')
+            ->where('id', $id)
+            ->where('jenis', 'Pembelian')
+            ->whereHas('transaksiDetail', function ($query) {
+                $query->where('jenis_barang', 'DOC');
+            })
+            // ->where('user_id', auth()->user()->id) // Uncomment if needed
+            ->orderBy('tanggal', 'DESC')
+            ->get(); // Fetch the Transaksi records first
+
+        // Now, map over the transactions to extract the desired data
+        $data = $transactions->map(function ($transaction) {
+            return [
+                // 'faktur' => $transaction->faktur,
+                'id' => $transaction->transaksiDetail->first()?->item_id, // Access item_id from the first related transaksiDetail (if it exists)
+                'nama' => $transaction->transaksiDetail->first()?->item_nama, 
+                'qty' => $transaction->transaksiDetail->first()?->qty, 
+                'terpakai' => $transaction->transaksiDetail->first()?->terpakai, 
+                'sisa' => $transaction->transaksiDetail->first()?->sisa, 
+                'harga' => $transaction->transaksiDetail->first()?->harga, 
+                'sub_total' => $transaction->transaksiDetail->first()?->sub_total, 
+            ];
+        });
+
+        return response()->json(['data' => $data]);
     }
 }

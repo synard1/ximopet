@@ -56,7 +56,8 @@ class PembelianDOC extends Component
     {
         $this->docs = Stok::where('jenis','DOC')->get();
         $this->suppliers = Rekanan::where('jenis','Supplier')->get();
-        $this->kandangs = Kandang::where('status','Aktif')->get();
+        // $this->kandangs = Kandang::where('status','Aktif')->get();
+        $this->kandangs = Kandang::all();
         return view('livewire.transaksi.pembelian-d-o-c',[
             'docs' => $this->docs,
             'suppliers' => $this->suppliers,
@@ -66,11 +67,39 @@ class PembelianDOC extends Component
 
     public function storeDOC()
     {
+            // $supplier = Rekanan::where('id', $this->supplierSelect)->first();
+            // $kandang = Kandang::where('id', $this->selectedKandang)->first();
+            // $doc = Stok::where('id',$this->docSelect)->first();
+        
+            // // Prepare the data for creating/updating
+            // $data = [
+            //     'jenis' => 'Pembelian',
+            //     // 'jenis_barang' => 'DOC',
+            //     'faktur' => $this->faktur,
+            //     'tanggal' => $this->tanggal,
+            //     'rekanan_id' => $this->supplierSelect,
+            //     'farm_id' => $kandang->farm_id,
+            //     'kandang_id' => $this->selectedKandang,
+            //     'harga' => $this->harga,
+            //     'total_qty' => $this->qty,
+            //     'sub_total' => $this->qty * $this->harga,
+            //     'periode' => $this->periode,
+            //     'user_id' => auth()->user()->id,
+            //     'status' => 'Aktif',
+            // ];
+
+            // $transaksi = Transaksi::updateOrCreate(['id' => $this->transaksi_id], $data);
+            // $kandang->update(
+            //     [
+            //         'status' => 'Digunakan',
+            //         'jumlah' => $transaksi->total_qty,
+            //     ]
+            // );
         try {
-        //     // Validate the form input data
+            // Validate the form input data
             $this->validate(); 
         
-        //     // Wrap database operation in a transaction (if applicable)
+            // Wrap database operation in a transaction (if applicable)
             DB::beginTransaction();
 
             $supplier = Rekanan::where('id', $this->supplierSelect)->first();
@@ -79,32 +108,56 @@ class PembelianDOC extends Component
         
             // Prepare the data for creating/updating
             $data = [
-                'parent_id' => null,
                 'jenis' => 'Pembelian',
-                'jenis_barang' => 'DOC',
+                // 'jenis_barang' => 'DOC',
                 'faktur' => $this->faktur,
                 'tanggal' => $this->tanggal,
                 'rekanan_id' => $this->supplierSelect,
                 'farm_id' => $kandang->farm_id,
                 'kandang_id' => $this->selectedKandang,
-                'rekanan_nama' => $supplier->nama ?? '',
                 'harga' => $this->harga,
-                'qty' => $this->qty,
+                'total_qty' => $this->qty,
                 'sub_total' => $this->qty * $this->harga,
                 'periode' => $this->periode,
                 'user_id' => auth()->user()->id,
-                'payload'=> [
-                    'doc' => $doc,
-                ],
                 'status' => 'Aktif',
             ];
 
+            // $transaksi = Transaksi::create($data);
             $transaksi = Transaksi::updateOrCreate(['id' => $this->transaksi_id], $data);
             $kandang->update(
                 [
                     'status' => 'Digunakan',
-                    'jumlah' => $transaksi->qty,
+                    'jumlah' => $transaksi->total_qty,
                 ]
+            );
+
+            // Data yang akan disimpan atau diperbarui
+            $transaksiDetailData = [
+                'transaksi_id' => $transaksi->id,
+                'jenis' => 'Pembelian',
+                'jenis_barang' => 'DOC',
+                'tanggal' => $transaksi->tanggal,
+                'rekanan_id' => $transaksi->rekanan_id,
+                'farm_id' => $transaksi->farm_id,
+                'kandang_id' => $kandang->id,
+                'item_id' => $doc->id,
+                'item_nama' => $doc->nama,
+                'harga' => $transaksi->harga,
+                'qty' => $transaksi->total_qty,
+                'terpakai' => 0,
+                'sisa' => $transaksi->total_qty,
+                'sub_total' => $transaksi->sub_total,
+                'konversi' => $doc->konversi,
+                'periode' => $this->periode,
+                'status' => 'Aktif',
+                'user_id' => auth()->user()->id,
+            ];
+
+            // Gunakan updateOrCreate untuk membuat atau memperbarui TransaksiDetail
+            $transaksiDetail = $transaksi->transaksiDetail()->updateOrCreate(
+                ['transaksi_id' => $transaksi->id, 'item_id' => $doc->id], // Kondisi untuk mencari record yang sudah ada
+                $transaksiDetailData // Data yang akan disimpan atau diperbarui
             );
 
         
@@ -129,7 +182,7 @@ class PembelianDOC extends Component
             DB::rollBack();
     
             // Handle validation and general errors
-            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ');
+            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. '.$e->getMessage());
             // Optionally log the error: Log::error($e->getMessage());
         } finally {
             // Reset the form in all cases to prepare for new data
@@ -139,7 +192,8 @@ class PembelianDOC extends Component
 
     public function editDoc($id)
     {
-        $pembelian = Transaksi::where('id',$id)->first();
+        $pembelian = Transaksi::with('transaksiDetail')->where('id',$id)->first();
+        // dd($pembelian->transaksiDetail[0]['item_id']);
 
         // Format the date using Carbon
         // $formattedTanggal = $this->formatDateTime($pembelian->tanggal);
@@ -148,13 +202,15 @@ class PembelianDOC extends Component
         $this->faktur = $pembelian->faktur;
         $this->tanggal = $pembelian->tanggal;
         $this->supplierSelect = $pembelian->rekanan_id;
-        $this->docSelect = $pembelian->payload['doc']['id'];
+        $this->docSelect = $pembelian->transaksiDetail[0]['item_id'];
         $this->selectedKandang = $pembelian->kandang_id;
-        $this->qty = $pembelian->qty;
+        $this->qty = $pembelian->total_qty;
         $this->harga = $pembelian->harga;
         $this->periode = $pembelian->periode;
 
         $this->edit_mode = true;
+
+        // dd($this->selectedKandang);
         // $this->openModal();
     }
 

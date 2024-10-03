@@ -238,7 +238,7 @@
                                         <span class="fs-2x fw-bold text-gray-800">Faktur #</span>
                                         <input type="text" wire:model="faktur" 
                                             class="form-control form-control-flush fw-bold text-muted fs-3 w-125px"
-                                            value="2021001" placehoder="...">
+                                            placeholder="{{ $fakturPlaceholder }}">
                                         @error('faktur')
                                         <span class="text-danger">{{ $message }}</span> @enderror
                                         @error('faktur')
@@ -511,7 +511,7 @@
                             <select id="selectedFarm" name="selectedFarm" class="form-control" wire:model="selectedFarm" @if ($editMode) disabled @endif>
                                 <option value="">=== Pilih Farm ===</option>
                                 @foreach($farms as $farm)
-                                    <option value="{{ $farm->farm_id }}" @if($farm->id == $selectedFarm) selected @endif>{{ $farm->nama_farm }}</option>
+                                    <option value="{{ $farm->id }}" @if($farm->id == $selectedFarm) selected @endif>{{ $farm->nama }}</option>
 
                                 @endforeach
                             </select>

@@ -7,37 +7,28 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Transaksi extends Model
+class StokTransaksi extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
+
+    protected $table = 'stok_transaksis';
 
     protected $fillable = [
         'id',
         'jenis',
-        'faktur',
         'tanggal',
-        'rekanan_id',
         'farm_id',
         'kandang_id',
-        'harga',
-        'total_qty',
-        'sub_total',
+        'qty',
         'terpakai',
         'sisa',
-        'periode',
         'status',
         'user_id',
     ];
 
     protected $casts = [
-        'payload' => 'array',
         'tanggal' => 'datetime',
     ];
-
-    public function rekanans()
-    {
-        return $this->belongsTo(Rekanan::class, 'rekanan_id','id');
-    }
 
     public function farms()
     {
@@ -49,18 +40,8 @@ class Transaksi extends Model
         return $this->belongsTo(Kandang::class, 'kandang_id','id');
     }
 
-    public function items()
+    public function stokMutasi()
     {
-        return $this->belongsTo(Stok::class, 'item_id','id');
+        return $this->hasMany(StokMutasi::class); 
     }
-
-    public function transaksiDetail()
-    {
-        return $this->hasMany(TransaksiDetail::class);
-    }
-
-    // public function transaksiDetails()
-    // {
-    //     return $this->hasMany(TransaksiDetail::class);
-    // }
 }

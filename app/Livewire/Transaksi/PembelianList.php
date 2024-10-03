@@ -8,6 +8,7 @@ use App\Models\Stok;
 use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
 use App\Models\FarmOperator;
+use App\Models\Farm;
 
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
@@ -25,6 +26,8 @@ class PembelianList extends Component
 
     public $isOpen = 0;
     public $editMode = false;
+    public $fakturPlaceholder = '000000'; 
+
 
 
     protected $rules = [
@@ -45,6 +48,8 @@ class PembelianList extends Component
         // $this->items = Item::all()->toArray();
         // $this->addItem();
         // $this->faktur = "000000";
+        $this->fakturPlaceholder = $this->fakturPlaceholder;
+
     }
 
     public function removeItem($index)
@@ -57,7 +62,11 @@ class PembelianList extends Component
     {
 
         $this->suppliers = Rekanan::where('jenis', 'Supplier')->get();
-        $this->farms = FarmOperator::where('user_id', auth()->user()->id)->where('status','Aktif')->get();
+        // $this->farms = FarmOperator::where('user_id', auth()->user()->id)->get();
+        // $this->farms =[];
+        $this->farms = Farm::whereHas('farmOperators', function ($query) {
+            $query->where('user_id', auth()->user()->id);
+        })->get();
         $this->allItems = Stok::where('status', 'Aktif')->where('jenis','!=','DOC')->get();
         // $this->suppliers = Rekanan::where('jenis', 'Supplier')->get();
         return view('livewire.transaksi.pembelian-list', [
@@ -97,23 +106,57 @@ class PembelianList extends Component
             // Wrap database operation in a transaction (if applicable)
             DB::beginTransaction();
 
-            foreach ($this->items as $itemData) {
-                $items = Stok::where('id', $itemData['name'])->first();
-                $itemsToStore[] = [
-                    'qty' => $itemData['qty'],
-                    'terpakai' => 0,
-                    'harga' => $itemData['harga'],
-                    'total' => $itemData['qty'] * $itemData['harga'],
-                    'nama' => $items->name,
-                    'jenis' => $items->jenis,
-                    'item_id' => $items->id,
-                    'item_nama' => $items->nama,
-                ];
-            }
+            // foreach ($this->items as $itemData) {
+            //     $items = Stok::where('id', $itemData['name'])->first();
+            //     $itemsToStore[] = [
+            //         'qty' => $itemData['qty'],
+            //         'terpakai' => 0,
+            //         'harga' => $itemData['harga'],
+            //         'total' => $itemData['qty'] * $itemData['harga'],
+            //         'nama' => $items->name,
+            //         'jenis' => $items->jenis,
+            //         'item_id' => $items->id,
+            //         'item_nama' => $items->nama,
+            //         'konversi' => $items->konversi,
+            //     ];
+            // }
 
-            $sumQty = array_sum(array_column($itemsToStore, 'qty'));
-            $sumPrice = array_sum(array_column($itemsToStore, 'harga'));
-            $sumTotal = array_sum(array_column($itemsToStore, 'total'));
+            // $sumQty = array_sum(array_column($itemsToStore, 'qty'));
+            // $sumPrice = array_sum(array_column($itemsToStore, 'harga'));
+            // $sumTotal = array_sum(array_column($itemsToStore, 'total'));
+
+            $itemsToStore = [];
+            $sumQty = 0;
+            $sumPrice = 0;
+            $sumTotal = 0;
+
+            foreach ($this->items as $itemData) {
+                $item = Stok::find($itemData['name']); // Menggunakan find untuk efisiensi
+
+                if ($item) { // Memastikan item ditemukan
+                    $qty = $itemData['qty'];
+                    $harga = $itemData['harga'];
+                    $total = $qty * $harga;
+                    $konversi = $item->konversi; // Mengambil konversi dari item
+
+                    $itemsToStore[] = [
+                        'qty' => $qty,
+                        'terpakai' => 0,
+                        'harga' => $harga,
+                        'total' => $total,
+                        'nama' => $item->name,
+                        'jenis' => $item->jenis,
+                        'item_id' => $item->id,
+                        'item_nama' => $item->nama,
+                        'konversi' => $konversi,
+                    ];
+
+                    // Menghitung total qty dengan mempertimbangkan konversi
+                    $sumQty += $qty * $konversi;
+                    $sumPrice += $harga;
+                    $sumTotal += $total;
+                } 
+            }
         
             // dd($itemsToStore); 
 
@@ -130,7 +173,7 @@ class PembelianList extends Component
                 'kandang_id' => null,
                 'rekanan_nama' => $suppliers->nama,
                 'harga' => $sumPrice,
-                'qty' => $sumQty,
+                'total_qty' => $sumQty,
                 'sub_total' => $sumTotal,
                 'periode' => null,
                 'user_id' => auth()->user()->id,
@@ -145,7 +188,7 @@ class PembelianList extends Component
                 // Prepare the data for creating/updating
                 $data_details = [
                     'transaksi_id' => $transaksi->id,
-                    'parent_id' => null,
+                    // 'parent_id' => null,
                     'jenis' => 'Pembelian',
                     'jenis_barang' => $item->jenis,
                     'tanggal' => $this->tanggal,
@@ -156,10 +199,11 @@ class PembelianList extends Component
                     'item_nama' => $item->nama,
                     'nama' => $item->nama,
                     'harga' => $itemData['harga'],
-                    'qty' => $itemData['qty'],
+                    'qty' => $itemData['qty'] * $item->konversi,
                     'terpakai' => 0,
-                    'sisa' => $itemData['qty'],
+                    'sisa' => $itemData['qty'] * $item->konversi,
                     'sub_total' => $itemData['qty'] * $itemData['harga'],
+                    'konversi' => $item->konversi,
                     'periode' => null,
                     'status' => 'Aktif',
                     'user_id' => auth()->user()->id,

@@ -29,6 +29,7 @@
 
                                     <!--begin::Input group-->
                                     <div class="mb-5">
+                                        <label class="form-label fs-8 mb-3">No. Faktur</label>
                                         <input type="text" wire:model="faktur" id="faktur"
                                             class="form-control form-control-solid" placeholder="No. Faktur" @if ($edit_mode == true) readonly disabled
                                                 
@@ -43,6 +44,7 @@
 
                                     <!--begin::Input group-->
                                     <div class="mb-5">
+                                        <label class="form-label fs-8 mb-3">Tanggal Pembelian</label>
                                         <input wire:model="tanggal" id="tanggal" class="form-control form-control-solid"
                                             placeholder="Tanggal" @if ($edit_mode == true) readonly disabled
                                                 
@@ -62,6 +64,7 @@
 
                                     <!--begin::Input group-->
                                     <div class="mb-5">
+                                        <label class="form-label fs-8 mb-3">Supplier</label>
                                         <!--begin::Select2-->
                                         <select id="supplierSelect" name="supplierSelect" wire:model="supplierSelect"
                                             class="js-select2 form-control">
@@ -87,12 +90,13 @@
 
                                     <!--begin::Input group-->
                                     <div class="mb-5">
+                                        <label class="form-label fs-8 mb-3">Kandang</label>
                                         <!--begin::Select2-->
                                         <select id="selectedKandang" name="selectedKandang" wire:model="selectedKandang"
                                             class="js-select2 form-control">
                                             <option value="">=== Pilih Kandang ===</option>
                                             @foreach ($kandangs as $kandang)
-                                            <option value="{{ $kandang->id }}">{{ $kandang->farms->nama }} - {{
+                                            <option value="{{ $kandang->id }}" @if($selectedKandang == $kandang->id) selected @endif>{{ $kandang->farms->nama }} - {{
                                                 $kandang->kode
                                                 }} - {{ $kandang->nama }}</option>
                                             @endforeach
@@ -108,6 +112,7 @@
 
                                     <!--begin::Input group-->
                                     <div class="mb-5">
+                                        <label class="form-label fs-8 mb-3">Periode</label>
                                         <!--begin::Input-->
                                         <input type="text" wire:model="periode" id="periode"
                                             class="form-control form-control-solid mb-3 mb-lg-0"
@@ -207,16 +212,65 @@
         $("#tanggal").flatpickr();
 
 
-        // const yourModal = document.getElementById('kt_modal_new_doc');
+        const yourModal = document.getElementById('kt_modal_new_doc');
+        const kandangSelect = document.getElementById('selectedKandang');
         // const yourForm = document.getElementById('kt_modal_master_doc_form');
 
-        // yourModal.addEventListener('hidden.bs.modal', event => {
-        //     yourForm.reset();
+        yourModal.addEventListener('show.bs.modal', event => {
+           // Clear existing options in the farmSelect dropdown
+            while (kandangSelect.options.length > 0) {
+                kandangSelect.remove(0);
+            }
 
-        //     // Clear Livewire validation errors
-        //      Livewire.emit('resetFormAndErrors'); // Trigger the Livewire method
+            // Reset operator dropdown
+            kandangSelect.innerHTML = '<option value="">=== Pilih Kandang ===</option>';
 
-        // });
+            // Fetch operators for the selected farm via AJAX, including parameters
+            fetch(`/api/v1/kandangs`, {
+                method: 'POST', // Or 'GET' if your API endpoint supports it
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Add any other necessary headers, e.g., CSRF token if using POST
+                },
+                body: JSON.stringify({ // Add your parameters here
+                    type: 'LIST',
+                    status: 'Aktif'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // ... (rest of your existing code to handle the response)
+                if (data && data.length > 0) {
+                    data.forEach(kandang => {
+                        const option = document.createElement('option');
+                        option.value = kandang.id;
+                        option.text = kandang.nama;
+                        kandangSelect.appendChild(option);
+                    });
+                }
+                console.log(data);
+            })
+            .catch(error => console.error('Error fetching operators:', error));
+
+            // Fetch operators for the selected farm via AJAX
+            // fetch(`/api/v1/get-farms/`)
+            //     .then(response => response.json())
+            //     .then(data => {
+            //         if (data.farms && data.farms.length > 0) {
+            //             data.farms.forEach(farm => {
+            //                 const option = document.createElement('option');
+            //                 option.value = farm.id;
+            //                 option.text = farm.nama;
+            //                 farmSelect.appendChild(option);
+            //             });
+            //         }
+            //         console.log(data);
+            //     })
+            //     .catch(error => console.error('Error fetching operators:', error));
+
+            console.log('form open');
+            
+        });
 
         // Using Bootstrap's Modal instance
 

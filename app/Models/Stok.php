@@ -11,13 +11,13 @@ class Stok extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $table = 'master_stoks';
+    protected $table = 'stoks';
 
     protected $fillable = [
         'id',
         'jenis',
         'kode',
-        'nama',
+        'name',
         'satuan_besar',
         'satuan_kecil',
         'konversi',

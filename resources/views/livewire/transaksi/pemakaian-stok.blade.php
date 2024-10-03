@@ -11,7 +11,7 @@
                         <!--begin::Card body-->
                         <div class="card-body p-12">
                             <!--begin::Form-->
-                            <form action="" id="kt_pembelian_stok_form">
+                            <form action="" id="kt_pemakaian_stok_form">
                                 <!--begin::Wrapper-->
                                 <div class="d-flex flex-column align-items-start flex-xxl-row">
                                     <!--begin::Input group-->
@@ -287,6 +287,34 @@
     @endpush
     @push('scripts')
     <script>
+        function getDetailPemakaian(param) {
+            console.log(param);
+            new DataTable('#itemsTable', {
+                ajax: `/api/v1/transaksi/details/${param}`,
+                columns: [
+                    { data: '#',
+                        render: function (data, type, row, meta) {
+                        return meta.row + meta.settings._iDisplayStart + 1;
+                        } 
+                    },
+                    { data: 'jenis_barang' },
+                    { data: 'nama' },
+                    { data: 'qty', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
+                    { data: 'terpakai', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
+                    { data: 'sisa', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
+                    { data: 'harga', render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) },
+                    { data: 'sub_total', render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) }
+                ]
+            });
+        }
+
+        function closeDetailsPurchasing() {
+            var table = new DataTable('#itemsTable');
+            table.destroy();
+        }
+        
+    </script>
+    <script>
         let farmId, kandangId = '';
         $(document).ready(function() {
             var updateArea = $('#formDiva'); 
@@ -304,7 +332,11 @@
             saveChangesButton.disabled = true;
 
             $('#selectedFarm').change(function() {
+
                 farmId = $(this).val();
+                if(farmId == ''){
+                    // break;
+                }
                 const updateArea = $('#formDiva'); 
                 // const div = document.getElementById('formDiv');
 

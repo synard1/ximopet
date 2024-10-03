@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
 use App\Models\StokMutasi;
+use App\Models\StokTransaksi;
 
 class StokController extends Controller
 {
@@ -26,11 +27,25 @@ class StokController extends Controller
 
             $stockEntries = TransaksiDetail::where('item_id', $itemId)
                 ->where('farm_id', $validatedData['farm_id']) 
+                ->where('sisa' , '>', 0)
+                ->whereNotIn('jenis_barang', ['DOC'])
                 // ->where('kandang_id', $validatedData['kandang_id']) 
-                ->orderBy('created_at', 'desc')
+                ->orderBy('tanggal', 'asc')
                 ->get();
 
             $remainingQuantity = $quantityUsed;
+
+            // Create Stocktransaksi
+            $stokTransaksi = StokTransaksi::create([
+                            'farm_id' => $validatedData['farm_id'],
+                            'kandang_id' => $validatedData['kandang_id'],
+                            'qty' => 0,
+                            'terpakai' => 0,
+                            'sisa' => 0,
+                            'jenis' => 'Keluar',
+                            'tanggal'=> $validatedData['tanggal'],                            
+                            'user_id' => auth()->user()->id,
+                        ]);
 
             foreach ($stockEntries as $stockEntry) {
                 if ($remainingQuantity <= 0) {
@@ -48,7 +63,8 @@ class StokController extends Controller
                 
                         // Create StockMovement
                         StokMutasi::create([
-                            'transaksidet_id' => $stockEntry->id,
+                            'stok_transaksi_id' => $stokTransaksi->id,
+                            'transaksi_detail_id' => $stockEntry->id,
                             'item_id' => $stockEntry->item_id,
                             'item_nama' => $stockEntry->item_nama,
                             'jenis_barang' => $stockEntry->jenis_barang,
@@ -77,7 +93,8 @@ class StokController extends Controller
                         $stockEntry->save();
                 
                         StokMutasi::create([
-                            'transaksidet_id' => $stockEntry->id,
+                            'stok_transaksi_id' => $stokTransaksi->id,
+                            'transaksi_detail_id' => $stockEntry->id,
                             'item_id' => $stockEntry->item_id,
                             'item_nama' => $stockEntry->item_nama,
                             'jenis_barang' => $stockEntry->jenis_barang,

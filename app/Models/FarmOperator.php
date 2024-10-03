@@ -9,26 +9,27 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FarmOperator extends Model
 {
-    use HasFactory, HasUuids, SoftDeletes;
+    // Specify the table name if it's not the conventional 'farm_operators'
+    protected $table = 'farm_operators'; 
 
-    protected $table = 'farm_operators';
+    // If you don't have 'created_at' and 'updated_at' columns in your pivot table
+    public $timestamps = false; 
 
+    // Define the fillable attributes (if you have any additional columns besides the foreign keys)
     protected $fillable = [
-        'id',
         'farm_id',
-        'nama_farm',
         'user_id',
-        'nama_operator',
-        'status',
+        // ... other fillable attributes if needed
     ];
+
+    // Define relationships with Farm and User models
+    public function farm()
+    {
+        return $this->belongsTo(Farm::class);
+    }
 
     public function user()
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function farm()
-    {
-        return $this->belongsTo(Farm::class);
     }
 }

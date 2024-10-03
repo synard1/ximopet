@@ -34,4 +34,9 @@ class Farm extends Model
     {
         return $this->hasMany(FarmOperator::class);
     }
+
+    public function operators()
+    {
+        return $this->belongsToMany(User::class, 'farm_operators');
+    }
 }

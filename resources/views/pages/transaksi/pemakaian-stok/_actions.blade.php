@@ -13,22 +13,22 @@
     <!--end::Menu item--> --}}
 
     <!--begin::Menu item-->
-    <div class="menu-item px-3">
+    {{-- <div class="menu-item px-3"> --}}
         {{-- <a href="#" class="menu-link px-3" wire:click="edit('{{ $stokMutasi->id }}')"> --}}
         {{-- <a href="#" class="menu-link px-3" data-kt-stokMutasi-id="{{ $stokMutasi->id }}" data-bs-toggle="modal" data-bs-target="#kt_modal_master_stokMutasi" data-kt-action="update_row"> --}}
-        <a href="#" class="menu-link px-3" data-kt-stokMutasi-id="{{ $stokMutasi->id }}" data-kt-action="update_row_stok">
+        {{-- <a href="#" class="menu-link px-3" data-kt-stokMutasi-id="{{ $stokMutasi->id }}" data-kt-action="update_row_stok">
             Edit
-        </a>
+        </a> --}}
         {{-- <button wire:click="edit('{{ $stokMutasi->id }}')" class="btn btn-sm btn-info">Edit</button> --}}
 
-    </div>
+    {{-- </div> --}}
     <!--end::Menu item-->
 
     <!--begin::Menu item-->
     <div class="menu-item px-3">
         {{-- <a href="#" class="menu-link px-3" wire:click="edit('{{ $stokMutasi->id }}')"> --}}
         {{-- <a href="#" class="menu-link px-3" data-kt-stokMutasi-id="{{ $stokMutasi->id }}" data-bs-toggle="modal" data-bs-target="#kt_modal_master_stokMutasi" data-kt-action="update_row"> --}}
-        <a href="#" class="menu-link px-3" data-kt-stokMutasi-id="{{ $stokMutasi->id }}" data-kt-action="view_details">
+        <a href="#" class="menu-link px-3" data-kt-transaksi-id="{{ $stokMutasi->id }}" data-kt-action="view_detail_pemakaian">
             View
         </a>
         {{-- <button wire:click="edit('{{ $stokMutasi->id }}')" class="btn btn-sm btn-info">Edit</button> --}}

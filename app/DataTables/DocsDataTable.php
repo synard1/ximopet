@@ -86,9 +86,13 @@ class DocsDataTable extends DataTable
         $query = $model->newQuery();
 
         // return $model->newQuery();
-        $query = $model::orderBy('tanggal', 'DESC')
+        $query = $model::with('transaksiDetail')
             ->where('jenis','Pembelian')
-            ->where('jenis_barang','DOC')
+            ->whereHas('transaksiDetail', function ($query) {
+                $query->where('jenis_barang', 'DOC');
+            })
+            // ->where('user_id',auth()->user()->id)
+            ->orderBy('tanggal', 'DESC')
             ->newQuery();
 
         return $query;
@@ -113,6 +117,7 @@ class DocsDataTable extends DataTable
             ->parameters([
                 'scrollX'      =>  true,
                 'searching'       =>  false,
+                // 'responsive'       =>  true,
                 'lengthMenu' => [
                         [ 10, 25, 50, -1 ],
                         [ '10 rows', '25 rows', '50 rows', 'Show all' ]
@@ -128,17 +133,30 @@ class DocsDataTable extends DataTable
     public function getColumns(): array
     {
         return [
+            // Add a special column to trigger the child row
+            // Column::computed('details')
+            //     ->title('') // You can set a title if you want
+            //     ->addClass('details-control text-center') // Add necessary classes for styling
+            //     ->orderable(false)
+            //     ->searchable(false)
+            //     ->width(60) // Adjust width as needed
+            //     ->exportable(false)
+            //     ->printable(false),
             Column::make('faktur')->searchable(true),
             Column::make('tanggal')->title('Tanggal Pembelian')->searchable(true),
             Column::make('rekanan_id')->title('Nama Supplier')->searchable(true),
-            Column::make('payload.doc.nama')->title('Nama DOC')->searchable(true),
-            Column::make('qty')->searchable(false),
+            // Column::make('payload.doc.nama')->title('Nama DOC')->searchable(true),
+            Column::make('total_qty')->searchable(false),
             Column::make('harga')->searchable(true),
             Column::make('sub_total')->searchable(true),
             Column::make('periode')->searchable(true),
-            Column::make('farm_id')->title('Farm'),
-            Column::make('kandang_id')->title('Kandang'),
-            Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
+            Column::make('farm_id')->visible(false)->title('Farm'),
+            Column::make('kandang_id')->visible(false)->title('Kandang'),
+            Column::make('created_at')->title('Created Date')
+                ->visible(false)
+                // ->addClass('text-nowrap')
+                ->searchable(false)
+                ->addClass('text-nowrap details-control'),
             Column::computed('action')
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)

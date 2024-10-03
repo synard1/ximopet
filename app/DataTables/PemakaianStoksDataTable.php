@@ -9,6 +9,8 @@ use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+
 
 class PemakaianStoksDataTable extends DataTable
 {
@@ -20,27 +22,63 @@ class PemakaianStoksDataTable extends DataTable
 
     private function formatRupiah($amount) {
         // Convert the number to a string with two decimal places
-        $formattedAmount = number_format($amount, 2, ',', '.');
+        // $formattedAmount = number_format($amount, 2, ',', '.');
     
         // Add the currency symbol and return the formatted number
-        return "Rp " . $formattedAmount;
+        return "Rp " . $amount;
     }
 
-    public function dataTable(QueryBuilder $query): EloquentDataTable
+    public function dataTable(QueryBuilder $query, Request $request): EloquentDataTable
     {
         return (new EloquentDataTable($query))
             ->editColumn('created_at', function (StokMutasi $stokMutasi) {
                 return $stokMutasi->created_at->format('d M Y, h:i a');
             })
+            ->addColumn('tanggal_pembelian', function (StokMutasi $stokMutasi) {
+                // $tanggal = Carbon::parse($stokMutasi->tanggal);
+                // $tanggal->format('d-m-Y');
+                // return $tanggal;
+                    return $stokMutasi->TransaksiDetail->tanggal->format('Y-m-d');
+
+            })
+            // ->filterColumn('tanggal_pembelian', function($query, $keyword) {
+            //     $query->whereHas('TransaksiDetail', function($query) use ($keyword) { // Assuming you have a 'farm' relationship on your model
+            //         $query->where('tanggal', 'like', "%{$keyword}%");
+            //     });
+            // })
+            ->filter(function ($query) use ($request) {
+                if ($request->has('search') && $request->get('search')['value'] != '') {
+                    $searchTerm = $request->get('search')['value'];
+            
+                    $query->where(function ($q) use ($searchTerm) {
+                        $q->whereHas('TransaksiDetail', function ($subquery) use ($searchTerm) {
+                            $subquery->where('tanggal', 'like', "%$searchTerm%");
+                            // You can add more 'orWhere' conditions on TransaksiDetail columns here
+                        })
+                        ->orWhereHas('farms', function ($subquery) use ($searchTerm) {
+                            $subquery->where('nama', 'like', "%$searchTerm%");
+                            // Add more 'orWhere' conditions on 'farms' columns if needed
+                        })
+                        ->orWhereHas('kandangs', function ($subquery) use ($searchTerm) {
+                            $subquery->where('nama', 'like', "%$searchTerm%");
+                            // Add more 'orWhere' conditions on 'farms' columns if needed
+                        });
+                        // Add more 'orWhereHas' conditions for other relationships if needed
+                    });
+                }
+            })
             ->editColumn('tanggal', function (StokMutasi $stokMutasi) {
                 // $tanggal = Carbon::parse($stokMutasi->tanggal);
                 // $tanggal->format('d-m-Y');
                 // return $tanggal;
-                    return $stokMutasi->tanggal->format('d-M-Y');
+                    return $stokMutasi->tanggal->format('d-m-Y');
 
             })
             ->editColumn('farm_id', function (StokMutasi $stokMutasi) {
                 return $stokMutasi->farms->nama;
+            })
+            ->editColumn('kandang_id', function (StokMutasi $stokMutasi) {
+                return $stokMutasi->kandangs->nama;
             })
             ->editColumn('rekanan_id', function (StokMutasi $stokMutasi) {
                 return $stokMutasi->rekanans->nama;
@@ -69,7 +107,7 @@ class PemakaianStoksDataTable extends DataTable
             //     });
             // })
             ->setRowId('id')
-            ->rawColumns(['']);
+            ->rawColumns(['tanggal_pembelian']);
             // ->make(true);
     }
 
@@ -82,7 +120,8 @@ class PemakaianStoksDataTable extends DataTable
         $query = $model->newQuery();
 
         // return $model->newQuery();
-        $query = $model::where('jenis','Keluar')
+        $query = $model::with(['farms','kandangs','rekanans','items','TransaksiDetail'])
+            ->where('jenis','Keluar')
             ->orderBy('tanggal', 'DESC')
             ->newQuery();
 
@@ -99,16 +138,27 @@ class PemakaianStoksDataTable extends DataTable
             ->setTableId('pemakaianStoks-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
+            // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
+            ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
+            ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
+            // ->setTableId('pemakaianStoks-table')
+            // ->columns($this->getColumns())
+            // ->minifiedAjax()
             // ->dom('Bfrtip')
             // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
             // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
-            ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
-            ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
+            // // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
+            // ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             ->orderBy(1)
-            ->parameters([
-                'scrollX'      =>  true,
-                'searching'      =>  false,
-            ])
+            // ->parameters([
+            //     // 'scrollX'      =>  true,
+            //     // 'searching'     => false,
+            //     'lengthMenu' => [
+            //             [ 10, 25, 50, -1 ],
+            //             [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+            //     ],
+            //     'buttons'      => ['export', 'print', 'reload','colvis'],
+            // ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaksi/pemakaian-stok/_draw-scripts.js')) . "}");
     }
 
@@ -119,14 +169,16 @@ class PemakaianStoksDataTable extends DataTable
     {
         return [
             // Column::make('faktur')->searchable(true),
-            Column::make('farm_id')->title('Farm')->searchable(true),
-            Column::make('tanggal')->title('Tanggal Pembelian')->searchable(true),
+            Column::make('farm_id')->title('Farm'),
+            Column::make('kandang_id')->title('Kandang'),
+            Column::computed('tanggal_pembelian')->title('Tanggal Pembelian')->searchable(true),
+            Column::make('tanggal')->title('Tanggal Pemakaian'),
             // Column::make('rekanan_id')->title('Nama Supplier')->searchable(true),
-            Column::make('item_id')->title('Nama Item')->searchable(true),
+            // Column::make('item_id')->title('Nama Item')->searchable(true),
+            // Column::make('qty')->title('Terpakai'),
+            // Column::make('harga')->searchable(true),
             Column::make('qty')->title('Terpakai'),
-            Column::make('harga')->searchable(true),
-            Column::make('terpakai')->title('Total Terpakai')->searchable(true),
-            Column::make('sisa')->searchable(true),
+            // Column::make('sisa')->searchable(true),
             // Column::make('sub_total')->searchable(true),
             // Column::make('periode')->searchable(true),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),

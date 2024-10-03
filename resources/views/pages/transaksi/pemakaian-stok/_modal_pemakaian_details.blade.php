@@ -1,9 +1,9 @@
 <!-- Modal -->
-<div class="modal fade" id="kt_modal_pembelian_details" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+<div class="modal fade" id="kt_modal_pemakaian_details" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h1 class="modal-title fs-5" id="kt_modal_pembelian_details_title">Modal title</h1>
+          <h1 class="modal-title fs-5" id="kt_modal_pemakaian_details_title">Modal title</h1>
           {{-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> --}}
         </div>
         <div class="modal-body">
@@ -36,10 +36,20 @@
 
   @push('scripts')
     <script>
-        function getDetails(param) {
+        function getDetailPemakaian(param) {
             console.log(param);
             new DataTable('#detailsTable', {
-                ajax: `/api/v1/transaksi/details/${param}`,
+                // ajax: `/api/v1/transaksi/pemakaian/details/${param}`,
+                ajax: {
+                    url: "/api/v1/transaksi", // Replace with your actual route
+                    type: 'POST', // Use POST method
+                    data: function (d) {
+                        // Add your additional data here
+                        d.type = 'detail';
+                        d.jenis = 'transaksi';
+                        d.id = param;
+                    }
+                },
                 columns: [
                     { data: '#',
                         render: function (data, type, row, meta) {
@@ -64,7 +74,7 @@
         }
 
         // Destroy DataTables on modal close
-        // $('#kt_modal_pembelian_details').on('hidden.bs.modal', function () {
+        // $('#kt_modal_pemakaian_details').on('hidden.bs.modal', function () {
         //     // Destroy the DataTables instance
         //     window.LaravelDataTables['detailsTable'].destroy();
         //     console.log('tables destroy');

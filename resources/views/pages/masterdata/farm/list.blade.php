@@ -77,7 +77,7 @@
                         <!--begin::Search-->
                         <div class="d-flex align-items-center position-relative my-1">
                             {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
-                            <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Operator" id="mySearchInput"/>
+                            <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Operator" id="mySearchInput2"/>
                         </div>
                         <!--end::Search-->
                     </div>
@@ -111,7 +111,7 @@
                                     {{-- <th>ID</th> --}}
                                     <th>Nama Farm</th>
                                     <th>Nama Operator</th>
-                                    <th>Status</th>
+                                    {{-- <th>Status</th> --}}
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -136,22 +136,40 @@
                     if (e.target.href.includes('#kt_tab_operator')) {
                         var table = new DataTable('#operatorsTable');
                         table.destroy();
-                        // window.LaravelDataTables['operatorsTable'].ajax.reload();
+                        window.LaravelDataTables['operatorsTable'].ajax.reload();
                         getOperators();
                         console.log('tab operator');
+
+                        document.getElementById('mySearchInput2').addEventListener('keyup', function () {
+                            window.LaravelDataTables['operatorsTable'].search(this.value).draw();
+                        });
                     }else{
                         // var table = new DataTable('#farms-table');
                         // table.destroy();
                         window.LaravelDataTables['farms-table'].ajax.reload();
                         
                         console.log('tab farm');
+                        document.getElementById('mySearchInput').addEventListener('keyup', function () {
+                            window.LaravelDataTables['farms-table'].search(this.value).draw();
+                        });
                     }
                 });
             });
 
-            document.getElementById('mySearchInput').addEventListener('keyup', function () {
-                window.LaravelDataTables['farms-table'].search(this.value).draw();
-            });
+            
+
+            
+
+            // Search Data Operator
+            // document.getElementById('searchOperator').addEventListener('keyup', function () {
+            //     window.LaravelDataTables['operatorsTable'].search(this.value).draw();
+            // });
+
+            // const filterSearch = document.querySelector('[data-kt-user-operator-filter="search"]');
+            // filterSearch.addEventListener('keyup', function (e) {
+            //     datatable.search(e.target.value).draw();
+            // });
+
             document.addEventListener('livewire:init', function () {
                 Livewire.on('success', function () {
                     $('#kt_modal_add_user').modal('hide');
@@ -186,14 +204,14 @@
                         // { data: 'farm_id' },
                         { data: 'nama_farm' },
                         { data: 'nama_operator' },
-                        { data: 'status' },
+                        // { data: 'status' },
                         { 
                             data: null, 
                             orderable: false, 
                             searchable: false,
                             render: function (data, type, row) {
                                 return `
-                                    <button class="btn btn-sm btn-danger" onclick="deleteOperator('${row.id}')">Delete</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteOperator('${row.user_id}','${row.farm_id}')">Delete</button>
                                 `;
                                 // return `
                                 //     <a href="/farm/operators/${row.id}" class="btn btn-sm btn-primary">View</a>
@@ -206,12 +224,29 @@
                 });
             }
 
-            function deleteOperator(id) {
+            function deleteOperator(user_id,farm_id) {
+                 // Prepare the final JSON data to be sent
+                const finalData = {
+                    farm_id: farm_id,
+                    user_id: user_id,
+                    type: 'DELETE',
+                    // ... other data you might need to include (e.g., 'parameter', 'tanggal')
+                };
+
                 if (confirm('Are you sure you want to delete this operator?')) {
+                    $.ajaxSetup({
+                        headers: {
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        }
+                    });
+
                     $.ajax({
-                        url: `/api/v1/farm/operators/${id}`,
-                        type: 'DELETE',
+                        url: `/api/v1/farm/operators`,
+                        type: 'POST',
+                        data: JSON.stringify(finalData),
+                        contentType: 'application/json', 
                         success: function(result) {
+                            toastr.success(result.message);
                             // Reload the DataTable to reflect the deletion
                             $('#operatorsTable').DataTable().ajax.reload();
                         },

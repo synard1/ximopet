@@ -52,6 +52,7 @@
         <!--end::Card body-->
     </div>
 
+    @include('pages.transaksi.pembelian-doc._modal_pembelian_doc_details')
     @push('scripts')
         {{ $dataTable->scripts() }}
         <script>

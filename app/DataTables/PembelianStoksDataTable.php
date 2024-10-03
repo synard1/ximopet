@@ -3,6 +3,7 @@
 namespace App\DataTables;
 
 use App\Models\Transaksi;
+use App\Models\Stok;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
@@ -43,9 +44,13 @@ class PembelianStoksDataTable extends DataTable
             // ->editColumn('payload.doc.nama', function (Transaksi $transaksi) {
             //     return $transaksi->payload['doc']['kode'] .' - '.$transaksi->payload['doc']['nama'];
             // })
-            ->editColumn('harga', function (Transaksi $transaksi) {
-                return $this->formatRupiah($transaksi->harga);
-            })
+            // ->editColumn('qty', function (Transaksi $transaksi) {
+
+            //     return $transaksi->qty / $transaksi->items->konversi;
+            // })
+            // ->editColumn('harga', function (Transaksi $transaksi) {
+            //     return $this->formatRupiah($transaksi->harga);
+            // })
             ->editColumn('sub_total', function (Transaksi $transaksi) {
                 return $this->formatRupiah($transaksi->sub_total);
             })
@@ -75,10 +80,12 @@ class PembelianStoksDataTable extends DataTable
 
         // return $model->newQuery();
         $query = $model::where('jenis','Pembelian')
-            ->where('jenis_barang','!=','DOC')
-            ->where('user_id',auth()->user()->id)
-            ->orderBy('tanggal', 'DESC')
-            ->newQuery();
+                ->whereHas('transaksiDetail', function ($query) {
+                    $query->whereNotIn('jenis_barang', ['DOC']); // Gunakan whereNotIn untuk mengecualikan 'DOC'
+                })
+                ->where('user_id',auth()->user()->id)
+                ->orderBy('tanggal', 'DESC')
+                ->newQuery(); 
 
         return $query;
 
@@ -117,8 +124,8 @@ class PembelianStoksDataTable extends DataTable
             Column::make('tanggal')->title('Tanggal Pembelian')->searchable(true),
             Column::make('rekanan_id')->title('Nama Supplier')->searchable(true),
             // Column::make('payload.doc.nama')->title('Nama DOC')->searchable(true),
-            Column::make('qty')->searchable(true),
-            Column::make('harga')->searchable(true),
+            // Column::make('qty')->searchable(true),
+            // Column::make('harga')->searchable(true),
             Column::make('sub_total')->searchable(true),
             // Column::make('periode')->searchable(true),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),

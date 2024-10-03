@@ -14,7 +14,7 @@
                 <!--begin::Search-->
                 <div class="d-flex align-items-center position-relative my-1">
                     {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
-                    <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Data DOC" id="mySearchInput"/>
+                    <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Transaksi" id="mySearchInput"/>
                 </div>
                 <!--end::Search-->
             </div>
@@ -32,7 +32,6 @@
                     <!--end::Add user-->
                 </div>
                 <!--end::Toolbar-->
-
             </div>
             <!--end::Card toolbar-->
         </div>
@@ -50,79 +49,101 @@
     </div>
 
     <livewire:transaksi.pemakaian-stok />
-    {{-- @include('pages.transaksi.pemakaian-stok._modal_pemakaian_details') --}}
+    @include('pages.transaksi.pemakaian-stok._modal_pemakaian_details')
+
 
     @push('scripts')
         {{ $dataTable->scripts() }}
         <script>
-            document.querySelectorAll('[data-kt-button="new_use_stok"]').forEach(function (element) {
-			element.addEventListener('click', function () {
-				// Simulate delete request -- for demo purpose only
-				Swal.fire({
-					html: `Preparing Form`,
-					icon: "info",
-					buttonsStyling: false,
-					showConfirmButton: false,
-					timer: 2000
-				}).then(function () {
+            document.getElementById('mySearchInput').addEventListener('keyup', function () {
+                window.LaravelDataTables['pemakaianStoks-table'].search(this.value).draw();
+            });
+            document.addEventListener('livewire:init', function () {
+                // Livewire.on('success', function () {
+                //     $('#kt_modal_add_user').modal('hide');
+                //     window.LaravelDataTables['pemakaianStoks-table'].ajax.reload();
+                // });
 
-                    $('#supplierDropdown').select2();
+                // Livewire.on('closeFormPemakaian', function () {
+                //     showLoadingSpinner();
+                //     const cardList = document.getElementById(`stokTableCard`);
+                //     cardList.style.display = 'block';
 
-                    // Livewire.on('reinitialize-select2-pemakaianStok', function () {
-                    //     // updateDropdowns();
-                    //     console.log('test update dropdown');
-                    //     // $('#itemsSelect').select2();
-                        
-                    // });
+                //     const cardForm = document.getElementById(`pemakaianStokFormCard`);
+                //     cardForm.style.display = 'none';
 
-                    // console.log('form loaded');
-                    Livewire.dispatch('createPemakaianStok');
+                //     const element = document.getElementById('pemakaianStokFormCard');
+                //     const form = element.querySelector('#kt_pemakaian_stok_form');
+                //     form.reset(); // Reset form	
 
-                    const cardList = document.getElementById(`stokTableCard`);
-                    cardList.style.display = 'none';
-                    // cardList.classList.toggle('d-none');
+                //     // Assuming you have a jQuery reference to your select element
+                //     // const $selectedFarm = $('#selectedFarm');
 
-                    const cardForm = document.getElementById(`pemakaianStokFormCard`);
-                    cardForm.style.display = 'block';
-                    // cardList.classList.toggle('d-none');
-					// fetchFarm();
+                //     // Reset the selected option to the first one (usually the placeholder)
+                //     // $('#selectedFarm').val('');
+                //     // Assuming you've initialized Select2 on the element with id 'selectedFarm'
+                //     $('#selectedFarm').val(null).trigger('change.select2'); 
+                //     $('#kandangs').val(null).trigger('change.select2'); 
 
-				});
-				
-			});
+                //     const updateArea = $('#formDiva'); 
+                //     const saveChangesButton = document.getElementById('saveChangesButton');
 
-		});
+                //     updateArea.addClass('grey-block'); 
 
-        document.addEventListener('livewire:init', function () {
-                Livewire.on('closeFormPemakaian', function () {
-                    showLoadingSpinner();
-                    const cardList = document.getElementById(`stokTableCard`);
-                    cardList.style.display = 'block';
+                //     // Disable the button
+                //     saveChangesButton.disabled = true;
 
-                    const cardForm = document.getElementById(`pemakaianStokFormCard`);
-                    cardForm.style.display = 'none';
-
-                    // Reload DataTables
-                    $('.table').each(function() {
-                        if ($.fn.DataTable.isDataTable(this)) {
-                            $(this).DataTable().ajax.reload();
-                        }
-                    });
+                //     // Reload DataTables
+                //     $('.table').each(function() {
+                //         if ($.fn.DataTable.isDataTable(this)) {
+                //             $(this).DataTable().ajax.reload();
+                //         }
+                //     });
 
                     
-                });
+                // });
             });
-        
-        
-            // document.getElementById('mySearchInput').addEventListener('keyup', function () {
-            //     window.LaravelDataTables['kandangs-table'].search(this.value).draw();
+            // $('#kt_modal_add_user').on('hidden.bs.modal', function () {
+            //     Livewire.dispatch('new_user');
             // });
-            // document.addEventListener('livewire:init', function () {
-            //     Livewire.on('success', function () {
-            //         $('#kt_modal_add_user').modal('hide');
-            //         window.LaravelDataTables['kandangs-table'].ajax.reload();
-            //     });
-            // });
+
+            document.querySelectorAll('[data-kt-button="new_use_stok"]').forEach(function (element) {
+                element.addEventListener('click', function () {
+                    // Simulate delete request -- for demo purpose only
+                    Swal.fire({
+                        html: `Preparing Form`,
+                        icon: "info",
+                        buttonsStyling: false,
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(function () {
+
+                        $('#supplierDropdown').select2();
+
+                        // Livewire.on('reinitialize-select2-pemakaianStok', function () {
+                        //     // updateDropdowns();
+                        //     console.log('test update dropdown');
+                        //     // $('#itemsSelect').select2();
+                            
+                        // });
+
+                        // console.log('form loaded');
+                        Livewire.dispatch('createPemakaianStok');
+
+                        const cardList = document.getElementById(`stokTableCard`);
+                        cardList.style.display = 'none';
+                        // cardList.classList.toggle('d-none');
+
+                        const cardForm = document.getElementById(`pemakaianStokFormCard`);
+                        cardForm.style.display = 'block';
+                        // cardList.classList.toggle('d-none');
+                        // fetchFarm();
+
+                    });
+                    
+                });
+
+            });
         </script>
     @endpush
 </x-default-layout>

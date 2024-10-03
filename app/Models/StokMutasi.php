@@ -15,7 +15,8 @@ class StokMutasi extends Model
 
     protected $fillable = [
         'id',
-        'transaksidet_id',
+        'stok_transaksi_id',
+        'transaksi_detail_id',
         'jenis',
         'jenis_barang',
         'tanggal',
@@ -61,8 +62,13 @@ class StokMutasi extends Model
         return $this->belongsTo(Stok::class, 'item_id','id');
     }
 
-    // public function transaksis()
-    // {
-    //     return $this->belongsTo(Transaksi::class, 'transaksi_id','id');
-    // }
+    public function stokTransaksi()
+    {
+        return $this->belongsTo(StokTransaksi::class); 
+    }
+
+    public function TransaksiDetail()
+    {
+        return $this->belongsTo(TransaksiDetail::class, 'transaksi_detail_id','id');
+    }
 }

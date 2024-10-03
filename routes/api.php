@@ -7,6 +7,8 @@ use App\Actions\AppApi;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\MasterData\KandangController;
+use App\Http\Controllers\Transaksi\TransaksiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -126,6 +128,14 @@ Route::prefix('v1')->group(function () {
         return app(AppApi::class)->create($request);
     });
 
+    Route::post('/kandangs', function (Request $request) {
+        return app(KandangController::class)->getKandangs($request);
+    });
+
+    Route::post('/transaksi', function (Request $request) {
+        return app(TransaksiController::class)->getTransaksi($request);
+    });
+
     Route::get('/farms/{id}', function ($id) {
         return app(AppApi::class)->get($id);
     });
@@ -146,8 +156,12 @@ Route::prefix('v1')->group(function () {
         return app(AppApi::class)->getFarmOperator();
     });
 
-    Route::delete('/farm/operators/{id}', function ($id) {
-        return app(AppApi::class)->deleteFarmOperator($id);
+    Route::post('/farm/operators', function (Request $request) {
+        return app(AppApi::class)->farmOperator($request);
+    });
+
+    Route::delete('/farm/operators', function (Request $request) {
+        return app(AppApi::class)->deleteFarmOperator($request);
     });
 
     Route::get('/get-operators/{farm}', [AppApi::class, 'getOperators']);
@@ -162,6 +176,10 @@ Route::prefix('v1')->group(function () {
     Route::post('/stoks/mutasi', function (Request $request) {
         return app(AppApi::class)->createMutasiStok($request);
     });
+
+    // Route::post('/transaksi', function (Request $request) {
+    //     return app(AppApi::class)->getTransaksi($request);
+    // });
 
     Route::get('/resetDemo', [AppApi::class, 'resetDemo']);
 
