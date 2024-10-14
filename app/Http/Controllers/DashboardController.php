@@ -42,7 +42,8 @@ class DashboardController extends Controller
         }
         $rekanan = Rekanan::all();
         $stock = \App\Models\TransaksiDetail::where('jenis', 'Pembelian')
-            ->where('jenis_barang', '!=', 'DOC');
+            ->where('jenis_barang', '!=', 'DOC')
+            ->select('jenis_barang', 'sisa', 'konversi');
 
         if (auth()->user()->hasRole('Operator')) {
             $farmOperator = auth()->user()->farmOperators;
@@ -54,12 +55,15 @@ class DashboardController extends Controller
             }
         }
 
-        $stock = $stock->sum('sisa');
+        $stock = $stock->get()->sum(function ($item) {
+            return $item->sisa / $item->konversi;
+        });
 
         $stockByType = \App\Models\Transaksi::where('transaksis.jenis', 'Pembelian')
             ->join('transaksi_details', 'transaksis.id', '=', 'transaksi_details.transaksi_id')
             ->where('transaksi_details.jenis', 'Pembelian')
-            ->select('transaksi_details.jenis_barang', DB::raw('SUM(transaksi_details.sisa) as total_sisa'));
+            ->select('transaksi_details.jenis_barang', 
+                DB::raw('SUM(transaksi_details.sisa / transaksi_details.konversi) as total_sisa'));
 
         if (auth()->user()->hasRole('Operator')) {
             $farmOperator = auth()->user()->farmOperators;

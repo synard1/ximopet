@@ -160,7 +160,7 @@
         <!--end::Col-->
 
         <div class="col-xl-3 mb-10">
-            <div class="card card-flush h-lg-50">
+            <div class="card card-flush h-100">
                 <!--begin::Header-->
                 <div class="card-header pt-5">
                     <!--begin::Title-->
