@@ -3,7 +3,7 @@
 namespace App\DataTables;
 
 use App\Models\Transaksi;
-use App\Models\Stok;
+use App\Models\Item;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
@@ -78,17 +78,28 @@ class PembelianStoksDataTable extends DataTable
     {
         $query = $model->newQuery();
 
-        // return $model->newQuery();
-        $query = $model::where('jenis','Pembelian')
+        if (auth()->user()->hasRole('Operator')) {
+            $farmOperator = auth()->user()->farmOperators;
+            if ($farmOperator) {
+                $farmIds = $farmOperator->pluck('farm_id')->toArray();
+                $query = $model::where('jenis', 'Pembelian')
+                    ->whereHas('transaksiDetail', function ($query) {
+                        $query->whereNotIn('jenis_barang', ['DOC']);
+                    })
+                    ->whereIn('farm_id', $farmIds)
+                    ->orderBy('tanggal', 'DESC')
+                    ->newQuery();
+            }
+        } else {
+            $query = $model::where('jenis', 'Pembelian')
                 ->whereHas('transaksiDetail', function ($query) {
-                    $query->whereNotIn('jenis_barang', ['DOC']); // Gunakan whereNotIn untuk mengecualikan 'DOC'
+                    $query->whereNotIn('jenis_barang', ['DOC']);
                 })
-                ->where('user_id',auth()->user()->id)
                 ->orderBy('tanggal', 'DESC')
-                ->newQuery(); 
+                ->newQuery();
+        }
 
         return $query;
-
     }
 
     /**

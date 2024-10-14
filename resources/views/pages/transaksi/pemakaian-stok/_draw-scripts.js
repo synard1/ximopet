@@ -20,71 +20,46 @@ KTMenu.init();
 
 
 // Add click event listener to delete buttons
-// document.querySelectorAll('[data-kt-action="delete_row"]').forEach(function (element) {
-//     element.addEventListener('click', function () {
-//         Swal.fire({
-//             text: 'Are you sure you want to remove?',
-//             icon: 'warning',
-//             buttonsStyling: false,
-//             showCancelButton: true,
-//             confirmButtonText: 'Yes',
-//             cancelButtonText: 'No',
-//             customClass: {
-//                 confirmButton: 'btn btn-danger',
-//                 cancelButton: 'btn btn-secondary',
-//             }
-//         }).then((result) => {
-//             if (result.isConfirmed) {
-//                 Livewire.dispatch('delete_transaksi_stok', [this.getAttribute('data-kt-transaksi-id')]);
-//             }
-//         });
-//     });
-// });
+document.querySelectorAll('[data-kt-action="delete_row"]').forEach(function (element) {
+    element.addEventListener('click', function () {
+        Swal.fire({
+            text: 'Are you sure you want to remove?',
+            icon: 'warning',
+            buttonsStyling: false,
+            showCancelButton: true,
+            confirmButtonText: 'Yes',
+            cancelButtonText: 'No',
+            customClass: {
+                confirmButton: 'btn btn-danger',
+                cancelButton: 'btn btn-secondary',
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const id = element.getAttribute('data-kt-transaksi-id');
+                // Post reverse stock reduction using AJAX with headers
+                $.ajax({
+                    url: '/api/v1/stocks',
+                    method: 'POST',
+                    data: { type: 'reverse', id: id, jenis: 'Pemakaian' },
+                }).then(function (response) {
+                    if (response.status === 'success') {
+                        var table = new DataTable('#pemakaianStoks-table');
+                        // table.destroy();
+                        table.ajax.reload();
+                        toastr.success(response.message);
+                        // if (LaravelDataTables && LaravelDataTables['transaksis-table'] && typeof LaravelDataTables['transaksis-table'].ajax === 'function') {
+                        //     LaravelDataTables['transaksis-table'].ajax.reload();
+                        // } else {
+                        //     console.error('LaravelDataTables or transaksis-table is not properly initialized');
+                        // }
+                    }
+                });
 
-// Add click event listener to update buttons
-// document.querySelectorAll('[data-kt-action="update_row_stok"]').forEach(function (element) {
-//     element.addEventListener('click', function (e) {
-//         e.preventDefault();
-//         // Select parent row
-//         const parent = e.target.closest('tr');
-
-//         // Get transaksi ID
-//         const transaksiId = event.currentTarget.getAttribute('data-kt-transaksi-id');
-
-//         // Get subject name
-//         const transaksiName = parent.querySelectorAll('td')[1].innerText;
-
-//         // Simulate delete request -- for demo purpose only
-//         Swal.fire({
-//             html: `Membuka Data <b>`+ transaksiName +`</b>`,
-//             icon: "info",
-//             buttonsStyling: false,
-//             showConfirmButton: false,
-//             timer: 2000
-//         }).then(function () {
-//             Livewire.dispatch('editPembelian', [transaksiId]);
-
-//             // flatpickr("#tanggalPembelian", {
-//             //     enableTime: true,
-//             //     dateFormat: "Y-m-d H:i",
-//             // });
-
-//             // flatpickr("#tanggal", {
-//             //     enableTime: true,
-//             //     dateFormat: "Y-m-d H:i", 
-//             //     defaultDate: '{{ $tanggal }}',
-//             // });
-
-//             const cardList = document.getElementById(`stokTableCard`);
-//             cardList.style.display = 'none';
-//             // cardList.classList.toggle('d-none');
-
-//             const cardForm = document.getElementById(`stokFormCard`);
-//             cardForm.style.display = 'block';
-//         });
-        
-//     });
-// });
+                // Livewire.dispatch('deletePemakaianStok', [this.getAttribute('data-kt-transaksi-id')]);
+            }
+        });
+    });
+});
 
 // Add click event listener to update buttons
 document.querySelectorAll('[data-kt-action="view_detail_pemakaian"]').forEach(function (element) {
@@ -127,11 +102,3 @@ document.querySelectorAll('[data-kt-action="view_detail_pemakaian"]').forEach(fu
         
     });
 });
-
-
-
-// // Listen for 'success' event emitted by Livewire
-// Livewire.on('success', (message) => {
-//     // Reload the transaksis-table datatable
-//     LaravelDataTables['transaksis-table'].ajax.reload();
-// });

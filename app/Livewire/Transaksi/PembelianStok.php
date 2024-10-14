@@ -3,7 +3,7 @@
 namespace App\Livewire\Transaksi;
 
 use Livewire\Component;
-use App\Models\Stok;
+use App\Models\Item;
 use App\Models\Rekanan;
 use App\Models\Kandang;
 use App\Models\FarmOperator;
@@ -34,7 +34,7 @@ class PembelianStok extends Component
 
     public function render()
     {
-        $this->docs = Stok::where('jenis','DOC')->get();
+        $this->docs = Item::where('jenis','DOC')->get();
         $this->suppliers = Rekanan::where('jenis','Supplier')->get();
         $this->farms = FarmOperator::where('user_id', auth()->user()->id)->get();
         $this->kandangs = Kandang::where('status','Aktif')->get();
@@ -56,7 +56,7 @@ class PembelianStok extends Component
 
             $supplier = Rekanan::where('id', $this->supplierSelect)->first();
             $kandang = Kandang::where('id', $this->selectedKandang)->first();
-            $doc = Stok::where('id',$this->docSelect)->first();
+            $doc = Item::where('id',$this->docSelect)->first();
         
             // Prepare the data for creating/updating
             $data = [

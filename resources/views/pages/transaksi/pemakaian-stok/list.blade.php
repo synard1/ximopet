@@ -59,6 +59,23 @@
                 window.LaravelDataTables['pemakaianStoks-table'].search(this.value).draw();
             });
             document.addEventListener('livewire:init', function () {
+                Livewire.on('closeFormPemakaian', function () {
+                    showLoadingSpinner();
+                    const cardList = document.getElementById(`stokTableCard`);
+                    cardList.style.display = 'block';
+
+                    const cardForm = document.getElementById(`pemakaianStokFormCard`);
+                    cardForm.style.display = 'none';
+
+                    // Reload DataTables
+                    $('.table').each(function() {
+                        if ($.fn.DataTable.isDataTable(this)) {
+                            $(this).DataTable().ajax.reload();
+                        }
+                    });
+
+                    
+                });
                 // Livewire.on('success', function () {
                 //     $('#kt_modal_add_user').modal('hide');
                 //     window.LaravelDataTables['pemakaianStoks-table'].ajax.reload();

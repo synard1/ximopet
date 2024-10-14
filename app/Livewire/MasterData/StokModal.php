@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 use App\Models\Farm;
-use App\Models\Stok;
+use App\Models\Item;
 
 class StokModal extends Component
 {
@@ -60,7 +60,7 @@ class StokModal extends Component
                 'user_id' => auth()->user()->id,
             ];
         
-            $stok = Stok::where('id', $this->stok_id)->first() ?? Stok::create($data);
+            $stok = Item::where('id', $this->stok_id)->first() ?? Item::create($data);
         
             DB::commit();
     

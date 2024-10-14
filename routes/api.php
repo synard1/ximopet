@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MasterData\KandangController;
 use App\Http\Controllers\Transaksi\TransaksiController;
+use App\Http\Controllers\StokController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,11 +22,19 @@ use App\Http\Controllers\Transaksi\TransaksiController;
 |
 */
 
+Route::middleware('auth:sanctum')->get('/check-auth', function (Request $request) {
+    if ($request->user()) {
+        return response()->json(['user' => $request->user()]);
+    } else {
+        return response()->json(['error' => 'Unauthenticated'], 401);
+    }
+});
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::prefix('v1')->group(function () {
+Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
 
     Route::get('/users', function (Request $request) {
         return app(SampleUserApi::class)->datatableList($request);
@@ -136,6 +145,10 @@ Route::prefix('v1')->group(function () {
         return app(TransaksiController::class)->getTransaksi($request);
     });
 
+    Route::post('/stocks', function (Request $request) {
+        return app(StokController::class)->stoks($request);
+    })->name('api.v1.stoks');
+
     Route::get('/farms/{id}', function ($id) {
         return app(AppApi::class)->get($id);
     });
@@ -169,9 +182,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/get-kandangs/{farm}/{status}', [AppApi::class, 'getKandangs']);
     Route::get('/get-farm-stocks/{farm}', [AppApi::class, 'getFarmStoks']);
 
-    Route::post('/stocks-edit', function (Request $request) {
-        return app(AppApi::class)->postStockEdit($request);
-    });
+    // Route::post('/stocks-edit', function (Request $request) {
+    //     return app(AppApi::class)->postStockEdit($request);
+    // });
 
     Route::post('/stoks/mutasi', function (Request $request) {
         return app(AppApi::class)->createMutasiStok($request);
@@ -182,5 +195,7 @@ Route::prefix('v1')->group(function () {
     // });
 
     Route::get('/resetDemo', [AppApi::class, 'resetDemo']);
+
+    
 
 });

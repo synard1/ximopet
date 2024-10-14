@@ -5,7 +5,7 @@ namespace App\Livewire\Transaksi;
 use Livewire\Component;
 use App\Models\Rekanan;
 use App\Models\Item;
-use App\Models\StokHistory;
+use App\Models\StokMutasi;
 use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
 use App\Models\FarmOperator;
@@ -107,13 +107,32 @@ class PembelianList extends Component
             // Wrap database operation in a transaction (if applicable)
             DB::beginTransaction();
 
+            // foreach ($this->items as $itemData) {
+            //     $items = Item::where('id', $itemData['name'])->first();
+            //     $itemsToStore[] = [
+            //         'qty' => $itemData['qty'],
+            //         'terpakai' => 0,
+            //         'harga' => $itemData['harga'],
+            //         'total' => $itemData['qty'] * $itemData['harga'],
+            //         'nama' => $items->name,
+            //         'jenis' => $items->jenis,
+            //         'item_id' => $items->id,
+            //         'item_nama' => $items->nama,
+            //         'konversi' => $items->konversi,
+            //     ];
+            // }
+
+            // $sumQty = array_sum(array_column($itemsToStore, 'qty'));
+            // $sumPrice = array_sum(array_column($itemsToStore, 'harga'));
+            // $sumTotal = array_sum(array_column($itemsToStore, 'total'));
+
             $itemsToStore = [];
             $sumQty = 0;
             $sumPrice = 0;
             $sumTotal = 0;
 
             foreach ($this->items as $itemData) {
-                $item = Item::findOrFail($itemData['name']); // Menggunakan find untuk efisiensi
+                $item = Item::find($itemData['name']); // Menggunakan find untuk efisiensi
 
                 if ($item) { // Memastikan item ditemukan
                     $qty = $itemData['qty'];
@@ -140,7 +159,11 @@ class PembelianList extends Component
                 } 
             }
         
+            // dd($itemsToStore); 
+
             $suppliers = Rekanan::where('id', $this->selectedSupplier)->first();
+
+            
 
             // Prepare the data for creating/updating
             $data = [
@@ -157,26 +180,76 @@ class PembelianList extends Component
                 'terpakai' => 0,
                 'sisa' => $sumQty,
                 'sub_total' => $sumTotal,
-                'kelompok_ternak_id' => null,
+                'periode' => null,
                 'user_id' => auth()->user()->id,
                 // 'payload' => ['items' => $itemsToStore],
                 'status' => 'Aktif',
             ];
 
-            $transaksi = Transaksi::create($data);
+            // $transaksi = Transaksi::create($data);
 
             foreach ($this->items as $itemData) {
-                $item = Item::findOrFail($itemData['name']);
+                $item = Item::where('id', $itemData['name'])->first();
 
-                $transaksiDetail = $this->createStokTransaksiAndDetail($transaksi, $item, $itemData, $suppliers);
-                // $stokMutasi = $this->createStokMutasi($item, $itemData);
+                $stokMutasi = StokMutasi::create([
+                    'farm_id' => $this->selectedFarm,
+                    'kandang_id' => null,
+                    // 'rekanan_id' => $suppliers->id,
+                    'item_id' => $item->id,
+                    // 'item_name' => $item->name,
+                    // 'harga' => $sumPrice,
+                    'qty' => $itemData['qty'],
+                    'stok_awal' => 0,
+                    'stok_akhir' => $itemData['qty'],
+                    'status' => 'Masuk',
+                ]);
 
-                // $this->createTransaksiDetail($transaksi, $item, $itemData);
+                $transaksi= $stokMutasi->stokTransaksi()->create([
+                    'faktur' => $this->faktur,
+                    'tanggal' => $this->tanggal,
+                    'jenis' => 'Pembelian',
+                    'farm_id' => $this->selectedFarm,
+                    'kandang_id' => null,
+                    'rekanan_id' => $suppliers->id,
+                    'item_id' => $item->id,
+                    'item_name' => $item->name,
+                    'harga' => $sumPrice,
+                    'total_qty' => $sumQty,
+                    'terpakai' => 0,
+                    'sisa' => $itemData['qty'],
+                    'sub_total' => $itemData['qty'] * $itemData['harga'],
+                    'periode' => null,
+                    'status' => 'Masuk',
+                    'user_id' => auth()->user()->id,
+                ]);
+
+                // Prepare the data for creating/updating
+                $data_details = [
+                    'transaksi_id' => $transaksi->id,
+                    // 'parent_id' => null,
+                    'jenis' => 'Pembelian',
+                    'jenis_barang' => $item->jenis,
+                    'tanggal' => $this->tanggal,
+                    'rekanan_id' => $transaksi->rekanan_id,
+                    'farm_id' => $this->selectedFarm,
+                    'kandang_id' => null,
+                    'item_id' => $item->id,
+                    'item_name' => $item->name,
+                    'name' => $item->name,
+                    'harga' => $itemData['harga'],
+                    'qty' => $itemData['qty'] * $item->konversi,
+                    'terpakai' => 0,
+                    'sisa' => $itemData['qty'] * $item->konversi,
+                    'sub_total' => $itemData['qty'] * $itemData['harga'],
+                    'konversi' => $item->konversi,
+                    'periode' => null,
+                    'status' => 'Aktif',
+                    'user_id' => auth()->user()->id,
+                ];
+
+                $transaksiDetail = TransaksiDetail::create($data_details);
+
             }
-
-            // Add these methods to the class:
-            
-            
 
             DB::commit();
 
@@ -197,75 +270,6 @@ class PembelianList extends Component
             // $this->reset();
         }
         
-    }
-
-    private function createStokTransaksiAndDetail($transaksi, $item, $itemData, $supplier)
-    {
-        // $transaksiData = [
-        //     'jenis' => 'Pembelian',
-        //     'jenis_barang' => 'Stok',
-        //     'faktur' => $this->faktur,
-        //     'tanggal' => $this->tanggal,
-        //     'rekanan_id' => $supplier->id,
-        //     'farm_id' => $this->selectedFarm,
-        //     'rekanan_nama' => $supplier->nama,
-        //     'harga' => $itemData['harga'],
-        //     'total_qty' => $itemData['qty'],
-        //     'sub_total' => $itemData['qty'] * $itemData['harga'],
-        //     'terpakai' => 0,
-        //     'sisa' => $itemData['qty'],
-        //     'kelompok_ternak_id' => null,
-        //     'user_id' => auth()->user()->id,
-        //     'status' => 'Aktif',
-        // ];
-
-        // $transaksi = Transaksi::create($transaksiData);
-
-        $transaksiDetailData = [
-            'jenis' => 'Pembelian',
-            'jenis_barang' => $item->jenis,
-            'tanggal' => $this->tanggal,
-            'rekanan_id' => $supplier->id,
-            'farm_id' => $this->selectedFarm,
-            'item_id' => $item->id,
-            'item_name' => $item->name,
-            'qty' => $itemData['qty'],
-            'harga' => $itemData['harga'],
-            'sub_total' => $itemData['qty'] * $itemData['harga'],
-            'terpakai' => 0,
-            'sisa' => $itemData['qty'],
-            'satuan_besar' => $item->satuan_besar,
-            'satuan_kecil' => $item->satuan_kecil,
-            'konversi' => $item->konversi,
-            'kelompok_ternak_id' => null,
-            'status' => 'Aktif',
-            'user_id' => auth()->user()->id,
-        ];
-
-        $transaksiDetail = $transaksi->transaksiDetail()->create($transaksiDetailData);
-
-        $stokMutasiData = [
-            'transaksi_id' => $transaksi->id,
-            'farm_id' => $transaksi->farm_id,
-            'kandang_id' => $transaksi->kandang_id,
-            'tanggal' => $this->tanggal,
-            'item_id' => $transaksiDetail->item_id,
-            'qty' => $transaksiDetail->qty,
-            'harga' => $transaksiDetail->harga,
-            'total' => $transaksiDetail->total,
-            'jenis' => 'Masuk',
-            'stok_awal' => 0,
-            'stok_akhir' => $transaksiDetail->qty,
-            'status' => 'Aktif',
-            'user_id' => auth()->user()->id,
-        ];
-
-        $stokHistory = $transaksi->stokHistory()->create($stokMutasiData);
-
-
-        // $transaksiDetail->stokMutasi()->create($stokMutasiData);
-
-        return $transaksi;
     }
 
     public function formatDateTime($dateTimeString)
@@ -306,9 +310,7 @@ class PembelianList extends Component
             }else{
                 // Delete the user record with the specified ID
                 Transaksi::destroy($id);
-                $transaksiDetail = TransaksiDetail::where('transaksi_id', $id)->first();
-                StokHistory::where('transaksi_id', $id)->delete();
-                $transaksiDetail->delete();
+                $deleted = TransaksiDetail::where('transaksi_id', $id)->delete();
 
                 DB::commit();
                 // Emit a success event with a message
@@ -317,10 +319,10 @@ class PembelianList extends Component
 
             
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $th) {
             DB::rollBack();
             // Handle validation and general errors
-            $this->dispatch('error', 'Terjadi kesalahan saat menghapus data.' . $e->getMessage());
+            $this->dispatch('error', 'Terjadi kesalahan saat menghapus data.');
         }
     }
 

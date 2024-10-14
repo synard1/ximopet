@@ -10,11 +10,11 @@ use App\Models\Rekanan;
 use App\Models\Farm;
 use App\Models\FarmOperator;
 use App\Models\Kandang;
-use App\Models\Stok;
+use App\Models\Item;
 use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
 use Spatie\Permission\Models\Role;
-
+use App\Models\StokMutasi;
 
 class DemoSeeder extends Seeder
 {
@@ -34,7 +34,7 @@ class DemoSeeder extends Seeder
 
         // Create Stok records using the array
         foreach ($stockData as $data) {
-            Stok::create(array_merge($data, ['status' => 'Aktif']));
+            Item::create(array_merge($data, ['status' => 'Aktif']));
         }
 
         // Create Rekanan records (Suppliers and Customers)
@@ -78,8 +78,8 @@ class DemoSeeder extends Seeder
             // Data dummy untuk Transaksi Pembelian DOC
             $supplier = Rekanan::where('jenis', 'Supplier')->inRandomOrder()->first();
             $kandang = $demoFarm->kandangs->first(); 
-            $stokDoc = Stok::where('jenis', 'DOC')->inRandomOrder()->first();
-            $stok = Stok::whereIn('jenis', ['Pakan', 'Obat', 'Vaksin', 'Lainnya'])->inRandomOrder()->first();
+            $stokDoc = Item::where('jenis', 'DOC')->inRandomOrder()->first();
+            $stok = Item::whereIn('jenis', ['Pakan', 'Obat', 'Vaksin', 'Lainnya'])->inRandomOrder()->first();
 
             $qty = $faker->numberBetween(10, 20) * 100;
             $harga = $faker->numberBetween(1, 10) * 500;
@@ -109,43 +109,94 @@ class DemoSeeder extends Seeder
                 'sisa' => $qty,
                 'total_qty' => $qty,
                 'harga' => $harga,
-                'periode' => 'PR-'.$demoFarm->kode . '-' . $kandang->kode . str_pad($counter + 1, 3, '0', STR_PAD_LEFT),
-                // 'sub_total' => 0, // Akan diupdate setelah detail ditambahkan
+                // 'periode' => null,
+                'sub_total' => $qty * $harga,
                 'status' => 'Aktif',
                 // 'payload' => ['items' => $itemsToStore],
                 'user_id' => $supervisor->id, // Supervisor yang menyetujui
             ]);
 
-            // Detail Transaksi Pembelian DOC
-            $subTotal = 0;
-            // $qty = $transaksiPembelian->qty;
-            // $harga = $transaksiPembelian->harga;
-            $subTotal += $qty * $harga;
+            if($transaksiPembelian->kelompokTernak()->exists()){
+                $kelompokTernak = $transaksiPembelian->kelompokTernak;
+            }else{
+                $kelompokTernak = $transaksiPembelian->kelompokTernak()->create([
+                    'transaksi_id' => $transaksiPembelian->id, // Ensure this is set
+                    'name' => 'PR-'.$demoFarm->kode . '-' . $kandang->kode . str_pad($counter + 1, 3, '0', STR_PAD_LEFT),
+                    'breed' => 'DOC',
+                    'start_date' => $transaksiPembelian->tanggal,
+                    'estimated_end_date' => $transaksiPembelian->tanggal->addMonths(6),
+                    'initial_quantity' => $qty,
+                    'current_quantity' => $qty,
+                    'death_quantity' => 0,
+                    'slaughter_quantity' => 0,
+                    'sold_quantity' => 0,
+                    'remaining_quantity' => $qty,
+                    'status' => 'Aktif',
+                    'created_by' => $supervisor->id,
+                ]);
+                $transaksiPembelian->kelompok_ternak_id = $kelompokTernak->id;
+                $transaksiPembelian->save();
 
-            TransaksiDetail::create([
-                'transaksi_id' => $transaksiPembelian->id,
-                'jenis' => 'Pembelian',
-                'jenis_barang' => 'DOC',
-                'tanggal' => $transaksiPembelian->tanggal,
-                'rekanan_id' => $supplier->id,
-                'farm_id' => $demoFarm->id,
-                'kandang_id' => $kandang->id,
-                'item_id' => $stokDoc->id,
-                'item_nama' => $stokDoc->nama,
-                'harga' => $harga,
-                'qty' => $qty,
-                'terpakai' => 0,
-                'sisa' => $qty,
-                'sub_total' => $subTotal,
-                'konversi' => 1,
-                'periode' => $transaksiPembelian->periode,
-                'status' => 'Aktif',
-                'user_id' => $supervisor->id,
-            ]);
+                // Detail Transaksi Pembelian DOC
+                $subTotal = 0;
+                // $qty = $transaksiPembelian->qty;
+                // $harga = $transaksiPembelian->harga;
+                $subTotal += $qty * $harga;
 
-            // Update sub total transaksi pembelian
-            $transaksiPembelian->sub_total = $subTotal;
-            $transaksiPembelian->save();
+                $transaksiDetail = $transaksiPembelian->transaksiDetail()->create([
+                    'transaksi_id' => $transaksiPembelian->id,
+                    'jenis' => 'Pembelian',
+                    'jenis_barang' => 'DOC',
+                    'tanggal' => $transaksiPembelian->tanggal,
+                    'item_id' => $stokDoc->id,
+                    'item_name' => $stokDoc->name,
+                    'harga' => $harga,
+                    'qty' => $qty,
+                    'terpakai' => 0,
+                    'sisa' => $qty,
+                    'sub_total' => $subTotal,
+                    'satuan_besar' => $stokDoc->satuan_besar,
+                    'satuan_kecil' => $stokDoc->satuan_kecil,
+                    'konversi' => 1,
+                    'status' => 'Aktif',
+                    'user_id' => $supervisor->id,
+                ]);
+
+                // Update Status Kandang
+                $kandang->jumlah = $transaksiPembelian->transaksiDetail->first()?->qty;
+                $kandang->kelompok_ternak_id = $kelompokTernak->id;
+                $kandang->status = 'Digunakan';
+                $kandang->save();
+            }
+
+            
+
+            
+
+            // TransaksiDetail::create([
+            //     'transaksi_id' => $transaksiPembelian->id,
+            //     'jenis' => 'Pembelian',
+            //     'jenis_barang' => 'DOC',
+            //     'tanggal' => $transaksiPembelian->tanggal,
+            //     'rekanan_id' => $supplier->id,
+            //     'farm_id' => $demoFarm->id,
+            //     'kandang_id' => $kandang->id,
+            //     'item_id' => $stokDoc->id,
+            //     'item_name' => $stokDoc->name,
+            //     'harga' => $harga,
+            //     'qty' => $qty,
+            //     'terpakai' => 0,
+            //     'sisa' => $qty,
+            //     'sub_total' => $subTotal,
+            //     'konversi' => 1,
+            //     'periode' => $transaksiPembelian->periode,
+            //     'status' => 'Aktif',
+            //     'user_id' => $supervisor->id,
+            // ]);
+
+            // // Update sub total transaksi pembelian
+            // $transaksiPembelian->sub_total = $subTotal;
+            // $transaksiPembelian->save();
 
             // Detail Transaksi Pembelian Stok
             $subTotal = 0;
@@ -173,41 +224,53 @@ class DemoSeeder extends Seeder
                 'user_id' => $operator->id, // Supervisor yang menyetujui
             ]);
 
+
+            if($transaksiPembelianStok->exists()){
+                $transaksiDetail = $transaksiPembelianStok->transaksiDetail()->create([
+                    'transaksi_id' => $transaksiPembelianStok->id,
+                    'jenis' => 'Pembelian',
+                    'jenis_barang' => 'Pakan',
+                    'tanggal' => $transaksiPembelianStok->tanggal,
+                    'item_id' => $stok->id,
+                    'item_name' => $stok->name,
+                    'harga' => $harga,
+                    'qty' => $qty * $stok->konversi,
+                    'terpakai' => 0,
+                    'sisa' => $qty * $stok->konversi,
+                    'sub_total' => ($qty * $harga),
+                    'konversi' => $stok->konversi,
+                    'status' => 'Aktif',
+                    'user_id' => $operator->id,
+                ]);
+
+                // Update sub total transaksi pembelian
+                $transaksiPembelianStok->sub_total = $subTotal;
+                $transaksiPembelianStok->save();
+
+                $stokHistory = $transaksiPembelianStok->stokHistory()->create([
+                    'transaksi_id' => $transaksiPembelianStok->id,
+                    // 'transaksi_detail_id' => $transaksiDetail->id,
+                    'farm_id' => $demoFarm->id,
+                    'kandang_id' => $kandang->id,
+                    'tanggal' => $transaksiPembelianStok->tanggal,
+                    'jenis' => 'Masuk',
+                    'item_id' => $stok->id,
+                    'qty' => $qty * $stok->konversi,
+                    'stok_awal' => 0,
+                    'stok_akhir' => $qty * $stok->konversi,
+                    'status' => 'Aktif',
+                    'user_id' => $operator->id,
+                ]);
+            }
+
+
             
-            TransaksiDetail::create([
-                'transaksi_id' => $transaksiPembelianStok->id,
-                'jenis' => 'Pembelian',
-                'jenis_barang' => 'Pakan',
-                'tanggal' => $transaksiPembelianStok->tanggal,
-                'rekanan_id' => $supplier->id,
-                'farm_id' => $demoFarm->id,
-                'item_id' => $stok->id,
-                'item_nama' => $stok->nama,
-                'harga' => $harga,
-                'qty' => $qty * $stok->konversi,
-                'terpakai' => 0,
-                'sisa' => $qty * $stok->konversi,
-                'sub_total' => ($qty * $harga),
-                'konversi' => $stok->konversi,
-                'status' => 'Aktif',
-                'user_id' => $operator->id,
-            ]);
-
-            // Update sub total transaksi pembelian
-            $transaksiPembelianStok->sub_total = $subTotal;
-            $transaksiPembelianStok->save();
-
-
-            // Update Status Kandang
-            $kandang->jumlah = $transaksiPembelian->transaksiDetail->first()?->qty;
-            $kandang->status = 'Digunakan';
-            $kandang->save();
 
             $counter++; // Increment the counter for the next iteration
         });
 
         // for ($i=0; $i < count($jenisStok); $i++) { 
-        //     $demoStok = Stok::create([
+        //     $demoStok = Item::create([
         //         'kode'          => $kodeStok[$i].'001',
         //         'jenis'         => $jenisStok[$i],
         //         'nama'          => 'Nama Stok'.$jenisStok[$i],
@@ -274,9 +337,9 @@ class DemoSeeder extends Seeder
             // $supplier = Rekanan::where('jenis', 'Supplier')->inRandomOrder()->first();
             // $farm = Farm::inRandomOrder()->first();
             // $kandang = $farm->kandangs->first(); // Get the first kandang associated with the farm
-            // $stokDoc = Stok::where('jenis', 'DOC')->inRandomOrder()->first();
+            // $stokDoc = Item::where('jenis', 'DOC')->inRandomOrder()->first();
 
-            // $stok = Stok::whereIn('jenis', ['Pakan', 'Obat', 'Vaksin', 'Lainnya'])->inRandomOrder()->first();
+            // $stok = Item::whereIn('jenis', ['Pakan', 'Obat', 'Vaksin', 'Lainnya'])->inRandomOrder()->first();
             // $qty = $faker->numberBetween(10, 20) * 100;
             // $harga = $faker->numberBetween(1, 10) * 500;
 

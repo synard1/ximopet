@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class StokMutasi extends BaseModel
+class StokHistory extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
@@ -15,7 +15,8 @@ class StokMutasi extends BaseModel
 
     protected $fillable = [
         'id',
-        'transaksi_detail_id',
+        'transaksi_id',
+        // 'transaksi_detail_id',
         'farm_id',
         'kandang_id',
         'tanggal',
@@ -55,12 +56,12 @@ class StokMutasi extends BaseModel
         return $this->belongsTo(Item::class, 'item_id','id');
     }
 
-    public function stokTransaksi()
+    public function transaksi()
     {
-        return $this->belongsTo(StokTransaksi::class); 
+        return $this->belongsTo(Transaksi::class); 
     }
 
-    public function TransaksiDetail()
+    public function transaksiDetail()
     {
         return $this->belongsTo(TransaksiDetail::class, 'transaksi_detail_id','id');
     }

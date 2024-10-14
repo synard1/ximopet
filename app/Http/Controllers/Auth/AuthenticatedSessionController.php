@@ -36,10 +36,19 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        $request->user()->update([
+        $user = $request->user();
+
+        $user->update([
             'last_login_at' => Carbon::now()->toDateTimeString(),
             'last_login_ip' => $request->getClientIp()
         ]);
+
+        // Create a new Sanctum token for the user
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // You might want to store this token in the session or return it in the response
+        // For this example, we'll store it in the session
+        $request->session()->put('auth_token', $token);
 
         return redirect()->intended(RouteServiceProvider::HOME);
     }

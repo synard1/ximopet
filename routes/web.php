@@ -13,7 +13,7 @@ use App\Http\Controllers\MasterData\StokController;
 use App\Models\Stok;
 use App\Http\Controllers\Transaksi\TransaksiController;
 use App\Http\Controllers\StokController as StockController;
-
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,6 +45,11 @@ Route::get('/test', function () {
     return view('test');
 });
 
+Route::get('/tokens/create', function (Request $request) {
+    $token = $request->user()->createToken($request->token_name);
+ 
+    return ['token' => $token->plainTextToken];
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -84,6 +89,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/transaksi/docs', [TransaksiController::class, 'docIndex'])->name('docs.index');
         Route::post('/reduce-stock', [StockController::class, 'reduceStock']);
     });
+
+    
 
 });
 

@@ -126,6 +126,14 @@
             loadingEl.remove();
         }, 3000);
     };
+
+    // Example: Setting up global AJAX headers
+    $.ajaxSetup({
+         headers: {
+             'Authorization': @json('Bearer ' . session('auth_token')),
+             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+         }
+     });
 </script>
 
 @livewireScripts

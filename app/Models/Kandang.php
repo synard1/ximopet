@@ -20,11 +20,18 @@ class Kandang extends Model
         'jumlah',
         'kapasitas',
         'status',
-        'user_id',
+        'kelompok_ternak_id',
+        'created_by',
+        'updated_by',
     ];
 
     public function farms()
     {
         return $this->belongsTo(Farm::class,'farm_id');
+    }
+
+    public function kelompokTernak()
+    {
+        return $this->belongsTo(KelompokTernak::class,'kelompok_ternak_id');
     }
 }

@@ -93,7 +93,7 @@ class AppApi
             $query->select('id', 'satuan_besar', 'satuan_kecil','konversi');
         }])
         ->where('transaksi_id', $id)
-        ->get(['id','jenis','jenis_barang','item_id','item_nama','qty','terpakai', 'sisa', 'harga','sub_total']);
+        ->get(['id','jenis','jenis_barang','item_id','item_name','qty','terpakai', 'sisa', 'harga','sub_total']);
 
         // Map over the collection to calculate the 'sisa' field and include satuan data
         $formattedOptions = $options->map(function ($item) {
@@ -238,20 +238,37 @@ class AppApi
         //         ->groupBy('farm_id')
         //         ->distinct('nama')
         //         ->get();
-        $data = TransaksiDetail::where('farm_id', $farmId)
-                // ->whereIn('jenis_barang',['Pakan','Obat'])
-                ->whereNotIn('jenis_barang', ['DOC'])
-                ->where('sisa' , '>', 0)
-                ->select('item_id', 'item_nama', DB::raw('SUM(sisa) as total')) // Replace 'column_to_sum' with the actual column you want to sum
-                ->groupBy('item_id','item_nama')
-                ->get();
+        $data = Transaksi::with(['transaksiDetail' => function($query) {
+                    $query->whereNotIn('jenis_barang', ['DOC'])
+                          ->where('sisa', '>', 0);
+                }])
+                ->where('farm_id', $farmId)
+                ->where('jenis', 'Pembelian')
+                ->get()
+                ->flatMap(function ($transaksi) {
+                    return $transaksi->transaksiDetail;
+                })
+                ->groupBy('item_id')
+                ->map(function ($group) {
+                    return [
+                        'item_id' => $group->first()->item_id,
+                        'item_name' => $group->first()->item_name,
+                        'total' => $group->sum('sisa')
+                    ];
+                })
+                ->values();
 
         // Separate query to get the oldest date
-        $oldestDate = TransaksiDetail::where('farm_id', $farmId)
-                ->where('sisa' , '>', 0)
-                ->whereNotIn('jenis_barang', ['DOC'])
-                ->groupBy('item_id')
-                ->min('tanggal'); 
+        $oldestDate = Transaksi::with(['transaksiDetail' => function($query) {
+                    $query->where('sisa', '>', 0)
+                          ->whereNotIn('jenis_barang', ['DOC']);
+                }])
+                ->where('farm_id', $farmId)
+                ->whereHas('transaksiDetail', function($query) {
+                    $query->where('sisa', '>', 0)
+                          ->whereNotIn('jenis_barang', ['DOC']);
+                })
+                ->min('tanggal');
 
         // return $data->count();
 
@@ -368,7 +385,8 @@ class AppApi
             
             $transaksiDetail->update(
                 [
-                    'sub_total' => ($transaksiDetail->qty / $transaksiDetail->items->konversi) * $transaksiDetail->harga
+                    'sub_total' => ($transaksiDetail->qty / $transaksiDetail->items->konversi) * $transaksiDetail->harga,
+                    // 'total_qty' => ($transaksiDetail->qty / $transaksiDetail->items->konversi),
                 ]
             );
 
@@ -387,7 +405,8 @@ class AppApi
             $sumHarga = TransaksiDetail::where('transaksi_id',$transaksiDetail->transaksi_id)->sum('harga');
             $transaksi->update(
                 [
-                    'qty' => $sumQty,
+                    'total_qty' => $sumQty,
+                    'sisa' => $sumQty,
                     'harga' => $sumHarga,
                     'sub_total' => $sumHarga * $sumQty
                 ]

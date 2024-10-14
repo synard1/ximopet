@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class TransaksiDetail extends Model
+class TransaksiDetail extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
@@ -16,22 +16,22 @@ class TransaksiDetail extends Model
         'transaksi_id',
         'parent_id',
         'item_id',
-        'item_nama',
+        'item_name',
         'jenis',
         'jenis_barang',
         'tanggal',
-        'rekanan_id',
-        'farm_id',
-        'kandang_id',
         'harga',
         'qty',
         'terpakai',
         'sisa',
+        'satuan_besar',
+        'satuan_kecil',
         'sub_total',
         'konversi',
-        'periode',
         'status',
         'user_id',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
@@ -40,6 +40,16 @@ class TransaksiDetail extends Model
 
     public function items()
     {
-        return $this->belongsTo(Stok::class, 'item_id','id');
+        return $this->belongsTo(Item::class, 'item_id','id');
+    }
+
+    public function stokHistory()
+    {
+        return $this->hasOne(StokHistory::class);
+    }
+
+    public function transaksi()
+    {
+        return $this->belongsTo(Transaksi::class, 'transaksi_id','id');
     }
 }

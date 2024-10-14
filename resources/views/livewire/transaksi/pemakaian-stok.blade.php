@@ -221,7 +221,7 @@
                                 <select id="selectedFarm" name="selectedFarm" class="form-control" wire:model="selectedFarm" data-control="select2">
                                     <option value="">=== Pilih Farm ===</option>
                                     @foreach($farms as $farm)
-                                        <option value="{{ $farm->farm_id }}">{{ $farm->nama_farm }}</option>
+                                        <option value="{{ $farm->id }}">{{ $farm->nama }}</option>
     
                                     @endforeach
                                 </select>
@@ -347,8 +347,13 @@
                 showConfirmButton: false,
                 timer: 2000
                 }).then(function () {
+
                     $.ajax({
                             url: '/api/v1/get-farm-stocks/' + farmId, 
+                            headers: {
+                                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            },
                             type: 'GET',
                             success: function(data) {
                                 jsonData = data;
@@ -373,7 +378,7 @@
 
                                 // Add new options based on the fetched data
                                 data.stock.forEach(item => {
-                                    const option = new Option(item.item_nama, item.item_id);
+                                    const option = new Option(item.item_name, item.item_id);
                                     itemSelect.append(option);
                                 });
 
@@ -423,21 +428,26 @@
 
 
         // Fetch operators for the selected farm via AJAX
-        fetch(`/api/v1/get-kandangs/${farmId}/used`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.kandangs && data.kandangs.length > 0) {
-                        // console.log(data.kandangs);
+        fetch(`/api/v1/get-kandangs/${farmId}/used`, {
+            headers: {
+                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.kandangs && data.kandangs.length > 0) {
+                // console.log(data.kandangs);
 
-                        data.kandangs.forEach(kandang => {
-                            const option = document.createElement('option');
-                            option.value = kandang.id;
-                            option.text = kandang.nama;
-                            kandangSelect.appendChild(option);
-                        });
-                    }
-                })
-                .catch(error => console.error('Error fetching kandangs:', error));
+                data.kandangs.forEach(kandang => {
+                    const option = document.createElement('option');
+                    option.value = kandang.id;
+                    option.text = kandang.nama;
+                    kandangSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching kandangs:', error));
     }
 
     // Function to update the table body with stock data
@@ -448,7 +458,7 @@
         jsonData.stock.forEach(item => {
             const newRow = `
                 <tr>
-                    <td>${item.item_nama}</td>
+                    <td>${item.item_name}</td>
                     <td id="availableStock_${item.item_id}">${item.total}</td>
                     <td>
                         <input type="number" class="form-control qty-input" data-item-id="${item.item_id}" min="0" max="${item.total}" placeholder="0" ${item.total === 0 ? 'disabled' : ''}>

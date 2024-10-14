@@ -3,7 +3,7 @@
 namespace App\Livewire\Transaksi;
 
 use Livewire\Component;
-use App\Models\Stok;
+use App\Models\Item;
 use App\Models\Rekanan;
 use App\Models\Kandang;
 use Illuminate\Support\Facades\DB;
@@ -54,7 +54,7 @@ class PembelianDOC extends Component
 
     public function render()
     {
-        $this->docs = Stok::where('jenis','DOC')->get();
+        $this->docs = Item::where('jenis','DOC')->get();
         $this->suppliers = Rekanan::where('jenis','Supplier')->get();
         // $this->kandangs = Kandang::where('status','Aktif')->get();
         $this->kandangs = Kandang::all();
@@ -69,7 +69,7 @@ class PembelianDOC extends Component
     {
             // $supplier = Rekanan::where('id', $this->supplierSelect)->first();
             // $kandang = Kandang::where('id', $this->selectedKandang)->first();
-            // $doc = Stok::where('id',$this->docSelect)->first();
+            // $doc = Item::where('id',$this->docSelect)->first();
         
             // // Prepare the data for creating/updating
             // $data = [
@@ -104,7 +104,7 @@ class PembelianDOC extends Component
 
             $supplier = Rekanan::where('id', $this->supplierSelect)->first();
             $kandang = Kandang::where('id', $this->selectedKandang)->first();
-            $doc = Stok::where('id',$this->docSelect)->first();
+            $doc = Item::where('id',$this->docSelect)->first();
         
             // Prepare the data for creating/updating
             $data = [

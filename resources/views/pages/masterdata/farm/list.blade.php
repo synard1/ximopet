@@ -136,7 +136,7 @@
                     if (e.target.href.includes('#kt_tab_operator')) {
                         var table = new DataTable('#operatorsTable');
                         table.destroy();
-                        window.LaravelDataTables['operatorsTable'].ajax.reload();
+                        // window.LaravelDataTables['operatorsTable'].ajax.reload();
                         getOperators();
                         console.log('tab operator');
 
@@ -194,17 +194,21 @@
 
             function getOperators() {
                 new DataTable('#operatorsTable', {
-                    ajax: `/api/v1/farm/operators`,
+                    ajax: {
+                        url: '/api/v1/farm/operators',
+                        headers: {
+                                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            },
+                    },
                     columns: [
                         { data: '#',
                             render: function (data, type, row, meta) {
                             return meta.row + meta.settings._iDisplayStart + 1;
                             } 
                         },
-                        // { data: 'farm_id' },
                         { data: 'nama_farm' },
                         { data: 'nama_operator' },
-                        // { data: 'status' },
                         { 
                             data: null, 
                             orderable: false, 
@@ -213,14 +217,15 @@
                                 return `
                                     <button class="btn btn-sm btn-danger" onclick="deleteOperator('${row.user_id}','${row.farm_id}')">Delete</button>
                                 `;
-                                // return `
-                                //     <a href="/farm/operators/${row.id}" class="btn btn-sm btn-primary">View</a>
-                                //     <a href="/farm/operators/${row.id}/edit" class="btn btn-sm btn-warning">Edit</a>
-                                //     <button class="btn btn-sm btn-danger" onclick="deleteOperator('${row.id}')">Delete</button>
-                                // `;
                             }
                         }
-                    ]
+                    ],
+                    error: function (xhr, error, thrown) {
+                        if (xhr.status === 401) {
+                            // Redirect to login page or handle unauthorized access
+                            window.location.href = '/login';
+                        }
+                    }
                 });
             }
 
@@ -236,8 +241,9 @@
                 if (confirm('Are you sure you want to delete this operator?')) {
                     $.ajaxSetup({
                         headers: {
-                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                        }
+                                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            },
                     });
 
                     $.ajax({

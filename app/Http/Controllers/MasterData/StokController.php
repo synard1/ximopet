@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\MasterData;
 
-use App\Models\Stok;
+use App\Models\Item;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\DataTables\StoksDataTable;

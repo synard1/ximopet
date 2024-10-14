@@ -1,0 +1,200 @@
+Table users {
+  id bigint [pk, increment]
+  username varchar
+  password varchar
+  email varchar
+  // other fields...
+}
+
+// Master tables (assumed to exist based on foreign key references)
+Table master_rekanan {
+  id uuid [pk]
+  nama varchar
+  // other fields...
+}
+
+Table master_farms {
+  id uuid [pk]
+  nama varchar
+  // other fields...
+}
+
+Table master_kandangs {
+  id uuid [pk]
+  farm_id uuid [null, ref: > master_farms.id]
+  nama varchar
+  // other fields...
+}
+
+Table items {
+  id uuid [pk]
+  jenis varchar
+  kode varchar(64) [unique]
+  nama varchar
+  satuan_besar varchar
+  satuan_kecil varchar
+  konversi varchar
+  status varchar
+  created_by bigint [null]
+  updated_by bigint [null]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp [null]
+}
+
+
+Table transaksis {
+  id uuid [pk]
+  faktur varchar [null]
+  jenis varchar [null]
+  tanggal datetime [null]
+  rekanan_id uuid [null, ref: > master_rekanan.id]
+  farm_id uuid [null, ref: > master_farms.id]
+  kandang_id uuid [null, ref: > master_kandangs.id]
+  total_qty varchar [null]
+  total_berat varchar [null]
+  harga varchar [null]
+  sub_total varchar [null]
+  terpakai varchar [null]
+  sisa varchar [null]
+  kelompok_ternak_id uuid [null, ref: > kelompok_ternak.id]
+  status varchar [null]
+  notes text [null]
+  user_id bigint [ref: > users.id]
+  created_by bigint [null]
+  updated_by bigint [null]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp [null]
+}
+
+// Detail transaksi, pencatatan detail dari transaksi per item
+Table transaksi_details {
+  id uuid [pk]
+  transaksi_id uuid [null, ref: > transaksis.id]
+  jenis varchar [null, note:'pembelian / penjualan / mutasi']
+  jenis_barang varchar [null, note:'pakan / obat / lainnya']
+  tanggal datetime [null]
+  rekanan_id uuid [null, ref: > master_rekanan.id]
+  farm_id uuid [null, ref: > master_farms.id]
+  kandang_id uuid [null, ref: > master_kandangs.id]
+  item_id uuid [null, ref: > items.id]
+  item_name varchar [null]
+  harga varchar [null]
+  qty varchar [null]
+  sub_total varchar [null]
+  terpakai varchar [null]
+  sisa varchar [null]
+  satuan_besar varchar [null]
+  satuan_kecil varchar [null]
+  konversi varchar [null]
+  kelompok_ternak_id uuid [null, ref: > kelompok_ternak.id]
+  status varchar [null]
+  user_id bigint [ref: > users.id]
+  created_by bigint [null]
+  updated_by bigint [null]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp [null]
+}
+
+Table stok_histories {
+  id uuid [pk]
+  transaksi_detail_id uuid [null, ref: > transaksi_details.id]
+  tanggal datetime [null]
+  jenis varchar [null, note: 'in / out']
+  qty varchar [note: 'dalam satuan terkecil, jumlah yang dikeluarkan / dimasukkan']
+  stok_awal varchar [note: 'stok awal sebelum dikeluarkan / dimasukkan']
+  stok_akhir varchar [note: 'stok akhir setelah dikeluarkan / dimasukkan']
+  status varchar [note: 'status mutasi, apakah sudah dikeluarkan / dimasukkan']
+  keterangan text [null]
+  created_by bigint [null]
+  updated_by bigint [null]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp [null]
+}
+
+Table kelompok_ternak {
+    id uuid [pk]
+    transaksi_id uuid [ref: > transaksis.id]
+    batch string
+    breed string
+    start_date date
+    estimated_end_date date
+    initial_quantity integer
+    current_quantity integer
+    death_quantity integer
+    slaughter_quantity integer
+    sold_quantity integer
+    remaining_quantity integer
+    status enum('active', 'closed')
+    created_by bigint [ref: > users.id]
+    updated_by bigint [ref: > users.id]
+    created_at datetime
+    updated_at datetime
+    deleted_at datetime
+}
+
+Table histori_ternak {
+    id uuid [pk]
+    kelompok_ternak_id uuid [ref: > kelompok_ternak.id]
+    quantity integer
+    total_berat decimal(10, 2)
+    status enum('hidup', 'mati', 'terjual', 'dibunuh', 'dipotong', 'sakit', 'abnormal')
+    tanggal datetime
+    keterangan string
+    created_by bigint [ref: > users.id]
+    updated_by bigint [ref: > users.id]
+    created_at datetime
+    updated_at datetime
+    deleted_at datetime
+}
+
+Table konsumsi_pakan {
+    id uuid [pk]
+    kelompok_ternak_id uuid [ref: > kelompok_ternak.id]
+    item_id uuid [ref: > items.id]
+    quantity decimal(10, 2)
+    harga decimal(10, 2)
+    tanggal datetime
+    keterangan string
+    created_by bigint [ref: > users.id]
+    updated_by bigint [ref: > users.id]
+    created_at datetime
+    updated_at datetime
+    deleted_at datetime
+}
+
+Table kematian_ternak {
+    id uuid [pk]
+    kelompok_ternak_id uuid [ref: > kelompok_ternak.id]
+    tanggal datetime
+    quantity integer
+    sebab string
+    total_berat decimal(10, 2)
+    keterangan string
+    created_by bigint [ref: > users.id]
+    updated_by bigint [ref: > users.id]
+    created_at datetime
+    updated_at datetime
+    deleted_at datetime
+}
+
+Table penjualan_ternak {
+    id uuid [pk]
+    kelompok_ternak_id uuid [ref: > kelompok_ternak.id]
+    tanggal datetime
+    quantity integer
+    harga decimal(10, 2)
+    total_berat decimal(10, 2)
+    harga_jual decimal(10, 2)
+    total_harga decimal(10, 2)
+    pembeli_id uuid [ref: > master_rekanan.id]
+    keterangan string
+    created_by bigint [ref: > users.id]
+    updated_by bigint [ref: > users.id]
+    created_at datetime
+    updated_at datetime
+    deleted_at datetime
+}

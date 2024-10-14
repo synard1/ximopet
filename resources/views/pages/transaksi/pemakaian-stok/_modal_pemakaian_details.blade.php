@@ -42,11 +42,16 @@
                 // ajax: `/api/v1/transaksi/pemakaian/details/${param}`,
                 ajax: {
                     url: "/api/v1/transaksi", // Replace with your actual route
+                    headers: {
+                                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            },
                     type: 'POST', // Use POST method
                     data: function (d) {
                         // Add your additional data here
+                        d.task = 'READ';
                         d.type = 'detail';
-                        d.jenis = 'transaksi';
+                        d.jenis = 'Pemakaian';
                         d.id = param;
                     }
                 },

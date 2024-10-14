@@ -11,6 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         Schema::create('master_kandangs', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('farm_id');
@@ -18,14 +20,20 @@ return new class extends Migration
             $table->string('nama');
             $table->string('jumlah')->default(0);
             $table->string('kapasitas')->default(0);
+            $table->uuid('kelompok_ternak_id')->nullable();
             $table->string('status');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unsignedBigInteger('user_id');
-            $table->foreign('user_id')->references('id')->on('users');
             $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
+            $table->foreign('created_by')->references('id')->on('users');
+            $table->foreign('updated_by')->references('id')->on('users');
         });
+
+        Schema::enableForeignKeyConstraints();
     }
 
     /**

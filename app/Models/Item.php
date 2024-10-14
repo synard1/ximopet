@@ -7,20 +7,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Stok extends Model
+class Item extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $table = 'stoks';
+    protected $table = 'items';
 
     protected $fillable = [
         'id',
-        'jenis',
         'kode',
+        'jenis',
         'name',
         'satuan_besar',
         'satuan_kecil',
         'konversi',
         'status',
+        'created_by',
+        'updated_by',
     ];
 }

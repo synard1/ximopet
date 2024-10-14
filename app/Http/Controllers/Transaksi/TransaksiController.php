@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\DataTables\DocsDataTable;
 use App\DataTables\PembelianStoksDataTable;
 use App\DataTables\PemakaianStoksDataTable;
+use App\Models\StokHistory;
 use App\Models\TransaksiDetail;
 
 class TransaksiController extends Controller
@@ -109,6 +110,14 @@ class TransaksiController extends Controller
             }
 
             return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success' ]);
+        }elseif($task == 'READ'){
+            // Read Detail Items
+            $transactions = TransaksiDetail::where('transaksi_id', $id)
+                ->select('jenis_barang', 'item_name as nama', 'qty', 'terpakai', 'sisa', 'harga', 'sub_total')
+                ->orderBy('tanggal', 'DESC')
+                ->get();
+
+            return response()->json(['data' => $transactions]);
         }
 
         // $result = Transaksi::where('status', $status)->get(['id','kode','nama','kapasitas','jumlah']);

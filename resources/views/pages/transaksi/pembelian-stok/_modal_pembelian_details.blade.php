@@ -44,8 +44,20 @@
     <script>
         function getDetails(param) {
             // console.log(param);
+            // Get the Sanctum token from the session
+            const token = '{{ Session::get('auth_token') }}';
+
+            // Set up headers with the token
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+            };
+
             const table = new DataTable('#detailsTable', {
-                ajax: `/api/v1/transaksi/details/${param}`,
+                ajax: {
+                    url: `/api/v1/transaksi/details/${param}`,
+                    headers: headers
+                },
                 columns: [{
                         data: 'id',
                         title: '#',
@@ -57,7 +69,7 @@
                         data: 'jenis_barang'
                     },
                     {
-                        data: 'item_nama'
+                        data: 'item_name'
                     },
                     {
                         data: 'qty',
@@ -69,51 +81,9 @@
                     {
                         data: 'sisa',
                     },
-                    // { data: 'qty', className: 'editable', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
-                    // { data: 'terpakai', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
-                    // {
-                    //     data: 'qty',
-                    //     className: 'editable', // Tambahkan className di sini
-                    //     render: function(data, type, row) {
-                    //         const satuanBesar = row.satuan_besar || ''; 
-
-                    //         const formattedQty = $.fn.dataTable.render.number('.', ',', 2, '').display(data) + ' ' + satuanBesar;
-                    //         return formattedQty;
-                    //     }
-                    // },
-                    // {
-                    //     data: 'terpakai',
-                    //     render: function(data, type, row) {
-                    //         // Pastikan data 'satuan_besar' ada dan tidak null
-                    //         const satuanBesar = row.satuan_besar ||
-                    //         ''; // Gunakan nilai default kosong jika null
-
-                    //         // Format angka dan tambahkan prefix
-                    //         const formattedTerpakai = $.fn.dataTable.render.number('.', ',', 2, '').display(
-                    //             data) + ' ' + satuanBesar;
-                    //         return formattedTerpakai;
-                    //     }
-                    // },
-                    // {
-                    //     data: 'sisa',
-                    //     render: function(data, type, row) {
-                    //         // Pastikan data 'satuan_besar' ada dan tidak null
-                    //         const satuanBesar = row.satuan_besar ||
-                    //         ''; // Gunakan nilai default kosong jika null
-
-                    //         // Format angka dan tambahkan prefix
-                    //         const formattedSisa = $.fn.dataTable.render.number('.', ',', 2, '').display(
-                    //             data) + ' ' + satuanBesar;
-                    //         return formattedSisa;
-                    //     }
-                    // },
                     {
                         data: 'satuan_besar'
                     },
-                    // {
-                    //     data: 'sisa',
-                    //     render: $.fn.dataTable.render.number('.', ',', 2, '')
-                    // },
                     {
                         data: 'harga',
                         className: 'editable',
@@ -165,26 +135,32 @@
 
                         // Send AJAX request to update the data
                         $.ajax({
-                            url: '/api/v1/stocks-edit', // Replace with your actual Laravel route
+                            url: '/api/v1/stocks',
                             method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            },
                             data: {
-                                // Include the row's ID or other identifiers
+                                type: 'edit',
                                 id: rowData.id,
-                                column: columnData.data, // Get the column's data property
+                                column: columnData.data,
                                 value: newValue
                             },
                             success: function(response) {
-                                // Handle successful update
                                 cell.text(newValue);
                                 toastr.success(response.message);
                                 table.ajax.reload();
                             },
-                            error: function(error) {
-                                // Handle errors
-                                // cell.text(originalValue); 
-                                // cell.data('originalValue', originalValue); // Store original value in data attribute
+                            error: function(xhr, status, error) {
                                 table.ajax.reload();
-                                alert('Error updating value.');
+                                if (xhr.status === 401) {
+                                    toastr.error('Unauthorized. Please log in again.');
+                                    // Optionally, redirect to login page
+                                    // window.location.href = '/login';
+                                } else {
+                                    toastr.error('Error updating value: ' + xhr.responseJSON.message);
+                                }
                             }
                         });
                     } else if (isNaN(newValue) || newValue === '') {

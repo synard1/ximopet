@@ -5,7 +5,7 @@ namespace App\Livewire\MasterData;
 use Livewire\Component;
 use Illuminate\Support\Str;
 use App\Models\Farm;
-use App\Models\Stok;
+use App\Models\Item;
 use Ramsey\Uuid\Uuid; // Import the UUID library
 
 
@@ -32,7 +32,7 @@ class StokList extends Component
 
     public function render()
     {
-        $this->stoks = Stok::all();
+        $this->stoks = Item::all();
         // $this->farms = Farm::where('status', 'Aktif')->get();
         return view('livewire.master-data.stok-list', ['stoks' => $this->stoks,            
         'farms' => $this->farms, // Pass $farms to the view
@@ -50,7 +50,7 @@ class StokList extends Component
     public function store()
     {
         $this->validate();
-        Stok::updateOrCreate(['id' => $this->stok_id], [
+        Item::updateOrCreate(['id' => $this->stok_id], [
             'jenis' => $this->jenis,
             'kode' => $this->kode,
             'nama' => $this->nama,
@@ -75,7 +75,7 @@ class StokList extends Component
 
     public function editStok($id)
     {
-        $stok = Stok::where('id',$id)->first();
+        $stok = Item::where('id',$id)->first();
         $this->stok_id = $id;
         $this->jenis = $stok->jenis;
         $this->kode = $stok->kode;
@@ -92,7 +92,7 @@ class StokList extends Component
     {
 
         // Delete the user record with the specified ID
-        Stok::destroy($id);
+        Item::destroy($id);
 
         // Emit a success event with a message
         $this->dispatch('success', 'Data berhasil dihapus');
