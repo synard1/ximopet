@@ -10,9 +10,11 @@
         <li class="nav-item">
             <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_farm">Data Farm</a>
         </li>
+        @if(Auth::user()->hasRole('Supervisor'))
         <li class="nav-item">
             <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_operator">Data Operator</a>
         </li>
+        @endif
     </ul>
     
     <div class="tab-content" id="myTabContent">
@@ -136,12 +138,12 @@
                     if (e.target.href.includes('#kt_tab_operator')) {
                         var table = new DataTable('#operatorsTable');
                         table.destroy();
-                        // window.LaravelDataTables['operatorsTable'].ajax.reload();
                         getOperators();
                         console.log('tab operator');
 
+                        // Update this part to use the correct search input and DataTable
                         document.getElementById('mySearchInput2').addEventListener('keyup', function () {
-                            window.LaravelDataTables['operatorsTable'].search(this.value).draw();
+                            $('#operatorsTable').DataTable().search(this.value).draw();
                         });
                     }else{
                         // var table = new DataTable('#farms-table');
@@ -158,17 +160,21 @@
 
             
 
-            
+            function getOperators() {
+                new DataTable('#operatorsTable', {
+                    // ... existing configuration ...
+                });
 
-            // Search Data Operator
-            // document.getElementById('searchOperator').addEventListener('keyup', function () {
-            //     window.LaravelDataTables['operatorsTable'].search(this.value).draw();
-            // });
+                // Add this line to initialize the search functionality for the operators table
+                initializeOperatorSearch();
+            }
 
-            // const filterSearch = document.querySelector('[data-kt-user-operator-filter="search"]');
-            // filterSearch.addEventListener('keyup', function (e) {
-            //     datatable.search(e.target.value).draw();
-            // });
+            // Add this new function to initialize the search for the operators table
+            function initializeOperatorSearch() {
+                document.getElementById('mySearchInput2').addEventListener('keyup', function () {
+                    $('#operatorsTable').DataTable().search(this.value).draw();
+                });
+            }
 
             document.addEventListener('livewire:init', function () {
                 Livewire.on('success', function () {

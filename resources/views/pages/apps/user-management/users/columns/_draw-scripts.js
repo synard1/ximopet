@@ -87,7 +87,7 @@ document.querySelectorAll('[data-kt-action="new_user"]').forEach(function (eleme
 });
 
 // Listen for 'success' event emitted by Livewire
-Livewire.on('success', (message) => {
-    // Reload the users-table datatable
-    LaravelDataTables['users-table'].ajax.reload();
-});
+// Livewire.on('success', (message) => {
+//     // Reload the users-table datatable
+//     LaravelDataTables['users-table'].ajax.reload();
+// });

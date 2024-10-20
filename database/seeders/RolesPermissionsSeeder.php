@@ -50,8 +50,8 @@ class RolesPermissionsSeeder extends Seeder
                 'stok management',
                 'transaksi'
             ],
-            'trial' => [
-            ],
+            // 'trial' => [
+            // ],
         ];
 
         foreach ($permissions_by_role['SuperAdmin'] as $permission) {

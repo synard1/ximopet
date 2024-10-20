@@ -126,7 +126,7 @@
                                     <!--begin::Symbol-->
                                     <div class="symbol symbol-30px me-5 mb-8">
                                         <span class="symbol-label">
-                                            <i class="ki-outline ki-timer fs-1 text-primary"></i>
+                                            <i class="ki-outline ki-parcel fs-1 text-primary"></i>
                                         </span>
                                     </div>
                                     <!--end::Symbol-->

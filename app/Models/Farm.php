@@ -39,4 +39,9 @@ class Farm extends Model
     {
         return $this->belongsToMany(User::class, 'farm_operators');
     }
+
+    public function kelompokTernak()
+    {
+        return $this->hasMany(KelompokTernak::class);
+    }
 }
