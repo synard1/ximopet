@@ -21,6 +21,7 @@ class Transaksi extends BaseModel
         'kandang_id',
         'harga',
         'total_qty',
+        'total_berat',
         'sub_total',
         'terpakai',
         'sisa',
