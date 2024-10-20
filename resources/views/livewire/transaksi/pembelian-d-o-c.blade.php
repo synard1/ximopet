@@ -230,7 +230,8 @@
                 method: 'POST', // Or 'GET' if your API endpoint supports it
                 headers: {
                     'Content-Type': 'application/json',
-                    // Add any other necessary headers, e.g., CSRF token if using POST
+                    'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 body: JSON.stringify({ // Add your parameters here
                     type: 'LIST',

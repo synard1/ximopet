@@ -41,33 +41,38 @@ class PembelianStoksDataTable extends DataTable
             ->editColumn('rekanan_id', function (Transaksi $transaksi) {
                 return $transaksi->rekanans->nama;
             })
-            // ->editColumn('payload.doc.nama', function (Transaksi $transaksi) {
-            //     return $transaksi->payload['doc']['kode'] .' - '.$transaksi->payload['doc']['nama'];
-            // })
-            // ->editColumn('qty', function (Transaksi $transaksi) {
-
-            //     return $transaksi->qty / $transaksi->items->konversi;
-            // })
-            // ->editColumn('harga', function (Transaksi $transaksi) {
-            //     return $this->formatRupiah($transaksi->harga);
-            // })
             ->editColumn('sub_total', function (Transaksi $transaksi) {
                 return $this->formatRupiah($transaksi->sub_total);
             })
-            // ->editColumn('created_at', function (Kandang $kandang) {
-            //     return $kandang->created_at->format('d M Y, h:i a');
-            // })
             ->addColumn('action', function (Transaksi $transaksi) {
                 return view('pages/transaksi.pembelian-stok._actions', compact('transaksi'));
             })
-            // ->filterColumn('farm', function($query, $keyword) {
-            //     $query->whereHas('farms', function($query) use ($keyword) { // Assuming you have a 'farm' relationship on your model
-            //         $query->where('nama', 'like', "%{$keyword}%");
-            //     });
-            // })
+            ->filterColumn('farm_id', function($query, $keyword) {
+                $query->whereHas('farms', function($query) use ($keyword) {
+                    $query->where('nama', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('tanggal', function($query, $keyword) {
+                $formats = ['d-m-Y', 'Y-m-d'];
+                $date = null;
+
+                foreach ($formats as $format) {
+                    try {
+                        $date = \Carbon\Carbon::createFromFormat($format, $keyword);
+                        break;
+                    } catch (\Exception $e) {
+                        continue;
+                    }
+                }
+
+                if ($date) {
+                    $query->whereDate('tanggal', $date->format('Y-m-d'));
+                } else {
+                    $query->where('tanggal', 'like', "%{$keyword}%");
+                }
+            })
             ->setRowId('id')
-            ->rawColumns(['']);
-            // ->make(true);
+            ->rawColumns(['action']);
     }
 
 
@@ -111,15 +116,15 @@ class PembelianStoksDataTable extends DataTable
             ->setTableId('pembelianStoks-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            // ->dom('Bfrtip')
-            // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
-            // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
-            ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
+            ->dom('Bfrtip')
+            ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
+            ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
+            // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             ->orderBy(1)
             ->parameters([
                 'scrollX'      =>  true,
-                'searching'      =>  false,
+                'searching'      =>  true,
             ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaksi/pembelian-stok/_draw-scripts.js')) . "}");
     }

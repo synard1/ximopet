@@ -11,7 +11,7 @@ class StokMutasi extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $table = 'stok_histories';
+    protected $table = 'histori_stok';
 
     protected $fillable = [
         'id',

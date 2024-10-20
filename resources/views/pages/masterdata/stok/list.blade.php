@@ -42,6 +42,9 @@
         <!--end::Card body-->
     </div>
 
+    @include('pages.masterdata.stok._modal_stok_details')
+
+
     @push('scripts')
         {{ $dataTable->scripts() }}
         <script>

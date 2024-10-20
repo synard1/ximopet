@@ -27,6 +27,12 @@ return new class extends Migration
             $table->integer('slaughter_quantity'); //jumlah yang dipotong
             $table->integer('sold_quantity'); //jumlah yang terjual
             $table->integer('remaining_quantity'); //jumlah yang tersisa
+            $table->decimal('berat_beli', 10, 2)->default(0); //berat beli
+            $table->decimal('berat_jual', 10, 2)->default(0); //berat jual
+            $table->uuid('farm_id')->nullable();
+            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->uuid('kandang_id')->nullable();
+            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
             $table->string('status'); //status
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
