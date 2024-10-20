@@ -18,6 +18,7 @@ class Kandang extends Model
         'kode',
         'nama',
         'jumlah',
+        'berat',
         'kapasitas',
         'status',
         'kelompok_ternak_id',

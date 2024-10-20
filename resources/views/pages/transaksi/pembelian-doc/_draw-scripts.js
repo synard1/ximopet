@@ -156,16 +156,31 @@ function getDetailPembelianDoc(param) {
             { 
                 data: 'qty',
                 // className: 'editable', // Tambahkan className di sini 
-                render: $.fn.dataTable.render.number( '.', ',', 2, '' ) 
+                render: $.fn.dataTable.render.number( '.', ',', 0, '' ) 
             },
-            { data: 'terpakai', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
-            { data: 'sisa', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
+            { data: 'terpakai', render: $.fn.dataTable.render.number( '.', ',', 0, '' ) },
+            { data: 'sisa', render: $.fn.dataTable.render.number( '.', ',', 0, '' ) },
             { 
-                data: 'harga',
+                data: 'harga_beli',
                 // className: 'editable', // Tambahkan className di sini 
                 render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) 
             },
-            { data: 'sub_total', render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) }
+            { 
+                data: 'berat_beli', 
+                render: function(data, type, row) {
+                    let weight = parseFloat(data);
+                    if (weight >= 1000000) {
+                        return (weight / 1000000).toFixed(2) + ' Ton';
+                    } else if (weight >= 1000) {
+                        return (weight / 1000).toFixed(2) + ' Kg';
+                    } else {
+                        return weight.toFixed(2) + ' gram';
+                    }
+                }
+            },
+            { data: 'harga_jual', render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) },
+            { data: 'berat_jual', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
+            // { data: 'sub_total', render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) }
         ]
     });
 

@@ -13,6 +13,7 @@ use App\Http\Controllers\MasterData\StokController;
 use App\Models\Stok;
 use App\Http\Controllers\Transaksi\TransaksiController;
 use App\Http\Controllers\StokController as StockController;
+use App\Http\Controllers\TernakController;
 use Illuminate\Http\Request;
 
 /*
@@ -80,6 +81,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('/master-data/farms', FarmController::class);
         Route::resource('/master-data/kandangs', KandangController::class);
         Route::resource('/master-data/stoks', StokController::class);
+        Route::resource('/master-data/ternaks', TernakController::class);
         Route::get('/master-data/customers', [RekananController::class, 'customerIndex'])->name('customers.index');
     });
 
@@ -88,6 +90,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/transaksi/pakai', [TransaksiController::class, 'stokPakaiIndex'])->name('stoks.pakai.index');
         Route::get('/transaksi/docs', [TransaksiController::class, 'docIndex'])->name('docs.index');
         Route::post('/reduce-stock', [StockController::class, 'reduceStock']);
+        Route::get('/transaksi/kematian-ternak', [TernakController::class, 'kematianTernakIndex'])->name('kematian-ternak.index');
+
     });
 
     

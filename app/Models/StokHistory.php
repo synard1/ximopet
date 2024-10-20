@@ -11,20 +11,27 @@ class StokHistory extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $table = 'stok_histories';
+    protected $table = 'histori_stok';
 
     protected $fillable = [
         'id',
         'transaksi_id',
-        // 'transaksi_detail_id',
+        'parent_id',
         'farm_id',
         'kandang_id',
         'tanggal',
         'jenis',
         'item_id',
-        'qty',
+        'item_name',
+        'satuan',
+        'jenis_barang',
+        'kadaluarsa',
+        'perusahaan_nama',
+        'hpp',
         'stok_awal',
         'stok_akhir',
+        'stok_masuk',
+        'stok_keluar',
         'status',
         'keterangan',
         'user_id',

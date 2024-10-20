@@ -41,7 +41,7 @@ return new class extends Migration
             $table->uuid('farm_id')->nullable();
             $table->uuid('kandang_id')->nullable();
             $table->decimal('total_qty', 15, 2)->nullable();
-            // $table->decimal('total_berat', 15, 2)->nullable();
+            $table->decimal('total_berat', 15, 2)->nullable();
             $table->decimal('harga', 15, 2)->nullable();
             $table->decimal('sub_total', 15, 2)->nullable();
             $table->decimal('terpakai', 15, 2)->nullable();
@@ -75,6 +75,7 @@ return new class extends Migration
             $table->uuid('item_id')->nullable();
             $table->string('item_name')->nullable();
             $table->decimal('qty', 15, 2)->nullable();
+            $table->decimal('berat', 15, 2)->nullable();
             $table->decimal('harga', 15, 2)->nullable();
             $table->decimal('sub_total', 15, 2)->nullable();
             $table->decimal('terpakai', 15, 2)->nullable();
@@ -97,17 +98,24 @@ return new class extends Migration
             $table->foreign('updated_by')->references('id')->on('users');
         });
 
-        Schema::create('stok_histories', function (Blueprint $table) {
+        Schema::create('histori_stok', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('transaksi_id')->nullable();
-            // $table->uuid('transaksi_detail_id')->nullable();
+            $table->uuid('parent_id')->nullable();
             $table->uuid('farm_id')->nullable();
             $table->uuid('kandang_id')->nullable();
             $table->dateTime('tanggal')->nullable();
             $table->string('jenis')->nullable();
             $table->uuid('item_id')->nullable();
-            $table->string('qty'); //dalam satuan terkecil
+            $table->string('item_name');
+            $table->string('satuan');
+            $table->string('jenis_barang');
+            $table->dateTime('kadaluarsa')->nullable();
+            $table->string('perusahaan_nama');
+            $table->string('hpp');
             $table->string('stok_awal');
+            $table->string('stok_masuk');
+            $table->string('stok_keluar');
             $table->string('stok_akhir');
             $table->string('status');
             $table->text('keterangan')->nullable();
@@ -137,7 +145,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('items');
-        Schema::dropIfExists('stok_histories');
+        Schema::dropIfExists('histori_stok');
         Schema::dropIfExists('transaksi_details');
         Schema::dropIfExists('transaksis');
         Schema::dropIfExists('master_kandangs');

@@ -8,7 +8,7 @@ use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class KelompokTernak extends BaseModel
+class Ternak extends BaseModel
 {
     use HasFactory, SoftDeletes, HasUuids;
 

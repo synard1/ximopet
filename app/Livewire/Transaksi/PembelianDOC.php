@@ -6,6 +6,7 @@ use Livewire\Component;
 use App\Models\Item;
 use App\Models\Rekanan;
 use App\Models\Kandang;
+use App\Models\KelompokTernak;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
@@ -13,7 +14,7 @@ use App\Models\Transaksi;
 
 class PembelianDOC extends Component
 {
-    public $parent_id, $transaksi_id, $docs, $kode_doc, $suppliers, $kandangs, $periode, $faktur, $tanggal, $supplierSelect, $docSelect, $selectedKandang, $qty, $harga;
+    public $parent_id, $transaksi_id, $docs, $kode_doc, $suppliers, $kandangs, $periode, $faktur, $tanggal, $supplierSelect, $docSelect, $selectedKandang, $qty, $harga, $berat;
     public $edit_mode=0;
 
     protected $listeners = [
@@ -30,7 +31,6 @@ class PembelianDOC extends Component
     //     'selectedKandang' => 'required',
     //     'qty' => 'required|integer',
     //     'harga' => 'required|integer',
-    //     'periode' => 'required|unique:transaksis,periode,NULL,id,deleted_at,NULL',
     // ];
 
     protected function rules()
@@ -41,12 +41,13 @@ class PembelianDOC extends Component
             'docSelect' => 'required',
             'selectedKandang' => 'required',
             'qty' => 'required|integer',
+            'berat' => 'required|integer',
             'harga' => 'required|integer',
         ];
 
         if (!$this->edit_mode) { // Only add the 'faktur' rule if NOT in edit mode
             $rules['faktur'] = 'required|unique:transaksis,faktur,NULL,id,deleted_at,NULL';
-            $rules['periode'] = 'required|unique:transaksis,periode,NULL,id,deleted_at,NULL';
+
         }
 
         return $rules;
@@ -83,7 +84,6 @@ class PembelianDOC extends Component
             //     'harga' => $this->harga,
             //     'total_qty' => $this->qty,
             //     'sub_total' => $this->qty * $this->harga,
-            //     'periode' => $this->periode,
             //     'user_id' => auth()->user()->id,
             //     'status' => 'Aktif',
             // ];
@@ -117,8 +117,9 @@ class PembelianDOC extends Component
                 'kandang_id' => $this->selectedKandang,
                 'harga' => $this->harga,
                 'total_qty' => $this->qty,
+                'total_berat' => $this->berat,
                 'sub_total' => $this->qty * $this->harga,
-                'periode' => $this->periode,
+                'kelompok_ternak_id' => null,
                 'user_id' => auth()->user()->id,
                 'status' => 'Aktif',
             ];
@@ -129,8 +130,34 @@ class PembelianDOC extends Component
                 [
                     'status' => 'Digunakan',
                     'jumlah' => $transaksi->total_qty,
+                    'berat' => $transaksi->total_berat,
                 ]
             );
+
+            if($transaksi->kelompokTernak()->exists()){
+                $kelompokTernak = $transaksi->kelompokTernak;
+            }else{
+                $kelompokTernak = $transaksi->kelompokTernak()->create([
+                    'transaksi_id' => $transaksi->id, // Ensure this is set
+                    'name' => $this->periode,
+                    'breed' => 'DOC',
+                    'start_date' => $transaksi->tanggal,
+                    'estimated_end_date' => $transaksi->tanggal->addMonths(6),
+                    'initial_quantity' => $transaksi->total_qty,
+                    'current_quantity' => $transaksi->total_qty,
+                    'death_quantity' => 0,
+                    'slaughter_quantity' => 0,
+                    'sold_quantity' => 0,
+                    'remaining_quantity' => $transaksi->total_qty,
+                    'berat_beli' => $transaksi->total_berat,
+                    'status' => 'Aktif',
+                    'farm_id' => $transaksi->farm_id,
+                    'kandang_id' => $transaksi->kandang_id,
+                    'created_by' => auth()->user()->id,
+                ]);
+                $transaksi->kelompok_ternak_id = $kelompokTernak->id;
+                $transaksi->save();
+            }
 
             // Data yang akan disimpan atau diperbarui
             $transaksiDetailData = [
@@ -142,16 +169,19 @@ class PembelianDOC extends Component
                 'farm_id' => $transaksi->farm_id,
                 'kandang_id' => $kandang->id,
                 'item_id' => $doc->id,
-                'item_nama' => $doc->nama,
+                'item_name' => $doc->nama,
                 'harga' => $transaksi->harga,
                 'qty' => $transaksi->total_qty,
+                'berat' => $transaksi->total_berat,
                 'terpakai' => 0,
                 'sisa' => $transaksi->total_qty,
+                'satuan_besar' => $doc->satuan_besar,
+                'satuan_kecil' => $doc->satuan_kecil,
                 'sub_total' => $transaksi->sub_total,
                 'konversi' => $doc->konversi,
-                'periode' => $this->periode,
                 'status' => 'Aktif',
                 'user_id' => auth()->user()->id,
+                'created_by' => auth()->user()->id,
             ];
 
             // Gunakan updateOrCreate untuk membuat atau memperbarui TransaksiDetail
@@ -222,6 +252,11 @@ class PembelianDOC extends Component
     
                 $transaksi = Transaksi::where('id', $id)->first();
                 $kandang = Kandang::where('id', $transaksi->kandang_id)->first();
+
+                $kelompokTernak = KelompokTernak::where('id', $transaksi->kelompok_ternak_id)->first();
+
+                //Delete Kelompok Ternak
+                $kelompokTernak->delete();
 
                 // Delete the user record with the specified ID
                 Transaksi::destroy($id);

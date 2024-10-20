@@ -11,13 +11,13 @@
             </div>
             <div class="modal-body">
                 <form>
-                @if($user_id)
+                {{-- @if($user_id)
                     <div class="fv-row mb-7">
                         <label for="user_id" class="fw-semibold fs-6 mb-2">User ID</label>
                         <input type="text" class="form-control" wire:model="user_id" id="user_id" {{ $user_id ? 'disabled' : '' }}>
                         @error('user_id') <span class="text-danger error">{{ $message }}</span>@enderror
                     </div>
-                @endif
+                @endif --}}
                     <div class="fv-row mb-7">
                         <label for="name" class="required fw-semibold fs-6 mb-2">Nama</label>
                         <input type="text" class="form-control" wire:model="name" id="name">
@@ -49,6 +49,7 @@
                         <!--end::Label-->
                         @error('role')
                         <span class="text-danger">{{ $message }}</span> @enderror
+                        
                         <!--begin::Roles-->
                         @foreach($roles as $role)
                             <!--begin::Input row-->
@@ -56,7 +57,8 @@
                                 <!--begin::Radio-->
                                 <div class="form-check form-check-custom form-check-solid">
                                     <!--begin::Input-->
-                                    <input class="form-check-input me-3" id="kt_modal_update_role_option_{{ $role->id }}" wire:model="role" name="role" type="radio" value="{{ $role->name }}" checked="checked"/>
+                                    <input class="form-check-input me-3" id="kt_modal_update_role_option_{{ $role->id }}" wire:model="role" name="role" type="radio" value="{{ $role->name }}" 
+                                    @if($role->name === $role) checked="checked" @endif/>
                                     <!--end::Input-->
                                     <!--begin::Label-->
                                     <label class="form-check-label" for="kt_modal_update_role_option_{{ $role->id }}">

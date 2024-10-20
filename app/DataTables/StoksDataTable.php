@@ -19,13 +19,34 @@ class StoksDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
-            // ->addColumn('farm', function (Stok $stok) {
-            //     return $stok->farms->nama;
-            // })
-            ->editColumn('created_at', function (Stok $stok) {
-                return $stok->created_at->format('d M Y, h:i a');
+            ->editColumn('kode', function (Item $item) {
+                return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_stok" data-item-id="' . $item->id . '"><span class="menu-icon">
+							<i class="ki-outline ki-package fs-4 text-success"></i>
+						</span>' . $item->kode . '</a>';
             })
-            ->addColumn('action', function (Stok $stok) {
+            ->editColumn('jumlah', function (Item $stok) {
+                if (auth()->user()->farmOperators()->exists()) {
+                    $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
+                    $masuk = $stok->stokHistory()
+                        ->whereIn('farm_id', $farmIds)
+                        ->where('jenis','Masuk')
+                        ->sum('stok_akhir');
+                    $terpakai = $stok->stokHistory()
+                        ->whereIn('farm_id', $farmIds)
+                        ->where('jenis','Pemakaian')
+                        ->sum('stok_keluar');
+
+                    $stokAkhir = $masuk - $terpakai;
+
+                } else {
+                    $stokAkhir = $stok->stokHistory->sum('stok_akhir');
+                }
+                return number_format($stokAkhir / $stok->konversi, 2);
+            })
+            // ->editColumn('created_at', function (Item $stok) {
+            //     return $stok->created_at->format('d M Y, h:i a');
+            // })
+            ->addColumn('action', function (Item $stok) {
                 return view('pages/masterdata.stok._actions', compact('stok'));
             })
             // ->filterColumn('farm', function($query, $keyword) {
@@ -34,7 +55,7 @@ class StoksDataTable extends DataTable
             //     });
             // })
             ->setRowId('id')
-            ->rawColumns(['']);
+            ->rawColumns(['kode']);
             // ->make(true);
     }
 
@@ -42,13 +63,36 @@ class StoksDataTable extends DataTable
     /**
      * Get the query source of dataTable.
      */
-    public function query(Stok $model): QueryBuilder
+    public function query(Item $model): QueryBuilder
     {
         $query = $model->newQuery();
 
+        
+
         // return $model->newQuery();
-        $query = $model::orderBy('nama', 'DESC')
-            ->newQuery();
+        if (auth()->user()->hasRole('Operator')) {
+            // Get farm IDs for current user from farmOperators
+            $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
+
+            // dd($farmIds);
+            
+            // Add a condition to filter items based on farm IDs
+            $query->whereHas('stokHistory', function ($q) use ($farmIds) {
+                $q->whereIn('farm_id', $farmIds);
+            });
+            // $query = $model::with(['stokHistory', 'transaksiDetail'])
+            //     ->where('jenis', '!=', 'DOC')
+            //     // ->whereHas('farmOperator', function ($q) {
+            //     //     $q->where('user_id', auth()->id());
+            //     // })
+            //     ->orderBy('name', 'DESC')
+            //     ->newQuery();
+        } else {
+            $query = $model::with(['stokHistory', 'transaksiDetail'])
+                ->where('jenis', '!=', 'DOC')
+                ->orderBy('name', 'DESC')
+                ->newQuery();
+        }
 
         return $query;
 
@@ -80,12 +124,20 @@ class StoksDataTable extends DataTable
         return [
             Column::make('kode')->searchable(false),
             // Column::computed('farm')->searchable(true),
-            Column::make('nama'),
-            Column::make('status'),
-            Column::make('satuan_besar'),
-            Column::make('satuan_kecil'),
-            Column::make('konversi'),
-            Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
+            Column::make('name'),
+            Column::make('status')
+                ->visible(false),
+            Column::make('satuan_kecil')
+                ->visible(false),
+            Column::make('konversi')
+                ->visible(false),
+            Column::computed('jumlah')
+                ->visible(true),
+            Column::make('satuan_besar')
+                ->visible(true),
+            Column::make('created_at')->title('Created Date')->addClass('text-nowrap')
+                ->searchable(false)
+                ->visible(false),
             Column::computed('action')
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)

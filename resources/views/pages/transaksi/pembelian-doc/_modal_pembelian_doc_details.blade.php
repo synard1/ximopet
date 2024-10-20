@@ -1,6 +1,6 @@
 <!-- Modal -->
 <div class="modal fade" id="kt_modal_pembelian_doc_details" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header">
           <h1 class="modal-title fs-5" id="kt_modal_pembelian_doc_details_title">Modal title</h1>
@@ -12,11 +12,14 @@
                     <tr>
                         <th>#</th>
                         <th>Nama</th>
-                        <th>Jumlah</th>
-                        <th>Terpakai</th>
-                        <th>Sisa</th>
-                        <th>Harga</th>
-                        <th>Sub Total</th>
+                        <th>Jumlah Awal</th>
+                        <th>Mati</th>
+                        <th>Jumlah Akhir</th>
+                        <th>Harga Beli</th>
+                        <th>Berat Beli</th>
+                        <th>Harga Jual</th>
+                        <th>Berat Jual</th>
+                        {{-- <th>Sub Total</th> --}}
                     </tr>
                 </thead>
             </table>

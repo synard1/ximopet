@@ -437,7 +437,7 @@ class AppApi
     {
         try {
             //code...
-            Artisan::call('migrate:refresh --seed');
+            Artisan::call('migrate:fresh --seed');
             // Artisan::call('db:seed');
             return response()->json(['message' => 'Data Berhasil Direset', 'status' => 'success']);
 

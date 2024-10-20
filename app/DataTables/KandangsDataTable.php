@@ -25,6 +25,17 @@ class KandangsDataTable extends DataTable
             ->editColumn('created_at', function (Kandang $kandang) {
                 return $kandang->created_at->format('d M Y, h:i a');
             })
+            ->editColumn('jumlah', function (Kandang $kandang) {
+                return intval($kandang->jumlah)  ?? '';
+            })
+            ->editColumn('berat', function (Kandang $kandang) {
+                $beratGram = floatval($kandang->berat);
+                if ($beratGram >= 1000000) {
+                    return number_format($beratGram / 1000000, 2) . ' Ton';
+                } else {
+                    return number_format($beratGram / 1000, 2) . ' Kg';
+                }
+            })
             ->addColumn('action', function (Kandang $kandang) {
                 return view('pages/masterdata.kandang._actions', compact('kandang'));
             })
@@ -46,10 +57,16 @@ class KandangsDataTable extends DataTable
     {
         $query = $model->newQuery();
 
-        // return $model->newQuery();
-        $query = $model::with('farms')
-            ->orderBy('nama', 'DESC')
-            ->newQuery();
+        if (auth()->user()->hasRole('Operator')) {
+            $query = $model::with('farms')
+                ->whereHas('farms.farmOperators', function ($query) {
+                    $query->where('user_id', auth()->id());
+                })
+                ->orderBy('nama', 'DESC');
+        } else {
+            $query = $model::with('farms')
+                ->orderBy('nama', 'DESC');
+        }
 
         return $query;
 
@@ -84,6 +101,7 @@ class KandangsDataTable extends DataTable
             Column::make('nama'),
             Column::make('status'),
             Column::make('jumlah'),
+            Column::make('berat')->searchable(false),
             Column::make('kapasitas'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
             Column::computed('action')
@@ -91,6 +109,7 @@ class KandangsDataTable extends DataTable
                 ->exportable(false)
                 ->printable(false)
                 // ->width(60)
+                ->visible(auth()->user()->hasRole(['Supervisor']))
         ];
     }
 
