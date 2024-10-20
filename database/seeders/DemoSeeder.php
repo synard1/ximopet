@@ -30,7 +30,6 @@ class DemoSeeder extends Seeder
             ['kode' => 'OB001', 'jenis' => 'Obat', 'name' => 'Nama Stok Obat', 'satuan_besar' => 'Butir', 'satuan_kecil' => 'Butir', 'konversi' => 1],
             ['kode' => 'VK001', 'jenis' => 'Vaksin', 'name' => 'Nama Stok Vaksin', 'satuan_besar' => 'Impul', 'satuan_kecil' => 'Impul', 'konversi' => 1],
             ['kode' => 'VT001', 'jenis' => 'Vitamin', 'name' => 'Nama Stok Vitamin', 'satuan_besar' => 'Tablet', 'satuan_kecil' => 'Tablet', 'konversi' => 1],
-            ['kode' => 'VT001', 'jenis' => 'Vitamin', 'name' => 'Nama Stok Vitamin', 'satuan_besar' => 'Tablet', 'satuan_kecil' => 'Tablet', 'konversi' => 1],
             ['kode' => 'LL001', 'jenis' => 'Lainnya', 'name' => 'Nama Stok Lainnya', 'satuan_besar' => 'LL', 'satuan_kecil' => 'LL', 'konversi' => 1],
         ];
 
@@ -65,7 +64,6 @@ class DemoSeeder extends Seeder
         $counter = 0;
 
         // Create Farm records
-        Farm::factory(5)->create()->each(function ($demoFarm) use ($supervisor, $operator, $faker, &$counter, $beratBeli, $beratJual) {
         Farm::factory(5)->create()->each(function ($demoFarm) use ($supervisor, $operator, $faker, &$counter, $beratBeli, $beratJual) {
             // Initialize counter if it doesn't exist
             if (!isset($counter)) {
