@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('kode', 64)->unique();
             $table->string('nama');
             $table->string('jumlah')->default(0);
+            $table->string('berat')->default(0);
             $table->string('kapasitas')->default(0);
             $table->uuid('kelompok_ternak_id')->nullable();
             $table->string('status');

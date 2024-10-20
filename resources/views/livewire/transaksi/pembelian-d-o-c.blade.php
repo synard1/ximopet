@@ -176,7 +176,7 @@
                             <!--begin::Input group-->
                             <div class="fv-row mb-7">
                                 <!--begin::Label-->
-                                <label class="required fw-semibold fs-6 mb-2">Harga</label>
+                                <label class="required fw-semibold fs-6 mb-2">Harga Satuan</label>
                                 <!--end::Label-->
                                 <!--begin::Input-->
                                 <input type="number" wire:model="harga" id="harga"
@@ -185,6 +185,23 @@
                                 @error('harga')
                                 <span class="text-danger">{{ $message }}</span> @enderror
                                 @error('harga')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <!--end::Input group-->
+
+                            <!--begin::Input group-->
+                            <div class="fv-row mb-7">
+                                <!--begin::Label-->
+                                <label class="required fw-semibold fs-6 mb-2">Total Berat ( Gram )</label>
+                                <!--end::Label-->
+                                <!--begin::Input-->
+                                <input type="number" wire:model="berat" id="berat"
+                                    class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Total Berat ( Gram )" />
+                                <!--end::Input-->
+                                @error('berat')
+                                <span class="text-danger">{{ $message }}</span> @enderror
+                                @error('berat')
                                 <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>

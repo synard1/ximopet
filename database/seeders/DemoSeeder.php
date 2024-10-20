@@ -30,10 +30,11 @@ class DemoSeeder extends Seeder
             ['kode' => 'OB001', 'jenis' => 'Obat', 'name' => 'Nama Stok Obat', 'satuan_besar' => 'Butir', 'satuan_kecil' => 'Butir', 'konversi' => 1],
             ['kode' => 'VK001', 'jenis' => 'Vaksin', 'name' => 'Nama Stok Vaksin', 'satuan_besar' => 'Impul', 'satuan_kecil' => 'Impul', 'konversi' => 1],
             ['kode' => 'VT001', 'jenis' => 'Vitamin', 'name' => 'Nama Stok Vitamin', 'satuan_besar' => 'Tablet', 'satuan_kecil' => 'Tablet', 'konversi' => 1],
+            ['kode' => 'VT001', 'jenis' => 'Vitamin', 'name' => 'Nama Stok Vitamin', 'satuan_besar' => 'Tablet', 'satuan_kecil' => 'Tablet', 'konversi' => 1],
             ['kode' => 'LL001', 'jenis' => 'Lainnya', 'name' => 'Nama Stok Lainnya', 'satuan_besar' => 'LL', 'satuan_kecil' => 'LL', 'konversi' => 1],
         ];
 
-        $beratBeli = 300;
+        $beratBeli = 100;
         $beratJual = 0;
 
         // Create Stok records using the array
@@ -64,6 +65,7 @@ class DemoSeeder extends Seeder
         $counter = 0;
 
         // Create Farm records
+        Farm::factory(5)->create()->each(function ($demoFarm) use ($supervisor, $operator, $faker, &$counter, $beratBeli, $beratJual) {
         Farm::factory(5)->create()->each(function ($demoFarm) use ($supervisor, $operator, $faker, &$counter, $beratBeli, $beratJual) {
             // Initialize counter if it doesn't exist
             if (!isset($counter)) {
@@ -112,6 +114,7 @@ class DemoSeeder extends Seeder
                 'terpakai' => 0,
                 'sisa' => $qty,
                 'total_qty' => $qty,
+                'total_berat' => $qty * 100,
                 'harga' => $harga,
                 // 'periode' => null,
                 'sub_total' => $qty * $harga,
@@ -137,7 +140,11 @@ class DemoSeeder extends Seeder
                     'remaining_quantity' => $qty,
                     'berat_beli' => $beratBeli * $qty,
                     'berat_jual' => $beratJual * $qty,
+                    'berat_beli' => $beratBeli * $qty,
+                    'berat_jual' => $beratJual * $qty,
                     'status' => 'Aktif',
+                    'farm_id' => $transaksiPembelian->farm_id,
+                    'kandang_id' => $transaksiPembelian->kandang_id,
                     'farm_id' => $transaksiPembelian->farm_id,
                     'kandang_id' => $transaksiPembelian->kandang_id,
                     'created_by' => $supervisor->id,
@@ -160,6 +167,7 @@ class DemoSeeder extends Seeder
                     'item_name' => $stokDoc->name,
                     'harga' => $harga,
                     'qty' => $qty,
+                    'berat' => $kelompokTernak->berat_beli,
                     'terpakai' => 0,
                     'sisa' => $qty,
                     'sub_total' => $subTotal,
@@ -172,6 +180,7 @@ class DemoSeeder extends Seeder
 
                 // Update Status Kandang
                 $kandang->jumlah = $transaksiPembelian->transaksiDetail->first()?->qty;
+                $kandang->berat = $transaksiPembelian->transaksiDetail->first()?->berat;
                 $kandang->kelompok_ternak_id = $kelompokTernak->id;
                 $kandang->status = 'Digunakan';
                 $kandang->save();
@@ -238,11 +247,13 @@ class DemoSeeder extends Seeder
                     'transaksi_id' => $transaksiPembelianStok->id,
                     'jenis' => 'Pembelian',
                     'jenis_barang' => $stok->jenis,
+                    'jenis_barang' => $stok->jenis,
                     'tanggal' => $transaksiPembelianStok->tanggal,
                     'item_id' => $stok->id,
                     'item_name' => $stok->name,
                     'harga' => $harga,
                     'qty' => $qty * $stok->konversi,
+                    'berat' => 0,
                     'terpakai' => 0,
                     'sisa' => $qty * $stok->konversi,
                     'sub_total' => ($qty * $harga),
@@ -258,6 +269,7 @@ class DemoSeeder extends Seeder
                 $stokHistory = $transaksiPembelianStok->stokHistory()->create([
                     'transaksi_id' => $transaksiPembelianStok->id,
                     'parent_id' => null,
+                    'parent_id' => null,
                     'farm_id' => $demoFarm->id,
                     'kandang_id' => $kandang->id,
                     'tanggal' => $transaksiPembelianStok->tanggal,
@@ -269,7 +281,15 @@ class DemoSeeder extends Seeder
                     'kadaluarsa' => $transaksiPembelianStok->tanggal->addMonths(18),
                     'perusahaan_nama' => $transaksiPembelianStok->rekanans->nama,
                     'hpp' => $transaksiPembelianStok->harga,
+                    'item_name' => $stok->name,
+                    'satuan' => $stok->satuan_besar,
+                    'jenis_barang' => $stok->jenis,
+                    'kadaluarsa' => $transaksiPembelianStok->tanggal->addMonths(18),
+                    'perusahaan_nama' => $transaksiPembelianStok->rekanans->nama,
+                    'hpp' => $transaksiPembelianStok->harga,
                     'stok_awal' => 0,
+                    'stok_masuk' => $qty * $stok->konversi,
+                    'stok_keluar' => 0,
                     'stok_masuk' => $qty * $stok->konversi,
                     'stok_keluar' => 0,
                     'stok_akhir' => $qty * $stok->konversi,

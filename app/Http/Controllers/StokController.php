@@ -185,24 +185,14 @@ class StokController extends Controller
             // Update Detail Items
             $transaksiDetail = TransaksiDetail::findOrFail($id);
             // Find the corresponding StokMutasi record
-            $stokMutasi = StokMutasi::where('transaksi_detail_id', $id)->firstOrFail();
+            $stokMutasi = StokMutasi::where('transaksi_id', $transaksiDetail->transaksi_id)->firstOrFail();
 
-            // Update StokMutasi record
-            // if ($column == 'qty') {
-            //     $stokMutasi->update([
-            //         'qty' => $value * $transaksiDetail->items->konversi,
-            //         'sisa' => $value * $transaksiDetail->items->konversi,
-            //     ]);
-            // } else if ($column == 'harga') {
-            //     $stokMutasi->update([
-            //         'harga' => $value,
-            //     ]);
-            // }
             
             if($column == 'qty'){
 
                 $stokMutasi->update([
-                    'qty' => $value * $transaksiDetail->items->konversi,
+                    'stok_awal'  => 0,
+                    'stok_masuk' => $value * $transaksiDetail->items->konversi,
                     'stok_akhir' => $value * $transaksiDetail->items->konversi,
                     'updated_by' => auth()->user()->id,
 
@@ -212,7 +202,7 @@ class StokController extends Controller
                     [
                         $column => $value * $transaksiDetail->items->konversi,
                         'sisa' => $value * $transaksiDetail->items->konversi,
-                        // 'updated_by' => auth()->user()->id,
+                        'updated_by' => auth()->user()->id,
 
                     ]
                 );

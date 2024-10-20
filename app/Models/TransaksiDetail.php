@@ -22,6 +22,7 @@ class TransaksiDetail extends BaseModel
         'tanggal',
         'harga',
         'qty',
+        'berat',
         'terpakai',
         'sisa',
         'satuan_besar',

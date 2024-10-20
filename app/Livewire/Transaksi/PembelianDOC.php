@@ -14,7 +14,7 @@ use App\Models\Transaksi;
 
 class PembelianDOC extends Component
 {
-    public $parent_id, $transaksi_id, $docs, $kode_doc, $suppliers, $kandangs, $periode, $faktur, $tanggal, $supplierSelect, $docSelect, $selectedKandang, $qty, $harga;
+    public $parent_id, $transaksi_id, $docs, $kode_doc, $suppliers, $kandangs, $periode, $faktur, $tanggal, $supplierSelect, $docSelect, $selectedKandang, $qty, $harga, $berat;
     public $edit_mode=0;
 
     protected $listeners = [
@@ -41,6 +41,7 @@ class PembelianDOC extends Component
             'docSelect' => 'required',
             'selectedKandang' => 'required',
             'qty' => 'required|integer',
+            'berat' => 'required|integer',
             'harga' => 'required|integer',
         ];
 
@@ -116,6 +117,7 @@ class PembelianDOC extends Component
                 'kandang_id' => $this->selectedKandang,
                 'harga' => $this->harga,
                 'total_qty' => $this->qty,
+                'total_berat' => $this->berat,
                 'sub_total' => $this->qty * $this->harga,
                 'kelompok_ternak_id' => null,
                 'user_id' => auth()->user()->id,
@@ -128,6 +130,7 @@ class PembelianDOC extends Component
                 [
                     'status' => 'Digunakan',
                     'jumlah' => $transaksi->total_qty,
+                    'berat' => $transaksi->total_berat,
                 ]
             );
 
@@ -146,6 +149,7 @@ class PembelianDOC extends Component
                     'slaughter_quantity' => 0,
                     'sold_quantity' => 0,
                     'remaining_quantity' => $transaksi->total_qty,
+                    'berat_beli' => $transaksi->total_berat,
                     'status' => 'Aktif',
                     'farm_id' => $transaksi->farm_id,
                     'kandang_id' => $transaksi->kandang_id,
@@ -168,6 +172,7 @@ class PembelianDOC extends Component
                 'item_name' => $doc->nama,
                 'harga' => $transaksi->harga,
                 'qty' => $transaksi->total_qty,
+                'berat' => $transaksi->total_berat,
                 'terpakai' => 0,
                 'sisa' => $transaksi->total_qty,
                 'satuan_besar' => $doc->satuan_besar,

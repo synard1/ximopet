@@ -41,7 +41,7 @@ return new class extends Migration
             $table->uuid('farm_id')->nullable();
             $table->uuid('kandang_id')->nullable();
             $table->decimal('total_qty', 15, 2)->nullable();
-            // $table->decimal('total_berat', 15, 2)->nullable();
+            $table->decimal('total_berat', 15, 2)->nullable();
             $table->decimal('harga', 15, 2)->nullable();
             $table->decimal('sub_total', 15, 2)->nullable();
             $table->decimal('terpakai', 15, 2)->nullable();
@@ -75,6 +75,7 @@ return new class extends Migration
             $table->uuid('item_id')->nullable();
             $table->string('item_name')->nullable();
             $table->decimal('qty', 15, 2)->nullable();
+            $table->decimal('berat', 15, 2)->nullable();
             $table->decimal('harga', 15, 2)->nullable();
             $table->decimal('sub_total', 15, 2)->nullable();
             $table->decimal('terpakai', 15, 2)->nullable();
