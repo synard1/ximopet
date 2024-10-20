@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'create_header' => 'Master Data Baru',
+    'create_header_new' => 'Master Data Baru',
     'create_supplier' => 'Buat Data Supplier',
     'create_customer' => 'Buat Data Customer',
     'create_farm' => 'Buat Data Farm',
@@ -21,11 +21,21 @@ return [
     'create_stock' => 'Buat Data Stok',
     'create_users' => 'Buat Data User',
 
+    'menu_header' => 'Master Data',
+    'menu_supplier' => 'Data Supplier',
+    'menu_customer' => 'Data Customer',
+    'menu_farm' => 'Data Farm',
+    'menu_cage' => 'Data Kandang',
+    'menu_stock' => 'Data Stok',
+    'menu_users' => 'Data User',
+    'menu_ternak' => 'Data Ternak',
+
 
     'create_transaction_header' => 'Data Transaksi',
     'create_purchasing' => 'Pembelian Stok',
     'create_purchasing_doc' => 'Pembelian DOC',
     'create_mutation_stock' => 'Pemakaian Stok',
     'create_mutation_livestock' => 'Mutasi Ternak',
+    'create_death_livestock' => 'Kematian Ternak',
 
 ];

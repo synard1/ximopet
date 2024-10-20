@@ -47,7 +47,7 @@
                 <!--end::Group actions-->
 
                 <!--begin::Modal-->
-                <livewire:user.add-user-modal></livewire:user.add-user-modal>
+                {{-- <livewire:user.add-user-modal></livewire:user.add-user-modal> --}}
                 <!--end::Modal-->
             </div>
             <!--end::Card toolbar-->

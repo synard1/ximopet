@@ -23,7 +23,7 @@ class TambahOperatorFarm extends Component
         'selectedFarm' => 'required', // Unique except on update
         'farms' => 'required', // Unique except on update
         'selectedOperator' => 'required',
-        'status' => 'required',
+        // 'status' => 'required',
     ];
 
     public function mount()
@@ -61,15 +61,15 @@ class TambahOperatorFarm extends Component
             // Prepare the data for creating/updating the supplier
             $data = [
                 'farm_id' => $this->selectedFarm,
-                'nama_farm' => $farm->nama,
+                // 'nama_farm' => $farm->nama,
                 'user_id' => $user->id,
-                'nama_operator' => $user->name,
-                'status' => $this->status,
+                // 'nama_operator' => $user->name,
+                // 'status' => $this->status,
             ];
 
             // dd($data);
         
-            $farmOperator = FarmOperator::where('id', $this->id)->first() ?? FarmOperator::create($data);
+            $farmOperator = FarmOperator::create($data);
         // try {
         // //     // Validate the form input data
         //     // $this->validate(); 

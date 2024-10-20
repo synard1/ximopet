@@ -39,7 +39,7 @@
                         @error('selectedOperator') <span class="text-danger error">{{ $message }}</span>@enderror
                     </div>
 
-                    <!--begin::Input group-->
+                    {{-- <!--begin::Input group-->
                     <div class="fv-row mb-7">
                         <!--begin::Label-->
                         <label class="required fw-semibold fs-6 mb-2">Status</label>
@@ -57,7 +57,7 @@
                         <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
-                    <!--end::Input group-->
+                    <!--end::Input group--> --}}
                 </form>
             </div>
             <div class="modal-footer">
@@ -87,7 +87,14 @@
             farmSelect.innerHTML = '<option value="">=== Pilih Farm ===</option>';
 
             // Fetch operators for the selected farm via AJAX
-            fetch(`/api/v1/get-farms/`)
+            // Replace this URL with your actual API endpoint
+			const apiUrl = '/api/v1/get-farms/';
+            fetch(apiUrl, {
+				headers: {
+                                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            },
+			})
                 .then(response => response.json())
                 .then(data => {
                     if (data.farms && data.farms.length > 0) {
@@ -117,7 +124,15 @@
 
         if (selectedFarm) {
             // Fetch operators for the selected farm via AJAX
-            fetch(`/api/v1/get-operators/${selectedFarm}`)
+            // Replace this URL with your actual API endpoint
+			const apiUrl = `/api/v1/get-operators/${selectedFarm}`;
+	
+            fetch(apiUrl, {
+                headers: {
+                                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            },
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.operators && data.operators.length > 0) {

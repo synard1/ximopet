@@ -23,6 +23,7 @@ class AddUserModal extends Component
     public $saved_avatar;
     public $password = '';
     public $passwordConfirmation = '';
+    public $user;
 
     public $edit_mode = false;
     public $isOpen = 0;
@@ -53,7 +54,7 @@ class AddUserModal extends Component
         if (! auth()->user()->hasRole('SuperAdmin')) {
             $rolesQuery->where('name', '!=', 'SuperAdmin');
         }
-        $roles = $rolesQuery->get(); 
+        $roles = $rolesQuery->get();
 
         $roles_description = [
             'Administrator' => 'Best for business owners and company administrators',
@@ -171,30 +172,46 @@ class AddUserModal extends Component
 
     public function deleteUser($id)
     {
-        // Prevent deletion of current user
-        if ($id == Auth::id()) {
-            $this->dispatch('error', 'User cannot be deleted');
-            return;
+        try {
+            // Prevent deletion of current user
+            if ($id == Auth::id()) {
+                $this->dispatch('error', 'User cannot be deleted');
+                return;
+            }
+
+            DB::table('farm_operators')->where('user_id', $id)->delete();
+
+            // Delete the user record with the specified ID
+            User::destroy($id);
+
+            // Emit a success event with a message
+            $this->dispatch('success', 'User successfully deleted');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+    
+            // Handle validation and general errors
+            $this->dispatch('error', 'Terjadi kesalahan saat menghapus data. '.$e->getMessage());
         }
-
-        // Delete the user record with the specified ID
-        User::destroy($id);
-
-        // Emit a success event with a message
-        $this->dispatch('success', 'User successfully deleted');
     }
 
     public function updateUser($id)
     {
         $this->edit_mode = true;
 
-        $user = User::find($id);
+        $user = User::with('roles')->find($id);
+
+        if (!$user) {
+            $this->dispatch('error', 'User not found');
+            return;
+        }
 
         $this->user_id = $user->id;
         $this->saved_avatar = $user->profile_photo_url;
         $this->name = $user->name;
         $this->email = $user->email;
-        $this->role = $user->roles?->first()->name ?? '';
+        $this->role = $user->roles->first()->name ?? '';
+        $this->user = $user;
 
         $this->openModal();
     }
@@ -209,12 +226,12 @@ class AddUserModal extends Component
     public function edit($id)
     {
         $this->edit_mode = true;
-        $user = User::where('id',$id)->first();
-        // $this->user_id = $user->id;
+        $user = User::with('roles')->where('id', $id)->first();
         $this->user_id = $id;
         $this->name = $user->name;
         $this->email = $user->email;
-
+        $this->role = $user->roles->first()->name ?? '';
+        $this->user = $user;
 
         $this->openModal();
     }

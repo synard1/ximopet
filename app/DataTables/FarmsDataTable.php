@@ -40,6 +40,11 @@ class FarmsDataTable extends DataTable
      */
     public function query(Farm $model): QueryBuilder
     {
+        if (auth()->user()->hasRole('Operator')) {
+            return $model->newQuery()->whereHas('farmOperators', function ($query) {
+                $query->where('user_id', auth()->id());
+            });
+        }
         return $model->newQuery();
     }
 
@@ -75,10 +80,9 @@ class FarmsDataTable extends DataTable
             Column::make('status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
             Column::computed('action')
-                // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
+                ->visible(auth()->user()->hasRole(['Supervisor']))
         ];
     }
 

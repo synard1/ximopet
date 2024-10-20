@@ -13,9 +13,9 @@
                         <th>#</th>
                         <th>Jenis</th>
                         <th>Nama</th>
-                        <th>Jumlah</th>
+                        <th>Stok Awal</th>
                         <th>Terpakai</th>
-                        <th>Sisa</th>
+                        <th>Stok Akhir</th>
                         <th>Harga</th>
                         <th>Sub Total</th>
                     </tr>
@@ -63,7 +63,7 @@
                     },
                     { data: 'jenis_barang' },
                     { data: 'nama' },
-                    { data: 'qty', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
+                    { data: 'stok_awal', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
                     { data: 'terpakai', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
                     { data: 'sisa', render: $.fn.dataTable.render.number( '.', ',', 2, '' ) },
                     { data: 'harga', render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) },

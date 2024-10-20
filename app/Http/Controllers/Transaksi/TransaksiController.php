@@ -10,6 +10,7 @@ use App\DataTables\PembelianStoksDataTable;
 use App\DataTables\PemakaianStoksDataTable;
 use App\Models\StokHistory;
 use App\Models\TransaksiDetail;
+use Illuminate\Support\Facades\DB;
 
 class TransaksiController extends Controller
 {
@@ -113,7 +114,7 @@ class TransaksiController extends Controller
         }elseif($task == 'READ'){
             // Read Detail Items
             $transactions = TransaksiDetail::where('transaksi_id', $id)
-                ->select('jenis_barang', 'item_name as nama', 'qty', 'terpakai', 'sisa', 'harga', 'sub_total')
+                ->select('jenis_barang', 'item_name as nama', DB::raw('qty + sisa as stok_awal'), 'terpakai', 'sisa', 'harga', 'sub_total', 'konversi')
                 ->orderBy('tanggal', 'DESC')
                 ->get();
 
@@ -137,12 +138,16 @@ class TransaksiController extends Controller
             return [
                 // 'faktur' => $transaction->faktur,
                 'id' => $transaction->transaksiDetail->first()?->item_id, // Access item_id from the first related transaksiDetail (if it exists)
-                'nama' => $transaction->transaksiDetail->first()?->item_nama, 
+                'nama' => $transaction->transaksiDetail->first()?->item_name, 
                 'qty' => $transaction->transaksiDetail->first()?->qty, 
                 'terpakai' => $transaction->transaksiDetail->first()?->terpakai, 
                 'sisa' => $transaction->transaksiDetail->first()?->sisa, 
-                'harga' => $transaction->transaksiDetail->first()?->harga, 
-                'sub_total' => $transaction->transaksiDetail->first()?->sub_total, 
+                // 'harga' => $transaction->transaksiDetail->first()?->harga, 
+                'harga_beli' => $transaction->transaksiDetail->first()?->harga, 
+                'berat_beli' => $transaction->kelompokTernak->berat_beli / $transaction->transaksiDetail->first()?->konversi, 
+                'harga_jual' => 0, 
+                'berat_jual' => 0, 
+                // 'sub_total' => $transaction->transaksiDetail->first()?->sub_total, 
             ];
         });
 

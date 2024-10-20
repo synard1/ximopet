@@ -25,4 +25,20 @@ class Item extends BaseModel
         'created_by',
         'updated_by',
     ];
+
+    public function transaksiDetail()
+    {
+        return $this->hasMany(TransaksiDetail::class);
+    }
+
+    public function stokHistory()
+    {
+        return $this->hasMany(StokHistory::class,'item_id','id');
+    }
+
+//     public function farmOperator()
+//    {
+//        return $this->belongsToMany(User::class, 'farm_operators', 'item_id', 'user_id')
+//                    ->withPivot('farm_id');
+//    }
 }

@@ -88,7 +88,7 @@ class PemakaianStoksDataTable extends DataTable
 
             })
             ->editColumn('qty', function (Transaksi $transaksi) {
-                return $transaksi->stokHistory()->sum('qty');
+                return $transaksi->stokHistory()->sum('stok_keluar');
                 // return $transaksi->transaksiDetail->reduce(function ($carry, $detail) {
                 //     return $carry + ($detail->stokHistory->qty ?? 0);
                 // }, 0);
@@ -154,10 +154,10 @@ class PemakaianStoksDataTable extends DataTable
 
     //     // return $model->newQuery();
     //     $query = $model::with(['farms','rekanans','items','transaksiDetail','transaksi'])
-    //         ->where('stok_histories.jenis','Pemakaian')
+    //         ->where('histori_stok.jenis','Pemakaian')
     //         ->groupBy('transaksi_details.transaksi_id')
-    //         ->join('transaksi_details', 'stok_histories.transaksi_detail_id', '=', 'transaksi_details.id')
-    //         ->select('stok_histories.jenis','transaksi_details.tanggal')
+    //         ->join('transaksi_details', 'histori_stok.transaksi_detail_id', '=', 'transaksi_details.id')
+    //         ->select('histori_stok.jenis','transaksi_details.tanggal')
     //         ->newQuery();
 
     //     return $query;
@@ -212,8 +212,8 @@ class PemakaianStoksDataTable extends DataTable
             // Column::make('item_id')->title('Nama Item')->searchable(true),
             // Column::make('qty')->title('Terpakai'),
             // Column::make('harga')->searchable(true),
-            Column::make('qty')->title('Jumlah'),
             Column::make('stok_awal')->title('Stok Awal'),
+            Column::make('qty')->title('Stok Terpakai'),
             Column::make('stok_akhir')->title('Stok Akhir'),
             // Column::make('sisa')->searchable(true),
             // Column::make('sub_total')->searchable(true),

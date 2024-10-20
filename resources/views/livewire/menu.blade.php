@@ -9,7 +9,7 @@
 				<div data-kt-menu-trigger="click" class="menu-item menu-accordion show">
 					<!--begin:Menu link-->
 					<span class="menu-link">
-						<span class="menu-title">{{ trans('menu.create_header',[],'id') }}</span>
+						<span class="menu-title">{{ trans('menu.create_header_new',[],'id') }}</span>
 						<span class="menu-arrow"></span>
 					</span>
 					<!--end:Menu link-->
@@ -128,7 +128,7 @@
 		<div data-kt-menu-trigger="click" class="menu-item menu-accordion show">
 			<!--begin:Menu link-->
 			<span class="menu-link">
-				<span class="menu-title">{{ trans('menu.create_header',[],'id') }}</span>
+				<span class="menu-title">{{ trans('menu.create_header_new',[],'id') }}</span>
 				<span class="menu-arrow"></span>
 			</span>
 			<!--end:Menu link-->
@@ -180,7 +180,7 @@
 		<div data-kt-menu-trigger="click" class="menu-item menu-accordion show">
 			<!--begin:Menu link-->
 			<span class="menu-link">
-				<span class="menu-title">{{ trans('menu.create_header',[],'id') }}</span>
+				<span class="menu-title">{{ trans('menu.create_header_new',[],'id') }}</span>
 				<span class="menu-arrow"></span>
 			</span>
 			<!--end:Menu link-->
@@ -293,6 +293,99 @@
 		</div>
 		<!--end:Menu item-->
 		@endif
+		@if(auth()->user()->hasRole(['Operator']))
+		<!--begin:Menu item-->
+		<div class="menu-item py-1">
+			<!--begin:Menu content-->
+			<div class="menu-content">
+				<div class="separator separator-dashed"></div>
+			</div>
+			<!--end:Menu content-->
+		</div>
+		<!--end:Menu item-->
+		<!--begin:Menu item-->
+		<div data-kt-menu-trigger="click" class="menu-item menu-accordion show">
+			<!--begin:Menu link-->
+			<span class="menu-link">
+				<span class="menu-title">{{ trans('menu.menu_header',[],'id') }}</span>
+				<span class="menu-arrow"></span>
+			</span>
+			<!--end:Menu link-->
+			<!--begin:Menu sub-->
+			<div class="menu-sub menu-sub-accordion menu-state-gray-900 menu-fit open">
+				<!--begin:Menu item-->
+				<div class="menu-item">
+					<!--begin:Menu link-->
+					<span class="menu-link" onclick="window.location.href='/master-data/farms'">
+						<span class="menu-icon">
+							<i class="ki-outline ki-home fs-4 text-success"></i>
+						</span>
+						<span class="menu-title">{{ trans('menu.menu_farm',[],'id') }}</span>
+						<span class="menu-badge">
+							<button class="btn btn-sm btn-icon btn-action">
+								<i class="ki-outline ki-right fs-4"></i>
+							</button>
+						</span>
+					</span>
+					<!--end:Menu link-->
+				</div>
+				<!--end:Menu item-->
+				<!--begin:Menu item-->
+				<div class="menu-item">
+					<!--begin:Menu link-->
+					<span class="menu-link" onclick="window.location.href='/master-data/kandangs'">
+						<span class="menu-icon">
+							<i class="ki-outline ki-home-1 fs-4 text-info"></i>
+						</span>
+						<span class="menu-title">{{ trans('menu.menu_cage',[],'id') }}</span>
+						<span class="menu-badge">
+							<button class="btn btn-sm btn-icon btn-action">
+								<i class="ki-outline ki-right fs-4"></i>
+							</button>
+						</span>
+					</span>
+					<!--end:Menu link-->
+				</div>
+				<!--end:Menu item-->
+				<!--begin:Menu item-->
+				<div class="menu-item">
+					<!--begin:Menu link-->
+					<span class="menu-link" onclick="window.location.href='/master-data/ternaks'">
+						<span class="menu-icon">
+							<i class="ki-outline ki-cube-3 fs-4 text-danger"></i>
+						</span>
+						<span class="menu-title">{{ trans('menu.menu_ternak',[],'id') }}</span>
+						<span class="menu-badge">
+							<button class="btn btn-sm btn-icon btn-action">
+								<i class="ki-outline ki-right fs-4"></i>
+							</button>
+						</span>
+					</span>
+					<!--end:Menu link-->
+				</div>
+				<!--end:Menu item-->
+				<!--begin:Menu item-->
+				<div class="menu-item">
+					<!--begin:Menu link-->
+					<span class="menu-link" onclick="window.location.href='/master-data/stoks'">
+						<span class="menu-icon">
+							<i class="ki-outline ki-cube-3 fs-4 text-warning"></i>
+						</span>
+						<span class="menu-title">{{ trans('menu.menu_stock',[],'id') }}</span>
+						<span class="menu-badge">
+							<button class="btn btn-sm btn-icon btn-action">
+								<i class="ki-outline ki-right fs-4"></i>
+							</button>
+						</span>
+					</span>
+					<!--end:Menu link-->
+				</div>
+				<!--end:Menu item-->
+			</div>
+			<!--end:Menu sub-->
+		</div>
+		<!--end:Menu item-->
+		@endif
 		<!--begin:Menu item-->
 		<div class="menu-item py-1">
 			<!--begin:Menu content-->
@@ -364,6 +457,23 @@
 							<button class="btn btn-sm btn-icon btn-action" data-bs-toggle="modal"
 								data-bs-target="#kt_modal_top_up_wallet">
 								<a href="/transaksi/pakai"><i class="ki-outline ki-plus fs-4"></i></a>
+							</button>
+						</span>
+					</span>
+					<!--end:Menu link-->
+				</div>
+				<!--end:Menu item-->
+				<!--begin:Menu item-->
+				<div class="menu-item menu-accordion menu-fit">
+					<!--begin:Menu link-->
+					<span class="menu-link" onclick="window.location.href='/transaksi/kematian-ternak'">
+						<span class="menu-icon">
+							<i class="ki-outline ki-logistic fs-4 text-gray-700"></i>
+						</span>
+						<span class="menu-title">{{ trans('menu.create_death_livestock',[],'id') }}</span>
+						<span class="menu-badge">
+							<button class="btn btn-sm btn-icon btn-action" >
+								<i class="ki-outline ki-plus fs-4"></i>
 							</button>
 						</span>
 					</span>
@@ -449,7 +559,12 @@
 			// Replace this URL with your actual API endpoint
 			const apiUrl = '/api/v1/farms-list';
 	
-			fetch(apiUrl)
+			fetch(apiUrl, {
+				headers: {
+                                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            },
+			})
 				.then(response => {
 					if (!response.ok) {
 						throw new Error(`HTTP error! Status: ${response.status}`);
@@ -518,6 +633,8 @@
 					$('#kt_modal_user').modal('show');
 				});
 			});
+
+
 
 		});
 	</script>
