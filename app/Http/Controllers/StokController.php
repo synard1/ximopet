@@ -192,8 +192,8 @@ class StokController extends Controller
 
                 $stokMutasi->update([
                     'stok_awal'  => 0,
-                    'stok_masuk' => $value * $transaksiDetail->items->konversi,
                     'stok_akhir' => $value * $transaksiDetail->items->konversi,
+                    'stok_masuk' => $value * $transaksiDetail->items->konversi,
                     'updated_by' => auth()->user()->id,
 
                 ]);

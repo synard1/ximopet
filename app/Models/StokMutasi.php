@@ -23,6 +23,8 @@ class StokMutasi extends BaseModel
         'item_id',
         'qty',
         'stok_awal',
+        'stok_masuk',
+        'stok_keluar',
         'stok_akhir',
         'status',
         'keterangan',
