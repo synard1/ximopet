@@ -435,7 +435,12 @@
 			// Replace this URL with your actual API endpoint
 			const apiUrl = '/api/v1/farms-list';
 	
-			fetch(apiUrl)
+			fetch(apiUrl, {
+				headers: {
+                                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            },
+			})
 				.then(response => {
 					if (!response.ok) {
 						throw new Error(`HTTP error! Status: ${response.status}`);

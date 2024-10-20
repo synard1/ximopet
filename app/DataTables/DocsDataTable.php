@@ -37,6 +37,9 @@ class DocsDataTable extends DataTable
             ->editColumn('rekanan_id', function (Transaksi $transaksi) {
                 return $transaksi->rekanans->nama ?? '';
             })
+            ->editColumn('total_qty', function (Transaksi $transaksi) {
+                return $transaksi->transaksiDetail->sum('qty') ?? '';
+            })
             ->editColumn('payload.doc.nama', function (Transaksi $transaksi) {
                 if($transaksi->payload){
                     if (isset($transaksi->payload['doc']) && !empty($transaksi->payload['doc'])) {
@@ -54,6 +57,9 @@ class DocsDataTable extends DataTable
             })
             ->editColumn('kandang_id', function (Transaksi $transaksi) {
                 return $transaksi->kandangs->nama ?? '';
+            })
+            ->editColumn('kelompok_ternak_id', function (Transaksi $transaksi) {
+                return $transaksi->kelompokTernak->name ?? '';
             })
             ->editColumn('harga', function (Transaksi $transaksi) {
                 return $this->formatRupiah($transaksi->harga);
@@ -149,7 +155,7 @@ class DocsDataTable extends DataTable
             Column::make('total_qty')->searchable(false),
             Column::make('harga')->searchable(true),
             Column::make('sub_total')->searchable(true),
-            Column::make('periode')->searchable(true),
+            Column::make('kelompok_ternak_id')->visible(true)->title('Kelompok Ternak'),
             Column::make('farm_id')->visible(false)->title('Farm'),
             Column::make('kandang_id')->visible(false)->title('Kandang'),
             Column::make('created_at')->title('Created Date')

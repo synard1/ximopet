@@ -36,7 +36,7 @@
                 <!--end::Toolbar-->
 
                 <!--begin::Modal-->
-                <livewire:user.add-user-modal></livewire:user.add-user-modal>
+                {{-- <livewire:user.add-user-modal></livewire:user.add-user-modal> --}}
                 <!--end::Modal-->
             </div>
             <!--end::Card toolbar-->
@@ -60,12 +60,12 @@
             document.getElementById('mySearchInput').addEventListener('keyup', function () {
                 window.LaravelDataTables['users-table'].search(this.value).draw();
             });
-            document.addEventListener('livewire:init', function () {
-                Livewire.on('success', function () {
-                    $('#kt_modal_add_user').modal('hide');
-                    window.LaravelDataTables['users-table'].ajax.reload();
-                });
-            });
+            // document.addEventListener('livewire:init', function () {
+            //     Livewire.on('success', function () {
+            //         $('#kt_modal_add_user').modal('hide');
+            //         window.LaravelDataTables['users-table'].ajax.reload();
+            //     });
+            // });
             // $('#kt_modal_add_user').on('hidden.bs.modal', function () {
             //     Livewire.dispatch('new_user');
             // });

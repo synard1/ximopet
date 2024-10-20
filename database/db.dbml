@@ -98,7 +98,7 @@ Table transaksi_details {
   deleted_at timestamp [null]
 }
 
-Table stok_histories {
+Table histori_stok {
   id uuid [pk]
   transaksi_detail_id uuid [null, ref: > transaksi_details.id]
   tanggal datetime [null]
