@@ -46,13 +46,22 @@ return new class extends Migration
 
         Schema::create('histori_ternak', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->uuid('transaksi_id');
             $table->uuid('kelompok_ternak_id');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
-            $table->integer('quantity');
+            $table->uuid('parent_id')->nullable();
+            $table->uuid('farm_id')->nullable();
+            $table->uuid('kandang_id')->nullable();
+            $table->dateTime('tanggal'); //tanggal mulai
+            $table->string('jenis'); //tanggal selesai
+            $table->string('perusahaan_nama');
+            $table->string('hpp');
+            $table->string('stok_awal');
+            $table->string('stok_masuk');
+            $table->string('stok_keluar');
+            $table->string('stok_akhir');
             $table->decimal('total_berat', 10, 2);
             $table->enum('status', ['hidup', 'mati', 'terjual', 'dibunuh', 'dipotong', 'sakit', 'abnormal']);
-            $table->dateTime('tanggal');
-            $table->string('keterangan');
+            $table->string('keterangan')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
 
@@ -61,6 +70,10 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('transaksi_id')->references('id')->on('transaksis')->onDelete('cascade');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
         });
 
         Schema::create('konsumsi_pakan', function (Blueprint $table) {

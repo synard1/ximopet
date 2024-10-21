@@ -100,20 +100,23 @@
             // Make cells editable (using a simple approach for now)
             table.on('click', 'tbody td.editable', function() {
                 var cell = $(this);
-                // var originalValue = cell.text();
-
-                // Extract the numeric value without the prefix
                 var originalValueText = cell.text();
-                var originalValue = parseFloat(originalValueText.replace(/[^0-9.-]+/g, '')); // Remove non-numeric characters
+                var originalValue = parseFloat(originalValueText.replace(/[^0-9.-]+/g, ''));
 
+                // Get the row data safely
+                var row = table.row(cell.closest('tr'));
+                if (!row || !row.data()) {
+                    console.error('Unable to get row data');
+                    return;
+                }
+                var rowData = row.data();
 
-                // Get the row data to check 'terpakai'
-                var rowData = table.row(cell.closest('tr')).data();
-                // console.log(rowData.terpakai);
+                // Safely check 'terpakai'
+                var terpakai = rowData && rowData.terpakai !== undefined ? rowData.terpakai : 0;
 
-                // Disable editing if 'terpakai' is greater than 0 or if it's null/undefined
-                if (rowData.terpakai > 0 || rowData.terpakai === null || rowData.terpakai === undefined) {
-                    return; // Exit the click handler, preventing editing
+                // Disable editing if 'terpakai' is greater than 0
+                if (terpakai > 0) {
+                    return;
                 }
 
                 // Create an input field for editing
@@ -123,13 +126,9 @@
 
                 // Handle saving the edit
                 input.blur(function() {
-                    // var newValue = input.val();
-                    var newValue = parseFloat(input.val()); // Parse the new value as a float
+                    var newValue = parseFloat(input.val());
 
-                    // if (newValue !== originalValue) {
                     if (!isNaN(newValue) && newValue !== originalValue) { 
-                        // Get the row and column data
-                        var rowData = table.row(cell.closest('tr')).data();
                         var columnIndex = table.cell(cell).index().column;
                         var columnData = table.settings().init().columns[columnIndex];
 
@@ -156,19 +155,15 @@
                                 table.ajax.reload();
                                 if (xhr.status === 401) {
                                     toastr.error('Unauthorized. Please log in again.');
-                                    // Optionally, redirect to login page
-                                    // window.location.href = '/login';
                                 } else {
                                     toastr.error('Error updating value: ' + xhr.responseJSON.message);
                                 }
                             }
                         });
                     } else if (isNaN(newValue) || newValue === '') {
-                        alert('Error value cannot blank');
+                        alert('Error: Value cannot be blank');
                         table.ajax.reload();
-
                     } else {
-                        // No change, revert to original value
                         table.ajax.reload();
                     }
                 });

@@ -54,5 +54,9 @@ class KelompokTernak extends BaseModel
     {
         return $this->belongsTo(Kandang::class, 'kandang_id', 'id');
     }
+
+    public function historyTernaks(){
+        return $this->hasMany(TernakHistory::class, 'kelompok_ternak_id', 'id');
+    }
     
 }
