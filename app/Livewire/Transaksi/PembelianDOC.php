@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use App\Models\Transaksi;
+use App\Models\TernakHistory;
 
 class PembelianDOC extends Component
 {
@@ -251,14 +252,19 @@ class PembelianDOC extends Component
                 DB::beginTransaction();
     
                 $transaksi = Transaksi::where('id', $id)->first();
+                $transaksiDetail = $transaksi->transaksiDetail()->first();
                 $kandang = Kandang::where('id', $transaksi->kandang_id)->first();
 
                 $kelompokTernak = KelompokTernak::where('id', $transaksi->kelompok_ternak_id)->first();
 
-                //Delete Kelompok Ternak
+                $historyTernak = TernakHistory::where('kelompok_ternak_id', $kelompokTernak->id)->first();
+
+                //Delete Kelompok Ternak & Ternak History
+                $historyTernak->delete();
                 $kelompokTernak->delete();
 
                 // Delete the user record with the specified ID
+                $transaksiDetail->delete();
                 Transaksi::destroy($id);
     
                 $kandang->update(
