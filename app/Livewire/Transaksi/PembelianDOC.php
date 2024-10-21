@@ -120,6 +120,8 @@ class PembelianDOC extends Component
                 'total_qty' => $this->qty,
                 'total_berat' => $this->berat,
                 'sub_total' => $this->qty * $this->harga,
+                'terpakai'  => 0,
+                'sisa'  => $this->qty,
                 'kelompok_ternak_id' => null,
                 'user_id' => auth()->user()->id,
                 'status' => 'Aktif',
@@ -156,6 +158,27 @@ class PembelianDOC extends Component
                     'kandang_id' => $transaksi->kandang_id,
                     'created_by' => auth()->user()->id,
                 ]);
+
+                $historyTernak = $kelompokTernak->historyTernaks()->create([
+                    'transaksi_id' => $transaksi->id,
+                    'kelompok_ternak_id' => $kelompokTernak->id,
+                    'parent_id' => null,
+                    'farm_id' => $transaksi->farm_id,
+                    'kandang_id' => $transaksi->kandang_id,
+                    'tanggal' => $transaksi->tanggal,
+                    'jenis' => 'Masuk',
+                    'perusahaan_nama' => $transaksi->rekanans->nama,
+                    'hpp' => $transaksi->sub_total,
+                    'stok_awal' => 0,
+                    'stok_akhir' => $transaksi->total_qty,
+                    'stok_masuk' => $transaksi->total_qty,
+                    'stok_keluar' => 0,
+                    'total_berat' => $kelompokTernak->berat_beli,
+                    'status' => 'hidup',
+                    'keterangan' => null,
+                    'created_by' => auth()->user()->id,
+                ]);
+
                 $transaksi->kelompok_ternak_id = $kelompokTernak->id;
                 $transaksi->save();
             }
