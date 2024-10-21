@@ -53,8 +53,8 @@ class FIFOService
 
                 // Fetch stock entries ordered by oldest first (FIFO)
                 $stockEntries = TransaksiDetail::whereHas('transaksi', function ($query) use ($validatedData) {
-                    $query->where('farm_id', $validatedData['farm_id']);
-                })
+                        $query->where('farm_id', $validatedData['farm_id']);
+                    })
                     ->where('item_id', $itemId)
                     ->where('jenis', 'Pembelian')
                     ->where('sisa', '>', 0)
@@ -80,6 +80,13 @@ class FIFOService
                     $stockEntry->sisa -= $deductQuantity;
                     $stockEntry->terpakai += $deductQuantity;
                     $stockEntry->save();
+
+                    // Update Stok Mutasi
+                    $stokMutasi = StokMutasi::where('transaksi_id', $stockEntry->transaksi_id)->first();
+
+                    $stokMutasi->stok_masuk = $stockEntry->sisa;
+                    $stokMutasi->stok_akhir = $stockEntry->sisa;
+                    $stokMutasi->save();
 
                     // Create TransaksiDetail
                     $transaksiDetail = TransaksiDetail::create([
@@ -107,6 +114,7 @@ class FIFOService
                     // Create StokMutasi
                     StokHistory::create([
                         'transaksi_id' => $transaksi->id,
+                        'parent_id' => $stokMutasi->id,
                         'item_id' => $stockEntry->item_id,
                         'item_name' => $stockEntry->item_name,
                         'satuan' => $transaksiDetail->satuan_besar,
