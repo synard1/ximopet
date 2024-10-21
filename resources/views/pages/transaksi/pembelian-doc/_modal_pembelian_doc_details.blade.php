@@ -1,4 +1,4 @@
-getDetailPembelianDoc<!-- Modal -->
+<!-- Modal -->
 <div class="modal fade" id="kt_modal_pembelian_doc_details" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl">
       <div class="modal-content">

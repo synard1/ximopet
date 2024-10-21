@@ -147,6 +147,28 @@ class DemoSeeder extends Seeder
                     'kandang_id' => $transaksiPembelian->kandang_id,
                     'created_by' => $supervisor->id,
                 ]);
+
+                $historyTernak = $kelompokTernak->historyTernaks()->create([
+                    'transaksi_id' => $transaksiPembelian->id,
+                    'kelompok_ternak_id' => $kelompokTernak->id,
+                    'parent_id' => null,
+                    'farm_id' => $transaksiPembelian->farm_id,
+                    'kandang_id' => $transaksiPembelian->kandang_id,
+                    'tanggal' => $transaksiPembelian->tanggal,
+                    'jenis' => 'Masuk',
+                    'perusahaan_nama' => $transaksiPembelian->rekanans->nama,
+                    'hpp' => $transaksiPembelian->sub_total,
+                    'stok_awal' => 0,
+                    'stok_akhir' => $qty,
+                    'stok_masuk' => $qty,
+                    'stok_keluar' => 0,
+                    'total_berat' => $kelompokTernak->berat_beli,
+                    'status' => 'hidup',
+                    'keterangan' => null,
+                    'created_by' => $supervisor->id,
+                ]);
+
+                // Update Transaksi Pembelian Ternak
                 $transaksiPembelian->kelompok_ternak_id = $kelompokTernak->id;
                 $transaksiPembelian->save();
 
