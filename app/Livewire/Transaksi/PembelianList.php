@@ -307,9 +307,15 @@ class PembelianList extends Component
             DB::beginTransaction();
 
             $detail = TransaksiDetail::where('transaksi_id', $id)->first();
+            $stokHistory = StokHistory::where('transaksi_id', $id)->first();
 
-            if($detail->terpakai > 0){
-                $this->dispatch('error', 'Sudah ada data transaksi yang terpakai.');
+            // Find related StokHistory records
+            $relatedStokHistories = StokHistory::where('parent_id', $stokHistory->id)->get();
+
+            // Check if there are any related StokHistory records
+            if ($relatedStokHistories->isNotEmpty() && $detail->terpakai > 0) {
+                $this->dispatch('error', 'Tidak dapat menghapus transaksi. Terdapat riwayat stok terkait.');
+                return;
             }else{
                 // Delete the user record with the specified ID
                 Transaksi::destroy($id);
@@ -321,9 +327,6 @@ class PembelianList extends Component
                 // Emit a success event with a message
                 $this->dispatch('success', 'Data berhasil dihapus');
             }
-
-            
-
         } catch (\Exception $e) {
             DB::rollBack();
             // Handle validation and general errors
