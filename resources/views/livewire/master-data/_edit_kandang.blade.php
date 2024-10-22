@@ -32,10 +32,11 @@
                         <label class="required fw-semibold fs-6 mb-2">Status</label>
                         <!--end::Label-->
                         <!--begin::Select2-->
-                        <select id="status" name="status" wire:model="status" class="js-select2 form-control">
+                        <select id="status" name="status" wire:model="status" class="js-select2 form-control" {{ $status == 'Digunakan' ? 'disabled' : '' }}>
                             <option value="">=== Pilih ===</option>
-                                <option value="Aktif">Aktif</option>
-                                <option value="Tidak Aktif">Tidak Aktif</option>
+                            <option value="Aktif" {{ $status == 'Aktif' ? 'selected' : '' }}>Aktif</option>
+                            <option value="Tidak Aktif" {{ $status == 'Tidak Aktif' ? 'selected' : '' }}>Tidak Aktif</option>
+                            <option value="Digunakan" {{ $status == 'Digunakan' ? 'selected' : '' }}>Digunakan</option>
                         </select>
                         <!--end::Select2-->
                         @error('farm_id')

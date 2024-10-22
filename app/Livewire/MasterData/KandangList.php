@@ -53,6 +53,14 @@ class KandangList extends Component
     public function store()
     {
         $this->validate();
+        
+        $kandang = Kandang::find($this->kandang_id);
+        
+        if ($kandang && $this->kapasitas < $kandang->jumlah) {
+            $this->dispatch('error', __('Kapasitas tidak boleh kurang dari jumlah ternak saat ini'));
+            return;
+        }
+        
         Kandang::updateOrCreate(['id' => $this->kandang_id], [
             'kode' => $this->kode,
             'nama' => $this->nama,
@@ -62,13 +70,10 @@ class KandangList extends Component
 
         if($this->kandang_id){
             $this->dispatch('success', __('Data Kandang Berhasil Diubah'));
-
         }else{
             $this->dispatch('success', __('Data Kandang Berhasil Dibuat'));
         }
 
-        // session()->flash('message', 
-        // $this->kandang_id ? 'Kandang updated successfully.' : 'Kandang created successfully.');
         $this->closeModal();
         $this->resetInputFields();
     }
@@ -89,9 +94,20 @@ class KandangList extends Component
 
     public function deleteKandangList($id)
     {
+        $kandang = Kandang::find($id);
 
-        // Delete the user record with the specified ID
-        Kandang::destroy($id);
+        if (!$kandang) {
+            $this->dispatch('error', 'Kandang tidak ditemukan');
+            return;
+        }
+
+        if ($kandang->status !== 'Aktif') {
+            $this->dispatch('error', 'Hanya kandang dengan status Aktif dan kosong yang dapat dihapus');
+            return;
+        }
+
+        // Delete the kandang record with the specified ID
+        $kandang->delete();
 
         // Emit a success event with a message
         $this->dispatch('success', 'Data berhasil dihapus');
