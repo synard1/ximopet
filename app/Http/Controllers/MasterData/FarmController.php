@@ -79,4 +79,29 @@ class FarmController extends Controller
     {
         //
     }
+
+    public function getDataAjax(Request $request)
+    {
+        $roles = $request->get('roles');
+        $type = $request->get('type');
+
+        if($type == 'list'){
+            if($roles == 'Operator'){
+                // Fetch existing farm IDs associated with the selected roles and type
+                $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
+
+                // Fetch operators not associated with the selected farm
+                $farms = Farm::whereIn('id', $farmIds)->get(['id', 'nama']);
+
+                $result = ['farms' => $farms];
+
+                return response()->json($result);
+            }
+        }
+
+        
+
+        
+        // return response()->json(['operators' => $operators]);
+    }
 }

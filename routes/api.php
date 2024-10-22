@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MasterData\KandangController;
 use App\Http\Controllers\Transaksi\TransaksiController;
 use App\Http\Controllers\StokController;
+use App\Http\Controllers\MasterData\FarmController;
 
 /*
 |--------------------------------------------------------------------------
@@ -134,12 +135,16 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     });
 
     Route::post('/farms', function (Request $request) {
-        return app(AppApi::class)->create($request);
+        return app(FarmController::class)->getDataAjax($request);
     });
 
     Route::post('/kandangs', function (Request $request) {
-        return app(KandangController::class)->getKandangs($request);
+        return app(KandangController::class)->getDataAjax($request);
     });
+    
+    // Route::post('/kandangs', function (Request $request) {
+    //     return app(KandangController::class)->getKandangs($request);
+    // });
 
     Route::post('/transaksi', function (Request $request) {
         return app(TransaksiController::class)->getTransaksi($request);

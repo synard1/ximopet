@@ -8,37 +8,28 @@ use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class KelompokTernak extends BaseModel
+class KematianTernak extends BaseModel
 {
     use HasFactory, SoftDeletes, HasUuids;
 
-    protected $table = 'kelompok_ternak';
+    protected $table = 'kematian_ternak';
 
     protected $fillable = [
-        'transaksi_id',
-        'name',
-        'breed',
-        'start_date',
-        'estimated_end_date',
-        'initial_quantity',
-        'stok_awal',
-        'stok_masuk',
-        'jumlah_mati',
-        'jumlah_dipotong',
-        'jumlah_dijual',
-        'stok_akhir',
-        'berat_beli',
-        'berat_jual',
-        'status',
+        'id',
+        'kelompok_ternak_id',
+        'tanggal',
         'farm_id',
         'kandang_id',
+        'quantity',
+        'total_berat',
+        'penyebab',
+        'keterangan',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
-        'start_date' => 'datetime',
-        'estimated_end_date' => 'datetime',
+        'tanggal' => 'datetime',
     ];
 
     public function transaksi()
@@ -60,8 +51,8 @@ class KelompokTernak extends BaseModel
         return $this->hasMany(TernakHistory::class, 'kelompok_ternak_id', 'id');
     }
 
-    public function kematianTernak(){
-        return $this->hasMany(KematianTernak::class, 'kelompok_ternak_id', 'id');
+    public function kelompokTernaks(){
+        return $this->belongsTo(KelompokTernak::class, 'kelompok_ternak_id', 'id');
     }
     
 }

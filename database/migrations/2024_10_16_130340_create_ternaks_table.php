@@ -21,12 +21,12 @@ return new class extends Migration
             $table->string('breed'); //jenis
             $table->date('start_date'); //tanggal mulai
             $table->date('estimated_end_date'); //tanggal selesai
-            $table->integer('initial_quantity'); //jumlah awal
-            $table->integer('current_quantity'); //jumlah saat ini
-            $table->integer('death_quantity'); //jumlah mati
-            $table->integer('slaughter_quantity'); //jumlah yang dipotong
-            $table->integer('sold_quantity'); //jumlah yang terjual
-            $table->integer('remaining_quantity'); //jumlah yang tersisa
+            $table->integer('stok_awal'); //jumlah awal
+            $table->integer('stok_masuk'); //jumlah saat ini
+            $table->integer('jumlah_mati'); //jumlah mati
+            $table->integer('jumlah_dipotong'); //jumlah yang dipotong
+            $table->integer('jumlah_dijual'); //jumlah yang terjual
+            $table->integer('stok_akhir'); //jumlah yang tersisa
             $table->decimal('berat_beli', 10, 2)->default(0); //berat beli
             $table->decimal('berat_jual', 10, 2)->default(0); //berat jual
             $table->uuid('farm_id')->nullable();
@@ -99,11 +99,12 @@ return new class extends Migration
         Schema::create('kematian_ternak', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('kelompok_ternak_id');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
             $table->dateTime('tanggal');
+            $table->uuid('farm_id');
+            $table->uuid('kandang_id');
             $table->integer('quantity');
-            $table->string('sebab');
             $table->decimal('total_berat', 10, 2);
+            $table->string('penyebab');
             $table->string('keterangan');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -113,6 +114,9 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
         });
 
         Schema::create('penjualan_ternak', function (Blueprint $table) {

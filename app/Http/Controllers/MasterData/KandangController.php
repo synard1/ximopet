@@ -77,4 +77,32 @@ class KandangController extends Controller
 
         return response()->json($result);
     }
+
+    public function getDataAjax(Request $request)
+    {
+        $roles = $request->get('roles');
+        $type = $request->get('type');
+        $farm_id = $request->get('farm_id');
+
+        if($type == 'list'){
+            if($roles == 'Operator'){
+                // Fetch existing farm IDs associated with the selected roles and type
+                $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
+
+                // Fetch kandangs associated with the selected farm and status 'Digunakan'
+                $kandangs = Kandang::where('master_kandangs.farm_id', $farm_id)
+                            ->where('master_kandangs.status', 'Digunakan')
+                            ->leftJoin('kelompok_ternak', 'master_kandangs.id', '=', 'kelompok_ternak.kandang_id')
+                            ->select('master_kandangs.id', 'master_kandangs.nama', 'kelompok_ternak.name as kelompok_ternak_name', 'kelompok_ternak.start_date')
+                            ->get();
+
+                $result = [
+                    'kandangs' => $kandangs,
+                    'oldestDate' => $kandangs->min('start_date')
+                ];
+
+                return response()->json($result);
+            }
+        }
+    }
 }

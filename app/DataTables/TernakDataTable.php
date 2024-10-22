@@ -98,10 +98,10 @@ class TernakDataTable extends DataTable
         return [
             Column::make('name'),
             Column::make('start_date'),
-            Column::make('initial_quantity'),
+            Column::make('stok_masuk'),
             Column::make('berat_beli'),
-            Column::make('death_quantity')->title('Ternak Mati'),
-            Column::make('remaining_quantity')->title('Sisa Ternak'),
+            Column::make('jumlah_mati')->title('Ternak Mati'),
+            Column::make('stok_akhir')->title('Sisa Ternak'),
             Column::make('status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),
             // Column::computed('action')

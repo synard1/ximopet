@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ternak;
 use Illuminate\Http\Request;
 use App\DataTables\TernakDataTable;
+use App\DataTables\KematianTernakDataTable;
 
 class TernakController extends Controller
 {
@@ -67,11 +68,11 @@ class TernakController extends Controller
         //
     }
 
-    public function kematianTernakIndex(TernakDataTable $dataTable)
+    public function kematianTernakIndex(KematianTernakDataTable $dataTable)
     {
-        $data = Ternak::all();
-        $dataTable->data = $data;
-        $dataTable->setup();
-        return $dataTable->render('pages.transaksi.kematian-ternak.index');
+        // $data = Ternak::all();
+        // $dataTable->data = $data;
+        // $dataTable->setup();
+        return $dataTable->render('pages.transaksi.kematian-ternak.list');
     }
 }
