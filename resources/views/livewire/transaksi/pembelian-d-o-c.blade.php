@@ -252,7 +252,8 @@
                 },
                 body: JSON.stringify({ // Add your parameters here
                     type: 'LIST',
-                    status: 'Aktif'
+                    status: 'Aktif',
+                    roles: 'Supervisor'
                 })
             })
             .then(response => response.json())
@@ -266,7 +267,7 @@
                         kandangSelect.appendChild(option);
                     });
                 }
-                console.log(data);
+                // console.log(data);
             })
             .catch(error => console.error('Error fetching operators:', error));
 
@@ -286,7 +287,7 @@
             //     })
             //     .catch(error => console.error('Error fetching operators:', error));
 
-            console.log('form open');
+            // console.log('form open');
             
         });
 

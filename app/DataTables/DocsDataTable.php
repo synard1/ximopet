@@ -67,20 +67,31 @@ class DocsDataTable extends DataTable
             ->editColumn('sub_total', function (Transaksi $transaksi) {
                 return $this->formatRupiah($transaksi->sub_total);
             })
-            // ->editColumn('created_at', function (Kandang $kandang) {
-            //     return $kandang->created_at->format('d M Y, h:i a');
-            // })
             ->addColumn('action', function (Transaksi $transaksi) {
                 return view('pages/transaksi.pembelian-doc._actions', compact('transaksi'));
             })
-            // ->filterColumn('farm', function($query, $keyword) {
-            //     $query->whereHas('farms', function($query) use ($keyword) { // Assuming you have a 'farm' relationship on your model
-            //         $query->where('nama', 'like', "%{$keyword}%");
-            //     });
-            // })
             ->setRowId('id')
-            ->rawColumns(['']);
-            // ->make(true);
+            ->rawColumns([''])
+            ->filterColumn('rekanan_id', function($query, $keyword) {
+                $query->whereHas('rekanans', function($q) use ($keyword) {
+                    $q->where('nama', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('farm_id', function($query, $keyword) {
+                $query->whereHas('farms', function($q) use ($keyword) {
+                    $q->where('nama', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('kandang_id', function($query, $keyword) {
+                $query->whereHas('kandangs', function($q) use ($keyword) {
+                    $q->where('nama', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('kelompok_ternak_id', function($query, $keyword) {
+                $query->whereHas('kelompokTernak', function($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
+            });
     }
 
 
@@ -122,7 +133,7 @@ class DocsDataTable extends DataTable
             ->orderBy(1)
             ->parameters([
                 'scrollX'      =>  true,
-                'searching'       =>  false,
+                'searching'       =>  true,
                 // 'responsive'       =>  true,
                 'lengthMenu' => [
                         [ 10, 25, 50, -1 ],

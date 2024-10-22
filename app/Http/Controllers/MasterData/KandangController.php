@@ -65,26 +65,28 @@ class KandangController extends Controller
         //
     }
 
-    public function getKandangs(Request $request)
-    {
-        $type = $request->type;
-        $status = $request->status;
+    // public function getKandangs(Request $request)
+    // {
+    //     $type = $request->type;
+    //     $status = $request->status;
 
-        $result = Kandang::where('status', $status)->get(['id','kode','nama','kapasitas','jumlah']);
+    //     $result = Kandang::where('status', $status)->get(['id','kode','nama','kapasitas','jumlah']);
 
-        // dd($request->all());
+    //     // dd($request->all());
 
 
-        return response()->json($result);
-    }
+    //     return response()->json($result);
+    // }
 
     public function getDataAjax(Request $request)
     {
         $roles = $request->get('roles');
         $type = $request->get('type');
         $farm_id = $request->get('farm_id');
+        $status = $request->get('status');
 
-        if($type == 'list'){
+
+        if($type == 'list' || $type == 'LIST'){
             if($roles == 'Operator'){
                 // Fetch existing farm IDs associated with the selected roles and type
                 $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
@@ -102,7 +104,27 @@ class KandangController extends Controller
                 ];
 
                 return response()->json($result);
+            }elseif($roles == 'Supervisor'){
+
+                $result = Kandang::where('status', $status)->get(['id','kode','nama','kapasitas','jumlah']);
+
+                return response()->json($result);
             }
         }
+    }
+
+    public function getKandangs($farmId, $status)
+    {
+        // Fetch operators not associated with the selected farm
+        if( $status == 'used'){
+            $kandangs = Kandang::where('farm_id', $farmId)->where('status', 'Digunakan')->get(['id', 'nama']);
+        // }else{
+        //     $kandangs = Kandang::where('status', 'Tidak Aktif')->get(['id', 'nama']);
+        }
+
+        $result = ['kandangs' => $kandangs];
+
+
+        return response()->json($result);
     }
 }
