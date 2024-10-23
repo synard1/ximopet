@@ -144,7 +144,7 @@
                                     class="js-select2 form-control">
                                     <option value="">=== Pilih ===</option>
                                     @foreach ($docs as $doc)
-                                    <option value="{{ $doc->id }}">{{ $doc->kode }} -- {{ $doc->nama }}</option>
+                                    <option value="{{ $doc->id }}">{{ $doc->kode }} -- {{ $doc->name }}</option>
                                     @endforeach
                                 </select>
                                 <!--end::Select2-->
