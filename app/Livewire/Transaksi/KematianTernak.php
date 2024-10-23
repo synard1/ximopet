@@ -97,6 +97,7 @@ class KematianTernak extends Component
 
             DB::commit();
             $this->dispatch('success', 'Data Kematian Ternak berhasil ditambahkan');
+            $this->reset();
         } catch (\Exception $e) {
             DB::rollBack();
             $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data.'. $e);

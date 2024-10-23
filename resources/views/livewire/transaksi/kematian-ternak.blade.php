@@ -3,7 +3,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Buat Data Kandang</h5>
+                    <h5 class="modal-title">Buat Data Kematian Ternak</h5>
                     <!--begin::Close-->
                     <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal" aria-label="Close">
                         {!! getIcon('cross','fs-1') !!}
@@ -64,7 +64,7 @@
                                 <!--begin::Input group-->
                                 <div class="fv-row mb-7">
                                     <!--begin::Label-->
-                                    <label class="required fw-semibold fs-6 mb-2">Tanggal Pembelian</label>
+                                    <label class="required fw-semibold fs-6 mb-2">Tanggal</label>
                                     <!--end::Label-->
                                     <!--begin::Input-->
                                     <input class="form-control" wire:model="tanggal" placeholder="Pilih Tanggal Pembelian" id="tanggal" disabled/>

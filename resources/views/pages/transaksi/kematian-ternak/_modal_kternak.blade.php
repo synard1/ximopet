@@ -44,7 +44,7 @@
 
                                     <!--begin::Input group-->
                                     <div class="mb-5">
-                                        <label class="form-label fs-8 mb-3">Tanggal Pembelian</label>
+                                        <label class="form-label fs-8 mb-3">Tanggal</label>
                                         <input wire:model="tanggal" id="tanggal" class="form-control form-control-solid"
                                             placeholder="Tanggal" @if ($edit_mode == true) readonly disabled
                                                 
