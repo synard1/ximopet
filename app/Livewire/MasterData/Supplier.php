@@ -90,19 +90,17 @@ class Supplier extends Component
         $this->openModal();
     }
 
-    // public function delete($id)
-    // {
-    //     // Rekanan::find($id)->delete();
-    //     Rekanan::where('id',$id)->delete();
-    //     session()->flash('message', 'Rekanan deleted successfully.');
-    // }
-
     public function deleteSupplier($id)
     {
-        // Delete the user record with the specified ID
-        Rekanan::destroy($id);
+        $supplier = Rekanan::findOrFail($id);
 
-        // Emit a success event with a message
+        if ($supplier->transaksi()->exists()) {
+            $this->dispatch('error', 'Supplier tidak dapat dihapus karena memiliki transaksi terkait.');
+            return;
+        }
+
+        $supplier->delete();
+
         $this->dispatch('success', 'Data berhasil dihapus');
     }
 

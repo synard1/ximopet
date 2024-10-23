@@ -26,4 +26,8 @@ class Rekanan extends Model
         'telp_pic',
         'status',
     ];
+
+    public function transaksi(){
+        return $this->hasMany(Transaksi::class);
+    }
 }
