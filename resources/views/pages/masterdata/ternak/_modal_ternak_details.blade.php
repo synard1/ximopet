@@ -4,29 +4,23 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h1 class="modal-title fs-5" id="kt_modal_ternak_details_title">Modal title</h1>
+                <h1 class="modal-title fs-5" id="kt_modal_ternak_details_title">Detail Ternak</h1>
                 {{-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> --}}
             </div>
             <div class="modal-body">
-                <table id="detailsTable" class="display" style="width:100%">
+                <table id="detailsTernakTable" class="display" style="width:100%">
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Jenis</th>
-                            <th>Nama</th>
-                            <th>Jumlah</th>
-                            <th>Terpakai</th>
-                            <th>Sisa</th>
-                            <th>Satuan</th>
-                            <th>Harga</th>
-                            <th>Sub Total</th>
+                            <th>Tanggal</th>
+                            <th>Stok Awal</th>
+                            <th>Jumlah Mati</th>
+                            <th>Berat Mati</th>
+                            <th>Stok Akhir</th>
+                            <th>Penyebab</th>
                         </tr>
                     </thead>
                 </table>
-                <p>* Hanya <b>Jumlah</b> dan <b>Harga</b> yang bisa di ubah secara langsung</br>
-                    * Data hanya bisa diubah jika belum memiliki data transaksi</br>
-                    * Klik pada kolom data yang akan di ubah untuk membuka fungsi ubah secara langsung</p>
-
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
@@ -42,7 +36,7 @@
 
 @push('scripts')
     <script>
-        function getDetails(param) {
+        function getDetailsTernak(param) {
             // console.log(param);
             // Get the Sanctum token from the session
             const token = '{{ Session::get('auth_token') }}';
@@ -53,132 +47,55 @@
                 'Accept': 'application/json'
             };
 
-            const table = new DataTable('#detailsTable', {
+            const table = new DataTable('#detailsTernakTable', {
                 ajax: {
-                    url: `/api/v1/transaksi/details/${param}`,
-                    headers: headers
+                    url: `/api/v1/ternaks`,
+                    headers: headers,
+                    type: 'POST',
+                    data: function (d) {
+                        d.roles = 'Operator';
+                        d.task = 'READ';
+                        d.type = 'Detail';
+                        d.jenis = 'Mutasi';
+                        d.id = param;
+                    },
+                    dataSrc: '' // Add this line to handle the array response
                 },
                 columns: [{
-                        data: 'id',
                         title: '#',
                         render: function(data, type, row, meta) {
                             return meta.row + meta.settings._iDisplayStart + 1;
                         }
                     },
                     {
-                        data: 'jenis_barang'
+                        data: 'tanggal',
+                        render: function(data) {
+                            return new Date(data).toLocaleDateString('en-GB');
+                        }
                     },
                     {
-                        data: 'item_name'
+                        data: 'stok_awal'
                     },
                     {
-                        data: 'qty',
-                        className: 'editable', // Tambahkan className di sini
+                        data: 'jumlah_mati'
                     },
                     {
-                        data: 'terpakai',
+                        data: 'berat_mati'
                     },
                     {
-                        data: 'sisa',
+                        data: 'stok_akhir'
                     },
                     {
-                        data: 'satuan_besar'
-                    },
-                    {
-                        data: 'harga',
-                        className: 'editable',
-                        render: $.fn.dataTable.render.number(',', '.', 0, 'Rp')
-                    },
-                    {
-                        data: 'sub_total',
-                        render: $.fn.dataTable.render.number(',', '.', 0, 'Rp')
+                        data: 'penyebab'
                     }
                 ]
-            });
-
-            // Enable inline editing
-            // Make cells editable (using a simple approach for now)
-            table.on('click', 'tbody td.editable', function() {
-                var cell = $(this);
-                // var originalValue = cell.text();
-
-                // Extract the numeric value without the prefix
-                var originalValueText = cell.text();
-                var originalValue = parseFloat(originalValueText.replace(/[^0-9.-]+/g, '')); // Remove non-numeric characters
-
-
-                // Get the row data to check 'terpakai'
-                var rowData = table.row(cell.closest('tr')).data();
-                // console.log(rowData.terpakai);
-
-                // Disable editing if 'terpakai' is greater than 0 or if it's null/undefined
-                if (rowData.terpakai > 0 || rowData.terpakai === null || rowData.terpakai === undefined) {
-                    return; // Exit the click handler, preventing editing
-                }
-
-                // Create an input field for editing
-                var input = $('<input type="text" value="' + originalValue + '">');
-                cell.html(input);
-                input.focus();
-
-                // Handle saving the edit
-                input.blur(function() {
-                    // var newValue = input.val();
-                    var newValue = parseFloat(input.val()); // Parse the new value as a float
-
-                    // if (newValue !== originalValue) {
-                    if (!isNaN(newValue) && newValue !== originalValue) { 
-                        // Get the row and column data
-                        var rowData = table.row(cell.closest('tr')).data();
-                        var columnIndex = table.cell(cell).index().column;
-                        var columnData = table.settings().init().columns[columnIndex];
-
-                        // Send AJAX request to update the data
-                        $.ajax({
-                            url: '/api/v1/stocks',
-                            method: 'POST',
-                            headers: {
-                                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
-                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                            },
-                            data: {
-                                type: 'edit',
-                                id: rowData.id,
-                                column: columnData.data,
-                                value: newValue
-                            },
-                            success: function(response) {
-                                cell.text(newValue);
-                                toastr.success(response.message);
-                                table.ajax.reload();
-                            },
-                            error: function(xhr, status, error) {
-                                table.ajax.reload();
-                                if (xhr.status === 401) {
-                                    toastr.error('Unauthorized. Please log in again.');
-                                    // Optionally, redirect to login page
-                                    // window.location.href = '/login';
-                                } else {
-                                    toastr.error('Error updating value: ' + xhr.responseJSON.message);
-                                }
-                            }
-                        });
-                    } else if (isNaN(newValue) || newValue === '') {
-                        alert('Error value cannot blank');
-                        table.ajax.reload();
-
-                    } else {
-                        // No change, revert to original value
-                        table.ajax.reload();
-                    }
-                });
             });
         }
 
         function closeDetails() {
-            var table = new DataTable('#detailsTable');
+            var table = new DataTable('#detailsTernakTable');
             table.destroy();
-            window.LaravelDataTables['ternakStoks-table'].ajax.reload();
+            window.LaravelDataTables['ternaks-table'].ajax.reload();
         }
     </script>
 @endpush

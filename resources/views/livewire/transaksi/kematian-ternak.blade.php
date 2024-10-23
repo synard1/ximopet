@@ -67,7 +67,7 @@
                                     <label class="required fw-semibold fs-6 mb-2">Tanggal</label>
                                     <!--end::Label-->
                                     <!--begin::Input-->
-                                    <input class="form-control" wire:model="tanggal" placeholder="Pilih Tanggal Pembelian" id="tanggal" disabled/>
+                                    <input class="form-control" wire:model="tanggal" placeholder="Pilih Tanggal" id="tanggal" disabled/>
                                     <!--end::Input-->
                                     @error('tanggal')
                                     <span class="text-danger">{{ $message }}</span> @enderror

@@ -102,7 +102,9 @@ return new class extends Migration
             $table->dateTime('tanggal');
             $table->uuid('farm_id');
             $table->uuid('kandang_id');
+            $table->string('stok_awal');
             $table->integer('quantity');
+            $table->string('stok_akhir');
             $table->decimal('total_berat', 10, 2);
             $table->string('penyebab');
             $table->string('keterangan');

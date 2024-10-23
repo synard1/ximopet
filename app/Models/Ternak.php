@@ -54,5 +54,13 @@ class Ternak extends BaseModel
     {
         return $this->belongsTo(Kandang::class, 'kandang_id', 'id');
     }
+
+    public function kematianTernak(){
+        return $this->hasMany(KematianTernak::class, 'kelompok_ternak_id', 'id');
+    }
+
+    public function jenisTernak(){
+        return $this->belongsTo(Item::class, 'item_id', 'id');
+    }
     
 }

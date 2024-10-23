@@ -68,6 +68,48 @@ document.querySelectorAll('[data-kt-action="update_row"]').forEach(function (ele
     });
 });
 
+// Add click event listener to update buttons
+document.querySelectorAll('[data-kt-action="view_detail_ternak"]').forEach(function (element) {
+    element.addEventListener('click', function (e) {
+        e.preventDefault();
+        var modal = document.getElementById('kt_modal_ternak_details');
+
+        // Select parent row
+        const parent = e.target.closest('tr');
+
+        // Get transaksi ID
+        const transaksiId = event.currentTarget.getAttribute('data-kt-transaksi-id');
+
+        // Get suppliers name
+        const transaksiSupplier = parent.querySelectorAll('td')[2].innerText;
+        const transaksiFaktur = parent.querySelectorAll('td')[0].innerText;
+
+        // Simulate delete request -- for demo purpose only
+        Swal.fire({
+            html: `Membuka Data <b>${transaksiFaktur} - ${transaksiSupplier}</b>`,
+            icon: "info",
+            buttonsStyling: false,
+            showConfirmButton: false,
+            timer: 2000
+        }).then(function () {
+            modal.addEventListener('show.bs.modal', function (event) {
+                // Button that triggered the modal
+                var button = event.relatedTarget;
+                // Extract info from data-* attributes
+                var title = `${transaksiFaktur} - ${transaksiSupplier} Detail Data`;
+                // Update the modal's title
+                var modalTitle = modal.querySelector('.modal-title');
+                modalTitle.textContent = title;
+            });
+            getDetailsTernak(transaksiId);
+
+            $('#kt_modal_ternak_details').modal('show');
+            // Livewire.dispatch('editKandang', [transaksiId]);
+        });
+        
+    });
+});
+
 // Listen for 'success' event emitted by Livewire
 Livewire.on('success', (message) => {
     // Reload the farms-table datatable

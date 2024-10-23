@@ -11,6 +11,7 @@ use App\Http\Controllers\MasterData\KandangController;
 use App\Http\Controllers\Transaksi\TransaksiController;
 use App\Http\Controllers\StokController;
 use App\Http\Controllers\MasterData\FarmController;
+use App\Http\Controllers\TernakController;
 
 /*
 |--------------------------------------------------------------------------
@@ -140,6 +141,10 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
 
     Route::post('/kandangs', function (Request $request) {
         return app(KandangController::class)->getDataAjax($request);
+    });
+
+    Route::post('/ternaks', function (Request $request) {
+        return app(TernakController::class)->getDataAjax($request);
     });
     
     // Route::post('/kandangs', function (Request $request) {

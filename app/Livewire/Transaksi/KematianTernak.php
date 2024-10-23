@@ -13,6 +13,7 @@ use App\Models\KelompokTernak;
 use App\Models\Transaksi;
 use App\Models\Rekanan;
 use App\Models\KematianTernak as kTernak;
+use App\Models\TernakHistory;
 
 
 class KematianTernak extends Component
@@ -81,7 +82,9 @@ class KematianTernak extends Component
                 'tanggal' => $this->tanggal,
                 'farm_id' => $this->selectedFarm,
                 'kandang_id' => $this->selectedKandang,
+                'stok_awal' => $ternak->stok_akhir,
                 'quantity' => $this->jumlah,
+                'stok_akhir' => $ternak->stok_akhir - $this->jumlah,
                 'total_berat' => $this->total_berat,
                 'penyebab' => $this->penyebab,
                 'keterangan' => $this->keterangan ?? null,
@@ -94,6 +97,29 @@ class KematianTernak extends Component
             $ternak->jumlah_mati += $kTernak->quantity;
             $ternak->stok_akhir -= $kTernak->quantity;
             $ternak->save();
+
+            // Generate history ternak
+            // $historyData = [
+            //     'transaksi_id' => $kTernak->id, // Assuming kematian_ternak has a transaction_id
+            //     'kelompok_ternak_id' => $ternak->id,
+            //     'parent_id' => $ternak->id,
+            //     'farm_id' => $this->selectedFarm,
+            //     'kandang_id' => $this->selectedKandang,
+            //     'tanggal' => $this->tanggal,
+            //     'jenis' => 'Kematian',
+            //     'perusahaan_nama' => $ternak->farm->nama ?? '',
+            //     'hpp' => $ternak->berat_beli ?? 0,
+            //     'stok_awal' => $ternak->stok_akhir + $kTernak->quantity,
+            //     'stok_masuk' => 0,
+            //     'stok_keluar' => $kTernak->quantity,
+            //     'stok_akhir' => $ternak->stok_akhir,
+            //     'total_berat' => $this->total_berat,
+            //     'status' => 'mati',
+            //     'keterangan' => $this->keterangan ?? null,
+            //     'created_by' => auth()->user()->id,
+            // ];
+
+            // TernakHistory::create($historyData);
 
             DB::commit();
             $this->dispatch('success', 'Data Kematian Ternak berhasil ditambahkan');

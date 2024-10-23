@@ -35,7 +35,7 @@ class TernakDataTable extends DataTable
             //     return $jumlah;
             // })
             ->editColumn('name', function (Ternak $ternak) {
-                return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-bs-toggle="modal" data-bs-target="#kt_modal_ternak_details" data-farm-id="' . $ternak->id . '">' . $ternak->name . '</a>';
+                return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_ternak" data-kt-transaksi-id="' . $ternak->id . '">' . $ternak->name . '</a>';
             })
             ->editColumn('start_date', function (Ternak $ternak) {
                 return $ternak->start_date->format('d M Y, h:i a');

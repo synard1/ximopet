@@ -17,10 +17,13 @@ class KematianTernak extends BaseModel
     protected $fillable = [
         'id',
         'kelompok_ternak_id',
+        'history_ternak_id',
         'tanggal',
         'farm_id',
         'kandang_id',
+        'stok_awal',
         'quantity',
+        'stok_akhir',
         'total_berat',
         'penyebab',
         'keterangan',
