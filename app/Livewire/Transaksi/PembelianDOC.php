@@ -106,6 +106,13 @@ class PembelianDOC extends Component
             $supplier = Rekanan::where('id', $this->supplierSelect)->first();
             $kandang = Kandang::where('id', $this->selectedKandang)->first();
             $doc = Item::where('id',$this->docSelect)->first();
+
+            // Validate that qty does not exceed kandang capacity
+            if ($this->qty > $kandang->kapasitas) {
+                throw ValidationException::withMessages([
+                    'qty' => 'Jumlah DOC tidak boleh melebihi kapasitas kandang (' . $kandang->kapasitas . ').'
+                ]);
+            }
         
             // Prepare the data for creating/updating
             $data = [
@@ -193,7 +200,7 @@ class PembelianDOC extends Component
                 'farm_id' => $transaksi->farm_id,
                 'kandang_id' => $kandang->id,
                 'item_id' => $doc->id,
-                'item_name' => $doc->nama,
+                'item_name' => $doc->name,
                 'harga' => $transaksi->harga,
                 'qty' => $transaksi->total_qty,
                 'berat' => $transaksi->total_berat,
@@ -278,24 +285,37 @@ class PembelianDOC extends Component
                 $transaksiDetail = $transaksi->transaksiDetail()->first();
                 $kandang = Kandang::where('id', $transaksi->kandang_id)->first();
 
+                if ($kandang) {
+                    $kandang->update([
+                        'status' => 'Aktif',
+                        'jumlah' => '0',
+                        'berat' => '0',
+                        'updated_by' => auth()->user()->id,
+                    ]);
+                } else {
+                    // Handle the case where the kandang is not found
+                    // You might want to log this or throw an exception
+                    $this->dispatch('error', "Kandang not found for id: {$transaksi->kandang_id}");
+
+                }
+
                 $kelompokTernak = KelompokTernak::where('id', $transaksi->kelompok_ternak_id)->first();
 
                 $historyTernak = TernakHistory::where('kelompok_ternak_id', $kelompokTernak->id)->first();
+
+                
 
                 //Delete Kelompok Ternak & Ternak History
                 $historyTernak->delete();
                 $kelompokTernak->delete();
 
+                
+
                 // Delete the user record with the specified ID
                 $transaksiDetail->delete();
                 Transaksi::destroy($id);
     
-                $kandang->update(
-                    [
-                        'status' => 'Aktif',
-                        'jumlah' => '0',
-                    ]
-                );
+                
     
                 DB::commit();
                 // Emit a success event with a message
