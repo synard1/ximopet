@@ -42,7 +42,7 @@ class DemoSeeder extends Seeder
         }
 
         // Create Rekanan records (Suppliers and Customers)
-        for ($i = 1; $i <= 5; $i++) {
+        for ($i = 1; $i <= 7; $i++) {
             Rekanan::factory()->create([
                 'jenis' => 'Supplier',
                 'kode' => 'S00' . $i,
@@ -54,28 +54,25 @@ class DemoSeeder extends Seeder
             ]);
         }
 
-        // $jenisStok = ['DOC', 'Pakan', 'Obat', 'Vaksin', 'Lainnya'];
-        // $kodeStok = ['DOC', 'PK', 'OB', 'VK', 'LL'];
-        // $satuanBesarStok = ['Ekor', 'Kg', 'Butir', 'Impul', 'LL'];
-        // $satuanKecilStok = ['Ekor', 'Gram', 'Butir', 'Impul', 'LL'];
-        // $konversiStok = [1, 1000, 1, 1, 1];
-        $operator = User::where('email','operator@demo.com')->first();
+        $operator1 = User::where('email','operator@demo.com')->first();
+        $operator2 = User::where('email','operator2@demo.com')->first();
         $supervisor = User::where('email','supervisor@demo.com')->first();
         $counter = 0;
 
         // Create Farm records
-        Farm::factory(5)->create()->each(function ($demoFarm) use ($supervisor, $operator, $faker, &$counter, $beratBeli, $beratJual) {
+        Farm::factory(7)->create()->each(function ($demoFarm) use ($supervisor, $operator1, $operator2, $faker, &$counter, $beratBeli, $beratJual) {
             // Initialize counter if it doesn't exist
             if (!isset($counter)) {
                 $counter = 1; 
             }
             // Create FarmOperator record
+            $operator = ($counter % 2 == 0) ? $operator1 : $operator2;
             $demoFarm->operators()->attach($operator); 
 
             // Create Kandang records for each farm
             Kandang::factory(1)->create([
                 'farm_id' => $demoFarm->id,
-                'kode' => 'K00' . $demoFarm->kode, // Assuming you want a unique kandang code per farm
+                'kode' => 'K00' . $demoFarm->kode,
                 'nama' => 'Kandang-F' . $demoFarm->kode,
             ]);
 
@@ -97,13 +94,9 @@ class DemoSeeder extends Seeder
                                                 ->where('kandang_id', $kandang->id)
                                                 ->exists();
 
-            // dd($kandang ? $kandang->id : null); 
-            // dd($kandang->id);
-
             // Pembelian DOC
             $transaksiPembelian = Transaksi::create([
                 'jenis' => 'Pembelian',
-                // 'jenis_barang' => 'DOC',
                 'faktur' => 'DOC-' . str_pad($counter + 1, 3, '0', STR_PAD_LEFT),
                 'tanggal' => $faker->dateTimeBetween('-1 month', 'now'),
                 'rekanan_id' => $supplier->id,
@@ -114,18 +107,16 @@ class DemoSeeder extends Seeder
                 'total_qty' => $qty,
                 'total_berat' => $qty * 100,
                 'harga' => $harga,
-                // 'periode' => null,
                 'sub_total' => $qty * $harga,
                 'status' => 'Aktif',
-                // 'payload' => ['items' => $itemsToStore],
-                'user_id' => $supervisor->id, // Supervisor yang menyetujui
+                'user_id' => $supervisor->id,
             ]);
 
             if($transaksiPembelian->kelompokTernak()->exists()){
                 $kelompokTernak = $transaksiPembelian->kelompokTernak;
             }else{
                 $kelompokTernak = $transaksiPembelian->kelompokTernak()->create([
-                    'transaksi_id' => $transaksiPembelian->id, // Ensure this is set
+                    'transaksi_id' => $transaksiPembelian->id,
                     'name' => 'PR-'.$demoFarm->kode . '-' . $kandang->kode . str_pad($counter + 1, 3, '0', STR_PAD_LEFT),
                     'breed' => 'DOC',
                     'start_date' => $transaksiPembelian->tanggal,
@@ -139,8 +130,6 @@ class DemoSeeder extends Seeder
                     'berat_beli' => $beratBeli * $qty,
                     'berat_jual' => $beratJual * $qty,
                     'status' => 'Aktif',
-                    'farm_id' => $transaksiPembelian->farm_id,
-                    'kandang_id' => $transaksiPembelian->kandang_id,
                     'farm_id' => $transaksiPembelian->farm_id,
                     'kandang_id' => $transaksiPembelian->kandang_id,
                     'created_by' => $supervisor->id,
@@ -172,8 +161,6 @@ class DemoSeeder extends Seeder
 
                 // Detail Transaksi Pembelian DOC
                 $subTotal = 0;
-                // $qty = $transaksiPembelian->qty;
-                // $harga = $transaksiPembelian->harga;
                 $subTotal += $qty * $harga;
 
                 $transaksiDetail = $transaksiPembelian->transaksiDetail()->create([
@@ -204,35 +191,6 @@ class DemoSeeder extends Seeder
                 $kandang->save();
             }
 
-            
-
-            
-
-            // TransaksiDetail::create([
-            //     'transaksi_id' => $transaksiPembelian->id,
-            //     'jenis' => 'Pembelian',
-            //     'jenis_barang' => 'DOC',
-            //     'tanggal' => $transaksiPembelian->tanggal,
-            //     'rekanan_id' => $supplier->id,
-            //     'farm_id' => $demoFarm->id,
-            //     'kandang_id' => $kandang->id,
-            //     'item_id' => $stokDoc->id,
-            //     'item_name' => $stokDoc->name,
-            //     'harga' => $harga,
-            //     'qty' => $qty,
-            //     'terpakai' => 0,
-            //     'sisa' => $qty,
-            //     'sub_total' => $subTotal,
-            //     'konversi' => 1,
-            //     'periode' => $transaksiPembelian->periode,
-            //     'status' => 'Aktif',
-            //     'user_id' => $supervisor->id,
-            // ]);
-
-            // // Update sub total transaksi pembelian
-            // $transaksiPembelian->sub_total = $subTotal;
-            // $transaksiPembelian->save();
-
             // Detail Transaksi Pembelian Stok
             $subTotal = 0;
             $qty = $faker->numberBetween(10, 20) * 100;
@@ -242,29 +200,24 @@ class DemoSeeder extends Seeder
             // Pembelian Pakan dan Lainnya
             $transaksiPembelianStok = Transaksi::create([
                 'jenis' => 'Pembelian',
-                // 'jenis_barang' => 'Pakan',
                 'faktur' => 'PB-' . str_pad($counter + 1, 3, '0', STR_PAD_LEFT),
                 'tanggal' => $faker->dateTimeBetween('-1 month', 'now'),
                 'rekanan_id' => $supplier->id,
                 'farm_id' => $demoFarm->id,
                 'kandang_id' => $kandang->id,
-                // 'rekanan_nama' => $supplier->nama,
                 'harga' => $harga,
                 'total_qty' => $qty,
                 'terpakai' => 0,
                 'sisa' => $qty,
-                'sub_total' => $harga * $qty, // Akan diupdate setelah detail ditambahkan
+                'sub_total' => $harga * $qty,
                 'status' => 'Aktif',
-                // 'payload' => ['items' => $stokToStore],
-                'user_id' => $operator->id, // Supervisor yang menyetujui
+                'user_id' => $operator->id,
             ]);
-
 
             if($transaksiPembelianStok->exists()){
                 $transaksiDetail = $transaksiPembelianStok->transaksiDetail()->create([
                     'transaksi_id' => $transaksiPembelianStok->id,
                     'jenis' => 'Pembelian',
-                    'jenis_barang' => $stok->jenis,
                     'jenis_barang' => $stok->jenis,
                     'tanggal' => $transaksiPembelianStok->tanggal,
                     'item_id' => $stok->id,
@@ -287,7 +240,6 @@ class DemoSeeder extends Seeder
                 $stokHistory = $transaksiPembelianStok->stokHistory()->create([
                     'transaksi_id' => $transaksiPembelianStok->id,
                     'parent_id' => null,
-                    'parent_id' => null,
                     'farm_id' => $demoFarm->id,
                     'kandang_id' => $kandang->id,
                     'tanggal' => $transaksiPembelianStok->tanggal,
@@ -299,15 +251,7 @@ class DemoSeeder extends Seeder
                     'kadaluarsa' => $transaksiPembelianStok->tanggal->addMonths(18),
                     'perusahaan_nama' => $transaksiPembelianStok->rekanans->nama,
                     'hpp' => $transaksiPembelianStok->harga,
-                    'item_name' => $stok->name,
-                    'satuan' => $stok->satuan_besar,
-                    'jenis_barang' => $stok->jenis,
-                    'kadaluarsa' => $transaksiPembelianStok->tanggal->addMonths(18),
-                    'perusahaan_nama' => $transaksiPembelianStok->rekanans->nama,
-                    'hpp' => $transaksiPembelianStok->harga,
                     'stok_awal' => 0,
-                    'stok_masuk' => $qty * $stok->konversi,
-                    'stok_keluar' => 0,
                     'stok_masuk' => $qty * $stok->konversi,
                     'stok_keluar' => 0,
                     'stok_akhir' => $qty * $stok->konversi,
@@ -316,33 +260,23 @@ class DemoSeeder extends Seeder
                 ]);
             }
 
-
-            
-
-            $counter++; // Increment the counter for the next iteration
+            $counter++;
         });
 
-
         // Create the default role if it doesn't exist
-        $role = Role::firstOrCreate(['name' => 'Operator']); // Replace 'user' with your desired default role name
+        $role = Role::firstOrCreate(['name' => 'Operator']);
 
         // Create users and assign the default role
-        User::factory(10) // Adjust the number of users as needed
+        User::factory(5)
             ->create()
             ->each(function ($user) use ($role) {
                 $user->assignRole($role);
 
-                // Create 1-5 FarmOperator entries for this user
-                $numberOfFarms = rand(1, 5); // Generate a random number between 1 and 5
+                $numberOfFarms = rand(1, 5);
 
                 for ($i = 0; $i < $numberOfFarms; $i++) {
-                    // You'll need to fetch or create a 'demoFarm' here
-                    $demoFarm = Farm::inRandomOrder()->first(); // Get a random farm
+                    $demoFarm = Farm::inRandomOrder()->first();
 
-                    // FarmOperator::create([
-                    //     'farm_id'        => $demoFarm->id,
-                    //     'user_id'        => $user->id,
-                    // ]);
                     $existingFarmOperator = FarmOperator::where('farm_id', $demoFarm->id)
                                   ->where('user_id', $user->id)
                                   ->exists();
