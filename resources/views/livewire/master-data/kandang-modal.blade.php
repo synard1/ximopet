@@ -1,5 +1,4 @@
 <div class="modal" tabindex="-1" role="dialog" id="kt_modal_new_kandang" tabindex="-1" aria-hidden="true" wire:ignore.self>
-{{-- <div class="modal" tabindex="-1" role="dialog"> --}}
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -26,9 +25,9 @@
                                 <!--begin::Select2-->
                                 <select id="farmSelect" name="farmSelect" wire:model="selectedFarm" class="js-select2 form-control">
                                     <option value="">=== Pilih ===</option>
-                                    {{-- @foreach ($farms as $farm)
+                                    @foreach ($farms as $farm)
                                         <option value="{{ $farm->id }}">{{ $farm->nama }}</option>
-                                    @endforeach --}}
+                                    @endforeach
                                 </select>
                                 <!--end::Select2-->
                                 @error('selectedFarm')
@@ -46,7 +45,7 @@
                                 <!--end::Label-->
                                 <!--begin::Input-->
                                 <input type="text" wire:model="kode_kandang" id="kode_kandang"
-                                    class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Kode Kandang" />
+                                    class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Kode Kandang" pattern="[A-Za-z0-9@#%&*_-]+" title="Kode kandang hanya boleh menggunakan karakter alfanumerik dan simbol sederhana." />
                                 <!--end::Input-->
                                 @error('kode_kandang')
                                 <span class="text-danger">{{ $message }}</span> @enderror
@@ -87,13 +86,9 @@
                         <!--end::Scroll-->
                     </form>
                     <!--end::Form-->
-                {{-- <p>Your Dynamic Number: {{ $dynamicNumber }}</p>
-                <p>URL: {{ $currentUrl }}</p> --}}
-
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                {{-- <button type="button" class="btn btn-secondary" wire:click="closeModalKandang()">Close</button> --}}
                 <button type="button" class="btn btn-primary" wire:click="storeKandang()">Save changes</button>
             </div>
         </div>
