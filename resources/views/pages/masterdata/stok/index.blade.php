@@ -8,18 +8,23 @@
         <li class="nav-item">
             <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_pane_4">Data Stok</a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_5">Pemetaan Lokasi</a>
-        </li>
+        @if(auth()->user()->hasRole(['Supervisor']))
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_5">Pemetaan Lokasi</a>
+            </li>
+        @endif
     </ul>
     
     <div class="tab-content" id="myTabContent">
         <div class="tab-pane fade show active" id="kt_tab_pane_4" role="tabpanel">
             @include('pages.masterdata.stok._table')
         </div>
-        <div class="tab-pane fade" id="kt_tab_pane_5" role="tabpanel">
-            @include('pages.masterdata.stok._pemetaan_lokasi_table')
-        </div>
+
+        @if(auth()->user()->hasRole(['Supervisor']))
+            <div class="tab-pane fade" id="kt_tab_pane_5" role="tabpanel">
+                @include('pages.masterdata.stok._pemetaan_lokasi_table')
+            </div>
+        @endif
     </div>
 
     @include('pages.masterdata.stok._modal_stok_details')

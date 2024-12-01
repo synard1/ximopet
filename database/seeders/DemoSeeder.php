@@ -46,7 +46,7 @@ class DemoSeeder extends Seeder
         $this->createPurchases($faker);
 
         // Create additional users with roles (unchanged)
-        $this->createAdditionalUsers($faker);
+        // $this->createAdditionalUsers($faker);
     }
 
     private function createItemCategoriesAndItems(Generator $faker)

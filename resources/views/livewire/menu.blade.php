@@ -132,7 +132,7 @@
 		<div data-kt-menu-trigger="click" class="menu-item menu-accordion show">
 			<!--begin:Menu link-->
 			<span class="menu-link">
-				<span class="menu-title">{{ trans('menu.create_header_new',[],'id') }}</span>
+				<span class="menu-title">Master Data</span>
 				<span class="menu-arrow"></span>
 			</span>
 			<!--end:Menu link-->
@@ -145,7 +145,7 @@
 						<span class="menu-icon">
 							<i class="ki-outline ki-user fs-4 text-success"></i>
 						</span>
-						<span class="menu-title">{{ trans('menu.create_users',[],'id') }}</span>
+						<span class="menu-title">Data Users</span>
 						<span class="menu-badge">
 							{{--
 							<livewire:master-data._create_supplier /> --}}
