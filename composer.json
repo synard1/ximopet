@@ -7,8 +7,11 @@
     "require": {
         "php": "^8.0.2",
         "diglactic/laravel-breadcrumbs": "^8.1",
+        "filament/filament": "^3.2",
+        "filament/forms": "^3.2",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^10.0",
+        "laravel/pulse": "^1.2",
         "laravel/sanctum": "*",
         "laravel/socialite": "^5.6",
         "laravel/tinker": "^2.7",
@@ -24,6 +27,7 @@
         "laravel/breeze": "^1.14",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.0.1",
+        "laravel/telescope": "^5.2",
         "mockery/mockery": "^1.4.4",
         "nunomaduro/collision": "^7.0",
         "phpunit/phpunit": "^10.0",
@@ -46,7 +50,8 @@
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi",
-            "@php artisan vendor:publish --force --tag=livewire:assets --ansi"
+            "@php artisan vendor:publish --force --tag=livewire:assets --ansi",
+            "@php artisan filament:upgrade"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
