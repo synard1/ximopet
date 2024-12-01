@@ -14,17 +14,6 @@
                     id="#kt_app_header_secondary_menu" data-kt-menu="true">
                     @if(auth()->user()->hasRole(['SuperAdmin','Administrator']))
                     <!--begin:Menu item-->
-                    <!--begin:Menu item-->
-                    <div class="menu-item">
-                        <!--begin:Menu link-->
-                        <a class="menu-link" href="/">
-                            <span class="menu-title">Account</span>
-                        </a>
-                        <!--end:Menu link-->
-                    </div>
-                    <!--end:Menu item-->
-                    <!--end:Menu item-->
-                    <!--begin:Menu item-->
                     <div class="menu-item">
                         <!--begin:Menu content-->
                         <div class="menu-content">
@@ -34,103 +23,24 @@
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"
-                        class="menu-item here">
+                    <div class="menu-item here">
                         <!--begin:Menu link-->
                         <span class="menu-link">
                             <span class="menu-title">Administrator</span>
-                            <span class="menu-arrow"></span>
                         </span>
                         <!--end:Menu link-->
-                        <!--begin:Menu sub-->
-                        <div class="menu-sub menu-sub-dropdown px-lg-2 py-lg-4 w-150px w-lg-175px" style="">
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link active" href="index.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-chart-simple fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Dashboard</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link" href="account/settings.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-share fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Settings</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link" href="account/security.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-shield fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Security</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link" href="account/activity.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-scan-barcode fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Activity</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link" href="account/billing.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-dollar fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Billing</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link" href="apps/statements.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-two-credit-cart fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Statements</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                        </div>
-                        <!--end:Menu sub-->
                     </div>
                     <!--end:Menu item-->
                     @else
                     <!--begin:Menu item-->
-                    <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"
-                        class="menu-item here">
+                    {{-- <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start" class="menu-item here"> --}}
+                    <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" class="menu-item here">
                         <!--begin:Menu link-->
                         <span class="menu-link">
-                            <span class="menu-title">Account 2</span>
-                            <span class="menu-arrow"></span>
+                            <span class="menu-title">Account</span>
                         </span>
                         <!--end:Menu link-->
-                        <!--begin:Menu sub-->
+                        {{-- <!--begin:Menu sub-->
                         <div class="menu-sub menu-sub-dropdown px-lg-2 py-lg-4 w-150px w-lg-175px" style="">
                             <!--begin:Menu item-->
                             <div class="menu-item">
@@ -205,16 +115,7 @@
                             </div>
                             <!--end:Menu item-->
                         </div>
-                        <!--end:Menu sub-->
-                    </div>
-                    <!--end:Menu item-->
-                    <!--begin:Menu item-->
-                    <div class="menu-item">
-                        <!--begin:Menu content-->
-                        <div class="menu-content">
-                            <div class="menu-separator"></div>
-                        </div>
-                        <!--end:Menu content-->
+                        <!--end:Menu sub--> --}}
                     </div>
                     <!--end:Menu item-->
                     @if(auth()->user()->hasRole(['SuperAdmin','Administrator']))
@@ -230,16 +131,6 @@
                     @endif
 
                     @endif
-
-                    <!--begin:Menu item-->
-                    <div class="menu-item">
-                        <!--begin:Menu content-->
-                        <div class="menu-content">
-                            <div class="menu-separator"></div>
-                        </div>
-                        <!--end:Menu content-->
-                    </div>
-                    <!--end:Menu item-->
                     <!--begin:Menu item-->
                     <div class="menu-item">
                         <!--begin:Menu link-->
@@ -260,15 +151,6 @@
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
                     <div class="menu-item flex-grow-1"></div>
-                    <!--end:Menu item-->
-                    <!--begin:Menu item-->
-                    <div class="menu-item">
-                        <!--begin:Menu content-->
-                        <div class="menu-content">
-                            <div class="menu-separator d-block d-lg-none"></div>
-                        </div>
-                        <!--end:Menu content-->
-                    </div>
                     <!--end:Menu item-->
                 </div>
                 <!--end::Menu-->
@@ -294,7 +176,7 @@
                         <!--end:Menu link-->
                     </div>
                     <!--end:Menu item-->
-                    <!--begin:Menu item-->
+                    {{-- <!--begin:Menu item-->
                     <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"
                         class="menu-item menu-lg-down-accordion me-0 me-lg-2">
                         <!--begin:Menu link-->
@@ -384,7 +266,7 @@
                         </div>
                         <!--end:Menu sub-->
                     </div>
-                    <!--end:Menu item-->
+                    <!--end:Menu item--> --}}
 
                     @else
                         <!--begin:Menu item-->
@@ -400,7 +282,7 @@
                     </div>
                     <!--end:Menu item-->
                     @if(auth()->user()->hasRole(['Administrator']))
-                        <!--begin:Menu item-->
+                        {{-- <!--begin:Menu item-->
                         <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"
                             class="menu-item menu-lg-down-accordion me-0 me-lg-2">
                             <!--begin:Menu link-->
@@ -430,7 +312,7 @@
                             </div>
                             <!--end:Menu sub-->
                         </div>
-                        <!--end:Menu item-->
+                        <!--end:Menu item--> --}}
                     @elseif(auth()->user()->hasRole(['Supervisor']))
                         <!--begin:Menu item-->
                         <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"

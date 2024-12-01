@@ -7,7 +7,6 @@
     "require": {
         "php": "^8.0.2",
         "diglactic/laravel-breadcrumbs": "^8.1",
-        "filament/filament": "^3.2",
         "filament/forms": "^3.2",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^10.0",
@@ -17,7 +16,6 @@
         "laravel/tinker": "^2.7",
         "league/flysystem-aws-s3-v3": "^3.0",
         "livewire/livewire": "^3.0",
-        "nwidart/laravel-modules": "^11.0",
         "spatie/laravel-permission": "^5.10",
         "yajra/laravel-datatables": "^10.0"
     },
