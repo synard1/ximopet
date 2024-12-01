@@ -20,12 +20,16 @@ class BaseModel extends Model
 
         // Set created_by on creation
         static::creating(function ($model) {
-            $model->created_by = Auth::id(); // Get the authenticated user's ID
+            if (!$model->created_by && Auth::id()) {
+                $model->created_by = Auth::id();
+            }
         });
 
-        // Set updated_by on update
+        // Set updated_by on update 
         static::updating(function ($model) {
-            $model->updated_by = Auth::id(); // Get the authenticated user's ID
+            if (Auth::id()) {
+                $model->updated_by = Auth::id();
+            }
         });
     }
 }

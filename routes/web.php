@@ -12,7 +12,7 @@ use App\Http\Controllers\MasterData\KandangController;
 use App\Http\Controllers\MasterData\StokController;
 use App\Models\Stok;
 use App\Http\Controllers\Transaksi\TransaksiController;
-use App\Http\Controllers\StokController as StockController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\TernakController;
 use Illuminate\Http\Request;
 
@@ -86,11 +86,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::name('transaksi.')->group(function () {
+        Route::get('/transaksi/harian', [TransaksiController::class, 'harianIndex'])->name('harian.index');
         Route::get('/transaksi/stoks', [TransaksiController::class, 'stokIndex'])->name('stoks.index');
         Route::get('/transaksi/pakai', [TransaksiController::class, 'stokPakaiIndex'])->name('stoks.pakai.index');
         Route::get('/transaksi/docs', [TransaksiController::class, 'docIndex'])->name('docs.index');
         Route::post('/reduce-stock', [StockController::class, 'reduceStock']);
         Route::get('/transaksi/kematian-ternak', [TernakController::class, 'kematianTernakIndex'])->name('kematian-ternak.index');
+
+    });
+
+    Route::name('ternak.')->group(function () {
+        Route::get('/ternak/afkir', [TernakController::class, 'ternakAfkirIndex'])->name('afkir.index');
+        Route::get('/ternak/jual', [TernakController::class, 'ternakJualIndex'])->name('jual.index');
+        Route::get('/ternak/mati', [TernakController::class, 'ternakMatiIndex'])->name('mati.index');
+        Route::resource('/ternak', TernakController::class);
+
 
     });
 

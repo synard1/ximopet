@@ -9,16 +9,16 @@
     <div class="card" id="stokTableCard">
         <!--begin::Card header-->
         <div class="card-header border-0 pt-6">
-            {{-- <!--begin::Card title-->
+            <!--begin::Card title-->
             <div class="card-title">
                 <!--begin::Search-->
                 <div class="d-flex align-items-center position-relative my-1">
                     {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
-                    <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Data DOC" id="mySearchInput"/>
+                    <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Data Pembelian" id="mySearchInput"/>
                 </div>
                 <!--end::Search-->
             </div>
-            <!--begin::Card title--> --}}
+            <!--begin::Card title-->
 
             <!--begin::Card toolbar-->
             <div class="card-toolbar">
@@ -114,16 +114,32 @@
             });
         
         
-            // document.getElementById('mySearchInput').addEventListener('keyup', function () {
-            //     window.LaravelDataTables['kandangs-table'].search(this.value).draw();
-            // });
+            document.getElementById('mySearchInput').addEventListener('keyup', function () {
+                window.LaravelDataTables['pembelianStoks-table'].search(this.value).draw();
+            });
             // document.addEventListener('livewire:init', function () {
             //     Livewire.on('success', function () {
             //         $('#kt_modal_add_user').modal('hide');
             //         window.LaravelDataTables['kandangs-table'].ajax.reload();
             //     });
             // });
+
+            // Fix for printable false not working
+            $(document).ready(function() {
+                window.LaravelDataTables['pembelianStoks-table'].on('preXhr.dt', function(e, settings, data) {
+                    data.columns = settings.aoColumns.map(function(col, index) {
+                        return {
+                            data: col.data,
+                            name: col.name,
+                            searchable: col.searchable,
+                            orderable: col.orderable,
+                            search: {value: "", regex: false}
+                        };
+                    }).filter(function(col) {
+                        return col.data !== 'action';
+                    });
+                });
+            });
         </script>
     @endpush
 </x-default-layout>
-

@@ -10,7 +10,7 @@
         <div class="card-body py-4">
             <!--begin::Table-->
             <div class="table-responsive">
-                {{ $dataTable->table() }}
+                {{ $dataTable->table(['id' => 'ternaks-table']) }}
             </div>
             <!--end::Table-->
         </div>

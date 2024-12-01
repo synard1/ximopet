@@ -22,6 +22,7 @@ class RekananFactory extends Factory
             'telp_pic' => $this->faker->phoneNumber,
             'email' => $this->faker->email,
             'status' => 'Aktif',
+            'created_by' => 3,
         ];
     }
 }

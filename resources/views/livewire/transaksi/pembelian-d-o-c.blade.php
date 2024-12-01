@@ -96,12 +96,13 @@
                                             class="js-select2 form-control">
                                             <option value="">=== Pilih Kandang ===</option>
                                             @foreach ($kandangs as $kandang)
-                                            <option value="{{ $kandang->id }}" @if($selectedKandang == $kandang->id) selected @endif>{{ $kandang->farms->nama }} - {{
+                                            <option value="{{ $kandang->id }}" @if($selectedKandang == $kandang->id) selected @endif>{{ $kandang->farms->name }} - {{
                                                 $kandang->kode
                                                 }} - {{ $kandang->nama }}</option>
                                             @endforeach
                                         </select>
                                         <!--end::Select2-->
+                                        <small id="farmName" class="text-muted"></small>
                                         @error('selectedKandang')
                                         <span class="text-danger">{{ $message }}</span> @enderror
                                         @error('selectedKandang')
@@ -115,8 +116,8 @@
                                         <label class="form-label fs-8 mb-3">Periode</label>
                                         <!--begin::Input-->
                                         <input type="text" wire:model="periode" id="periode"
-                                            class="form-control form-control-solid mb-3 mb-lg-0"
-                                            placeholder="Periode" />
+                                            class="form-control form-control-solid mb-3 mb-lg-0" disabled
+                                            placeholder="[Auto Generate]" />
                                         <!--end::Input-->
                                         @error('periode')
                                         <span class="text-danger">{{ $message }}</span> @enderror
@@ -228,29 +229,26 @@
     <script>
         $("#tanggal").flatpickr();
 
-
         const yourModal = document.getElementById('kt_modal_new_doc');
         const kandangSelect = document.getElementById('selectedKandang');
-        // const yourForm = document.getElementById('kt_modal_master_doc_form');
+        const farmNameDisplay = document.getElementById('farmName');
+        const kandangs =[];
 
         yourModal.addEventListener('show.bs.modal', event => {
-           // Clear existing options in the farmSelect dropdown
             while (kandangSelect.options.length > 0) {
                 kandangSelect.remove(0);
             }
 
-            // Reset operator dropdown
             kandangSelect.innerHTML = '<option value="">=== Pilih Kandang ===</option>';
 
-            // Fetch operators for the selected farm via AJAX, including parameters
             fetch(`/api/v1/kandangs`, {
-                method: 'POST', // Or 'GET' if your API endpoint supports it
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
-                body: JSON.stringify({ // Add your parameters here
+                body: JSON.stringify({
                     type: 'LIST',
                     status: 'Aktif',
                     roles: 'Supervisor'
@@ -258,100 +256,28 @@
             })
             .then(response => response.json())
             .then(data => {
-                // ... (rest of your existing code to handle the response)
+                kandangs.length = 0; // Clear the array before assigning new data
+                kandangs.push(...data);
                 if (data && data.length > 0) {
                     data.forEach(kandang => {
                         const option = document.createElement('option');
                         option.value = kandang.id;
-                        option.text = kandang.nama;
+                        option.text = kandang.farm_kode + ' - ' + kandang.nama;
                         kandangSelect.appendChild(option);
                     });
                 }
-                // console.log(data);
             })
             .catch(error => console.error('Error fetching operators:', error));
-
-            // Fetch operators for the selected farm via AJAX
-            // fetch(`/api/v1/get-farms/`)
-            //     .then(response => response.json())
-            //     .then(data => {
-            //         if (data.farms && data.farms.length > 0) {
-            //             data.farms.forEach(farm => {
-            //                 const option = document.createElement('option');
-            //                 option.value = farm.id;
-            //                 option.text = farm.nama;
-            //                 farmSelect.appendChild(option);
-            //             });
-            //         }
-            //         console.log(data);
-            //     })
-            //     .catch(error => console.error('Error fetching operators:', error));
-
-            // console.log('form open');
-            
         });
 
-        // Using Bootstrap's Modal instance
-
-        // var myModal = new bootstrap.Modal(document.getElementById('kt_modal_new_doc'));
-
-        // document.addEventListener('livewire:init', function () {
-        //     // const modalInstance = new bootstrap.Modal('kt_modal_new_doc');
-
-        //         Livewire.on('closeFormPembelian', function () {
-        //                     // Shared variables
-        // const element = document.getElementById('kt_modal_new_doc');
-        // const form = element.querySelector('#kt_modal_master_doc_form');
-        // const modal = new bootstrap.Modal(element);
-        // var myModal = new bootstrap.Modal(document.getElementById('kt_modal_new_doc'));
-
-        //             // const modal = bootstrap.Modal.getInstance('kt_modal_new_doc');
-        //             myModal.hide();
-        //             form.reset();
-
-        //             console.log('modal close');
-
-                    
-        //         });
-        //     });
-
-
-//             document.addEventListener('livewire:init', function () {
-//                 const closeModalBtn = document.getElementById('closeModalBtn');
-
-// closeModalBtn.addEventListener('click', () => {
-//     Livewire.dispatch('closeFormPembelian');
-// });
-
-
-
-//     Livewire.on('closeFormPembelian', function () {
-//                             // Shared variables
-//         const element = document.getElementById('kt_modal_new_doc');
-//         const form = element.querySelector('#kt_modal_master_doc_form');
-//         const modal = new bootstrap.Modal(element);
-//         var myModal = new bootstrap.Modal(document.getElementById('kt_modal_new_doc'));
-
-//                     // const modal = bootstrap.Modal.getInstance('kt_modal_new_doc');
-//                     myModal.hide();
-//                     form.reset();
-
-//                     console.log('modal close');
-
-                    
-//     });
-//     });
-
-//     document.addEventListener('livewire:load', function () {
-//     Livewire.on('closeFormPembelian', function () {
-//         // ... your modal closing and form reset logic
-//     });
-
-//     document.body.addEventListener('click', function (event) {
-//         if (event.target.id === 'closeModalBtn' || event.target.closest('#closeModalBtn')) { 
-//             Livewire.emit('closeFormPembelian');
-//         }
-//     });
-// });
+        kandangSelect.addEventListener('change', function() {
+            const selectedKandangId = kandangSelect.value;
+            const selectedKandang = kandangs.find(kandang => kandang.id === selectedKandangId);
+            if (selectedKandang) {
+                farmNameDisplay.textContent = `Farm Name: ${selectedKandang.farm_name}`;
+            } else {
+                farmNameDisplay.textContent = '';
+            }
+        });
     </script>
     @endpush

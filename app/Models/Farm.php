@@ -6,9 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\BaseModel;
 
 
-class Farm extends Model
+class Farm extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
@@ -23,11 +24,17 @@ class Farm extends Model
         'pic',
         'telp_pic',
         'status',
+        'created_by',
+        'updated_by',
     ];
 
     public function kandangs()
     {
         return $this->hasMany(Kandang::class);
+    }
+    public function storages()
+    {
+        return $this->hasMany(InventoryLocation::class);
     }
 
     public function farmOperators()

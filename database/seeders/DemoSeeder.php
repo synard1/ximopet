@@ -9,289 +9,511 @@ use App\Models\User;
 use App\Models\Rekanan;
 use App\Models\Farm;
 use App\Models\FarmOperator;
+use App\Models\FarmSilo;
 use App\Models\Kandang;
 use App\Models\Item;
-use App\Models\Transaksi;
-use App\Models\TransaksiDetail;
+use App\Models\ItemCategory;
+use App\Models\ItemLocation;
+use App\Models\InventoryLocation;
+use App\Models\CurrentStock;
+use App\Models\StockMovement;
+use App\Models\StockHistory;
+use App\Models\TransaksiBeli;
+use App\Models\TransaksiBeliDetail;
+use App\Models\KelompokTernak;
+use App\Models\CurrentTernak;
+use App\Models\TransaksiTernak;
 use Spatie\Permission\Models\Role;
-use App\Models\StokMutasi;
+use Carbon\Carbon;
 
 class DemoSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(Generator $faker)
     {
-        // Define stock data in an array for easier management
-        $stockData = [
-            ['kode' => 'DOC001', 'jenis' => 'DOC', 'name' => 'Nama Stok DOC', 'satuan_besar' => 'Ekor', 'satuan_kecil' => 'Ekor', 'konversi' => 1],
-            ['kode' => 'PK001', 'jenis' => 'Pakan', 'name' => 'Nama Stok Pakan', 'satuan_besar' => 'Kg', 'satuan_kecil' => 'Gram', 'konversi' => 1000],
-            ['kode' => 'OB001', 'jenis' => 'Obat', 'name' => 'Nama Stok Obat', 'satuan_besar' => 'Butir', 'satuan_kecil' => 'Butir', 'konversi' => 1],
-            ['kode' => 'VK001', 'jenis' => 'Vaksin', 'name' => 'Nama Stok Vaksin', 'satuan_besar' => 'Impul', 'satuan_kecil' => 'Impul', 'konversi' => 1],
-            ['kode' => 'VT001', 'jenis' => 'Vitamin', 'name' => 'Nama Stok Vitamin', 'satuan_besar' => 'Tablet', 'satuan_kecil' => 'Tablet', 'konversi' => 1],
-            ['kode' => 'LL001', 'jenis' => 'Lainnya', 'name' => 'Nama Stok Lainnya', 'satuan_besar' => 'LL', 'satuan_kecil' => 'LL', 'konversi' => 1],
+        // Create item categories and items (unchanged)
+        $this->createItemCategoriesAndItems($faker);
+
+        // Create Rekanan records
+        $this->createRekanan($faker);
+
+        // Create farms and related data
+        $this->createFarms($faker);
+
+        // Add this line to create item location mappings before purchases
+        $this->createItemLocationMappings();
+
+        // Now create purchases for each farm
+        $this->createPurchases($faker);
+
+        // Create additional users with roles (unchanged)
+        $this->createAdditionalUsers($faker);
+    }
+
+    private function createItemCategoriesAndItems(Generator $faker)
+    {
+        $categoryData = [
+            ['name' => 'DOC', 'code' => 'DOC', 'description' => 'Day Old Chick Category'],
+            ['name' => 'Pakan', 'code' => 'PKN', 'description' => 'Feed Category'],
+            ['name' => 'Obat', 'code' => 'OBT', 'description' => 'Medicine Category'],
+            ['name' => 'Vaksin', 'code' => 'VKS', 'description' => 'Vaccine Category'],
+            ['name' => 'Vitamin', 'code' => 'VTM', 'description' => 'Vitamin Category'],
+            ['name' => 'Lainnya', 'code' => 'LNY', 'description' => 'Other Category'],
         ];
 
-        $beratBeli = 100;
-        $beratJual = 0;
+        foreach ($categoryData as $data) {
+            $supervisor = User::where('email', 'supervisor@demo.com')->first();
+            $category = ItemCategory::create(array_merge($data, ['status' => 'Aktif', 'created_by' => $supervisor->id]));
 
-        // Create Stok records using the array
-        foreach ($stockData as $data) {
-            Item::create(array_merge($data, ['status' => 'Aktif']));
-        }
-
-        // Create Rekanan records (Suppliers and Customers)
-        for ($i = 1; $i <= 7; $i++) {
-            Rekanan::factory()->create([
-                'jenis' => 'Supplier',
-                'kode' => 'S00' . $i,
-            ]);
-
-            Rekanan::factory()->create([
-                'jenis' => 'Customer',
-                'kode' => 'C00' . $i,
+            Item::create([
+                'category_id' => $category->id,
+                'kode' => $category->code . '001',
+                'name' => 'Nama Stok ' . $category->name,
+                'satuan_besar' => $this->getSatuanBesar($category->name),
+                'satuan_kecil' => $this->getSatuanKecil($category->name),
+                'konversi' => $category->name === 'Pakan' ? 1000 : 1,
+                'status' => 'Aktif',
+                'is_feed' => $category->name === 'Pakan',
+                'created_by' => $supervisor->id,
             ]);
         }
+    }
 
-        $operator1 = User::where('email','operator@demo.com')->first();
-        $operator2 = User::where('email','operator2@demo.com')->first();
-        $supervisor = User::where('email','supervisor@demo.com')->first();
-        $counter = 0;
+    private function createFarms(Generator $faker)
+    {
+        Farm::factory(7)->create()->each(function ($farm) use ($faker) {
+            $supervisor = User::where('email', 'supervisor@demo.com')->first();
 
-        // Create Farm records
-        Farm::factory(7)->create()->each(function ($demoFarm) use ($supervisor, $operator1, $operator2, $faker, &$counter, $beratBeli, $beratJual) {
-            // Initialize counter if it doesn't exist
-            if (!isset($counter)) {
-                $counter = 1; 
+            // Create warehouse location for farm
+            InventoryLocation::create([
+                'farm_id' => $farm->id,
+                'name' => 'Gudang ' . $farm->nama,
+                'code' => 'WH-' . $farm->kode,
+                'type' => 'warehouse',
+                'status' => 'Aktif',
+                'created_by' => $supervisor->id,
+            ]);
+
+            // Create 4 silos and their locations for each farm
+            // for ($i = 1; $i <= 4; $i++) {
+                // $silo = FarmSilo::create([
+                //     'farm_id' => $farm->id,
+                //     'name' => 'Silo ' . $i,
+                //     'code' => 'SL' . $i . '-' . $farm->kode,
+                //     'capacity' => 5000, // 5 ton capacity
+                //     'description' => 'Feed storage silo ' . $i,
+                //     'status' => 'Aktif',
+                //     'created_by' => $supervisor->id,
+                // ]);
+
+                // Create silo location
+                // InventoryLocation::create([
+                //     'farm_id' => $farm->id,
+                //     'silo_id' => $silo : $silo->id ?? '',
+                //     'name' => 'Silo ' . $i . ' ' . $farm->nama,
+                //     'code' => 'SL-' . $i . '-' . $farm->kode,
+                //     'type' => 'silo',
+                //     'status' => 'Aktif',
+                //     'created_by' => $supervisor->id,
+                // ]);
+            // }
+
+            // Create kandang
+            Kandang::factory()->create([
+                'farm_id' => $farm->id,
+                'kode' => 'K00' . $farm->kode,
+                'nama' => 'Kandang-F' . $farm->kode,
+            ]);
+        });
+    }
+
+    private function createPurchases(Generator $faker)
+    {
+        Farm::all()->each(function ($farm) use ($faker) {
+            $supervisor = User::where('email', 'supervisor@demo.com')->first();
+            $operator1 = User::where('email', 'operator@demo.com')->first();
+            $operator2 = User::where('email', 'operator2@demo.com')->first();
+
+            // Get a random warehouse
+            $warehouseLocation = InventoryLocation::where('farm_id', $farm->id)
+                ->where('type', 'warehouse')
+                ->first();
+
+            // Assign operator
+            $operator = rand(0, 1) ? $operator1 : $operator2;
+            $farm->operators()->attach($operator);
+
+            // Get the kandang for this farm
+            $kandang = Kandang::where('farm_id', $farm->id)->first();
+
+            // Create DOC purchase
+            $this->createDocPurchase($farm, $kandang, $warehouseLocation, $supervisor, $faker);
+
+            // Create inventory purchase
+            $this->createInventoryPurchase($farm, $kandang, $warehouseLocation, $operator, $faker);
+        });
+    }
+
+    private function getSatuanBesar($categoryName)
+    {
+        return match($categoryName) {
+            'DOC' => 'Ekor',
+            'Pakan' => 'Kg',
+            'Obat' => 'Butir',
+            'Vaksin' => 'Impul',
+            'Vitamin' => 'Tablet',
+            default => 'LL'
+        };
+    }
+
+    private function getSatuanKecil($categoryName)
+    {
+        return match($categoryName) {
+            'DOC' => 'Ekor',
+            'Pakan' => 'Gram',
+            'Obat' => 'Butir',
+            'Vaksin' => 'Impul',
+            'Vitamin' => 'Tablet',
+            default => 'LL'
+        };
+    }
+
+    private function createItemLocationMappings()
+    {
+        $farms = Farm::all();
+        $items = Item::all();
+
+        foreach ($farms as $farm) {
+            // Get the warehouse location for this farm
+            $warehouseLocation = InventoryLocation::where('farm_id', $farm->id)
+                ->where('type', 'warehouse')
+                ->first();
+
+            if (!$warehouseLocation) {
+                continue; // Skip if no warehouse found for this farm
             }
-            // Create FarmOperator record
-            $operator = ($counter % 2 == 0) ? $operator1 : $operator2;
-            $demoFarm->operators()->attach($operator); 
 
-            // Create Kandang records for each farm
-            Kandang::factory(1)->create([
-                'farm_id' => $demoFarm->id,
-                'kode' => 'K00' . $demoFarm->kode,
-                'nama' => 'Kandang-F' . $demoFarm->kode,
+            foreach ($items as $item) {
+                // Create or update the item location mapping
+                ItemLocation::updateOrCreate(
+                    [
+                        'item_id' => $item->id,
+                        'farm_id' => $farm->id,
+                    ],
+                    [
+                        'location_id' => $warehouseLocation->id,
+                        'created_by' => 3, // Assuming 3 is a valid user ID (e.g., supervisor)
+                        'updated_by' => 3,
+                    ]
+                );
+            }
+        }
+    }
+
+    private function createAdditionalUsers(Generator $faker)
+    {
+        $roles = ['manager', 'accountant', 'staff'];
+
+        foreach ($roles as $role) {
+            $user = User::create([
+                'name' => ucfirst($role),
+                'email' => $role . '@demo.com',
+                'password' => bcrypt('demo'),
             ]);
 
-            // Data dummy untuk Transaksi Pembelian DOC
+            $role = Role::firstOrCreate(['name' => $role]);
+            $user->assignRole($role);
+        }
+    }
+
+    private function createRekanan(Generator $faker)
+    {
+        $rekananTypes = ['Supplier', 'Customer', 'Both'];
+        foreach ($rekananTypes as $type) {
+            for ($i = 0; $i < 5; $i++) {
+                Rekanan::create([
+                    'jenis' => $type,
+                    'kode' => 'REK-' . $type[0] . '-' . str_pad(Rekanan::count() + 1, 3, '0', STR_PAD_LEFT),
+                    'nama' => $faker->company,
+                    'alamat' => $faker->address,
+                    'telp' => $faker->phoneNumber,
+                    'pic' => $faker->name,
+                    'telp_pic' => $faker->phoneNumber,
+                    'email' => $faker->companyEmail,
+                    'status' => 'Aktif',
+                    'created_by' => 3,
+                ]);
+            }
+        }
+    }
+
+    private function createDocPurchase($farm, $kandang, $location, $supervisor, $faker)
+    {
+        if ($supervisor) {
             $supplier = Rekanan::where('jenis', 'Supplier')->inRandomOrder()->first();
-            $kandang = $demoFarm->kandangs->first(); 
-            $stokDoc = Item::where('jenis', 'DOC')->inRandomOrder()->first();
-            $stok = Item::whereIn('jenis', ['Pakan', 'Obat', 'Vaksin', 'Lainnya'])->inRandomOrder()->first();
+            $docItem = Item::whereHas('category', function($q) {
+                $q->where('name', 'DOC');
+            })->first();
 
             $qty = $faker->numberBetween(10, 20) * 100;
             $harga = $faker->numberBetween(1, 10) * 500;
+            $tanggal = $faker->dateTimeBetween('-1 month', 'now');
+            $batchNumber = $this->generateUniqueBatchNumber($tanggal);
 
-            // Check if a 'DOC' transaction already exists for this kandang
-            $existingDocTransaction = Transaksi::with('transaksiDetail')
-                                                ->where('jenis','Pembelian')
-                                                ->whereHas('transaksiDetail', function ($query) {
-                                                    $query->where('jenis_barang', 'DOC');
-                                                })
-                                                ->where('kandang_id', $kandang->id)
-                                                ->exists();
+            
 
-            // Pembelian DOC
-            $transaksiPembelian = Transaksi::create([
-                'jenis' => 'Pembelian',
-                'faktur' => 'DOC-' . str_pad($counter + 1, 3, '0', STR_PAD_LEFT),
+            // Create purchase transaction
+            $purchase = TransaksiBeli::create([
+                'jenis' => 'DOC',
+                'faktur' => 'DOC-' . str_pad($farm->id, 3, '0', STR_PAD_LEFT),
                 'tanggal' => $faker->dateTimeBetween('-1 month', 'now'),
                 'rekanan_id' => $supplier->id,
-                'farm_id' => $demoFarm->id,
+                'batch_number' => $batchNumber,
+                'farm_id' => $farm->id,
                 'kandang_id' => $kandang->id,
-                'terpakai' => 0,
-                'sisa' => $qty,
                 'total_qty' => $qty,
-                'total_berat' => $qty * 100,
+                'total_berat' => $qty * 0.1, // Assuming 100g per DOC
                 'harga' => $harga,
                 'sub_total' => $qty * $harga,
-                'status' => 'Aktif',
-                'user_id' => $supervisor->id,
-            ]);
-
-            if($transaksiPembelian->kelompokTernak()->exists()){
-                $kelompokTernak = $transaksiPembelian->kelompokTernak;
-            }else{
-                $kelompokTernak = $transaksiPembelian->kelompokTernak()->create([
-                    'transaksi_id' => $transaksiPembelian->id,
-                    'name' => 'PR-'.$demoFarm->kode . '-' . $kandang->kode . str_pad($counter + 1, 3, '0', STR_PAD_LEFT),
-                    'breed' => 'DOC',
-                    'start_date' => $transaksiPembelian->tanggal,
-                    'estimated_end_date' => $transaksiPembelian->tanggal->addMonths(6),
-                    'stok_awal' => 0,
-                    'stok_masuk' => $qty,
-                    'jumlah_mati' => 0,
-                    'jumlah_dipotong' => 0,
-                    'jumlah_dijual' => 0,
-                    'stok_akhir' => $qty,
-                    'berat_beli' => $beratBeli * $qty,
-                    'berat_jual' => $beratJual * $qty,
-                    'status' => 'Aktif',
-                    'farm_id' => $transaksiPembelian->farm_id,
-                    'kandang_id' => $transaksiPembelian->kandang_id,
-                    'created_by' => $supervisor->id,
-                ]);
-
-                $historyTernak = $kelompokTernak->historyTernaks()->create([
-                    'transaksi_id' => $transaksiPembelian->id,
-                    'kelompok_ternak_id' => $kelompokTernak->id,
-                    'parent_id' => null,
-                    'farm_id' => $transaksiPembelian->farm_id,
-                    'kandang_id' => $transaksiPembelian->kandang_id,
-                    'tanggal' => $transaksiPembelian->tanggal,
-                    'jenis' => 'Masuk',
-                    'perusahaan_nama' => $transaksiPembelian->rekanans->nama,
-                    'hpp' => $transaksiPembelian->sub_total,
-                    'stok_awal' => 0,
-                    'stok_akhir' => $qty,
-                    'stok_masuk' => $qty,
-                    'stok_keluar' => 0,
-                    'total_berat' => $kelompokTernak->berat_beli,
-                    'status' => 'hidup',
-                    'keterangan' => null,
-                    'created_by' => $supervisor->id,
-                ]);
-
-                // Update Transaksi Pembelian Ternak
-                $transaksiPembelian->kelompok_ternak_id = $kelompokTernak->id;
-                $transaksiPembelian->save();
-
-                // Detail Transaksi Pembelian DOC
-                $subTotal = 0;
-                $subTotal += $qty * $harga;
-
-                $transaksiDetail = $transaksiPembelian->transaksiDetail()->create([
-                    'transaksi_id' => $transaksiPembelian->id,
-                    'jenis' => 'Pembelian',
-                    'jenis_barang' => 'DOC',
-                    'tanggal' => $transaksiPembelian->tanggal,
-                    'item_id' => $stokDoc->id,
-                    'item_name' => $stokDoc->name,
-                    'harga' => $harga,
-                    'qty' => $qty,
-                    'berat' => $kelompokTernak->berat_beli,
-                    'terpakai' => 0,
-                    'sisa' => $qty,
-                    'sub_total' => $subTotal,
-                    'satuan_besar' => $stokDoc->satuan_besar,
-                    'satuan_kecil' => $stokDoc->satuan_kecil,
-                    'konversi' => 1,
-                    'status' => 'Aktif',
-                    'user_id' => $supervisor->id,
-                ]);
-
-                // Update Status Kandang
-                $kandang->jumlah = $transaksiPembelian->transaksiDetail->first()?->qty;
-                $kandang->berat = $transaksiPembelian->transaksiDetail->first()?->berat;
-                $kandang->kelompok_ternak_id = $kelompokTernak->id;
-                $kandang->status = 'Digunakan';
-                $kandang->save();
-            }
-
-            // Detail Transaksi Pembelian Stok
-            $subTotal = 0;
-            $qty = $faker->numberBetween(10, 20) * 100;
-            $harga = $faker->numberBetween(10, 20) * 1000;
-            $subTotal += $qty * $harga;
-
-            // Pembelian Pakan dan Lainnya
-            $transaksiPembelianStok = Transaksi::create([
-                'jenis' => 'Pembelian',
-                'faktur' => 'PB-' . str_pad($counter + 1, 3, '0', STR_PAD_LEFT),
-                'tanggal' => $faker->dateTimeBetween('-1 month', 'now'),
-                'rekanan_id' => $supplier->id,
-                'farm_id' => $demoFarm->id,
-                'kandang_id' => $kandang->id,
-                'harga' => $harga,
-                'total_qty' => $qty,
                 'terpakai' => 0,
                 'sisa' => $qty,
-                'sub_total' => $harga * $qty,
+                'notes' => 'Initial DOC Purchase',
                 'status' => 'Aktif',
-                'user_id' => $operator->id,
+                'created_by' => 3,
             ]);
 
-            if($transaksiPembelianStok->exists()){
-                $transaksiDetail = $transaksiPembelianStok->transaksiDetail()->create([
-                    'transaksi_id' => $transaksiPembelianStok->id,
-                    'jenis' => 'Pembelian',
-                    'jenis_barang' => $stok->jenis,
-                    'tanggal' => $transaksiPembelianStok->tanggal,
-                    'item_id' => $stok->id,
-                    'item_name' => $stok->name,
-                    'harga' => $harga,
-                    'qty' => $qty * $stok->konversi,
-                    'berat' => 0,
-                    'terpakai' => 0,
-                    'sisa' => $qty * $stok->konversi,
-                    'sub_total' => ($qty * $harga),
-                    'konversi' => $stok->konversi,
-                    'status' => 'Aktif',
-                    'user_id' => $operator->id,
-                ]);
+            // Create purchase detail
+            TransaksiBeliDetail::create([
+                'transaksi_id' => $purchase->id,
+                'jenis' => 'Pembelian',
+                'jenis_barang' => 'DOC',
+                'tanggal' => $purchase->tanggal,
+                'item_id' => $docItem->id,
+                'item_name' => $docItem->name,
+                'qty' => $qty,
+                'berat' => $qty * 0.1,
+                'harga' => $harga,
+                'sub_total' => $qty * $harga,
+                'terpakai' => 0,
+                'sisa' => $qty,
+                'satuan_besar' => $docItem->satuan_besar,
+                'satuan_kecil' => $docItem->satuan_kecil,
+                'konversi' => $docItem->konversi,
+                'status' => 'Aktif',
+                'created_by' => 3,
+            ]);
 
-                // Update sub total transaksi pembelian
-                $transaksiPembelianStok->sub_total = $subTotal;
-                $transaksiPembelianStok->save();
+            // Create kelompok ternak
+            $kelompokTernak = KelompokTernak::create([
+                'transaksi_id' => $purchase->id,
+                'name' => 'PR-' . $farm->kode . '-' . $kandang->kode . '-' . Carbon::parse($purchase->tanggal)->format('dmY'),
+                'breed' => 'DOC',
+                'start_date' => $purchase->tanggal,
+                'populasi_awal' => $qty,
+                'berat_awal' => $qty * 0.1,
+                'hpp' => $harga,
+                'status' => 'Aktif',
+                'keterangan' => 'Initial DOC Purchase',
+                'created_by' => 3,
+            ]);
 
-                $stokHistory = $transaksiPembelianStok->stokHistory()->create([
-                    'transaksi_id' => $transaksiPembelianStok->id,
-                    'parent_id' => null,
-                    'farm_id' => $demoFarm->id,
-                    'kandang_id' => $kandang->id,
-                    'tanggal' => $transaksiPembelianStok->tanggal,
-                    'jenis' => 'Masuk',
-                    'item_id' => $stok->id,
-                    'item_name' => $stok->name,
-                    'satuan' => $stok->satuan_besar,
-                    'jenis_barang' => $stok->jenis,
-                    'kadaluarsa' => $transaksiPembelianStok->tanggal->addMonths(18),
-                    'perusahaan_nama' => $transaksiPembelianStok->rekanans->nama,
-                    'hpp' => $transaksiPembelianStok->harga,
-                    'stok_awal' => 0,
-                    'stok_masuk' => $qty * $stok->konversi,
-                    'stok_keluar' => 0,
-                    'stok_akhir' => $qty * $stok->konversi,
-                    'status' => 'Aktif',
-                    'user_id' => $operator->id,
-                ]);
-            }
+        // Add new code: Create transaksi_ternak record
+        TransaksiTernak::create([
+            'kelompok_ternak_id' => $kelompokTernak->id,
+            'jenis_transaksi' => 'Pembelian',
+            'tanggal' => $purchase->tanggal,
+            'farm_id' => $farm->id,
+            'kandang_id' => $kandang->id,
+            'quantity' => $qty,
+            'berat_total' => $qty * 0.1,
+            'berat_rata' => 0.1, // DOC average weight
+            'harga_satuan' => $harga,
+            'total_harga' => $qty * $harga,
+            'status' => 'Aktif',
+            'keterangan' => 'Pembelian DOC Batch ' . $kelompokTernak->name,
+            'created_by' => 3,
+        ]);
 
-            $counter++;
-        });
+        // Update purchase with kelompok_ternak_id
+        $purchase->update([
+            'kelompok_ternak_id' => $kelompokTernak->id
+        ]);
 
-        // Create the default role if it doesn't exist
-        $role = Role::firstOrCreate(['name' => 'Operator']);
+            // Create current ternak record
+            CurrentTernak::create([
+                'kelompok_ternak_id' => $kelompokTernak->id,
+                'farm_id' => $farm->id,
+                'kandang_id' => $kandang->id,
+                'quantity' => $qty,
+                'berat_total' => $qty * 0.1,
+                'avg_berat' => 0.1,
+                'status' => 'Aktif',
+                'created_by' => 3,
+            ]);
 
-        // Create users and assign the default role
-        User::factory(5)
-            ->create()
-            ->each(function ($user) use ($role) {
-                $user->assignRole($role);
-
-                $numberOfFarms = rand(1, 5);
-
-                for ($i = 0; $i < $numberOfFarms; $i++) {
-                    $demoFarm = Farm::inRandomOrder()->first();
-
-                    $existingFarmOperator = FarmOperator::where('farm_id', $demoFarm->id)
-                                  ->where('user_id', $user->id)
-                                  ->exists();
-
-                    if (!$existingFarmOperator) {
-                        FarmOperator::create([
-                            'farm_id' => $demoFarm->id,
-                            'user_id' => $user->id,
-                        ]);
-                    }
-                }
-            });
-        
-
-        
-
+        // Update kandang
+        $kandang->update([
+            'jumlah' => $qty,
+            'berat' => $qty * 0.1,
+            'kelompok_ternak_id' => $kelompokTernak->id,
+            'status' => 'Digunakan',
+            'updated_by' => $supervisor->id,
+        ]);
+        }
     }
+
+    private function createInventoryPurchase($farm, $kandang, $warehouse, $operator, $faker)
+    {
+        // Get a random supplier
+        $supplier = Rekanan::where('jenis', 'Supplier')->inRandomOrder()->first();
+
+        // Get random item category (excluding DOC)
+        $category = ItemCategory::where('name', '!=', 'DOC')->inRandomOrder()->first();
+
+        // Get random item from the selected category
+        $item = Item::where('category_id', $category->id)->inRandomOrder()->first();
+
+        // Determine if we're using a silo or warehouse
+        $useSilo = 0;
+
+        if ($useSilo) {
+            $silo = FarmSilo::where('farm_id', $farm->id)->inRandomOrder()->first();
+            $location = InventoryLocation::where('farm_id', $farm->id)
+                ->where('type', 'silo')
+                ->where('silo_id', $silo->id)
+                ->first();
+        } else {
+            $location = $warehouse;
+            $silo = null;
+        }
+
+        $qty = $faker->numberBetween(100, 1000);
+        $harga = $faker->numberBetween(1000, 10000);
+        $tanggal = $faker->dateTimeBetween('-1 month', 'now');
+        $batchNumber = $this->generateUniqueBatchNumber($tanggal);
+
+
+        // Create purchase transaction
+        $purchase = TransaksiBeli::create([
+            'jenis' => $category->name,
+            'faktur' => $category->code . '-' . str_pad($farm->id, 3, '0', STR_PAD_LEFT),
+            'tanggal' => $tanggal,
+            'rekanan_id' => $supplier->id,
+            'batch_number' => $batchNumber,
+            'farm_id' => $farm->id,
+            'kandang_id' => $kandang->id,
+            'total_qty' => $qty,
+            'total_berat' => $qty * ($item->is_feed ? 1 : 0.1), // Assume 1kg for feed, 100g for others
+            'harga' => $harga,
+            'sub_total' => $qty * $harga,
+            'terpakai' => 0,
+            'sisa' => $qty,
+            'notes' => 'Purchase of ' . $item->name,
+            'status' => 'Aktif',
+            'created_by' => $operator->id,
+        ]);
+
+        // Create purchase detail
+        TransaksiBeliDetail::create([
+            'transaksi_id' => $purchase->id,
+            'jenis' => 'Pembelian',
+            'jenis_barang' => $category->name,
+            'tanggal' => $purchase->tanggal,
+            'item_id' => $item->id,
+            'item_name' => $item->name,
+            'qty' => $qty,
+            'berat' => $qty * ($item->is_feed ? 1 : 0.1),
+            'harga' => $harga,
+            'sub_total' => $qty * $harga,
+            'terpakai' => 0,
+            'sisa' => $qty,
+            'satuan_besar' => $item->satuan_besar,
+            'satuan_kecil' => $item->satuan_kecil,
+            'konversi' => $item->konversi,
+            'status' => 'Aktif',
+            'created_by' => $operator->id,
+        ]);
+
+
+
+        // Create inventory stock
+        $currentStock = CurrentStock::create([
+            'item_id' => $item->id,
+            'location_id' => $location->id,
+            'quantity' => $qty,
+            'reserved_quantity' => 0,
+            'available_quantity' => $qty,
+            'hpp' => $harga,
+            'status' => 'Aktif',
+            'created_by' => $operator->id,
+        ]);
+        
+        // Create stock movement record
+        StockMovement::create([
+            'transaksi_id' => $purchase->id,
+            'item_id' => $item->id,
+            'destination_location_id' => $location->id,
+            'destination_silo_id' => $silo ? $silo->id : null,
+            'movement_type' => 'purchase',
+            'tanggal' => $tanggal,
+            'batch_number' => $batchNumber,
+            'quantity' => $qty,
+            'satuan' => $item->satuan_besar,
+            'hpp' => $harga,
+            'status' => 'Completed',
+            'keterangan' => 'Initial purchase of ' . $item->name,
+            'created_by' => $operator->id,
+        ]);
+
+        // Log the StockHistory
+        StockHistory::create([
+            'transaksi_id' => $purchase->id,
+            'jenis' => 'Pembelian',
+            'parent_id' => null,
+            'stock_id' => $currentStock ? $currentStock->id : null,
+            'item_id' => $item->id,
+            'location_id' => $currentStock->location_id,
+            'batch_number' => $batchNumber,
+            'expiry_date' => null,
+            'quantity' => $qty,
+            'reserved_quantity' => 0,
+            'available_quantity' => $qty,
+            'hpp' => $harga,
+            'status' => 'In',
+            'created_by' => $operator->id,
+            // Other fields for StockHistory
+        ]);
+    }
+
+    private function getTransaksiBeliCountByDate($date)
+    {
+        // Validate the date format (optional)
+        $validatedDate = Carbon::parse($date)->format('Y-m-d');
+
+        // Count the number of TransaksiBeli for the specified date, including soft-deleted records
+        return TransaksiBeli::withTrashed()
+            ->whereDate('tanggal', $validatedDate)
+            ->count();
+    }
+
+    private function generateUniqueBatchNumber($date)
+    {
+        $batchDate = Carbon::parse($date)->format('Ymd');
+        $baseNumber = 'Pembelian-' . $batchDate . '-';
+
+        $latestBatch = TransaksiBeli::withTrashed()
+            ->whereDate('tanggal', $date)
+            ->where('batch_number', 'like', $baseNumber . '%')
+            ->orderByRaw('CAST(SUBSTRING(batch_number, -2) AS UNSIGNED) DESC')
+            ->value('batch_number');
+
+        if ($latestBatch) {
+            $latestNumber = intval(substr($latestBatch, -2));
+            $newNumber = $latestNumber + 1;
+        } else {
+            $newNumber = 1;
+        }
+
+        return $baseNumber . str_pad($newNumber, 2, '0', STR_PAD_LEFT);
+    }
+    // ... rest of the helper methods
 }

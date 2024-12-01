@@ -27,29 +27,24 @@ class StoksDataTable extends DataTable
             ->editColumn('jumlah', function (Item $stok) {
                 if (auth()->user()->farmOperators()->exists()) {
                     $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
-                    $masuk = $stok->stokHistory()
-                        ->whereIn('farm_id', $farmIds)
-                        ->where('jenis','Masuk')
-                        ->sum('stok_akhir');
-                    $terpakai = $stok->stokHistory()
-                        ->whereIn('farm_id', $farmIds)
-                        ->where('jenis','Pemakaian')
-                        ->sum('stok_keluar');
-
-                    $stokAkhir = $masuk - $terpakai;
-
+                    $stokAkhir = $stok->currentStock()
+                        ->whereHas('inventoryLocation', function ($query) use ($farmIds) {
+                            $query->whereIn('farm_id', $farmIds);
+                        })
+                        ->sum('available_quantity');
                 } else {
-                    $stokAkhir = $stok->stokHistory->sum('stok_akhir');
+                    $stokAkhir = $stok->currentStock->sum('available_quantity');
                 }
                 return number_format($stokAkhir / $stok->konversi, 2);
             })
-            // ->editColumn('created_at', function (Item $stok) {
-            //     return $stok->created_at->format('d M Y, h:i a');
-            // })
+            ->editColumn('created_at', function (Item $stok) {
+                return $stok->created_at->format('d M Y, h:i a');
+            })
             ->addColumn('action', function (Item $stok) {
                 return view('pages/masterdata.stok._actions', compact('stok'));
             })
             // ->filterColumn('farm', function($query, $keyword) {
+
             //     $query->whereHas('farms', function($query) use ($keyword) { // Assuming you have a 'farm' relationship on your model
             //         $query->where('nama', 'like', "%{$keyword}%");
             //     });
@@ -77,8 +72,8 @@ class StoksDataTable extends DataTable
             // dd($farmIds);
             
             // Add a condition to filter items based on farm IDs
-            $query->whereHas('stokHistory', function ($q) use ($farmIds) {
-                $q->whereIn('farm_id', $farmIds);
+            $query->whereHas('stockHistory.inventoryLocation.farm', function ($q) use ($farmIds) {
+                $q->whereIn('id', $farmIds);
             });
             // $query = $model::with(['stokHistory', 'transaksiDetail'])
             //     ->where('jenis', '!=', 'DOC')
@@ -88,8 +83,11 @@ class StoksDataTable extends DataTable
             //     ->orderBy('name', 'DESC')
             //     ->newQuery();
         } else {
-            $query = $model::with(['stokHistory', 'transaksiDetail'])
-                ->where('jenis', '!=', 'DOC')
+            // $query = $model::with(['stockHistory','itemCategory'])
+            $query = $model::with(['itemCategory'])
+                ->whereHas('itemCategory', function ($q) {
+                    $q->where('name', '!=', 'DOC');
+                })
                 ->orderBy('name', 'DESC')
                 ->newQuery();
         }

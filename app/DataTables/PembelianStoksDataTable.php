@@ -2,7 +2,7 @@
 
 namespace App\DataTables;
 
-use App\Models\Transaksi;
+use App\Models\TransaksiBeli as Transaksi;
 use App\Models\Item;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
@@ -41,14 +41,19 @@ class PembelianStoksDataTable extends DataTable
             ->editColumn('rekanan_id', function (Transaksi $transaksi) {
                 return $transaksi->rekanans->nama;
             })
-            ->editColumn('sub_total', function (Transaksi $transaksi) {
-                return $this->formatRupiah($transaksi->sub_total);
-            })
+            // ->editColumn('sub_total', function (Transaksi $transaksi) {
+            //     return $this->formatRupiah($transaksi->sub_total);
+            // })
             ->addColumn('action', function (Transaksi $transaksi) {
                 return view('pages/transaksi.pembelian-stok._actions', compact('transaksi'));
             })
             ->filterColumn('farm_id', function($query, $keyword) {
                 $query->whereHas('farms', function($query) use ($keyword) {
+                    $query->where('nama', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('rekanan_id', function($query, $keyword) {
+                $query->whereHas('rekanans', function($query) use ($keyword) {
                     $query->where('nama', 'like', "%{$keyword}%");
                 });
             })
@@ -72,7 +77,24 @@ class PembelianStoksDataTable extends DataTable
                 }
             })
             ->setRowId('id')
-            ->rawColumns(['action']);
+            ->rawColumns(['action'])
+            ->filter(function ($query) {
+                if (request()->has('search')) {
+                    $searchTerm = request('search')['value'];
+                    $query->where(function ($query) use ($searchTerm) {
+                        $query->where('id', 'like', "%{$searchTerm}%")
+                            ->orWhere('created_at', 'like', "%{$searchTerm}%")
+                            ->orWhere('tanggal', 'like', "%{$searchTerm}%")
+                            ->orWhere('sub_total', 'like', "%{$searchTerm}%")
+                            ->orWhereHas('farms', function ($q) use ($searchTerm) {
+                                $q->where('nama', 'like', "%{$searchTerm}%");
+                            })
+                            ->orWhereHas('rekanans', function ($q) use ($searchTerm) {
+                                $q->where('nama', 'like', "%{$searchTerm}%");
+                            });
+                    });
+                }
+            }, true);
     }
 
 
@@ -87,10 +109,10 @@ class PembelianStoksDataTable extends DataTable
             $farmOperator = auth()->user()->farmOperators;
             if ($farmOperator) {
                 $farmIds = $farmOperator->pluck('farm_id')->toArray();
-                $query = $model::where('jenis', 'Pembelian')
-                    ->whereHas('transaksiDetail', function ($query) {
-                        $query->whereNotIn('jenis_barang', ['DOC']);
-                    })
+                $query = $model::whereNotIn('jenis', ['DOC'])
+                    // ->whereHas('transaksiDetail', function ($query) {
+                    //     $query->whereNotIn('jenis_barang', ['DOC']);
+                    // })
                     ->whereIn('farm_id', $farmIds)
                     ->orderBy('tanggal', 'DESC')
                     ->newQuery();
@@ -117,14 +139,20 @@ class PembelianStoksDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('Bfrtip')
-            ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
+            // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             ->orderBy(1)
             ->parameters([
                 'scrollX'      =>  true,
-                'searching'      =>  true,
+                'searching'       =>  false,
+                // 'responsive'       =>  true,
+                'lengthMenu' => [
+                        [ 10, 25, 50, -1 ],
+                        [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+                ],
+                'buttons'      => ['export', 'print', 'reload','colvis'],
             ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaksi/pembelian-stok/_draw-scripts.js')) . "}");
     }
@@ -142,14 +170,14 @@ class PembelianStoksDataTable extends DataTable
             // Column::make('payload.doc.nama')->title('Nama DOC')->searchable(true),
             // Column::make('qty')->searchable(true),
             // Column::make('harga')->searchable(true),
-            Column::make('sub_total')->searchable(true),
+            // Column::make('sub_total')->searchable(true),
             // Column::make('periode')->searchable(true),
-            Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
+            Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),
             Column::computed('action')
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
+                ->addClass('text-center')
         ];
     }
 

@@ -9,9 +9,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MasterData\KandangController;
 use App\Http\Controllers\Transaksi\TransaksiController;
-use App\Http\Controllers\StokController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\MasterData\FarmController;
 use App\Http\Controllers\TernakController;
+use App\Http\Controllers\TransaksiTernakController;
+use App\Http\Controllers\DataController;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,6 +36,14 @@ Route::middleware('auth:sanctum')->get('/check-auth', function (Request $request
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
+});
+
+Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
+    Route::post('/data/{sources}/{operators?}', [DataController::class, 'index']);
+    Route::post('/d/item/location', [DataController::class, 'index'])->name('api.v2.item_location_mapping');
+
+    Route::post('/d/transaksi/{details?}', [DataController::class, 'transaksi']);
+
 });
 
 Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
@@ -122,6 +132,9 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         return app(SamplePermissionApi::class)->delete($id);
     });
 
+    // Route::apiResources('/get-operators/{farm}', [AppApi::class, 'getOperators']);
+
+
 
     Route::get('/farms-list', function (Request $request) {
         return app(AppApi::class)->getFarm($request);
@@ -133,6 +146,10 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
 
     Route::post('/farms-list', function (Request $request) {
         return app(AppApi::class)->datatableListFarm($request);
+    });
+
+    Route::post('/data/{source}', function (Request $request) {
+        return app(FarmController::class)->getDataAjax($request);
     });
 
     Route::post('/farms', function (Request $request) {
@@ -156,7 +173,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     });
 
     Route::post('/stocks', function (Request $request) {
-        return app(StokController::class)->stoks($request);
+        return app(StockController::class)->stoks($request);
     })->name('api.v1.stoks');
 
     Route::get('/farms/{id}', function ($id) {
@@ -169,6 +186,10 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
 
     Route::delete('/farms/{id}', function ($id) {
         return app(AppApi::class)->delete($id);
+    });
+
+    Route::get('/transaksi_beli/details/{id}', function ($id) {
+        return app(AppApi::class)->getTransaksiBeliDetail($id);
     });
 
     Route::get('/transaksi/details/{id}', function ($id) {
@@ -191,6 +212,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/get-farms', [AppApi::class, 'getFarms']);
     Route::get('/get-kandangs/{farm}/{status}', [AppApi::class, 'getKandangs']);
     Route::get('/get-farm-stocks/{farm}', [AppApi::class, 'getFarmStoks']);
+    Route::post('/transaksi-ternak/details', [TransaksiTernakController::class, 'getDetails']);
 
     // Route::post('/stocks-edit', function (Request $request) {
     //     return app(AppApi::class)->postStockEdit($request);

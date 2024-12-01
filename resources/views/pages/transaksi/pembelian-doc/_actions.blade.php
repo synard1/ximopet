@@ -7,7 +7,7 @@
     
     <!--begin::Menu item-->
     <div class="menu-item px-3">
-        <a href="#" class="menu-link px-3" data-kt-transaksi-id="{{ $transaksi->id }}" data-kt-action="view_detail_pembelian_doc">
+        <a href="#" class="menu-link px-3" data-kt-transaksi-id="{{ $transaksi->kelompok_ternak_id }}" data-kt-action="view_detail_pembelian_doc">
             View
         </a>
     </div>

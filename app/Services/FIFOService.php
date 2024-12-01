@@ -2,16 +2,35 @@
 
 namespace App\Services;
 
+use App\Models\CurrentStock;
+use App\Models\CurrentTernak;
 use App\Models\Kandang;
-use App\Models\Transaksi;
-use App\Models\TransaksiDetail;
+use App\Models\TransaksiHarian;
+use App\Models\TransaksiHarianDetail;
+use App\Models\TransaksiBeli;
+use App\Models\TransaksiBeliDetail;
 use App\Models\StokMutasi;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use App\Models\StokHistory;
+use App\Models\StockHistory;
+
+use App\Models\Ternak;
+use App\Services\TernakService;
+use App\Models\TernakAfkir;
+use App\Models\KematianTernak;
+use App\Models\TernakJual;
+use App\Models\TransaksiJual;
+use App\Models\TransaksiJualDetail;
 
 class FIFOService
 {
+    protected $ternakService;
+
+    public function __construct(TernakService $ternakService)
+    {
+        $this->ternakService = $ternakService;
+    }
+
     /**
      * Reduce stock using FIFO method.
      *
@@ -24,22 +43,26 @@ class FIFOService
     {
         DB::transaction(function () use ($validatedData) {
             $kandang = Kandang::find($validatedData['kandang_id']);
+            $ternak = CurrentTernak::where('farm_id',$validatedData['farm_id'])->where('kandang_id',$validatedData['kandang_id'])->where('status','Aktif')->first();
 
             // Create single Transaksi
-            $transaksi = Transaksi::create([
+            $transaksi = TransaksiHarian::create([
+                'tanggal' => $validatedData['tanggal'],
+                'kelompok_ternak_id' => $ternak->kelompok_ternak_id,
                 'farm_id' => $validatedData['farm_id'],
                 'kandang_id' => $validatedData['kandang_id'],
-                'total_qty' => 0,
-                'terpakai' => 0,
-                'sisa' => 0,
-                'jenis' => 'Pemakaian',
-                'tanggal' => $validatedData['tanggal'],
-                'user_id' => Auth::id(),
-                'kelompok_ternak_id' => $kandang->kelompok_ternak_id,
-                'status' => 'Aktif',
-                'harga' => 0,
-                'sub_total' => 0,
+                'created_by' => Auth::id(),
             ]);
+
+            if($validatedData['ternak_mati']){
+                $dataTernakMati = $this->ternakService->ternakMati($validatedData, $transaksi);
+             }
+             if($validatedData['ternak_afkir']){
+                $dataTernakAfkir = $this->ternakService->ternakAfkir($validatedData, $transaksi);
+             }
+             if($validatedData['ternak_jual']){
+                $dataTernakJual = $this->ternakService->ternakJual($validatedData, $transaksi);
+             }
 
             $totalQty = 0;
             $totalTerpakai = 0;
@@ -52,7 +75,7 @@ class FIFOService
                 $quantityUsed = $stockItem['qty_used'];
 
                 // Fetch stock entries ordered by oldest first (FIFO)
-                $stockEntries = TransaksiDetail::whereHas('transaksi', function ($query) use ($validatedData) {
+                $stockEntries = TransaksiBeliDetail::whereHas('transaksiBeli', function ($query) use ($validatedData) {
                         $query->where('farm_id', $validatedData['farm_id']);
                     })
                     ->where('item_id', $itemId)
@@ -62,6 +85,15 @@ class FIFOService
                     ->orderBy('tanggal', 'asc')
                     ->lockForUpdate() // Prevent race conditions
                     ->get();
+
+                    // dd($stockEntries);
+                
+                    $currentStock = CurrentStock::whereHas('inventoryLocation', function ($query) use ($validatedData) {
+                        $query->where('farm_id', $validatedData['farm_id']);
+                    })
+                    // ->where('farm_id', $validatedData['farm_id'])
+                    ->where('item_id', $itemId)
+                    ->first();
 
                 if ($stockEntries->isEmpty()) {
                     throw new \Exception('No stock available for item ID: ' . $itemId);
@@ -82,58 +114,66 @@ class FIFOService
                     $stockEntry->save();
 
                     // Update Stok Mutasi
-                    $stokMutasi = StokMutasi::where('transaksi_id', $stockEntry->transaksi_id)->first();
+                    // $stokMutasi = StokMutasi::where('transaksi_id', $stockEntry->transaksi_id)->first();
 
-                    $stokMutasi->stok_masuk = $stockEntry->sisa;
-                    $stokMutasi->stok_akhir = $stockEntry->sisa;
-                    $stokMutasi->save();
+                    // $stokMutasi->stok_masuk = $stockEntry->sisa;
+                    // $stokMutasi->stok_akhir = $stockEntry->sisa;
+                    // $stokMutasi->save();
 
+                    // dd($transaksi->id);
                     // Create TransaksiDetail
-                    $transaksiDetail = TransaksiDetail::create([
+                    $transaksiDetail = TransaksiHarianDetail::create([
                         'transaksi_id' => $transaksi->id,
                         'parent_id' => $stockEntry->id,
-                        'jenis' => 'Pemakaian',
-                        'tanggal' => $validatedData['tanggal'],
+                        'type' => 'Pemakaian',
+                        // 'tanggal' => $validatedData['tanggal'],
                         'item_id' => $stockEntry->item_id,
-                        'item_name' => $stockEntry->item_name,
-                        'qty' => $deductQuantity,
-                        'jenis_barang' => $stockEntry->jenis_barang,
-                        'kandang_id' => $validatedData['kandang_id'],
+                        // 'item_name' => $stockEntry->item_name,
+                        'quantity' => $deductQuantity,
+                        // 'jenis_barang' => $stockEntry->jenis_barang,
+                        // 'kandang_id' => $validatedData['kandang_id'],
+                        'total_berat' => $stockEntry->harga ?? '0',
                         'harga' => $stockEntry->harga,
-                        'sisa' => $stockEntry->sisa,
-                        'terpakai' => $stockEntry->terpakai,
-                        'satuan_besar' => $stockEntry->items->satuan_besar,
-                        'satuan_kecil' => $stockEntry->items->satuan_kecil,
-                        'konversi' => $stockEntry->items->konversi,
-                        'sub_total' => ($deductQuantity / $stockEntry->items->konversi) * $stockEntry->harga,
-                        'kelompok_ternak_id' => $kandang->kelompok_ternak_id,
-                        'status' => 'Aktif',
+                        // 'sisa' => $stockEntry->sisa,
+                        // 'terpakai' => $stockEntry->terpakai,
+                        // 'satuan_besar' => $stockEntry->items->satuan_besar,
+                        // 'satuan_kecil' => $stockEntry->items->satuan_kecil,
+                        // 'konversi' => $stockEntry->items->konversi,
+                        // 'sub_total' => ($deductQuantity / $stockEntry->items->konversi) * $stockEntry->harga,
+                        // 'kelompok_ternak_id' => $kandang->kelompok_ternak_id,
+                        // 'status' => 'Aktif',
                         'user_id' => Auth::id(),
                     ]);
 
                     // Create StokMutasi
-                    StokHistory::create([
+                    StockHistory::create([
                         'transaksi_id' => $transaksi->id,
-                        'parent_id' => $stokMutasi->id,
+                        'stock_id' => $currentStock->id,
                         'item_id' => $stockEntry->item_id,
-                        'item_name' => $stockEntry->item_name,
-                        'satuan' => $transaksiDetail->satuan_besar,
-                        'jenis_barang' => $stockEntry->jenis_barang,
-                        'kadaluarsa' => $stockEntry->kadaluarsa ?? $transaksiDetail->tanggal->addMonths(18),
-                        'perusahaan_nama' => $stockEntry->transaksi->rekanans->nama,
-                        'hpp' => $transaksiDetail->harga,
-                        'farm_id' => $validatedData['farm_id'],
-                        'kandang_id' => $validatedData['kandang_id'],
-                        'harga' => $stockEntry->harga,
-                        'stok_awal' => $stockEntry->qty,
-                        'stok_akhir' => $stockEntry->qty - $deductQuantity,
-                        'stok_masuk' => 0,
-                        'stok_keluar' => $deductQuantity,
-                        'tanggal' => $validatedData['tanggal'],
-                        'user_id' => Auth::id(),
+                        'location_id' => $currentStock->location_id,
+                        'transaksi_id' => $stockEntry->transaksi_id,
+                        'parent_id' => $stockEntry->id ?? null,
                         'jenis' => 'Pemakaian',
+                        'batch_number' => $stockEntry->batch_number,
+                        'expiry_date' => $stockEntry->expiry_date,
+                        'quantity' => $deductQuantity,
+                        'available_quantity' => $stockEntry->sisa,
+                        'hpp' => $stockEntry->harga,
                         'status' => 'Aktif',
+                        'created_by' => Auth::id(),
                     ]);
+
+                    // Update CurrentStock
+                    $currentStock = CurrentStock::where('item_id', $stockEntry->item_id)
+                    ->where('location_id',$currentStock->location_id)
+                    ->first();
+
+                    if ($currentStock) {
+                        // Update existing stock
+                        $currentStock->quantity -= $deductQuantity;
+                        $currentStock->available_quantity -= $deductQuantity;
+                        $currentStock->save();
+                    }
 
                     // Update remaining quantity to deduct
                     $remainingQuantity -= $deductQuantity;
@@ -150,8 +190,8 @@ class FIFOService
             }
 
             // Update total harga and sub total
-            $totalHarga = $transaksi->transaksiDetail()->sum('harga');
-            $totalSubTotal = $transaksi->transaksiDetail()->sum('sub_total');
+            // $totalHarga = $transaksi->details()->sum('harga');
+            // $totalSubTotal = $transaksi->details()->sum('sub_total');
 
             // Update Transaksi totals after all details are created
             $transaksi->update([
@@ -175,29 +215,98 @@ class FIFOService
     public function reverseStockReduction($request)
     {
         DB::transaction(function () use ($request) {
-            $transaksi = Transaksi::findOrFail($request->id);
+            $transaksi = TransaksiHarian::findOrFail($request->id);
+            $transaksiDetails = $transaksi->details;
 
-            if ($transaksi->jenis !== $request->jenis) {
-                throw new \Exception('This transaction is not a stock reduction.');
-            }
 
-            $transaksiDetails = $transaksi->transaksiDetail;
+
+
+            // dd($transaksi->details['item_id']);
+
+            // if ($transaksi->jenis !== $request->jenis) {
+            //     throw new \Exception('This transaction is not a stock reduction.');
+            // }
+
 
             foreach ($transaksiDetails as $detail) {
+                $currentStock = CurrentStock::whereHas('inventoryLocation', function ($query) use($transaksi){
+                    $query->where('farm_id', $transaksi->farm_id);
+                })
+                ->where('item_id', $detail->item_id)
+                ->first();
+
+                // dd($currentStock);
+
                 // Find the original stock entry
-                $originalStockEntry = TransaksiDetail::findOrFail($detail->parent_id);
+                $originalStockEntry = TransaksiBeliDetail::findOrFail($detail->parent_id);
 
                 // Reverse the stock changes
-                $originalStockEntry->sisa += $detail->qty;
-                $originalStockEntry->terpakai -= $detail->qty;
+                $originalStockEntry->sisa += $detail->quantity;
+                $originalStockEntry->terpakai -= $detail->quantity;
                 $originalStockEntry->save();
+
+                // Update CurrentStock
+                // $currentStock = CurrentStock::where('item_id', $detail->item_id)
+                // ->where('location_id',$currentStock->location_id)
+                // ->first();
+
+                if ($currentStock) {
+                    // Update existing stock
+                    $currentStock->quantity += $detail->quantity;
+                    $currentStock->available_quantity += $detail->quantity;
+                    $currentStock->save();
+                }
 
                 // Delete the TransaksiDetail
                 $detail->delete();
             }
 
+            //Check Ternak Afkir, Ternak Mati, Ternak Jual, Transaksi Jual, Transaksi Jual Detail
+            $ternak = Ternak::where('id', $transaksi->kelompok_ternak_id)->first();
+            $currentTernak = CurrentTernak::where('kelompok_ternak_id', $ternak->id)->first();
+            $ternakAfkir = TernakAfkir::where('transaksi_id', $request->id)->where('tipe_transaksi','Harian')->first();
+            $ternakMati = KematianTernak::where('transaksi_id', $request->id)->where('tipe_transaksi','Harian')->first();
+            $ternakJual = TernakJual::where('transaksi_id', $request->id)->where('tipe_transaksi','Harian')->first();
+            if($ternakJual){
+                $transaksiJual = TransaksiJual::where('transaksi_id', $request->id)->where('tipe_transaksi','Harian')->first();
+            }
+
+            // dd($ternakJual->quantity);
+
+            // Return Ternak Qty
+            if($ternakAfkir){
+                // $ternak->populasi_awal += $ternakAfkir->jumlah;
+                $currentTernak->quantity += $ternakAfkir->jumlah;
+                // $ternak->save();
+                $currentTernak->save();
+                $ternakAfkir->delete();
+
+            }
+
+            if($ternakMati){
+                // $ternak->populasi_awal += $ternakMati->jumlah;
+                $currentTernak->quantity += $ternakMati->quantity;
+                // $ternak->save();
+                $currentTernak->save();
+                $ternakMati->delete();
+
+            }
+
+            if($ternakJual){
+                // $ternak->populasi_awal += $ternakJual->jumlah;
+                $currentTernak->quantity += $ternakJual->quantity;
+                // $ternak->save();
+                $currentTernak->save();
+                $transaksiJual->details()->delete();
+                $transaksiJual->delete();
+                $ternakJual->delete();
+            }
+
             // Delete the StokHistory entries related to this transaction
-            StokHistory::where('transaksi_id', $request->id)->delete();
+            StockHistory::where('transaksi_id', $request->id)->delete();
+
+            //Delete Sub Data
+
 
             // Delete the main Transaksi
             $transaksi->delete();

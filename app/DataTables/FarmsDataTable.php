@@ -57,11 +57,17 @@ class FarmsDataTable extends DataTable
             ->setTableId('farms-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
+            ->dom('Bfrtip')
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             ->orderBy(1)
-            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/farm/_draw-scripts.js')) . "}");
+            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/farm/_draw-scripts.js')) . "}")
+            ->buttons([
+                'colvis'
+            ])
+            ->columnDefs([
+                ['visible' => true, 'targets' => '_all']
+            ]);
     }
 
     /**
@@ -72,10 +78,10 @@ class FarmsDataTable extends DataTable
         return [
             Column::make('kode')->searchable(false),
             Column::make('nama'),
-            Column::make('alamat'),
-            Column::make('telp'),
-            Column::make('pic'),
-            Column::make('telp_pic'),
+            Column::make('alamat')->visible(false),
+            Column::make('telp')->visible(false),
+            Column::make('pic')->visible(false),
+            Column::make('telp_pic')->visible(false),
             Column::computed('kapasitas'),
             Column::make('status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),

@@ -2,7 +2,7 @@
 
 namespace App\DataTables;
 
-use App\Models\Transaksi;
+use App\Models\TransaksiBeli as Transaksi;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
@@ -104,12 +104,12 @@ class DocsDataTable extends DataTable
 
         // return $model->newQuery();
         $query = $model::with('transaksiDetail')
-            ->where('jenis','Pembelian')
+            ->where('jenis','DOC')
             ->whereHas('transaksiDetail', function ($query) {
-                $query->where('jenis_barang', 'DOC');
+                // $query->where('jenis_barang', 'DOC');
             })
             // ->where('user_id',auth()->user()->id)
-            ->orderBy('tanggal', 'DESC')
+            ->orderBy('tanggal', 'ASC')
             ->newQuery();
 
         return $query;

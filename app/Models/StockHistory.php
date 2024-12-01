@@ -7,31 +7,26 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class StokHistory extends BaseModel
+class StockHistory extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $table = 'histori_stok';
+    protected $table = 'stock_histories';
 
     protected $fillable = [
         'id',
+        'stock_id',
+        'item_id',
+        'location_id',
         'transaksi_id',
         'parent_id',
-        'farm_id',
-        'kandang_id',
-        'tanggal',
         'jenis',
-        'item_id',
-        'item_name',
-        'satuan',
-        'jenis_barang',
-        'kadaluarsa',
-        'perusahaan_nama',
+        'batch_number',
+        'expiry_date',
+        'quantity',
+        'reserved_quantity',
+        'available_quantity',
         'hpp',
-        'stok_awal',
-        'stok_akhir',
-        'stok_masuk',
-        'stok_keluar',
         'status',
         'keterangan',
         'user_id',
@@ -71,5 +66,9 @@ class StokHistory extends BaseModel
     public function transaksiDetail()
     {
         return $this->belongsTo(TransaksiDetail::class, 'transaksi_detail_id','id');
+    }
+
+    public function inventoryLocation(){
+        return $this->belongsTo(InventoryLocation::class, 'location_id','id');
     }
 }

@@ -11,6 +11,9 @@ use App\Models\Kandang;
 use App\Models\StokHistory;
 use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
+
+use App\Models\KematianTernak;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 class PemakaianStok extends Component
@@ -28,12 +31,15 @@ class PemakaianStok extends Component
     public function render()
     {
         $this->suppliers = Rekanan::where('jenis','Supplier')->get();
-        $this->allItems = Item::where('status', 'Aktif')->where('jenis','!=','DOC')->get();
+        $this->allItems = Item::whereHas('itemCategory', function ($query) {
+            $query->where('name', '!=', 'DOC');
+        })->where('status', 'Aktif')->get();
         // $this->farms = FarmOperator::where('user_id', auth()->user()->id)->where('status','Aktif')->get();
         $this->farms = Farm::whereHas('farmOperators', function ($query) {
             $query->where('user_id', auth()->user()->id);
         })->get();
-        $this->kandangs = Kandang::where('deleted_at',null)->get();
+        // $this->kandangs = Kandang::where('deleted_at',null)->get();
+        $this->kandangs = [];
 
 
         return view('livewire.transaksi.pemakaian-stok', [
@@ -152,5 +158,37 @@ class PemakaianStok extends Component
         //     DB::rollBack();
         //     $this->dispatch('error', 'Terjadi kesalahan saat menghapus data: ' . $e->getMessage());
         // }
+    }
+
+    public function storeTernakMati()
+    {
+        $this->validate([
+            'tanggal' => 'required|date',
+            'selectedFarm' => 'required',
+            'selectedKandang' => 'required',
+            'quantity' => 'required|integer|min:1',
+            'keterangan' => 'nullable|string',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $ternakMati = new KematianTernak();
+            $ternakMati->tanggal = $this->tanggal;
+            $ternakMati->farm_id = $this->selectedFarm;
+            $ternakMati->kandang_id = $this->selectedKandang;
+            $ternakMati->jumlah = $this->quantity;
+            $ternakMati->keterangan = $this->keterangan;
+            $ternakMati->save();
+
+            // Update stok
+            $this->updateStok($this->selectedFarm, $this->selectedKandang, $this->quantity, 'kurang');
+
+            DB::commit();
+            $this->dispatch('success', 'Data Ternak Mati berhasil ditambahkan');
+            $this->resetForm();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->dispatch('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
     }
 }
