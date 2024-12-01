@@ -14,7 +14,8 @@ class StokController extends Controller
      */
     public function index(StoksDataTable $dataTable)
     {
-        return $dataTable->render('pages/masterdata.stok.list');
+        addJavascriptFile('assets/js/custom/fetch-data.js');
+        return $dataTable->render('pages/masterdata.stok.index');
     }
 
     /**

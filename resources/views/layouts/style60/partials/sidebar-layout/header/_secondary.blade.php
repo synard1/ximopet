@@ -524,79 +524,79 @@
                         </div>
                         <!--end:Menu item-->
                     @else
-                    <!--begin:Menu item-->
+                    {{-- <!--begin:Menu item-->
                     <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"
                     class="menu-item menu-lg-down-accordion me-0 me-lg-2">
-                    <!--begin:Menu link-->
-                    <span class="menu-link">
-                        <span class="menu-icon">
-                            <i class="ki-outline ki-grid fs-4"></i>
+                        <!--begin:Menu link-->
+                        <span class="menu-link">
+                            <span class="menu-icon">
+                                <i class="ki-outline ki-grid fs-4"></i>
+                            </span>
+                            <span class="menu-title">Menu</span>
+                            <span class="menu-arrow"></span>
                         </span>
-                        <span class="menu-title">Menu</span>
-                        <span class="menu-arrow"></span>
-                    </span>
-                    <!--end:Menu link-->
-                    <!--begin:Menu sub-->
-                    <div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-lg-2 py-lg-4 w-lg-200px"
-                        style="">
-                        <!--begin:Menu item-->
-                        <div class="menu-item">
-                            <!--begin:Menu link-->
-                            <a class="menu-link" href="/transaksi/stoks">
-                                <span class="menu-icon">
-                                    <i class="ki-outline ki-menu fs-3"></i>
-                                </span>
-                                <span class="menu-title">Pembelian</span>
-                            </a>
-                            <!--end:Menu link-->
-                        </div>
-                        <!--end:Menu item-->
-                        <!--begin:Menu item-->
-                        <div class="menu-item">
-                            <!--begin:Menu link-->
-                            <a class="menu-link" href="/data/penjualan">
-                                <span class="menu-icon">
-                                    <i class="ki-outline ki-basket-ok fs-3"></i>
-                                </span>
-                                <span class="menu-title">Penjualan</span>
-                            </a>
-                            <!--end:Menu link-->
-                        </div>
-                        <!--end:Menu item-->
-                        <!--begin:Menu item-->
-                        <div class="menu-item">
-                            <!--begin:Menu link-->
-                            <a class="menu-link" href="/stoks/mutasi">
-                                <span class="menu-icon">
-                                    <i class="ki-outline ki-home fs-3"></i>
-                                </span>
-                                <span class="menu-title">Mutasi Stok</span>
-                            </a>
-                            <!--end:Menu link-->
-                        </div>
-                        <!--end:Menu item-->
-
-                        @if(auth()->user()->hasRole(['SuperAdmin','Administrator']))
+                        <!--end:Menu link-->
+                        <!--begin:Menu sub-->
+                        <div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-lg-2 py-lg-4 w-lg-200px"
+                            style="">
                             <!--begin:Menu item-->
                             <div class="menu-item">
                                 <!--begin:Menu link-->
-                                <a class="menu-link" href="/setting">
+                                <a class="menu-link" href="/transaksi/stoks">
                                     <span class="menu-icon">
-                                        <i class="ki-outline ki-gear fs-3"></i>
+                                        <i class="ki-outline ki-menu fs-3"></i>
                                     </span>
-                                    <span class="menu-title">Setting</span>
+                                    <span class="menu-title">Pembelian</span>
                                 </a>
                                 <!--end:Menu link-->
                             </div>
                             <!--end:Menu item-->
-                        @endif
+                            <!--begin:Menu item-->
+                            <div class="menu-item">
+                                <!--begin:Menu link-->
+                                <a class="menu-link" href="/data/penjualan">
+                                    <span class="menu-icon">
+                                        <i class="ki-outline ki-basket-ok fs-3"></i>
+                                    </span>
+                                    <span class="menu-title">Penjualan</span>
+                                </a>
+                                <!--end:Menu link-->
+                            </div>
+                            <!--end:Menu item-->
+                            <!--begin:Menu item-->
+                            <div class="menu-item">
+                                <!--begin:Menu link-->
+                                <a class="menu-link" href="/stoks/mutasi">
+                                    <span class="menu-icon">
+                                        <i class="ki-outline ki-home fs-3"></i>
+                                    </span>
+                                    <span class="menu-title">Mutasi Stok</span>
+                                </a>
+                                <!--end:Menu link-->
+                            </div>
+                            <!--end:Menu item-->
 
-                        
+                            @if(auth()->user()->hasRole(['SuperAdmin','Administrator']))
+                                <!--begin:Menu item-->
+                                <div class="menu-item">
+                                    <!--begin:Menu link-->
+                                    <a class="menu-link" href="/setting">
+                                        <span class="menu-icon">
+                                            <i class="ki-outline ki-gear fs-3"></i>
+                                        </span>
+                                        <span class="menu-title">Setting</span>
+                                    </a>
+                                    <!--end:Menu link-->
+                                </div>
+                                <!--end:Menu item-->
+                            @endif
 
+                            
+
+                        </div>
+                        <!--end:Menu sub-->
                     </div>
-                    <!--end:Menu sub-->
-                </div>
-                <!--end:Menu item-->
+                    <!--end:Menu item--> --}}
                     @endif
                     @endif
                     

@@ -106,7 +106,9 @@ class KandangController extends Controller
                 return response()->json($result);
             }elseif($roles == 'Supervisor'){
 
-                $result = Kandang::where('status', $status)->get(['id','kode','nama','kapasitas','jumlah']);
+                $result = Kandang::where('master_kandangs.status', $status)
+                    ->leftJoin('master_farms', 'master_kandangs.farm_id', '=', 'master_farms.id')
+                    ->get(['master_kandangs.id', 'master_kandangs.kode', 'master_kandangs.nama', 'master_kandangs.kapasitas', 'master_kandangs.jumlah', 'master_farms.kode as farm_kode', 'master_farms.nama as farm_name']);
 
                 return response()->json($result);
             }

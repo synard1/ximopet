@@ -21,6 +21,8 @@ class FarmFactory extends Factory
             'jumlah' => 0,
             'kapasitas' => 1000000, // Adjust as needed
             'status' => 'Aktif',
+            'created_by' => 3,
+
         ];
     }
 }

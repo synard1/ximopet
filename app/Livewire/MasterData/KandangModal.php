@@ -17,13 +17,10 @@ class KandangModal extends Component
     public $isOpen = 0;
     public $dynamicNumber, $currentUrl, $referer;
 
-    // public $rand = 0;
-
     public $noFarmMessage = ''; // Add a property to store the message
 
-
     protected $rules = [
-        'kode_kandang' => 'required|unique:master_kandangs,kode',
+        'kode_kandang' => 'required|regex:/^[A-Za-z0-9@#%&*_-]+$/',
         'nama' => 'required|string',
         'kapasitas' => 'required|numeric',
         'selectedFarm' => 'required',
@@ -32,7 +29,6 @@ class KandangModal extends Component
     public function mount()
     {
         $this->farms = Farm::where('status', 'Aktif')->get();
-        // $this->rand = rand(1, 10000);
 
         // Check if there are any active farms
         if ($this->farms->isEmpty()) {
@@ -46,14 +42,27 @@ class KandangModal extends Component
         return view('livewire.master-data.kandang-modal', ['farms' => $this->farms,
         'noFarmMessage' => $this->noFarmMessage, // Pass the message to the view
         ]);
-
     }
 
     public function storeKandang()
     {
         try {
             // Validate the form input data
-            $this->validate(); 
+            $this->validate();
+
+            // dd($this->selectedFarm);
+
+            // Check if kode_kandang already exists for the selected farm
+            $existingKandang = Kandang::where('farm_id', $this->selectedFarm)
+                ->where('kode', $this->kode_kandang)
+                // ->where('id', '!=', $this->kandang_id) // Exclude current kandang when editing
+                ->first();
+
+            if ($existingKandang) {
+                throw ValidationException::withMessages([
+                    'kode_kandang' => 'Kode kandang sudah digunakan di farm ini'
+                ]);
+            }
         
             // Wrap database operation in a transaction (if applicable)
             DB::beginTransaction();
@@ -81,7 +90,9 @@ class KandangModal extends Component
             DB::rollBack();
     
             // Handle validation and general errors
-            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ');
+            // $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ');
+            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. '.$e->getMessage());
+
             // Optionally log the error: Log::error($e->getMessage());
         } finally {
             // Reset the form in all cases to prepare for new data
@@ -95,7 +106,6 @@ class KandangModal extends Component
         $this->dynamicNumber = rand(100, 999); // Generate random number
 
         $this->farms = Farm::where('status', 'Aktif')->get();
-
     }
 
     public function closeModalKandang()

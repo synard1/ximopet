@@ -3,7 +3,7 @@
 namespace App\DataTables;
 
 use App\Models\StokHistory;
-use App\Models\Transaksi;
+use App\Models\TransaksiBeli as Transaksi;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;

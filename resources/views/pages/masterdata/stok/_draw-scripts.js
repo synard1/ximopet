@@ -96,6 +96,8 @@ document.querySelectorAll('[data-kt-action="view_detail_stok"]').forEach(functio
         }).then(function () {
 
             destroyDetailsTable();
+            resetDateRange();
+            resetFarmSelect();
 
 
             modal.addEventListener('show.bs.modal', function (event) {
@@ -178,6 +180,11 @@ document.querySelectorAll('[data-kt-action="view_detail_stok"]').forEach(functio
 
 function getDetailStoks(transaksiId, farmId, startDate, endDate) {
     // console.log(transaksiId + " - " + farmId);
+    //Destroy old data
+    destroyDetailsTable();
+    // resetDateRange();
+    resetTableHeader();
+
     const table = new DataTable('#detailsStokTable', {
         info: false,
         ordering: false,

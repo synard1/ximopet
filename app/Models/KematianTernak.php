@@ -12,11 +12,13 @@ class KematianTernak extends BaseModel
 {
     use HasFactory, SoftDeletes, HasUuids;
 
-    protected $table = 'kematian_ternak';
+    protected $table = 'ternak_mati';
 
     protected $fillable = [
         'id',
         'kelompok_ternak_id',
+        'transaksi_id',
+        'tipe_transaksi',
         'history_ternak_id',
         'tanggal',
         'farm_id',

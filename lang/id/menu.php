@@ -32,6 +32,7 @@ return [
 
 
     'create_transaction_header' => 'Data Transaksi',
+    'create_daily_transaction' => 'Transaksi Harian',
     'create_purchasing' => 'Pembelian Stok',
     'create_purchasing_doc' => 'Pembelian DOC',
     'create_mutation_stock' => 'Pemakaian Stok',

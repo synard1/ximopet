@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         Schema::create('master_rekanan', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('jenis');
+            $table->string('jenis'); // Supplier or Buyer
             $table->string('kode', 64)->unique();
             $table->string('nama');
             $table->text('alamat');
@@ -22,9 +24,17 @@ return new class extends Migration
             $table->string('telp_pic', 50)->nullable();
             $table->string('email')->unique();
             $table->string('status');
+            $table->unsignedBigInteger('created_by');
+            $table->unsignedBigInteger('updated_by')->nullable();
+
             $table->timestamps();
             $table->softDeletes();
+
+            $table->foreign('created_by')->references('id')->on('users');
+            $table->foreign('updated_by')->references('id')->on('users');
         });
+
+        Schema::enableForeignKeyConstraints();
     }
 
     /**

@@ -11,6 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         Schema::create('master_farms', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('kode', 64)->unique();
@@ -22,9 +24,17 @@ return new class extends Migration
             $table->string('jumlah')->nullable();
             $table->string('kapasitas')->nullable();
             $table->string('status');
+            $table->unsignedBigInteger('created_by');
+            $table->unsignedBigInteger('updated_by')->nullable();
+
             $table->timestamps();
             $table->softDeletes();
+
+            $table->foreign('created_by')->references('id')->on('users');
+            $table->foreign('updated_by')->references('id')->on('users');
         });
+
+        Schema::enableForeignKeyConstraints();
     }
 
     /**

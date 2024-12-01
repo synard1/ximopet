@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\TransaksiDetail;
 use App\Models\Transaksi;
+use App\Models\TransaksiBeli;
+use App\Models\TransaksiBeliDetail;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
 
@@ -85,6 +87,43 @@ class AppApi
         return response()->json($data);
     }
 
+    public function getTransaksiBeliDetail($id)
+    {
+        // $options = TransaksiDetail::where('transaksi_id', $id)->get(['id','jenis','jenis_barang','item_nama','qty','terpakai', 'sisa', 'harga','sub_total']);
+        // Gunakan eager loading untuk mengambil data terkait dari model items
+        $options = TransaksiBeliDetail::with(['items' => function ($query) {
+            $query->select('id', 'satuan_besar', 'satuan_kecil','konversi');
+        }])
+        ->where('transaksi_id', $id)
+        ->get(['id','jenis','jenis_barang','item_id','item_name','qty','terpakai', 'sisa', 'harga','sub_total']);
+
+        // Map over the collection to calculate the 'sisa' field and include satuan data
+        $formattedOptions = $options->map(function ($item) {
+
+        // Pastikan relasi 'items' ada sebelum mengakses propertinya
+        if ($item->items) {
+            // $item->qty = number_format(($item->qty / $item->items->konversi), 3);
+            $item->qty = number_format(($item->qty / $item->items->konversi), 0);
+            // $item->sisa = ((floatval($item->qty) * floatval($item->items->konversi)) -  (floatval($item->terpakai)) / floatval($item->items->konversi));
+            $item->sisa = number_format(($item->sisa / $item->items->konversi), 0);
+            $item->terpakai = number_format(($item->terpakai / $item->items->konversi), 0);
+            $item->jumlah = number_format(($item->terpakai / $item->items->konversi), 0);
+            $item->satuan_besar = $item->items->satuan_besar;
+            $item->satuan_kecil = $item->items->satuan_kecil;
+            $item->konversi = $item->items->konversi;
+        } else {
+            $item->sisa = $item->qty - ( $item->terpakai / $item->items->konversi );
+            // Tangani kasus ketika 'items' null (misalnya, berikan nilai default)
+            $item->satuan_besar = null; 
+            $item->satuan_kecil = null; 
+            $item->konversi = null; 
+        }
+
+        return $item;
+        });
+
+        return response()->json(['data' => $formattedOptions]);
+    }
     public function getTransaksiDetail($id)
     {
         // $options = TransaksiDetail::where('transaksi_id', $id)->get(['id','jenis','jenis_barang','item_nama','qty','terpakai', 'sisa', 'harga','sub_total']);

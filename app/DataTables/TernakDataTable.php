@@ -2,8 +2,13 @@
 
 namespace App\DataTables;
 
+use App\Models\CurrentTernak;
+use App\Models\KematianTernak;
 use App\Models\Ternak;
-use App\Models\Kandang;;
+use App\Models\TernakAfkir;
+use App\Models\Kandang;
+
+use App\Models\TransaksiJual;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
@@ -21,19 +26,31 @@ class TernakDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->rawColumns(['name'])
-            ->editColumn('berat_beli', function (Ternak $ternak) {
-                if ($ternak->berat_beli < 1000) {
-                    return $ternak->berat_beli . ' gram';
-                } elseif ($ternak->berat_beli < 1000000) {
-                    return number_format($ternak->berat_beli / 1000, 2) . ' Kg';
-                } else {
-                    return number_format($ternak->berat_beli / 1000000, 2) . ' Ton';
-                }
-            })
-            // ->addColumn('kapasitas', function (Ternak $ternak) {
-            //     $jumlah = Kandang::where('ternak_id',$ternak->id)->sum('kapasitas');
-            //     return $jumlah;
+            // ->editColumn('berat_beli', function (Ternak $ternak) {
+            //     if ($ternak->berat_beli < 1000) {
+            //         return $ternak->berat_beli . ' gram';
+            //     } elseif ($ternak->berat_beli < 1000000) {
+            //         return number_format($ternak->berat_beli / 1000, 2) . ' Kg';
+            //     } else {
+            //         return number_format($ternak->berat_beli / 1000000, 2) . ' Ton';
+            //     }
             // })
+            ->editColumn('jumlah_mati', function (Ternak $ternak) {
+                $jumlah = KematianTernak::where('kelompok_ternak_id',$ternak->id)->sum('quantity');
+                return $jumlah;
+            })
+            ->editColumn('jumlah_afkir', function (Ternak $ternak) {
+                $jumlah = TernakAfkir::where('kelompok_ternak_id',$ternak->id)->sum('jumlah');
+                return $jumlah;
+            })
+            ->editColumn('jumlah_terjual', function (Ternak $ternak) {
+                $jumlah = TransaksiJual::where('kelompok_ternak_id',$ternak->id)->sum('jumlah');
+                return $jumlah  ?? '0';
+            })
+            ->editColumn('stok_akhir', function (Ternak $ternak) {
+                $ternak = CurrentTernak::where('kelompok_ternak_id',$ternak->id)->first();
+                return $ternak->quantity  ?? '0';
+            })
             ->editColumn('name', function (Ternak $ternak) {
                 return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_ternak" data-kt-transaksi-id="' . $ternak->id . '">' . $ternak->name . '</a>';
             })
@@ -56,7 +73,7 @@ class TernakDataTable extends DataTable
     public function query(Ternak $model): QueryBuilder
     {
         if (auth()->user()->hasRole('Operator')) {
-            return $model->newQuery()->whereHas('kandang.farms.farmOperators', function ($query) {
+            return $model->newQuery()->whereHas('transaksi.farms.farmOperators', function ($query) {
                 $query->where('user_id', auth()->id());
             });
         }
@@ -79,7 +96,7 @@ class TernakDataTable extends DataTable
             ->orderBy(1)
             ->parameters([
                 'scrollX'      =>  true,
-                'searching'       =>  false,
+                'searching'       =>  true,
                 // 'responsive'       =>  true,
                 'lengthMenu' => [
                         [ 10, 25, 50, -1 ],
@@ -98,10 +115,12 @@ class TernakDataTable extends DataTable
         return [
             Column::make('name'),
             Column::make('start_date'),
-            Column::make('stok_masuk'),
-            Column::make('berat_beli'),
-            Column::make('jumlah_mati')->title('Ternak Mati'),
-            Column::make('stok_akhir')->title('Sisa Ternak'),
+            Column::make('populasi_awal'),
+            // Column::make('berat_beli'),
+            Column::computed('jumlah_mati')->title('Ternak Mati'),
+            Column::computed('jumlah_afkir')->title('Ternak Afkir'),
+            Column::computed('jumlah_terjual')->title('Ternak Terjual'),
+            Column::computed('stok_akhir')->title('Sisa Ternak'),
             Column::make('status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),
             // Column::computed('action')

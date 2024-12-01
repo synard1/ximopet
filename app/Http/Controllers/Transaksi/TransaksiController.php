@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\DataTables\DocsDataTable;
 use App\DataTables\PembelianStoksDataTable;
 use App\DataTables\PemakaianStoksDataTable;
+use App\DataTables\TransaksiHarianDataTable;
 use App\Models\StokHistory;
 use App\Models\TransaksiDetail;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,12 @@ class TransaksiController extends Controller
     public function docIndex(DocsDataTable $dataTable)
     {
         return $dataTable->render('pages/transaksi.pembelian-doc.list');
+    }
+
+    public function harianIndex(TransaksiHarianDataTable $dataTable)
+    {
+        // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
+        return $dataTable->render('pages/transaksi.harian.list');
     }
 
     public function stokIndex(PembelianStoksDataTable $dataTable)

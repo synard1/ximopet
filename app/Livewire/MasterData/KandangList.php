@@ -66,6 +66,7 @@ class KandangList extends Component
             'nama' => $this->nama,
             'kapasitas' => $this->kapasitas,
             'status' => $this->status,
+            'created_by' => auth()->user()->id,
         ]);
 
         if($this->kandang_id){

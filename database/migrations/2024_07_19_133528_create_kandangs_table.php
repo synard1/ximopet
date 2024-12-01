@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('master_kandangs', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('farm_id');
-            $table->string('kode', 64)->unique();
+            $table->string('kode');
             $table->string('nama');
             $table->string('jumlah')->default(0);
             $table->string('berat')->default(0);

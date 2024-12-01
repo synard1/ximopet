@@ -17,8 +17,7 @@ class KandangFactory extends Factory
             'kapasitas' => 100000, // Adjust as needed
             'status' => 'Aktif',
             'kelompok_ternak_id' => null,
-            'created_by' => 1,
-            'updated_by' => 1,
+            'created_by' => 3,
         ];
     }
 }

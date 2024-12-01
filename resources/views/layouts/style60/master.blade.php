@@ -147,6 +147,10 @@
         }
     });
 </script>
+<script type="text/javascript">
+    // Define global JavaScript variables
+    window.AuthToken = "{{ session('auth_token') }}";
+</script>
 </body>
 <!--end::Body-->
 

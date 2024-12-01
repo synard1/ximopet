@@ -19,31 +19,22 @@ class KelompokTernak extends BaseModel
         'name',
         'breed',
         'start_date',
-        'estimated_end_date',
-        'initial_quantity',
-        'stok_awal',
-        'stok_masuk',
-        'jumlah_mati',
-        'jumlah_dipotong',
-        'jumlah_dijual',
-        'stok_akhir',
-        'berat_beli',
-        'berat_jual',
+        'populasi_awal',
+        'berat_awal',
+        'hpp',
         'status',
-        'farm_id',
-        'kandang_id',
+        'keterangan',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
         'start_date' => 'datetime',
-        'estimated_end_date' => 'datetime',
     ];
 
-    public function transaksi()
+    public function transaksiBeli()
     {
-        return $this->belongsTo(Transaksi::class, 'transaksi_id','id');
+        return $this->belongsTo(TransaksiBeli::class, 'transaksi_id','id');
     }
 
     public function farm()

@@ -74,5 +74,6 @@ class RolesPermissionsSeeder extends Seeder
         User::find(2)->assignRole('Administrator');
         User::find(3)->assignRole('Supervisor');
         User::find(4)->assignRole('Operator');
+        User::find(5)->assignRole('Operator');
     }
 }

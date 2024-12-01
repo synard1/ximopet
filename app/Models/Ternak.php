@@ -42,7 +42,7 @@ class Ternak extends BaseModel
 
     public function transaksi()
     {
-        return $this->belongsTo(Transaksi::class, 'transaksi_id','id');
+        return $this->belongsTo(TransaksiBeli::class, 'transaksi_id','id');
     }
 
     public function farm()

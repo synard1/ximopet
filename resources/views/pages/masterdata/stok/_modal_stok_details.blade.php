@@ -85,9 +85,9 @@
                 // console.log('Details table was not a DataTable instance');
             }
             $('#detailsStokTable tbody').empty();
-            resetFarmSelect();
-            resetDateRange();
-            resetTableHeader();
+            // resetFarmSelect();
+            // resetDateRange();
+            // resetTableHeader();
         }
 
         function resetFarmSelect() {
@@ -103,8 +103,9 @@
         function resetDateRange() {
             const dateRangeInput = document.getElementById('dateRange');
             if (dateRangeInput) {
-                dateRangeInput.value = '';
-                // console.log('Date range reset');
+                const today = new Date().toISOString().split('T')[0];
+                dateRangeInput.value = `${today} - ${today}`;
+                // console.log('Date range reset to current date');
             } else {
                 console.log('Date range input element not found');
             }

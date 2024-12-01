@@ -4,195 +4,89 @@
             <!--begin::Layout-->
             <div class="d-flex flex-column flex-lg-row">
                 <!--begin::Content-->
-                {{-- <div class="flex-lg-row-fluid mb-10 mb-lg-0 me-lg-7 me-xl-10" style="display: none;" id="formDiv"> --}}
-                <div class="flex-lg-row-fluid mb-10 mb-lg-0 me-lg-7 me-xl-10" id="formDiv">
+                {{-- <div class="d-flex flex-column gap-7 gap-lg-10" style="display: none;" id="formDiv"> --}}
+                <div class="flex-lg-row-fluid mb-10 mb-lg-0 me-lg-7 me-xl-10 gap-7 gap-lg-10" id="formDiv">
                     <!--begin::Card-->
-                    <div class="card" id="formDiva">
+                    <div class="card card-flush py-4 mb-7" id="formDiva">
+                        <!--begin::Card header-->
+                        <div class="card-header">
+                            <h2 class="card-title">Transaksi Stok</h2>
+                        </div>
+                        <!--end::Card header-->
                         <!--begin::Card body-->
-                        <div class="card-body p-12">
+                        <div class="card-body pt-0">
                             <!--begin::Form-->
                             <form action="" id="kt_pemakaian_stok_form">
-                                <!--begin::Wrapper-->
-                                <div class="d-flex flex-column align-items-start flex-xxl-row">
-                                    <!--begin::Input group-->
-                                    <div class="d-flex align-items-center flex-equal fw-row me-4 order-2"
-                                        data-bs-toggle="tooltip" data-bs-trigger="hover"
-                                        data-bs-original-title="Specify invoice date" data-kt-initialized="1">
-                                        <!--begin::Date-->
-                                        <div class="fs-6 fw-bold text-gray-700 text-nowrap">Tanggal:</div>
-                                        <!--end::Date-->
-    
-                                        <!--begin::Input-->
-                                        <div class="position-relative d-flex align-items-center w-150px">
-                                            <!--begin::Datepicker-->
-                                            <input class="form-control form-control-transparent fw-bold pe-5 flatpickr-input" placeholder="Pilih Tanggal" wire:model="tanggal" name="tanggal" id="tanggal" type="text" readonly="readonly"
-                                            x-data 
-                                            x-init="flatpickr($el, {
-                                                enableTime: false,
-                                                dateFormat: 'Y-m-d H:i',
-                                            })">
-                                            <!--end::Datepicker-->
-                                            
-                                            <!--begin::Icon-->
-                                            <i class="ki-outline ki-down fs-4 position-absolute ms-4 end-0"></i>                        
-                                            <!--end::Icon-->
-                                        </div>
-                                        <!--end::Input-->  
-                                        @error('tanggal')
-                                        <span class="text-danger">{{ $message }}</span> @enderror
-                                        @error('tanggal')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror 
-                                    </div>
-                                    <!--end::Input group-->
-    
+
+
+                                <!--begin::Table wrapper-->
+                                <div class="table-responsive mb-10">
+                                    <!--begin::Table-->
+                                    <table class="table table-rounded table-striped border gy-7 gs-7">
+                                        <thead>
+                                            <tr class="fw-bold fs-6 text-gray-800 border-bottom border-gray-200">
+                                                <th>Nama Barang</th>
+                                                <th>Stok Tersedia</th>
+                                                <th>Digunakan</th>
+                                                <th>Sisa Stok</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="stockTableBody">
+                                            <!-- Stock data will be populated here dynamically -->
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <!--end::Top-->
-    
-                                <!--begin::Separator-->
-                                <div class="separator separator-dashed my-10"></div>
-                                <!--end::Separator-->
-    
+                                <!--end::Table-->
+
                                 <!--begin::Wrapper-->
-                                <div class="mb-0">    
-                                    <!--begin::Table wrapper-->
-                                    <div class="table-responsive mb-10">
-                                        <!--begin::Table-->
-                                        {{-- <table class="table g-5 gs-0 mb-0 fw-bold text-gray-700" data-kt-element="items">
-                                            <!--begin::Table head-->
-                                            <thead>
-                                                <tr class="border-bottom fs-7 fw-bold text-gray-700 text-uppercase">
-                                                    <th class="min-w-300px w-475px">Item</th>
-                                                    <th class="min-w-100px w-100px">QTY</th>
-                                                    <th class="min-w-150px w-150px">Stock</th>
-                                                    <th class="min-w-100px w-150px text-end">Sub Total</th>
-                                                </tr>
-                                            </thead>
-                                            <!--end::Table head-->
-    
-                                            <!--begin::Table body-->
-                                            <tbody>
-                                                @foreach($items as $index => $item)
-                                                    <tr class="border-bottom border-bottom-dashed" data-kt-element="item">
-                                                        <td>
-                                                            <select wire:model="items.{{ $index }}.name" class="form-select select2 item-select" id="itemsSelect">
-                                                                <option value="">Select Item</option>
-                                                                @foreach($allItems as $availableItem)
-                                                                    <option value="{{ $availableItem->id }}">{{ $availableItem->nama }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                            <input type="hidden" wire:model="items.{{ $index }}.item_id">
-                                                        </td>
-                                                        <td class="ps-0">
-                                                            <input type="number" class="form-control form-control-solid" min="1" wire:model="items.{{ $index }}.qty" placeholder="1" data-kt-element="quantity">
-                                                        </td>
-                                                        <td>
-                                                            <input type="text" class="form-control form-control-solid text-end" wire:model="items.{{ $index }}.total"  data-kt-element="harga" >
-                                                        </td>
-                                                        <td class="pt-8 text-end text-nowrap">
-                                                            <span data-kt-element="total"></span>
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                            <!--end::Table body-->
-    
-                                            <!--begin::Table foot-->
-                                            <tfoot>
-                                                <tr
-                                                    class="border-top border-top-dashed align-top fs-6 fw-bold text-gray-700">
-                                                    <th class="text-primary">
-                                                        <button class="btn btn-link py-1" data-kt-element="add-item" wire:click="addItem" id="addItem">Add item</button>
-                                                    </th>
-    
-                                                    <th colspan="2" class="border-bottom border-bottom-dashed ps-0">
-                                                        <div class="d-flex flex-column align-items-start">
-                                                            <div class="fs-5">Subtotal</div>
-                                                        </div>
-                                                    </th>
-    
-                                                    <th colspan="2" class="border-bottom border-bottom-dashed text-end">
-                                                        Rp<span data-kt-element="sub-total">0.00</span>
-                                                    </th>
-                                                </tr>
-    
-                                                <tr class="align-top fw-bold text-gray-700">
-                                                    <th></th>
-    
-                                                    <th colspan="2" class="fs-4 ps-0">Total</th>
-    
-                                                    <th colspan="2" class="text-end fs-4 text-nowrap">
-                                                        Rp<span data-kt-element="grand-total">0.00</span>
-                                                    </th>
-                                                </tr>
-                                            </tfoot>
-                                            <!--end::Table foot-->
-                                        </table> --}}
-                                        <div id="formDiva"> 
-                                            <table class="table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Nama Barang</th>
-                                                        <th>Stok Tersedia</th>
-                                                        <th>Digunakan</th>
-                                                        <th>Sisa Stok</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="stockTableBody">
-                                                    {{-- Stock data will be populated here dynamically --}} 
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                <div class="d-flex flex-column align-items-start flex-xxl-row mb-5">
+                                    <div class="form-group w-100 mb-5">
+                                        <label for="keterangan" class="form-label fs-6 fw-bold text-gray-700">Keterangan</label>
+                                        <textarea id="keterangan" class="form-control form-control-solid" name="keterangan" rows="3" placeholder="Masukkan keterangan transaksi"></textarea>
                                     </div>
-                                    <!--end::Table-->
-    
-                                    <!--begin::Item template-->
-                                    <table class="table d-none" data-kt-element="item-template">
-                                        <tbody>
-                                            <tr class="border-bottom border-bottom-dashed" data-kt-element="item">
-                                                <td class="pe-7">
-                                                    <input type="text" class="form-control form-control-solid mb-2"
-                                                        name="name[]" placeholder="Item name">
-                                                </td>
-    
-                                                <td class="ps-0">
-                                                    <input type="text" class="form-control form-control-solid" min="1"
-                                                        name="quantity[]" placeholder="1" data-kt-element="quantity">
-                                                </td>
-    
-                                                <td>
-                                                    <input type="text" class="form-control form-control-solid text-end"
-                                                        name="harga[]" placeholder="0.00" data-kt-element="harga">
-                                                </td>
-    
-                                                <td class="pt-8 text-end">
-                                                    Rp<span data-kt-element="total">0.00</span>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-    
-                                    <table class="table d-none" data-kt-element="empty-template">
-                                        <tbody>
-                                            <tr data-kt-element="empty">
-                                                <th colspan="5" class="text-muted text-center py-10">
-                                                    No items
-                                                </th>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                    <!--end::Item template-->
-    
-                                    {{-- <!--begin::Notes-->
-                                    <div class="mb-0">
-                                        <label class="form-label fs-6 fw-bold text-gray-700">Notes</label>
-    
-                                        <textarea name="notes" class="form-control form-control-solid" rows="3"
-                                            placeholder="Thanks for your business"></textarea>
-                                    </div>
-                                    <!--end::Notes--> --}}
                                 </div>
                                 <!--end::Wrapper-->
+
+                            </form>
+                            <!--end::Form-->
+                        </div>
+                        <!--end::Card body-->
+                    </div>
+                    <!--end::Card-->
+                    
+                    <!--begin::Card-->
+                    <div class="card card-flush py-4" id="cardTransaksi">
+                        <!--begin::Card header-->
+                        <div class="card-header">
+                            <h2 class="card-title">Transaksi Ternak</h2>
+                        </div>
+                        <!--end::Card header-->
+                        <!--begin::Card body-->
+                        <div class="card-body pt-0">
+                            <!--begin::Form-->
+                            <form>
+                                <div class="mb-10">
+                                    <label class="form-label fw-bold fs-6 text-gray-700">Ternak Mati</label>
+                                    <input type="number" wire:model="ternak_mati"  class="form-control form-control-solid" name="ternak_mati" id="ternak_mati" placeholder="Jumlah Ekor" value="0">
+                                </div>
+                                
+                                <div class="mb-10">
+                                    <label class="form-label fw-bold fs-6 text-gray-700">Ternak Afkir</label>
+                                    <input type="number" class="form-control form-control-solid" name="ternak_afkir" id="ternak_afkir" placeholder="Jumlah Ekor" value="0">
+                                </div>
+                                
+                                <div class="mb-10">
+                                    <label class="form-label fw-bold fs-6 text-gray-700">Ternak Terjual</label>
+                                    <input type="number" class="form-control form-control-solid" name="ternak_jual" id="ternak_jual" placeholder="Jumlah Ekor" value="0">
+                                    {{-- <div class="row">
+                                        <div class="col-md-6 mb-5">
+                                            <input type="number" class="form-control form-control-solid" name="ternak_jual" id="ternak_jual" placeholder="Jumlah Ekor">
+                                        </div>
+                                        <div class="col-md-6 mb-5">
+                                            <input type="number" class="form-control form-control-solid" name="ternak_terjual_kg" placeholder="Jumlah Kg">
+                                        </div>
+                                    </div> --}}
+                                </div>
                             </form>
                             <!--end::Form-->
                         </div>
@@ -208,7 +102,7 @@
                     <div class="card" data-kt-sticky="true" data-kt-sticky-name="invoice"
                         data-kt-sticky-offset="{default: false, lg: '200px'}"
                         data-kt-sticky-width="{lg: '250px', lg: '300px'}" data-kt-sticky-left="auto"
-                        data-kt-sticky-top="150px" data-kt-sticky-animation="false" data-kt-sticky-zindex="95" style="">
+                        data-kt-sticky-top="150px" data-kt-sticky-animation="false" data-kt-sticky-zindex="95" data-kt-sticky-resize="false" style="">
     
                         <!--begin::Card body-->
                         <div class="card-body p-10">
@@ -239,13 +133,32 @@
                                 <label class="form-label fw-bold fs-6 text-gray-700">Kandang</label>
                                 <!--end::Label-->
     
-                                <select wire:model="selectedKandang" class="js-select2 form-control" id="kandangs">
+                                <select wire:model="selectedKandang" class="js-select2 form-control" id="kandangs" disabled>
                                     <option value="">=== Pilih Kandang ===</option>
                                     @foreach ($kandangs as $kandang)
                                     <option value="{{ $kandang->id }}">{{ $kandang->nama }}</option>
                                     @endforeach
                                 </select>
                                 @error('selectedKandang') <span class="text-danger error">{{ $message }}</span>@enderror
+                            </div>
+                            <!--end::Input group-->
+
+                            <!--begin::Input group-->
+                            <div class="mb-10">
+                                <!--begin::Label-->
+                                <label class="form-label fw-bold fs-6 text-gray-700">Tanggal</label>
+                                <!--end::Label-->
+
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="ki-outline ki-calendar fs-2"></i>
+                                    </span>
+                                    <input type="date" wire:model="tanggal" class="form-control" id="tanggal" name="tanggal" x-data 
+                                    x-init="flatpickr($el, {
+                                        enableTime: false,
+                                    })" disabled>
+                                </div>
+                                @error('tanggal') <span class="text-danger error">{{ $message }}</span>@enderror
                             </div>
                             <!--end::Input group-->
     
@@ -256,7 +169,7 @@
                             <!--begin::Actions-->
                             <div class="mb-0">
                                 <button type="button" class="btn btn-secondary" wire:click="close()">Close</button>
-                                <button type="submit" href="#" class="btn btn-primary" id="saveChangesButton"><i class="ki-outline ki-triangle fs-3"></i> Save Changes
+                                <button type="submit" href="#" class="btn btn-primary" id="saveChangesButton">Save
                                 </button>
                             </div>
                             <!--end::Actions-->
@@ -316,12 +229,18 @@
     </script>
     <script>
         let farmId, kandangId = '';
+        let kandangsData=[];
+        let stocksData=[];
         $(document).ready(function() {
             var updateArea = $('#formDiva'); 
+            var cardTransaksi = $('#cardTransaksi'); 
             updateArea.addClass('grey-block'); 
+            cardTransaksi.addClass('grey-block'); 
 
             // Get the button element
             const saveChangesButton = document.getElementById('saveChangesButton');
+            const kandangInput = document.getElementById('kandangs');
+            const tanggalInput = document.getElementById('tanggal');
             let jsonData = '';
             const farmSelect = document.getElementById('farms');
 
@@ -338,6 +257,10 @@
                     // break;
                 }
                 const updateArea = $('#formDiva'); 
+                var cardTransaksi = $('#cardTransaksi'); 
+                kandangsData.length = 0; // Clear the array before assigning new data
+                stocksData.length = 0; // Clear the array before assigning new data
+
                 // const div = document.getElementById('formDiv');
 
                 Swal.fire({
@@ -348,51 +271,89 @@
                 timer: 2000
                 }).then(function () {
 
+                    $.ajaxSetup({
+                        headers: {
+                            'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        },
+                    });
+
+                    const finalData = {
+                        farm_id: farmId,
+                        task: 'GET',
+                        mode: 'LIST',
+                    };
+
                     $.ajax({
-                            url: '/api/v1/get-farm-stocks/' + farmId, 
-                            headers: {
-                                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
-                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                            },
-                            type: 'GET',
-                            success: function(data) {
-                                jsonData = data;
+                        // url: `/api/v2/data/farms/stocks`,
+                        url: `/api/v2/data/farms/details`,
+                        type: 'POST',
+                        data: JSON.stringify(finalData),
+                        contentType: 'application/json', 
+                        success: function(data) {
+                            // console.log(result.data);
+                            kandangsData.push(...data.kandangs);
+                            stocksData.push(...data.stock);
+                            console.table(stocksData);
+                            
 
+                                const kandangSelect = document.getElementById('kandangs');
 
-
-                                // div.style.display = 'block'
-                                updateArea.removeClass('grey-block'); 
-
-                                let minDat = data.parameter.oldestDate;
-
-                                flatpickr("#tanggal", {
-                                    minDate: minDat, // Assuming $minDate is available in your Blade view
-                                    // Other Flatpickr options...
-                                });
-
-                                // Get the Select2 instance
-                                const itemSelect = $('#itemsSelect');
-    
                                 // Clear existing options
-                                itemSelect.empty();
+                                kandangSelect.innerHTML = '<option value="">=== Pilih Kandang ===</option>';
 
-                                // Add new options based on the fetched data
-                                data.stock.forEach(item => {
-                                    const option = new Option(item.item_name, item.item_id);
-                                    itemSelect.append(option);
-                                });
+                                // Only populate options if kandangs data exists and has items
+                                if (data.kandangs?.length > 0) {
+                                    data.kandangs.forEach(kandang => {
+                                        const option = document.createElement('option');
+                                        option.value = kandang.id;
+                                        option.text = kandang.nama;
+                                        kandangSelect.appendChild(option);
+                                    });
+                                }
 
-                                // Disable the button
-                                saveChangesButton.disabled = false;
+                                kandangInput.disabled = false;
 
-                                // Parse the JSON string into a JavaScript object
-                                // const tempData = JSON.parse(jsonData);
+                                // jsonData = data;
 
-                                // Now you can access and work with the data
-                                // console.log(jsonData.stock[0].nama); // Output: Nama StokObat
 
-                                updateTableBody(data); 
-                                updateKandang(farmId);
+
+                                // // div.style.display = 'block'
+                                // updateArea.removeClass('grey-block'); 
+                                // cardTransaksi.removeClass('grey-block'); 
+                                // kandangInput.disabled = false;
+                                // // tanggalInput.disabled = false;
+
+                                // // let minDat = data.parameter.oldestDate;
+
+                                // // flatpickr("#tanggal", {
+                                // //     minDate: minDat, // Assuming $minDate is available in your Blade view
+                                // //     // Other Flatpickr options...
+                                // // });
+
+                                // // Get the Select2 instance
+                                // const itemSelect = $('#itemsSelect');
+    
+                                // // Clear existing options
+                                // itemSelect.empty();
+
+                                // // Add new options based on the fetched data
+                                // data.stock.forEach(item => {
+                                //     const option = new Option(item.item_name, item.item_id);
+                                //     itemSelect.append(option);
+                                // });
+
+                                // // Disable the button
+                                // saveChangesButton.disabled = false;
+
+                                // // Parse the JSON string into a JavaScript object
+                                // // const tempData = JSON.parse(jsonData);
+
+                                // // Now you can access and work with the data
+                                // // console.log(jsonData.stock[0].nama); // Output: Nama StokObat
+
+                                // updateTableBody(data); 
+                                // // updateKandang(farmId);
 
                             },
                             error: function(xhr) { 
@@ -412,50 +373,107 @@
 
                 });
             });
+
+            $('#kandangs').change(function() {
+
+                kandangId = $(this).val();
+                if(kandangId == ''){
+                    // break;
+                }
+                console.log(kandangId);
+                console.log(kandangsData);
+
+                // Find the kandang object with matching id
+                let selectedKandang = kandangsData.find(kandang => kandang.id == kandangId);
+
+                if (selectedKandang) {
+                    let startDate = selectedKandang.start_date;
+                    console.log(startDate);
+
+                    tanggalInput.disabled = false;
+
+                    let minDat = startDate;
+
+                    flatpickr("#tanggal", {
+                        minDate: minDat,
+                        dateFormat: "Y-m-d", // Adjust this format if needed
+                    });
+
+                    updateArea.removeClass('grey-block'); 
+                    cardTransaksi.removeClass('grey-block');
+                    kandangInput.disabled = false;
+
+                    
+
+
+                    // Get the Select2 instance
+                    const itemSelect = $('#itemsSelect');
+
+                    // Clear existing options
+                    itemSelect.empty();
+
+                    // Add new options based on the fetched data
+                    stocksData.forEach(item => {
+                        const option = new Option(item.item_name, item.item_id);
+                        itemSelect.append(option);
+                    });
+
+                    // Disable the button
+                    saveChangesButton.disabled = false;
+
+                    updateTableBody(stocksData); 
+                                // updateKandang(farmId);
+                } else {
+                    console.log('Kandang not found');
+                    // Handle the case where no matching kandang is found
+                }
+
+
+            });
         });
 
     // Function to update the table body with stock data
-    function updateKandang(farmId) {
-        console.log('cek data kandang');
-        const kandangSelect = document.getElementById('kandangs');
+    // function updateKandang(farmId) {
+    //     console.log('cek data kandang');
+    //     const kandangSelect = document.getElementById('kandangs');
 
-        // Clear existing options in the farmSelect dropdown
-        while (kandangSelect.options.length > 0) {
-                kandangSelect.remove(0);
-        }
+    //     // Clear existing options in the farmSelect dropdown
+    //     while (kandangSelect.options.length > 0) {
+    //             kandangSelect.remove(0);
+    //     }
 
-        kandangSelect.innerHTML = '<option value="">=== Pilih Kanndang ===</option>';
+    //     kandangSelect.innerHTML = '<option value="">=== Pilih Kandang ===</option>';
 
 
-        // Fetch operators for the selected farm via AJAX
-        fetch(`/api/v1/get-kandangs/${farmId}/used`, {
-            headers: {
-                'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.kandangs && data.kandangs.length > 0) {
-                // console.log(data.kandangs);
+    //     // Fetch operators for the selected farm via AJAX
+    //     fetch(`/api/v1/get-kandangs/${farmId}/used`, {
+    //         headers: {
+    //             'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+    //             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+    //         }
+    //     })
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         if (data.kandangs && data.kandangs.length > 0) {
+    //             // console.log(data.kandangs);
 
-                data.kandangs.forEach(kandang => {
-                    const option = document.createElement('option');
-                    option.value = kandang.id;
-                    option.text = kandang.nama;
-                    kandangSelect.appendChild(option);
-                });
-            }
-        })
-        .catch(error => console.error('Error fetching kandangs:', error));
-    }
+    //             data.kandangs.forEach(kandang => {
+    //                 const option = document.createElement('option');
+    //                 option.value = kandang.id;
+    //                 option.text = kandang.nama;
+    //                 kandangSelect.appendChild(option);
+    //             });
+    //         }
+    //     })
+    //     .catch(error => console.error('Error fetching kandangs:', error));
+    // }
 
     // Function to update the table body with stock data
     function updateTableBody(jsonData) {
         const tableBody = $('#stockTableBody');
         tableBody.empty(); // Clear existing rows
 
-        jsonData.stock.forEach(item => {
+        jsonData.forEach(item => {
             const newRow = `
                 <tr>
                     <td>${item.item_name}</td>
@@ -526,6 +544,9 @@
             kandang_id: kandangSelect.value,
             tanggal: tanggal.value,
             stock: updatedStockData,
+            ternak_mati: ternak_mati.value,
+            ternak_afkir: ternak_afkir.value,
+            ternak_jual: ternak_jual.value,
             // ... other data you might need to include (e.g., 'parameter', 'tanggal')
         };
 
@@ -550,14 +571,36 @@
                 toastr.success(response.message); 
                 // table.ajax.reload();
                 Livewire.dispatch('closeFormPemakaian');
+
+                // Reload DataTables
+                $('.table').each(function() {
+                    if ($.fn.DataTable.isDataTable(this)) {
+                        $(this).DataTable().ajax.reload();
+                    }
+                });
             },
             error: function(xhr) {
-                // Handle errors during the AJAX call
                 console.error('Error updating stock data:', xhr.responseText);
-                // console.log(xhr.responseJSON.message);
-                // console.log(xhr.errors);
-                // console.log(xhr.message);
-                toastr.error(xhr.responseJSON.message); 
+                
+                let errorMessage = 'An error occurred while updating stock data.';
+                
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    
+                    if (xhr.responseJSON.error) {
+                        errorMessage += '<br>' + xhr.responseJSON.error;
+                    }
+                }
+                
+                toastr.error(errorMessage, 'Error', {
+                    closeButton: true,
+                    timeOut: 0,
+                    extendedTimeOut: 0,
+                    progressBar: true,
+                    enableHtml: true
+                });
             }
         });
     }

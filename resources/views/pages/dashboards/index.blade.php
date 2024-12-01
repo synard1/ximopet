@@ -8,7 +8,7 @@
     {{ Breadcrumbs::render('dashboard') }}
     @endsection
 
-    <div class="row gx-5 gx-xl-10">
+    {{-- <div class="row gx-5 gx-xl-10">
         <!--begin::Col-->
         <div class="col-xl-9 mb-10">
 
@@ -199,9 +199,9 @@
             </div>
         </div>
 
-    </div>
+    </div> --}}
 
-    <div class="row gy-5 g-xl-12" data-select2-id="select2-data-166-ezuu">
+    {{-- <div class="row gy-5 g-xl-12" data-select2-id="select2-data-166-ezuu">
         <!--begin::Col-->
         <div class="col-xl-12 mb-5 mb-xl-10" data-select2-id="select2-data-165-4jm3">
 
@@ -271,7 +271,7 @@
             <!--end::Table Widget 4-->
         </div>
         <!--end::Col-->
-    </div>
+    </div> --}}
 
     {{--
     <!--begin::Row-->

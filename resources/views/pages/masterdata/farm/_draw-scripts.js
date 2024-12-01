@@ -35,7 +35,8 @@ document.querySelectorAll('[data-kt-action="delete_row"]').forEach(function (ele
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                Livewire.dispatch('delete_farm', [this.getAttribute('data-kt-farm-id')]);
+                // Livewire.dispatch('delete_farm', [this.getAttribute('data-kt-farm-id')]);
+                deleteFarm(this.getAttribute('data-kt-farm-id'));
             }
         });
     });

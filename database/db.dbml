@@ -19,6 +19,14 @@ Table master_farms {
   // other fields...
 }
 
+Table farm_silos {
+  id uuid [pk]
+  nama varchar
+  farm_id uuid [null, ref: > master_farms.id]
+
+  // other fields...
+}
+
 Table master_kandangs {
   id uuid [pk]
   farm_id uuid [null, ref: > master_farms.id]
@@ -43,7 +51,7 @@ Table items {
 }
 
 
-Table transaksis {
+Table transaksi_beli {
   id uuid [pk]
   faktur varchar [null]
   jenis varchar [null]
@@ -51,6 +59,7 @@ Table transaksis {
   rekanan_id uuid [null, ref: > master_rekanan.id]
   farm_id uuid [null, ref: > master_farms.id]
   kandang_id uuid [null, ref: > master_kandangs.id]
+  farm_silo_id uuid [null, ref: > farm_silos.id]
   total_qty varchar [null]
   total_berat varchar [null]
   harga varchar [null]
@@ -60,18 +69,17 @@ Table transaksis {
   kelompok_ternak_id uuid [null, ref: > kelompok_ternak.id]
   status varchar [null]
   notes text [null]
-  user_id bigint [ref: > users.id]
-  created_by bigint [null]
-  updated_by bigint [null]
+  created_by bigint [ref: > users.id]
+  updated_by bigint [ref: > users.id]
   created_at timestamp
   updated_at timestamp
   deleted_at timestamp [null]
 }
 
-// Detail transaksi, pencatatan detail dari transaksi per item
-Table transaksi_details {
+// Detail transaksi beli, pencatatan detail dari transaksi beli per item
+Table transaksi_beli_details {
   id uuid [pk]
-  transaksi_id uuid [null, ref: > transaksis.id]
+  transaksi_beli_id uuid [null, ref: > transaksi_beli.id]
   jenis varchar [null, note:'pembelian / penjualan / mutasi']
   jenis_barang varchar [null, note:'pakan / obat / lainnya']
   tanggal datetime [null]
@@ -90,7 +98,47 @@ Table transaksi_details {
   konversi varchar [null]
   kelompok_ternak_id uuid [null, ref: > kelompok_ternak.id]
   status varchar [null]
-  user_id bigint [ref: > users.id]
+  created_by bigint [null]
+  updated_by bigint [null]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp [null]
+}
+
+Table transaksi_jual {
+  id uuid [pk]
+  faktur varchar [null]
+  tanggal datetime [null]
+  transaksi_beli_id uuid [null, ref: > transaksi_beli.id]
+  jumlah varchar [null]
+  harga varchar [null]
+  total_berat varchar [null]
+  kelompok_ternak_id uuid [null, ref: > kelompok_ternak.id]
+  status varchar [null]
+  notes text [null]
+  created_by bigint [ref: > users.id]
+  updated_by bigint [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp [null]
+}
+
+// Detail transaksi jual, pencatatan detail dari transaksi jual per item
+Table transaksi_jual_details {
+  id uuid [pk]
+  transaksi_jual_id uuid [null, ref: > transaksi_jual.id]
+  rekanan_id uuid [null, ref: > master_rekanan.id]
+  farm_id uuid [null, ref: > master_farms.id]
+  kandang_id uuid [null, ref: > master_kandangs.id]
+  harga_beli varchar [null]
+  harga_jual varchar [null]
+  qty varchar [null]
+  terpakai varchar [null]
+  sisa varchar [null]
+  umur varchar [null]
+  kelompok_ternak_id uuid [null, ref: > kelompok_ternak.id]
+  status varchar [null]
+  notes text [null]
   created_by bigint [null]
   updated_by bigint [null]
   created_at timestamp
@@ -100,7 +148,7 @@ Table transaksi_details {
 
 Table histori_stok {
   id uuid [pk]
-  transaksi_detail_id uuid [null, ref: > transaksi_details.id]
+  transaksi_detail_id uuid [null, ref: > transaksi_beli_details.id]
   tanggal datetime [null]
   jenis varchar [null, note: 'in / out']
   qty varchar [note: 'dalam satuan terkecil, jumlah yang dikeluarkan / dimasukkan']
@@ -117,7 +165,7 @@ Table histori_stok {
 
 Table kelompok_ternak {
     id uuid [pk]
-    transaksi_id uuid [ref: > transaksis.id]
+    transaksi_id uuid [ref: > transaksi_beli.id]
     batch string
     breed string
     start_date date

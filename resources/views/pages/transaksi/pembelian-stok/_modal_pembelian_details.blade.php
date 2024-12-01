@@ -55,7 +55,7 @@
 
             const table = new DataTable('#detailsTable', {
                 ajax: {
-                    url: `/api/v1/transaksi/details/${param}`,
+                    url: `/api/v1/transaksi_beli/details/${param}`,
                     headers: headers
                 },
                 columns: [{
