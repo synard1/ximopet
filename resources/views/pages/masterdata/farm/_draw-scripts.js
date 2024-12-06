@@ -69,6 +69,43 @@ document.querySelectorAll('[data-kt-action="update_row"]').forEach(function (ele
     });
 });
 
+$(document).on('click', '.farm-detail', function(e) {
+    e.preventDefault();
+    var farmId = $(this).data('farm-id');
+    var modal = $('#farmDetailsModal');
+    
+    $.ajax({
+        url: '/farm/' + farmId + '/kandangs',
+        type: 'GET',
+        success: function(response) {
+            var tableBody = modal.find('#kandangsTable tbody');
+            tableBody.empty();
+            
+            $.each(response, function(index, kandang) {
+                var formattedDate = kandang.kelompok_ternak && kandang.kelompok_ternak.start_date
+                    ? moment(kandang.kelompok_ternak.start_date).format('DD-MM-YYYY')
+                    : '-';
+                
+                tableBody.append(
+                    '<tr>' +
+                    '<td>' + kandang.kode + '</td>' +
+                    '<td>' + kandang.nama + '</td>' +
+                    '<td>' + kandang.kapasitas + '</td>' +
+                    '<td>' + kandang.status + '</td>' +
+                    '<td>' + formattedDate + '</td>' +
+                    '<td>' + (kandang.kelompok_ternak ? kandang.kelompok_ternak.populasi_awal : '-') + '</td>' +
+                    '</tr>'
+                );
+            });
+            
+            modal.modal('show');
+        },
+        error: function(xhr) {
+            console.log('Error:', xhr);
+        }
+    });
+});
+
 // Listen for 'success' event emitted by Livewire
 Livewire.on('success', (message) => {
     // Reload the farms-table datatable

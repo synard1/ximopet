@@ -272,7 +272,7 @@ class DataController extends Controller
 
     public function getFarmOperator()
     {
-        $data = FarmOperator::with('user:id,name')
+        $data = FarmOperator::with('user:id,name,email')
                 ->get(['farm_id', 'user_id']);
 
         // Extract the 'nama' from the 'farm' relationship
@@ -282,6 +282,7 @@ class DataController extends Controller
                 'user_id' => $farmOperator->user_id,
                 'nama_farm' => $farmOperator->farm ? $farmOperator->farm->nama : 'N/A',
                 'nama_operator' => $farmOperator->user ? $farmOperator->user->name : 'N/A',
+                'email' => $farmOperator->user ? $farmOperator->user->email : 'N/A',
             ];
         });
 

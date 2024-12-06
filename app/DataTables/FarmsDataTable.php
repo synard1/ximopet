@@ -20,7 +20,10 @@ class FarmsDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
-            ->rawColumns(['farm'])
+            ->rawColumns(['farm','nama'])
+            ->editColumn('nama', function (Farm $farm) {
+                return '<a href="#" class="farm-detail" data-farm-id="'.$farm->id.'">'.$farm->nama.'</a>';
+            })
             ->addColumn('kapasitas', function (Farm $farm) {
                 $jumlah = Kandang::where('farm_id',$farm->id)->sum('kapasitas');
                 return $jumlah;

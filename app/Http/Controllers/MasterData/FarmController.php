@@ -23,7 +23,7 @@ class FarmController extends Controller
     public function index(FarmsDataTable $dataTable, UsersDataTable $kandangDataTable)
     {
         $availableFarms = Farm::where('status', 'Aktif')->get();
-        return $dataTable->render('pages/masterdata.farm.list', ['availableFarms' => $availableFarms]);
+        return $dataTable->render('pages/masterdata.farm.index', ['availableFarms' => $availableFarms]);
     }
 
     /**
@@ -196,4 +196,31 @@ class FarmController extends Controller
             return response()->json(['error' => 'An error occurred while saving data. ' . $e->getMessage()], 500);
         }
     }
+
+    public function getKandangs(Farm $farm)
+    {
+        $kandangs = $farm->kandangs()->with(['kelompokTernak' => function($query) {
+            $query->where('status', 'Aktif');
+        }])->get()->map(function ($kandang) {
+            $kelompokTernak = $kandang->kelompokTernak;
+            return [
+                'id' => $kandang->id,
+                'nama' => $kandang->nama,
+                'kode' => $kandang->kode,
+                'kapasitas' => $kandang->kapasitas,
+                'status' => $kandang->status,
+                'kelompok_ternak' => $kelompokTernak ? [
+                    'id' => $kelompokTernak->id,
+                    'name' => $kelompokTernak->name,
+                    'breed' => $kelompokTernak->breed,
+                    'populasi_awal' => $kelompokTernak->populasi_awal,
+                    'berat_awal' => $kelompokTernak->berat_awal,
+                    'start_date' => $kelompokTernak->start_date,
+                ] : null,
+            ];
+        });
+
+        return response()->json($kandangs);
+    }
+    
 }

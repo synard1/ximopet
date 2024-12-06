@@ -36,6 +36,11 @@ class KandangsDataTable extends DataTable
                     return number_format($beratGram / 1000, 2) . ' Kg';
                 }
             })
+            ->editColumn('tanggal_masuk', function (Kandang $kandang) {
+                return $kandang->kelompokTernak && $kandang->kelompokTernak->start_date
+                    ? $kandang->kelompokTernak->start_date->format('Y-m-d')
+                    : '';
+            })
             ->addColumn('action', function (Kandang $kandang) {
                 return view('pages/masterdata.kandang._actions', compact('kandang'));
             })
@@ -103,7 +108,8 @@ class KandangsDataTable extends DataTable
             Column::make('jumlah'),
             Column::make('berat')->searchable(false),
             Column::make('kapasitas'),
-            Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
+            Column::computed('tanggal_masuk')->title('Tanggal Masuk DOC'),
+            Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),
             Column::computed('action')
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)

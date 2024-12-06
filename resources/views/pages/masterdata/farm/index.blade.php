@@ -22,18 +22,6 @@
     
     <div class="tab-content" id="myTabContent">
         <div class="tab-pane fade show active" id="kt_tab_farm" role="tabpanel">
-            <div class="card">
-                <div class="card-header border-0 pt-6">
-                    {{-- <div class="card-title">
-                        <div class="d-flex align-items-center position-relative my-1">
-                            {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
-                            <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Farm" id="mySearchInput"/>
-                        </div>
-                    </div> --}}
-                    <div class="card-toolbar">
-                        <livewire:master-data.farm-list />
-                    </div>
-                </div>
                 <div class="card-body py-4">
                     <div class="table-responsive">
                         {!! $dataTable->table(['class' => 'table table-bordered'], true) !!}
@@ -67,6 +55,7 @@
                                     <th>#</th>
                                     <th>Nama Farm</th>
                                     <th>Nama Operator</th>
+                                    <th>Email Login</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -111,12 +100,44 @@
             </div>
         </div>
     </div>
-    
+    @if(auth()->user()->hasRole(['Manager']))
+    @else
     <livewire:master-data.tambah-operator-farm />
     <livewire:master-data.tambah-storage-farm />
     @include('pages.masterdata.farm._related_data_modal')
+        
+    @endif
 
 
+
+
+    <!-- Farm Details Modal -->
+    <div class="modal fade" id="farmDetailsModal" tabindex="-1" aria-labelledby="farmDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="farmDetailsModalLabel">Farm Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table" id="kandangsTable">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Nama</th>
+                                <th>Kapasitas</th>
+                                <th>Status</th>
+                                <th>Tanggal Masuk DOC</th>
+                                <th>Jumlah Awal DOC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
     @push('scripts')
         {{ $dataTable->scripts() }}
         <script>
@@ -168,6 +189,7 @@
                         }},
                         { data: 'nama_farm' },
                         { data: 'nama_operator' },
+                        { data: 'email' },
                         { data: null, orderable: false, searchable: false, render: function (data, type, row) {
                             return `<button class="btn btn-sm btn-danger" onclick="deleteOperator('${row.user_id}','${row.farm_id}')">Delete</button>`;
                         }}

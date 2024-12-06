@@ -26,6 +26,10 @@ class TransaksiHarian extends BaseModel
     protected $keyType = 'string';
     public $incrementing = false;
 
+    protected $casts = [
+        'tanggal' => 'date',
+    ];
+
     public function farm()
     {
         return $this->belongsTo('App\Models\Farm', 'farm_id');

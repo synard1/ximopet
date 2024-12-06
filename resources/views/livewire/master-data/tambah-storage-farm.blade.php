@@ -1,4 +1,4 @@
-<div class="modal fade" tabindex="-1" role="dialog" id="kt_modal_tambah_storage_farm" data-bs-backdrop="static"
+<div class="modal fade" tabindex="-1" role="dialog" id="kt_modal_tambah_storage" data-bs-backdrop="static"
     data-bs-keyboard="false" tabindex="-1" aria-hidden="true" wire:ignore.self>
     <div class="modal-dialog" role="document">
         <div class="modal-content">

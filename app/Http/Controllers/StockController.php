@@ -201,13 +201,13 @@ class StockController extends Controller
             $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
 
             $item = Item::findOrFail($validatedData['id']);
-            $StockHistory = $item->stokHistory()
+            $stockHistory = $item->stokHistory()
                 ->whereBetween('tanggal', [$validatedData['start_date'], $validatedData['end_date']]);
 
             if ($validatedData['farm_id'] === '2d245e3f-fdc9-4138-b32d-994f3f1953a5') {
-                $stokHistory = $stokHistory->whereIn('farm_id', $farmIds);
+                $stokHistory = $stockHistory->whereIn('farm_id', $farmIds);
             } else {
-                $stokHistory = $stokHistory->where('farm_id', $validatedData['farm_id']);
+                $stokHistory = $stockHistory->where('farm_id', $validatedData['farm_id']);
             }
 
             $stokHistory = $stokHistory->orderBy('tanggal', 'DESC')->get();

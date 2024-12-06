@@ -6,12 +6,14 @@ use App\Http\Controllers\Apps\UserManagementController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\MasterData\RekananController;
 use App\Http\Controllers\MasterData\FarmController;
 use App\Http\Controllers\MasterData\KandangController;
 use App\Http\Controllers\MasterData\StokController;
 use App\Models\Stok;
 use App\Http\Controllers\Transaksi\TransaksiController;
+use App\Http\Controllers\TransaksiHarianController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TernakController;
 use Illuminate\Http\Request;
@@ -83,6 +85,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('/master-data/stoks', StokController::class);
         Route::resource('/master-data/ternaks', TernakController::class);
         Route::get('/master-data/customers', [RekananController::class, 'customerIndex'])->name('customers.index');
+        Route::get('/item-categories/list', [ItemCategoryController::class, 'getList'])->name('item-categories.list');
     });
 
     Route::name('transaksi.')->group(function () {
@@ -92,6 +95,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/transaksi/docs', [TransaksiController::class, 'docIndex'])->name('docs.index');
         Route::post('/reduce-stock', [StockController::class, 'reduceStock']);
         Route::get('/transaksi/kematian-ternak', [TernakController::class, 'kematianTernakIndex'])->name('kematian-ternak.index');
+        Route::post('/transaksi-harian/filter', [TransaksiHarianController::class, 'filter'])->name('harian.filter');
 
     });
 
@@ -101,6 +105,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/ternak/mati', [TernakController::class, 'ternakMatiIndex'])->name('mati.index');
         Route::resource('/ternak', TernakController::class);
 
+
+    });
+
+
+    Route::name('farm.')->group(function () {
+        Route::get('/farm/{farm}/kandangs', [FarmController::class, 'getKandangs'])->name('kandangs');
 
     });
 
