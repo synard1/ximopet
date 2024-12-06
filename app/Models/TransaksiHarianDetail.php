@@ -36,7 +36,7 @@ class TransaksiHarianDetail extends BaseModel
 
     public function transaksiHarian()
     {
-        return $this->belongsTo('App\Models\TransaksiHarian', 'transaksi_harian_id');
+        return $this->belongsTo('App\Models\TransaksiHarian', 'transaksi_id');
     }
 
     public function item()

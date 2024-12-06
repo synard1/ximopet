@@ -26,7 +26,7 @@ class TransaksiController extends Controller
     public function harianIndex(TransaksiHarianDataTable $dataTable)
     {
         // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
-        return $dataTable->render('pages/transaksi.harian.list');
+        return $dataTable->render('pages/transaksi.harian.index');
     }
 
     public function stokIndex(PembelianStoksDataTable $dataTable)

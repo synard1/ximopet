@@ -62,4 +62,13 @@ class ItemCategoryController extends Controller
     {
         //
     }
+
+    public function getList()
+    {
+        $categories = ItemCategory::select('id', 'name')
+                                ->where('name', '!=', 'DOC')
+                                ->where('status', 'Aktif')
+                                ->get();
+        return response()->json($categories);
+    }
 }
