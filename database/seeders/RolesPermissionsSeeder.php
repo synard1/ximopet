@@ -46,6 +46,12 @@ class RolesPermissionsSeeder extends Seeder
                 'customer management',
                 'transaksi'
             ],
+            'Manager' => [
+                'supplier management',
+                'customer management',
+                'inventory management',
+                'transaksi'
+            ],
             'Operator' => [
                 'stok management',
                 'transaksi'
@@ -75,5 +81,6 @@ class RolesPermissionsSeeder extends Seeder
         User::find(3)->assignRole('Supervisor');
         User::find(4)->assignRole('Operator');
         User::find(5)->assignRole('Operator');
+        User::find(6)->assignRole('Manager');
     }
 }

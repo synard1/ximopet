@@ -56,6 +56,13 @@ class UsersSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
+        $demoUser5 = User::create([
+            'name'              => $faker->name,
+            'email'             => 'manager@demo.com',
+            'password'          => Hash::make('demo'),
+            'email_verified_at' => now(),
+        ]);
+
         
 
         // Create 1000 users using the factory
