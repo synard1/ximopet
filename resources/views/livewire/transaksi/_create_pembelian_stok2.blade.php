@@ -367,7 +367,7 @@
                                                             <select wire:model="items.{{ $index }}.name" class="form-select select2">
                                                                 <option value="">Select Item</option>
                                                                 @foreach($allItems as $availableItem)
-                                                                    <option value="{{ $availableItem->id }}">{{ $availableItem->name }}</option>
+                                                                    <option value="{{ $availableItem->id }}">{{ $availableItem->itemCategory->name .' - '.$availableItem->name }}</option>
                                                                     {{-- <option value="{{ $availableItem->id }}" @if($availableItem->id == $item) selected @endif>{{ $availableItem->nama }}</option> --}}
                                                                 @endforeach
                                                                 {{-- {!! $items[$index]['qty'] !!} --}}

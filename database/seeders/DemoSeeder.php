@@ -67,17 +67,17 @@ class DemoSeeder extends Seeder
             $supervisor = User::where('email', 'supervisor@demo.com')->first();
             $category = ItemCategory::create(array_merge($data, ['status' => 'Aktif', 'created_by' => $supervisor->id]));
 
-        //     Item::create([
-        //         'category_id' => $category->id,
-        //         'kode' => $category->code . '001',
-        //         'name' => 'Nama Stok ' . $category->name,
-        //         'satuan_besar' => $this->getSatuanBesar($category->name),
-        //         'satuan_kecil' => $this->getSatuanKecil($category->name),
-        //         'konversi' => $category->name === 'Pakan' ? 1000 : 1,
-        //         'status' => 'Aktif',
-        //         'is_feed' => $category->name === 'Pakan',
-        //         'created_by' => $supervisor->id,
-        //     ]);
+            Item::create([
+                'category_id' => $category->id,
+                'kode' => $category->code . '001',
+                'name' => 'Nama Stok ' . $category->name,
+                'satuan_besar' => $this->getSatuanBesar($category->name),
+                'satuan_kecil' => $this->getSatuanKecil($category->name),
+                'konversi' => $category->name === 'Pakan' ? 1000 : 1,
+                'status' => 'Aktif',
+                'is_feed' => $category->name === 'Pakan',
+                'created_by' => $supervisor->id,
+            ]);
         }
     }
 
