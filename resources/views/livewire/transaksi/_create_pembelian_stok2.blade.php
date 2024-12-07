@@ -367,10 +367,8 @@
                                                             <select wire:model="items.{{ $index }}.name" class="form-select select2">
                                                                 <option value="">Select Item</option>
                                                                 @foreach($allItems as $availableItem)
-                                                                    <option value="{{ $availableItem->id }}">{{ $availableItem->name }}</option>
-                                                                    {{-- <option value="{{ $availableItem->id }}" @if($availableItem->id == $item) selected @endif>{{ $availableItem->nama }}</option> --}}
+                                                                    <option value="{{ $availableItem->id }}">{{ $availableItem->itemCategory->name .' - '.$availableItem->name }}</option>
                                                                 @endforeach
-                                                                {{-- {!! $items[$index]['qty'] !!} --}}
                                                             </select>
                                                             <input type="hidden" wire:model="items.{{ $index }}.item_id">
                                                         </td>
@@ -378,10 +376,10 @@
                                                             <input type="number" class="form-control form-control-solid" min="1" wire:model="items.{{ $index }}.qty" placeholder="1" data-kt-element="quantity">
                                                         </td>
                                                         <td>
-                                                            <input type="text" class="form-control form-control-solid text-end" wire:model="items.{{ $index }}.harga" placeholder="0.00" data-kt-element="harga" >
+                                                            <input type="text" class="form-control form-control-solid text-end" wire:model="items.{{ $index }}.harga" placeholder="0.00" data-kt-element="harga">
                                                         </td>
                                                         <td class="pt-8 text-end text-nowrap">
-                                                            Rp<span data-kt-element="total">{{ number_format($item['qty'] * $item['harga'], 2) }}</span>
+                                                            Rp<span data-kt-element="total">{{ number_format($this->calculateItemTotal($item), 2) }}</span>
                                                         </td>
                                                         <td class="pt-5 text-end">
                                                             <button type="button" class="btn btn-sm btn-icon btn-active-color-primary" wire:click="removeItem({{ $index }})">
