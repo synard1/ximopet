@@ -52,29 +52,10 @@ return new class extends Migration
             $table->foreign('updated_by')->references('id')->on('users');
         });
 
-        Schema::create('silos', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('farm_id');
-            $table->string('name');
-            $table->string('code')->unique();
-            $table->decimal('capacity', 15, 2); // Maximum capacity in kg/tons
-            $table->text('description')->nullable();
-            $table->string('status');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
-
-            $table->foreign('farm_id')->references('id')->on('master_farms');
-            $table->foreign('created_by')->references('id')->on('users');
-            $table->foreign('updated_by')->references('id')->on('users');
-        });
-
         Schema::create('inventory_locations', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('farm_id')->nullable();
             $table->uuid('kandang_id')->nullable();
-            $table->uuid('silo_id')->nullable();
             $table->string('name');
             $table->string('code')->unique();
             $table->text('description')->nullable();
@@ -87,7 +68,6 @@ return new class extends Migration
 
             $table->foreign('farm_id')->references('id')->on('master_farms');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
-            $table->foreign('silo_id')->references('id')->on('silos');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -130,28 +110,6 @@ return new class extends Migration
             $table->foreign('updated_by')->references('id')->on('users');
         });
 
-        Schema::create('silo_movements', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('silo_id');
-            $table->uuid('item_id');
-            $table->string('movement_type'); // fill, consume, transfer
-            $table->decimal('quantity', 15, 2);
-            $table->decimal('remaining_quantity', 15, 2);
-            $table->string('batch_number')->nullable();
-            $table->dateTime('movement_date');
-            $table->text('notes')->nullable();
-            $table->string('status');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
-
-            $table->foreign('silo_id')->references('id')->on('silos');
-            $table->foreign('item_id')->references('id')->on('items');
-            $table->foreign('created_by')->references('id')->on('users');
-            $table->foreign('updated_by')->references('id')->on('users');
-        });
-
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('transaksi_id')->nullable();
@@ -159,8 +117,6 @@ return new class extends Migration
             $table->uuid('item_id');
             $table->uuid('source_location_id')->nullable();
             $table->uuid('destination_location_id')->nullable();
-            $table->uuid('source_silo_id')->nullable();
-            $table->uuid('destination_silo_id')->nullable();
             $table->string('movement_type'); // purchase, transfer, adjustment, consumption, silo_fill, silo_consume
             $table->dateTime('tanggal');
             $table->string('batch_number')->nullable();
@@ -179,14 +135,13 @@ return new class extends Migration
             $table->foreign('item_id')->references('id')->on('items');
             $table->foreign('source_location_id')->references('id')->on('inventory_locations');
             $table->foreign('destination_location_id')->references('id')->on('inventory_locations');
-            $table->foreign('source_silo_id')->references('id')->on('silos');
-            $table->foreign('destination_silo_id')->references('id')->on('silos');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
 
         Schema::create('stock_histories', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->dateTime('tanggal');
             $table->uuid('stock_id');
             $table->uuid('item_id');
             $table->uuid('location_id');
@@ -223,11 +178,9 @@ return new class extends Migration
     {
         Schema::dropIfExists('item_categories');
         Schema::dropIfExists('items');
-        Schema::dropIfExists('silos');
         Schema::dropIfExists('inventory_locations');
         Schema::dropIfExists('item_location_mappings');
         Schema::dropIfExists('current_stocks');
-        Schema::dropIfExists('silo_movements');
         Schema::dropIfExists('stock_movements');
         Schema::dropIfExists('stock_histories');
     }

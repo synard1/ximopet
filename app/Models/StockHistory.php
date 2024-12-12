@@ -15,6 +15,7 @@ class StockHistory extends BaseModel
 
     protected $fillable = [
         'id',
+        'tanggal',
         'stock_id',
         'item_id',
         'location_id',
@@ -61,6 +62,11 @@ class StockHistory extends BaseModel
     public function transaksi()
     {
         return $this->belongsTo(Transaksi::class); 
+    }
+
+    public function transaksiBeli()
+    {
+        return $this->belongsTo(TransaksiBeli::class,'transaksi_id','id'); 
     }
 
     public function transaksiDetail()

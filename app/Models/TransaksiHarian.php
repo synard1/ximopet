@@ -52,6 +52,21 @@ class TransaksiHarian extends BaseModel
 
     public function details()
     {
-        return $this->hasMany('App\Models\TransaksiHarianDetail', 'transaksi_id');
+        return $this->hasMany(TransaksiHarianDetail::class, 'transaksi_id','id');
+    }
+
+    public function ternakAfkir()
+    {
+        return $this->hasMany(TernakAfkir::class, 'transaksi_id');
+    }
+
+    public function ternakJual()
+    {
+        return $this->hasMany(TernakJual::class, 'transaksi_id');
+    }
+
+    public function ternakMati()
+    {
+        return $this->hasMany(KematianTernak::class, 'transaksi_id');
     }
 }

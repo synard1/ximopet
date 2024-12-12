@@ -32,6 +32,7 @@ class TransaksiHarianDataTable extends DataTable
     public function dataTable(QueryBuilder $query, Request $request): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+            ->addIndexColumn() // Add this line to include row numbers
             ->editColumn('created_at', function (Transaksi $transaksi) {
                 return $transaksi->created_at->format('d M Y, h:i a');
             })
@@ -47,34 +48,42 @@ class TransaksiHarianDataTable extends DataTable
             //         $query->where('tanggal', 'like', "%{$keyword}%");
             //     });
             // })
-            // ->filter(function ($query) use ($request) {
-            //     if ($request->has('search') && $request->get('search')['value'] != '') {
-            //         $searchTerm = $request->get('search')['value'];
+            ->filter(function ($query) use ($request) {
+                if ($request->has('search') && $request->get('search')['value'] != '') {
+                    $searchTerm = $request->get('search')['value'];
             
-            //         $query->where(function ($q) use ($searchTerm) {
-            //             $q->whereHas('TransaksiDetail', function ($subquery) use ($searchTerm) {
-            //                 $subquery->where('tanggal', 'like', "%$searchTerm%");
-            //                 // You can add more 'orWhere' conditions on TransaksiDetail columns here
-            //             });
-            //             // ->orWhereHas('farms', function ($subquery) use ($searchTerm) {
-            //             //     $subquery->where('nama', 'like', "%$searchTerm%");
-            //             //     // Add more 'orWhere' conditions on 'farms' columns if needed
-            //             // })
-            //             // ->orWhereHas('kandangs', function ($subquery) use ($searchTerm) {
-            //             //     $subquery->where('nama', 'like', "%$searchTerm%");
-            //             //     // Add more 'orWhere' conditions on 'farms' columns if needed
-            //             // });
-            //             // Add more 'orWhereHas' conditions for other relationships if needed
-            //         });
-            //     }
-            // })
-            // ->editColumn('tanggal', function (Transaksi $transaksi) {
-            //     // $tanggal = Carbon::parse($stokMutasi->tanggal);
-            //     // $tanggal->format('d-m-Y');
-            //     // return $tanggal;
-            //         return $transaksi->tanggal->format('d-m-Y');
+                    $query->where(function ($q) use ($searchTerm) {
+                        $q->whereHas('details', function ($subquery) use ($searchTerm) {
+                            // Handle d-m-Y format
+                            $formattedDate = null;
+                            if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $searchTerm, $matches)) {
+                                $formattedDate = "{$matches[3]}-{$matches[2]}-{$matches[1]}";
+                            }
 
-            // })
+                            $subquery->where(function ($query) use ($searchTerm, $formattedDate) {
+                                $query->where('tanggal', 'like', "%$searchTerm%")
+                                    ->orWhereDate('tanggal', $formattedDate);
+                            });
+                        })
+                        ->orWhereHas('farm', function ($subquery) use ($searchTerm) {
+                            $subquery->where('nama', 'like', "%$searchTerm%");
+                            // Add more 'orWhere' conditions on 'farms' columns if needed
+                        })
+                        ->orWhereHas('kandang', function ($subquery) use ($searchTerm) {
+                            $subquery->where('nama', 'like', "%$searchTerm%");
+                            // Add more 'orWhere' conditions on 'farms' columns if needed
+                        });
+                        // Add more 'orWhereHas' conditions for other relationships if needed
+                    });
+                }
+            })
+            ->editColumn('tanggal', function (Transaksi $transaksi) {
+                // $tanggal = Carbon::parse($stokMutasi->tanggal);
+                // $tanggal->format('d-m-Y');
+                // return $tanggal;
+                    return $transaksi->tanggal->format('d-m-Y');
+
+            })
             ->editColumn('farm_id', function (Transaksi $transaksi) {
                 return $transaksi->farm->nama ?? 'N/A';
             })
@@ -126,7 +135,7 @@ class TransaksiHarianDataTable extends DataTable
             //     });
             // })
             ->setRowId('id')
-            ->rawColumns(['']);
+            ->rawColumns(['action']);
             // ->make(true);
     }
 
@@ -200,7 +209,11 @@ class TransaksiHarianDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('id')->searchable(false),
+            // Column::make('id')->searchable(false),
+            Column::computed('DT_RowIndex', 'No.')
+            ->title('No.')
+            ->addClass('text-center')
+            ->width(50),
             Column::make('farm_id')->title('Farm'),
             Column::make('kandang_id')->title('Kandang'),
             // Column::computed('tanggal_pembelian')->title('Tanggal Pembelian')->searchable(true),
@@ -215,7 +228,7 @@ class TransaksiHarianDataTable extends DataTable
             // Column::make('sisa')->searchable(true),
             // Column::make('sub_total')->searchable(true),
             // Column::make('periode')->searchable(true),
-            Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
+            Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),
             Column::computed('action')
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)

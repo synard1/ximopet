@@ -3,6 +3,7 @@
 namespace App\DataTables;
 
 use App\Models\Item;
+use App\Models\StockHistory;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
@@ -27,16 +28,30 @@ class StoksDataTable extends DataTable
             ->editColumn('jumlah', function (Item $stok) {
                 if (auth()->user()->farmOperators()->exists()) {
                     $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
-                    $stokAkhir = $stok->currentStock()
-                        ->whereHas('inventoryLocation', function ($query) use ($farmIds) {
-                            $query->whereIn('farm_id', $farmIds);
-                        })
-                        ->sum('available_quantity');
+                    $stokBeli = $stok->stockHistory->where('jenis', 'Pembelian')->sum('quantity');
+                    $stokPakai = $stok->stockHistory->where('jenis', 'Pemakaian')->sum('quantity');
+                    $stokAkhir = $stokBeli - $stokPakai;
                 } else {
                     $stokAkhir = $stok->currentStock->sum('available_quantity');
                 }
-                return number_format($stokAkhir / $stok->konversi, 2);
+                // return number_format($stokAkhir / $stok->konversi, 2);
+                // dd($stokAkhir);
+                return number_format($stokAkhir);
             })
+            // ->editColumn('jumlah', function (Item $stok) {
+            //     if (auth()->user()->farmOperators()->exists()) {
+            //         $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
+            //         $stokAkhir = $stok->currentStock()
+            //             ->whereHas('inventoryLocation', function ($query) use ($farmIds) {
+            //                 $query->whereIn('farm_id', $farmIds);
+            //             })
+            //             ->sum('available_quantity');
+            //     } else {
+            //         $stokAkhir = $stok->currentStock->sum('available_quantity');
+            //     }
+            //     // return number_format($stokAkhir / $stok->konversi, 2);
+            //     return number_format($stokAkhir);
+            // })
             ->editColumn('created_at', function (Item $stok) {
                 return $stok->created_at->format('d M Y, h:i a');
             })
@@ -131,7 +146,7 @@ class StoksDataTable extends DataTable
                 ->visible(false),
             Column::computed('jumlah')
                 ->visible(true),
-            Column::make('satuan_besar')
+            Column::make('satuan_kecil')->title('Satuan')
                 ->visible(true),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')
                 ->searchable(false)

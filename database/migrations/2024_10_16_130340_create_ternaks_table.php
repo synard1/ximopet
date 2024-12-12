@@ -88,6 +88,7 @@ return new class extends Migration
             $table->integer('quantity');          // Jumlah saat ini
             $table->decimal('berat_total', 10, 2); // Estimasi berat total
             $table->decimal('avg_berat', 10, 2);   // Rata-rata berat per ekor
+            $table->integer('umur');
             $table->string('status');              // active, sold, dead, culled
 
             $table->unsignedBigInteger('created_by');
@@ -157,6 +158,7 @@ return new class extends Migration
             $table->uuid('kandang_tujuan_id');
             $table->string('alasan_mutasi');
             $table->string('keterangan')->nullable();
+            $table->integer('umur');
             $table->string('status');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -207,6 +209,7 @@ return new class extends Migration
             $table->string('stok_akhir');
             $table->decimal('total_berat', 10, 2);
             $table->string('penyebab');
+            $table->integer('umur');
             $table->string('keterangan')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -259,6 +262,30 @@ return new class extends Migration
             $table->decimal('total_berat', 10, 2)->default(0);
             $table->string('kondisi')->nullable();
             $table->string('tindakan'); // dijual/dimusnahkan
+            $table->integer('umur');
+            $table->string('status');
+            $table->string('keterangan')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+
+            $table->timestamps();
+            $table->softDeletes();
+
+            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
+            $table->foreign('created_by')->references('id')->on('users');
+            $table->foreign('updated_by')->references('id')->on('users');
+        });
+
+        Schema::create('ternak_history', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('kelompok_ternak_id');
+            $table->dateTime('tanggal');
+            $table->string('stok_awal')->nullable();
+            $table->string('stok_akhir')->nullable();
+            $table->string('ternak_afkir')->nullable();
+            $table->string('ternak_mati')->nullable();
+            $table->string('ternak_jual')->nullable();
+            $table->integer('umur');
             $table->string('status');
             $table->string('keterangan')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();

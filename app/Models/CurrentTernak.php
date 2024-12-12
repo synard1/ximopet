@@ -21,8 +21,13 @@ class CurrentTernak extends BaseModel
         'quantity',
         'berat_total',
         'avg_berat',
+        'umur',
         'status',
         'created_by',
         'updated_by',
     ];
+
+    public function kelompokTernaks(){
+        return $this->belongsTo(KelompokTernak::class, 'kelompok_ternak_id', 'id');
+    }
 }

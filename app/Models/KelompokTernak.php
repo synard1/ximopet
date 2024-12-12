@@ -54,5 +54,20 @@ class KelompokTernak extends BaseModel
     public function kematianTernak(){
         return $this->hasMany(KematianTernak::class, 'kelompok_ternak_id', 'id');
     }
+
+    public function transaksiHarian()
+    {
+        return $this->hasMany(TransaksiHarian::class, 'kelompok_ternak_id','id');
+    }
+
+    public function ternakAfkir()
+    {
+        return $this->hasMany(TernakAfkir::class, 'kelompok_ternak_id','id');
+    }
+
+    public function penjualanTernaks()
+    {
+        return $this->hasMany(TernakJual::class, 'kelompok_ternak_id','id');
+    }
     
 }
