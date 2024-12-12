@@ -20,8 +20,6 @@ class StockMovement extends BaseModel
         'item_id',
         'source_location_id',
         'destination_location_id',
-        'source_silo_id',
-        'destination_silo_id',
         'movement_type',
         'tanggal',
         'batch_number',
