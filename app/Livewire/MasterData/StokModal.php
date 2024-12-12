@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 
 use App\Models\Farm;
 use App\Models\Item;
+use App\Models\ItemCategory;
 
 class StokModal extends Component
 {
@@ -19,7 +20,7 @@ class StokModal extends Component
     public $availableJenis = ['DOC', 'Pakan', 'Obat', 'Vaksin', 'Lainnya']; // List of available options
 
     protected $rules = [
-        'kode_stok' => 'required|unique:master_stoks,kode',
+        'kode_stok' => 'required|unique:items,kode',
         'jenis' => 'required',
         'nama' => 'required|string',
         'satuan_kecil' => 'required|string',
@@ -44,15 +45,17 @@ class StokModal extends Component
         try {
             // Validate the form input data
             $this->validate(); 
+
+            $category = ItemCategory::where('name',$this->jenis)->first();
         
             // Wrap database operation in a transaction (if applicable)
             DB::beginTransaction();
         
             // Prepare the data for creating/updating the stok
             $data = [
-                'jenis' => $this->jenis,
+                'category_id' => $category->id,
                 'kode' => $this->kode_stok,
-                'nama' => $this->nama,
+                'name' => $this->nama,
                 'satuan_besar' => $this->satuan_besar,
                 'satuan_kecil' => $this->satuan_kecil,
                 'konversi' => $this->konversi,
@@ -73,7 +76,7 @@ class StokModal extends Component
             DB::rollBack();
     
             // Handle validation and general errors
-            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ');
+            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. '.$e->getMessage());
             // Optionally log the error: Log::error($e->getMessage());
         } finally {
             // Reset the form in all cases to prepare for new data
