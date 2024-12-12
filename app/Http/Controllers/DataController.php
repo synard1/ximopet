@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\CurrentStock;
+use App\Models\CurrentTernak;
 use App\Models\Farm;
 use App\Models\Kandang;
 use App\Models\FarmOperator;
@@ -13,8 +14,11 @@ use App\Models\InventoryLocation;
 use App\Models\User;
 use App\Models\ItemLocation;
 use App\Models\Item; // Assuming there is an Item model
-
+use App\Models\KelompokTernak;
+use App\Models\KematianTernak;
 use App\Models\StockHistory;
+use App\Models\TernakAfkir;
+use App\Models\TernakJual;
 use App\Models\TransaksiHarian;
 use App\Models\TransaksiHarianDetail;
 
@@ -115,6 +119,9 @@ class DataController extends Controller
                 if ($task === 'GET') {
                     $farmId = $request->input('farm_id');
                     $data = $this->getFarmStocks($farmId);
+                    if (isset($data['error'])) {
+                        return response()->json($data, 404);
+                    }
                 } elseif ($task === 'DELETE') {
                     $stockId = $request->input('stock_id');
                     return $this->deleteStock($stockId);
@@ -125,6 +132,9 @@ class DataController extends Controller
                 if ($task === 'GET') {
                     $farmId = $request->input('farm_id');
                     $data = $this->getFarmDetails($farmId);
+                    if (isset($data['error'])) {
+                        return response()->json($data, 404);
+                    }
                 }
             } elseif($type === 'items'){
                 if ($submodul && $submodul === 'location') {
@@ -244,21 +254,17 @@ class DataController extends Controller
             ];
         });
 
-        // $kandangs = Kandang::where('farm_id', $farmId)->where('status', 'Digunakan')->get(['id', 'nama']);
-
+        $result = [
+            'stock' => $formattedStocks,
+            'parameter' => ['oldestDate' => $oldestDate],
+            'kandangs' => $kandangs
+        ];
+    
         if ($formattedStocks->isEmpty()) {
-            return response()->json([
-                'error' => 'No data found for the specified farm ID.'
-            ], 404);
-        } else {
-            $result = [
-                'stock' => $formattedStocks,
-                'parameter' => ['oldestDate' => $oldestDate],
-                'kandangs' => $kandangs
-            ];
-            return $result;
-            // return response()->json($result);
+            $result['error'] = 'No data found for the specified farm ID.';
         }
+    
+        return $result;
     }
 
     private function getFarmData($type)
@@ -586,61 +592,283 @@ class DataController extends Controller
         $id = $request->id;
         $value = $request->input('value');
         $column = $request->input('column');
+        $category = $request->input('category');
+        $tanggal = $request->input('tanggal');
+
+        // Handle d-m-Y format
+        $formattedDate = null;
+        if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $tanggal, $matches)) {
+            $formattedDate = "{$matches[3]}-{$matches[2]}-{$matches[1]}";
+        }
 
         if($task == 'UPDATE'){
             // dd($request->all());
             // Update Detail Items
-            $transaksiDetail = TransaksiHarianDetail::findOrFail($id);
-            if($column == 'qty'){
-                $transaksiDetail->update(
-                    [
-                        $column => $value * $transaksiDetail->items->konversi,
-                    ]
-                );
-            }else{
-                $transaksiDetail->update(
-                    [
-                        $column => $value,
-                    ]
-                );
+            $transaksiDetail = TransaksiHarian::findOrFail($id);
+            $currentTernak = CurrentTernak::where('kelompok_ternak_id', $transaksiDetail->kelompok_ternak_id)->first();
+
+            if (!$currentTernak) {
+                return response()->json([
+                    'message' => 'Current ternak tidak ditemukan',
+                    'status' => 'error'
+                ], 404);
             }
+        
+            $oldValue = $transaksiDetail->quantity;
+            $difference = $value - $oldValue;
+
+            if ($category == 'Mati') {
+                $ternakMati = KematianTernak::where('kelompok_ternak_id', $transaksiDetail->kelompok_ternak_id)
+                    ->whereDate('tanggal', $formattedDate)
+                    ->first();
+            
+                if ($ternakMati) {
+                    $ternakMati->update([
+                        'quantity' => $value,
+                        'updated_by' => auth()->user()->id,
+                    ]);
+            
+                    // Update the related TransaksiHarian detail
+                    $transaksiDetail->update([
+                        'quantity' => $value
+                    ]);
+
+                    $currentTernak->decrement('quantity', $difference);
+
+            
+                    return response()->json([
+                        'message' => 'Data kematian ternak berhasil diupdate',
+                        'status' => 'success',
+                        'data' => $ternakMati
+                    ]);
+                } else {
+                    return response()->json([
+                        'message' => 'Data kematian ternak tidak ditemukan',
+                        'status' => 'error'
+                    ], 404);
+                }
+            }elseif ($category == 'Afkir') {
+                $ternakAfkir = TernakAfkir::where('kelompok_ternak_id', $transaksiDetail->kelompok_ternak_id)
+                    ->whereDate('tanggal', $formattedDate)
+                    ->first();
+            
+                if ($ternakAfkir) {
+                    $ternakAfkir->update([
+                        'jumlah' => $value,
+                        'updated_by' => auth()->user()->id,
+                    ]);
+            
+                    // Update the related TransaksiHarian detail
+                    $transaksiDetail->update([
+                        'quantity' => $value
+                    ]);
+
+                    $currentTernak->decrement('quantity', $difference);
+
+            
+                    return response()->json([
+                        'message' => 'Data ternak afkir berhasil diupdate',
+                        'status' => 'success',
+                        'data' => $ternakAfkir
+                    ]);
+                } else {
+                    return response()->json([
+                        'message' => 'Data ternak afkir tidak ditemukan',
+                        'status' => 'error'
+                    ], 404);
+                }
+            }elseif ($category == 'Jual') {
+                $ternakJual = TernakJual::where('kelompok_ternak_id', $transaksiDetail->kelompok_ternak_id)
+                    ->whereDate('tanggal', $formattedDate)
+                    ->first();
+            
+                if ($ternakJual) {
+                    $ternakJual->update([
+                        'quantity' => $value,
+                        'updated_by' => auth()->user()->id,
+                    ]);
+            
+                    // Update the related TransaksiHarian detail
+                    $transaksiDetail->update([
+                        'quantity' => $value
+                    ]);
+
+                    $currentTernak->decrement('quantity', $difference);
+
+            
+                    return response()->json([
+                        'message' => 'Data ternak jual berhasil diupdate',
+                        'status' => 'success',
+                        'data' => $ternakJual
+                    ]);
+                } else {
+                    return response()->json([
+                        'message' => 'Data ternak jual tidak ditemukan',
+                        'status' => 'error'
+                    ], 404);
+                }
+            }
+            // if($column == 'qty'){
+            //     $transaksiDetail->update(
+            //         [
+            //             $column => $value * $transaksiDetail->items->konversi,
+            //         ]
+            //     );
+            // }else{
+            //     $transaksiDetail->update(
+            //         [
+            //             $column => $value,
+            //         ]
+            //     );
+            // }
 
             return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success' ]);
         }elseif($task == 'READ'){
-            // Read Detail Items
-            $transactions = TransaksiHarian::with(['details' => function($query) {
-                $query->select('id', 'transaksi_id', 'item_id', 'quantity', 'harga')
-                    ->with(['item' => function($itemQuery) {
-                        $itemQuery->select('id', 'name', 'category_id')
-                            ->with(['category' => function($categoryQuery) {
-                                $categoryQuery->select('id', 'name');
-                            }]);
-                    }]);
-            }])
-            ->where('id', $id)
-            ->select('id', 'tanggal')
-            ->orderBy('tanggal', 'DESC')
-            ->get()
-            ->map(function ($transaction) {
-                return $transaction->details->map(function ($detail) use ($transaction) {
-                    
-                    return [
-                        'nama' => $detail->item->name ?? 'N/A',
-                        'kategori' => $detail->item->category->name ?? 'N/A',
-                        'stok_awal' => $detail->qty + $detail->sisa,
-                        'terpakai' => $detail->quantity,
-                        'sisa' => $detail->sisa,
-                        'harga' => $detail->harga,
-                        'sub_total' => $detail->sub_total,
-                        'konversi' => $detail->konversi,
-                        'tanggal' => $transaction->tanggal
-                    ];
-                });
-            })
-            ->flatten(1);
+            // Refactored READ logic
+            $transaction = TransaksiHarian::with([
+                'details',
+                'details.item',
+                'details.item.category',
+                'ternakAfkir',
+                'ternakJual',
+                'ternakMati'
+            ])->findOrFail($id);
 
-            return response()->json(['data' => $transactions]);
+            $data = [];
+
+            // Process regular transaction details
+            foreach ($transaction->details as $detail) {
+                $data[] = [
+                    'nama' => $detail->item->name ?? 'N/A',
+                    'kategori' => $detail->item->category->name ?? 'N/A',
+                    'stok_awal' => $detail->qty + $detail->sisa,
+                    'terpakai' => $detail->quantity,
+                    'sisa' => $detail->sisa,
+                    'harga' => $detail->harga,
+                    'sub_total' => $detail->sub_total,
+                    'konversi' => $detail->konversi,
+                    'tanggal' => $transaction->tanggal->format('d-m-Y'),
+                    'jenis' => 'Regular'
+                ];
+            }
+
+            // Process ternak afkir
+            foreach ($transaction->ternakAfkir as $afkir) {
+                $data[] = [
+                    'nama' => 'Ternak Afkir',
+                    'kategori' => 'Afkir',
+                    'stok_awal' => null,
+                    'terpakai' => $afkir->jumlah,
+                    'sisa' => null,
+                    'harga' => $afkir->harga,
+                    'sub_total' => $afkir->jumlah * $afkir->harga,
+                    'konversi' => null,
+                    'tanggal' => $transaction->tanggal->format('d-m-Y'),
+                    'jenis' => 'Afkir'
+                ];
+            }
+
+            // Process ternak jual
+            foreach ($transaction->ternakJual as $jual) {
+                $data[] = [
+                    'nama' => 'Ternak Jual',
+                    'kategori' => 'Jual',
+                    'stok_awal' => null,
+                    'terpakai' => $jual->quantity,
+                    'sisa' => null,
+                    'harga' => $jual->harga,
+                    'sub_total' => $jual->jumlah * $jual->harga,
+                    'konversi' => null,
+                    'tanggal' => $transaction->tanggal->format('d-m-Y'),
+                    'jenis' => 'Jual'
+                ];
+            }
+
+            // Process ternak mati
+            foreach ($transaction->ternakMati as $mati) {
+                $data[] = [
+                    'nama' => 'Ternak Mati',
+                    'kategori' => 'Mati',
+                    'stok_awal' => null,
+                    'terpakai' => $mati->quantity,
+                    'sisa' => null,
+                    'harga' => 0,
+                    'sub_total' => 0,
+                    'konversi' => null,
+                    'tanggal' => $transaction->tanggal->format('d-m-Y'),
+                    'jenis' => 'Mati'
+                ];
+            }
+
+            return response()->json(['data' => $data]);
+    
         }
 
     }
+    // public function transaksi(Request $request, $type =null)
+    // {
+    //     $bentuk = $request->bentuk;
+    //     // $status = $request->status;
+    //     $jenis = $request->jenis;
+    //     $task = $request->task;
+    //     $id = $request->id;
+    //     $value = $request->input('value');
+    //     $column = $request->input('column');
+
+    //     if($task == 'UPDATE'){
+    //         // dd($request->all());
+    //         // Update Detail Items
+    //         $transaksiDetail = TransaksiHarianDetail::findOrFail($id);
+    //         if($column == 'qty'){
+    //             $transaksiDetail->update(
+    //                 [
+    //                     $column => $value * $transaksiDetail->items->konversi,
+    //                 ]
+    //             );
+    //         }else{
+    //             $transaksiDetail->update(
+    //                 [
+    //                     $column => $value,
+    //                 ]
+    //             );
+    //         }
+
+    //         return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success' ]);
+    //     }elseif($task == 'READ'){
+    //         // Read Detail Items
+    //         $transactions = TransaksiHarian::with(['details' => function($query) {
+    //             $query->select('id', 'transaksi_id', 'item_id', 'quantity', 'harga')
+    //                 ->with(['item' => function($itemQuery) {
+    //                     $itemQuery->select('id', 'name', 'category_id')
+    //                         ->with(['category' => function($categoryQuery) {
+    //                             $categoryQuery->select('id', 'name');
+    //                         }]);
+    //                 }]);
+    //         }])
+    //         ->where('id', $id)
+    //         ->select('id', 'tanggal')
+    //         ->orderBy('tanggal', 'DESC')
+    //         ->get()
+    //         ->map(function ($transaction) {
+    //             return $transaction->details->map(function ($detail) use ($transaction) {
+                    
+    //                 return [
+    //                     'nama' => $detail->item->name ?? 'N/A',
+    //                     'kategori' => $detail->item->category->name ?? 'N/A',
+    //                     'stok_awal' => $detail->qty + $detail->sisa,
+    //                     'terpakai' => $detail->quantity,
+    //                     'sisa' => $detail->sisa,
+    //                     'harga' => $detail->harga,
+    //                     'sub_total' => $detail->sub_total,
+    //                     'konversi' => $detail->konversi,
+    //                     'tanggal' => $transaction->tanggal
+    //                 ];
+    //             });
+    //         })
+    //         ->flatten(1);
+
+    //         return response()->json(['data' => $transactions]);
+    //     }
+
+    // }
 }

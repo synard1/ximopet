@@ -12,24 +12,18 @@ class TernakHistory extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $table = 'histori_ternak';
+    protected $table = 'ternak_history';
 
     protected $fillable = [
         'id',
-        'transaksi_id',
         'kelompok_ternak_id',
-        'parent_id',
-        'farm_id',
-        'kandang_id',
         'tanggal',
-        'jenis',
-        'perusahaan_nama',
-        'hpp',
         'stok_awal',
         'stok_akhir',
-        'stok_masuk',
-        'stok_keluar',
-        'total_berat',
+        'ternak_afkir',
+        'ternak_mati',
+        'ternak_jual',
+        'umur',
         'status',
         'keterangan',
         'created_by',

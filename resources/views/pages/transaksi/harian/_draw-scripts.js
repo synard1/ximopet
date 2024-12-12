@@ -83,6 +83,9 @@ document.querySelectorAll('[data-kt-action="view_detail_pemakaian"]').forEach(fu
         // Get suppliers name
         const transaksiSupplier = parent.querySelectorAll('td')[2].innerText;
         const transaksiFaktur = parent.querySelectorAll('td')[0].innerText;
+        const transaksiTanggalRaw = parent.querySelectorAll('td')[3].innerText;
+        const transaksiTanggal = formatDate(transaksiTanggalRaw);
+
 
         // Simulate delete request -- for demo purpose only
         Swal.fire({
@@ -96,7 +99,7 @@ document.querySelectorAll('[data-kt-action="view_detail_pemakaian"]').forEach(fu
                 // Button that triggered the modal
                 var button = event.relatedTarget;
                 // Extract info from data-* attributes
-                var title = `${transaksiFaktur} - ${transaksiSupplier} Detail Data`;
+                var title = `${transaksiTanggal} - ${transaksiSupplier} Detail Data`;
                 // Update the modal's title
                 var modalTitle = modal.querySelector('.modal-title');
                 modalTitle.textContent = title;
@@ -109,3 +112,11 @@ document.querySelectorAll('[data-kt-action="view_detail_pemakaian"]').forEach(fu
         
     });
 });
+
+
+// Add this function at the end of your file or in a separate utilities file
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString('id-ID', options);
+}

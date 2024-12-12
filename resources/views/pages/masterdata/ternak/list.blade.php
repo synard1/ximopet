@@ -17,8 +17,8 @@
         <!--end::Card body-->
     </div>
 
-    @include('pages.masterdata.ternak._modal_ternak_details')
-
+    {{-- @include('pages.masterdata.ternak._modal_ternak_details') --}}
+    @include('pages.masterdata.ternak._detail_modal')
     @push('scripts')
     {{ $dataTable->scripts() }}
     @endpush

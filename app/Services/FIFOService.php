@@ -21,6 +21,9 @@ use App\Models\KematianTernak;
 use App\Models\TernakJual;
 use App\Models\TransaksiJual;
 use App\Models\TransaksiJualDetail;
+use App\Models\TernakHistory;
+
+use Carbon\Carbon;
 
 class FIFOService
 {
@@ -53,6 +56,25 @@ class FIFOService
                 'kandang_id' => $validatedData['kandang_id'],
                 'created_by' => Auth::id(),
             ]);
+
+            // dd($ternak);
+
+            // Calculate the age of the livestock using Carbon
+            $tanggalMasuk = Carbon::parse($ternak->kelompokTernaks->start_date);
+            $tanggalJual = Carbon::parse($transaksi->tanggal);
+            $umur = $tanggalMasuk->diffInDays($tanggalJual);
+
+            // Update Ternak History
+            TernakHistory::updateOrCreate(
+                [
+                    'kelompok_ternak_id' => $transaksi->kelompok_ternak_id,
+                    'tanggal' => $transaksi->tanggal,
+                ],
+                ['stok_awal' => $ternak->quantity,
+                'umur' => $umur,
+                'status' => 'OK',
+                ]
+            );
 
             if($validatedData['ternak_mati']){
                 $dataTernakMati = $this->ternakService->ternakMati($validatedData, $transaksi);
@@ -147,6 +169,7 @@ class FIFOService
 
                     // Create StokMutasi
                     StockHistory::create([
+                        'tanggal' => $validatedData['tanggal'],
                         'transaksi_id' => $transaksi->id,
                         'stock_id' => $currentStock->id,
                         'item_id' => $stockEntry->item_id,

@@ -407,7 +407,7 @@
 								<!--end:Menu link-->
 							</div>
 							<!--end:Menu item-->
-							<!--begin:Menu item-->
+							{{-- <!--begin:Menu item-->
 							<div class="menu-item">
 								<!--begin:Menu link-->
 								<a class="menu-link {{ request()->is('ternak/mati') ? 'active' : '' }}" href="/ternak/mati">
@@ -418,8 +418,8 @@
 								</a>
 								<!--end:Menu link-->
 							</div>
-							<!--end:Menu item-->
-							<!--begin:Menu item-->
+							<!--end:Menu item--> --}}
+							{{-- <!--begin:Menu item-->
 							<div class="menu-item active">
 								<!--begin:Menu link-->
 								<a class="menu-link {{ request()->is('ternak/afkir') ? 'active' : '' }}" href="/ternak/afkir">
@@ -430,7 +430,7 @@
 								</a>
 								<!--end:Menu link-->
 							</div>
-							<!--end:Menu item-->
+							<!--end:Menu item--> --}}
 							<!--begin:Menu item-->
 							<div class="menu-item">
 								<!--begin:Menu link-->

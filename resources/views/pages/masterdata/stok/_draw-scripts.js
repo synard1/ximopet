@@ -226,35 +226,37 @@ function getDetailStoks(transaksiId, farmId, startDate, endDate) {
                     return data;
                 }
             },
+            { data: 'jenis', autoWidth: true },
             { data: 'nama_farm', autoWidth: true },
             { data: 'item_name', autoWidth: true },
             { data: 'perusahaan_nama', autoWidth: true },
-            { 
-                data: 'hpp',
-                autoWidth: true,
-                render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) 
-            },
-            { 
-                data: 'stok_awal',
-                autoWidth: true,
-                render: $.fn.dataTable.render.number( '.', ',', 0, '' ) 
-            },
-            { 
-                data: 'stok_masuk',
-                autoWidth: true,
-                render: $.fn.dataTable.render.number( '.', ',', 0, '' ) 
-            },
-            { 
-                data: 'stok_keluar',
-                autoWidth: true,
-                render: $.fn.dataTable.render.number( '.', ',', 0, '' ) 
-            },
-            { 
-                data: 'stok_akhir',
-                autoWidth: true,
-                render: $.fn.dataTable.render.number( '.', ',', 0, '' ) 
-            },
-            { data: 'satuan', autoWidth: true },
+            { data: 'quantity', autoWidth: true },
+            // { 
+            //     data: 'hpp',
+            //     autoWidth: true,
+            //     render: $.fn.dataTable.render.number( '.', ',', 2, 'Rp' ) 
+            // },
+            // { 
+            //     data: 'stok_awal',
+            //     autoWidth: true,
+            //     render: $.fn.dataTable.render.number( '.', ',', 0, '' ) 
+            // },
+            // { 
+            //     data: 'stok_masuk',
+            //     autoWidth: true,
+            //     render: $.fn.dataTable.render.number( '.', ',', 0, '' ) 
+            // },
+            // { 
+            //     data: 'stok_keluar',
+            //     autoWidth: true,
+            //     render: $.fn.dataTable.render.number( '.', ',', 0, '' ) 
+            // },
+            // { 
+            //     data: 'stok_akhir',
+            //     autoWidth: true,
+            //     render: $.fn.dataTable.render.number( '.', ',', 0, '' ) 
+            // },
+            // { data: 'satuan', autoWidth: true },
         ]
     });
 

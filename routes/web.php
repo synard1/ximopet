@@ -103,6 +103,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/ternak/afkir', [TernakController::class, 'ternakAfkirIndex'])->name('afkir.index');
         Route::get('/ternak/jual', [TernakController::class, 'ternakJualIndex'])->name('jual.index');
         Route::get('/ternak/mati', [TernakController::class, 'ternakMatiIndex'])->name('mati.index');
+        Route::get('/ternak/{id}/detail', [TernakController::class, 'showTernakDetails'])->name('detail');
+        // Route::get('/ternak/{id}/detail', [TernakController::class, 'showDetail'])->name('detail');
         Route::resource('/ternak', TernakController::class);
 
 
