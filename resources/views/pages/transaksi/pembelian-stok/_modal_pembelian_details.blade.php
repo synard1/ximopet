@@ -73,24 +73,30 @@
                     },
                     {
                         data: 'qty',
-                        className: 'editable', // Tambahkan className di sini
+                        className: 'editable text-center', // Add text-end class for right alignment
+                        // render: $.fn.dataTable.render.number(',', '.', 2)
                     },
                     {
                         data: 'terpakai',
+                        className: 'text-center', // Add text-end class for right alignment
+                        // render: $.fn.dataTable.render.number(',', '.', 0)
                     },
                     {
                         data: 'sisa',
+                        className: 'text-center', // Add text-end class for right alignment
+                        // render: $.fn.dataTable.render.number(',', '.', 0)
                     },
                     {
                         data: 'satuan_besar'
                     },
                     {
                         data: 'harga',
-                        className: 'editable',
+                        className: 'editable text-end',
                         render: $.fn.dataTable.render.number(',', '.', 0, 'Rp')
                     },
                     {
                         data: 'sub_total',
+                        className: 'text-end', // Add text-end class for right alignment
                         render: $.fn.dataTable.render.number(',', '.', 0, 'Rp')
                     }
                 ]
@@ -115,9 +121,9 @@
                 var terpakai = rowData && rowData.terpakai !== undefined ? rowData.terpakai : 0;
 
                 // Disable editing if 'terpakai' is greater than 0
-                if (terpakai > 0) {
-                    return;
-                }
+                // if (terpakai > 0) {
+                //     return;
+                // }
 
                 // Create an input field for editing
                 var input = $('<input type="text" value="' + originalValue + '">');
@@ -127,10 +133,27 @@
                 // Handle saving the edit
                 input.blur(function() {
                     var newValue = parseFloat(input.val());
+                    var columnIndex = table.cell(cell).index().column;
+                    var columnData = table.settings().init().columns[columnIndex];
 
-                    if (!isNaN(newValue) && newValue !== originalValue) { 
-                        var columnIndex = table.cell(cell).index().column;
-                        var columnData = table.settings().init().columns[columnIndex];
+                    if (!isNaN(newValue) && newValue !== originalValue) {
+                        // Check if we're editing the 'qty' column
+                        if (columnData.data === 'qty') {
+                            // Get the 'terpakai' value from the row data
+                            var terpakai = parseFloat(rowData.terpakai);
+
+                            // Check if new quantity is less than 'terpakai'
+                            if (newValue < terpakai) {
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: 'Jumlah baru tidak boleh kurang dari jumlah terpakai.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                                table.ajax.reload();
+                                return;
+                            }
+                        }
 
                         // Send AJAX request to update the data
                         $.ajax({
@@ -161,12 +184,61 @@
                             }
                         });
                     } else if (isNaN(newValue) || newValue === '') {
-                        alert('Error: Value cannot be blank');
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Nilai tidak boleh kosong.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
                         table.ajax.reload();
                     } else {
                         table.ajax.reload();
                     }
                 });
+
+                // Handle saving the edit
+                // input.blur(function() {
+                //     var newValue = parseFloat(input.val());
+
+                //     if (!isNaN(newValue) && newValue !== originalValue) { 
+                //         var columnIndex = table.cell(cell).index().column;
+                //         var columnData = table.settings().init().columns[columnIndex];
+
+                //         // Send AJAX request to update the data
+                //         $.ajax({
+                //             url: '/api/v1/stocks',
+                //             method: 'POST',
+                //             headers: {
+                //                 'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+                //                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                //             },
+                //             data: {
+                //                 type: 'edit',
+                //                 id: rowData.id,
+                //                 column: columnData.data,
+                //                 value: newValue
+                //             },
+                //             success: function(response) {
+                //                 cell.text(newValue);
+                //                 toastr.success(response.message);
+                //                 table.ajax.reload();
+                //             },
+                //             error: function(xhr, status, error) {
+                //                 table.ajax.reload();
+                //                 if (xhr.status === 401) {
+                //                     toastr.error('Unauthorized. Please log in again.');
+                //                 } else {
+                //                     toastr.error('Error updating value: ' + xhr.responseJSON.message);
+                //                 }
+                //             }
+                //         });
+                //     } else if (isNaN(newValue) || newValue === '') {
+                //         alert('Error: Value cannot be blank');
+                //         table.ajax.reload();
+                //     } else {
+                //         table.ajax.reload();
+                //     }
+                // });
             });
         }
 

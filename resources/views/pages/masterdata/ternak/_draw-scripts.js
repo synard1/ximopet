@@ -110,6 +110,153 @@ document.querySelectorAll('[data-kt-action="view_detail_ternak"]').forEach(funct
     });
 });
 
+document.querySelectorAll('[data-kt-action="view_detail_ternak"]').forEach(function (element) {
+    element.addEventListener('click', function (e) {
+        e.preventDefault();
+        var ternakId = e.target.getAttribute('data-kt-ternak-id');
+        
+        // Show loading indication
+        Swal.fire({
+            text: "Loading ternak details...",
+            icon: "info",
+            buttonsStyling: false,
+            showConfirmButton: false,
+            timer: 2000
+        });
+
+        fetch(`/ternak/${ternakId}/detail`, {
+            // method: 'POST',
+            // headers: {
+            //     'Content-Type': 'application/json',
+            //     'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
+            //     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            // },
+            // body: JSON.stringify({
+            //     type: 'LIST',
+            //     status: 'Aktif',
+            //     roles: 'Supervisor'
+            // })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.result && data.result.length > 0) {
+                // Populate modal with data
+                const modal = document.getElementById('kt_modal_ternak_details');
+                const modalTitle = modal.querySelector('.modal-title');
+                const tableBody = modal.querySelector('#detailTable tbody');
+
+                // Clear existing table rows
+                tableBody.innerHTML = '';
+
+                // Set modal title
+                // modalTitle.textContent = `Detail Ternak ID: ${ternakId}`;
+                modalTitle.textContent = `Detail Ternak ID: ` + data.nama;
+
+                // Populate table with data
+                data.result.forEach(item => {
+                    const row = `
+                        <tr>
+                            <td>${item.tanggal}</td>
+                            <td>${item.ternak_mati || 0}</td>
+                            <td>${item.ternak_afkir || 0}</td>
+                            <td>${item.ternak_terjual || 0}</td>
+                            <td>${item.pakan_harian}</td>
+                            <td>${item.obat_harian || 0}</td>
+                            <td>${item.vitamin_harian || 0}</td>
+                        </tr>
+                    `;
+                    tableBody.insertAdjacentHTML('beforeend', row);
+                });
+
+                // Show the modal
+                $('#kt_modal_ternak_details').modal('show');
+
+                // Initialize or refresh DataTable
+                if ($.fn.DataTable.isDataTable('#detailTable')) {
+                    $('#detailTable').DataTable().destroy();
+                }
+                $('#detailTable').DataTable({
+                    // pageLength: 10,
+                    // lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                    // order: [[0, 'desc']],
+                    // columnDefs: [
+                    //     { targets: 0, type: 'date' },
+                    //     { targets: '_all', type: 'num' }
+                    // ],
+                    autoWidth: true,
+                    responsive: false,
+                    // scrollX: true,
+                    dom: 'Bfrtip',
+                    buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+                });
+            } else {
+                Swal.fire({
+                    text: "No data available for this ternak.",
+                    icon: "info",
+                    buttonsStyling: false,
+                    confirmButtonText: "Ok, got it!",
+                    customClass: {
+                        confirmButton: "btn btn-primary"
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching ternak details:', error);
+            Swal.fire({
+                text: "An error occurred while loading ternak details.",
+                icon: "error",
+                buttonsStyling: false,
+                confirmButtonText: "Ok, got it!",
+                customClass: {
+                    confirmButton: "btn btn-primary"
+                }
+            });
+        });
+
+        // Fetch ternak details
+        // fetch(`/ternak/${ternakId}/detail`)
+        //     .then(response => response.text())
+        //     .then(html => {
+        //         let table;
+
+        //         // Trigger DataTable initialization when modal is opened
+        //         $('#kt_modal_ternak_details').on('shown.bs.modal', function () {
+        //             if (!$.fn.DataTable.isDataTable('#detailTable')) {
+        //                 table = $('#exampleTable').DataTable({
+        //                     processing: true,
+        //                     serverSide: true,
+        //                     ajax: "{{ route('users.get') }}",
+        //                     columns: [
+        //                         { data: 'id', name: 'id' },
+        //                         { data: 'name', name: 'name' },
+        //                         { data: 'email', name: 'email' },
+        //                         { data: 'created_at', name: 'created_at' }
+        //                     ],
+        //                 });
+        //             } else {
+        //                 table.ajax.reload(); // Reload data if already initialized
+        //             }
+        //         });
+
+        //         // document.getElementById('ternak_details_content').innerHTML = html;
+        //         $('#kt_modal_ternak_details').modal('show');
+        //     })
+        //     .catch(error => {
+        //         console.error('Error:', error);
+        //         Swal.fire({
+        //             text: "An error occurred while loading ternak details.",
+        //             icon: "error",
+        //             buttonsStyling: false,
+        //             confirmButtonText: "Ok, got it!",
+        //             customClass: {
+        //                 confirmButton: "btn btn-primary"
+        //             }
+        //         });
+        //     });
+    });
+});
+
 // Listen for 'success' event emitted by Livewire
 Livewire.on('success', (message) => {
     // Reload the farms-table datatable

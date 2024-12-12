@@ -17,7 +17,33 @@
     
     <div class="tab-content" id="myTabContent">
         <div class="tab-pane fade show active" id="kt_tab_overview" role="tabpanel">
-            <div class="card">
+            <div class="card" id="stokTableCard">
+			@if(auth()->user()->hasRole(['Operator']))
+                            <div class="card-header border-0 pt-6">
+                           <div class="card-title">
+                        <div class="d-flex align-items-center position-relative my-1">
+                            {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
+                            <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Data" id="searchTransaksiHarian"/>
+                        </div>
+                    </div>
+
+                <!--begin::Card toolbar-->
+                <div class="card-toolbar">
+                    <!--begin::Toolbar-->
+                    <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
+                        <!--begin::Add user-->
+                        <button type="button" class="btn btn-primary" data-kt-button="new_use_stok">
+                            {!! getIcon('plus', 'fs-2', '', 'i') !!}
+                            Tambah Data
+                        </button>
+                        <!--end::Add user-->
+                    </div>
+                    <!--end::Toolbar-->
+                </div>
+                <!--end::Card toolbar-->           
+                </div>     
+            @endif
+                
                 <div class="card-body py-4">
                     <div class="table-responsive">
                         {{ $dataTable->table() }}
@@ -25,6 +51,7 @@
                 </div>
             </div>
         </div>
+
         <div class="tab-pane fade" id="kt_tab_details" role="tabpanel">
             <div class="card">
                 <div class="card-body">
@@ -69,10 +96,43 @@
         </div>
     </div>
 
+        <livewire:transaksi.pemakaian-stok />
+        @include('pages.transaksi.harian._modal_pemakaian_details')
+
 
     @push('scripts')
         {{ $dataTable->scripts() }}
         <script>
+            $(document).ready(function() {
+                let table = window.LaravelDataTables['transaksiHarian-table'];
+                
+                $('#searchTransaksiHarian').on('keyup', function () {
+                    table.search(this.value).draw();
+                });
+
+                // ... rest of your script
+            });
+
+            document.addEventListener('livewire:init', function () {
+                Livewire.on('closeFormPemakaian', function () {
+                    showLoadingSpinner();
+                    const cardList = document.getElementById(`stokTableCard`);
+                    cardList.style.display = 'block';
+
+                    const cardForm = document.getElementById(`pemakaianStokFormCard`);
+                    cardForm.style.display = 'none';
+
+                    // Reload DataTables
+                    $('.table').each(function() {
+                        if ($.fn.DataTable.isDataTable(this)) {
+                            $(this).DataTable().ajax.reload();
+                        }
+                    });
+
+                    
+                });
+            });
+
             $(document).ready(function() {
                 $('.nav-link').on('shown.bs.tab', function(e) {
                     if (e.target.href.includes('#kt_tab_overview')) {
@@ -200,6 +260,44 @@
                 if (window.location.hash === '#kt_tab_details') {
                     getJenis();
                 }
+            });
+
+            document.querySelectorAll('[data-kt-button="new_use_stok"]').forEach(function (element) {
+                element.addEventListener('click', function () {
+                    // Simulate delete request -- for demo purpose only
+                    Swal.fire({
+                        html: `Preparing Form`,
+                        icon: "info",
+                        buttonsStyling: false,
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(function () {
+
+                        $('#supplierDropdown').select2();
+
+                        // Livewire.on('reinitialize-select2-pemakaianStok', function () {
+                        //     // updateDropdowns();
+                        //     console.log('test update dropdown');
+                        //     // $('#itemsSelect').select2();
+                            
+                        // });
+
+                        // console.log('form loaded');
+                        Livewire.dispatch('createPemakaianStok');
+
+                        const cardList = document.getElementById(`stokTableCard`);
+                        cardList.style.display = 'none';
+                        // cardList.classList.toggle('d-none');
+
+                        const cardForm = document.getElementById(`pemakaianStokFormCard`);
+                        cardForm.style.display = 'block';
+                        // cardList.classList.toggle('d-none');
+                        // fetchFarm();
+
+                    });
+                    
+                });
+
             });
         </script>
     @endpush

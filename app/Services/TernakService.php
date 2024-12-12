@@ -17,6 +17,7 @@ use App\Models\StokHistory;
 use App\Models\TransaksiBeli;
 use App\Models\TernakAfkir;
 use App\Models\TernakJual;
+use App\Models\TernakHistory;
 
 use Carbon\Carbon;
 
@@ -217,12 +218,24 @@ class TernakService
 
     public function ternakMati(array $validatedData, $transaksi)
     {
+        $kelompokTernak =  $this->kelompokTernak($validatedData);
+
+
+
+
+        // dd($test);
+
         DB::beginTransaction();
 
         try {
             $kelompokTernak =  $this->kelompokTernak($validatedData);
             $latestData = $this->getLatestKematianTernak($kelompokTernak);
             $currentTernak = $this->currentTernak($kelompokTernak);
+
+            // Calculate the age of the livestock using Carbon
+            $tanggalMasuk = Carbon::parse($kelompokTernak->tanggal_masuk);
+            $tanggalJual = Carbon::parse($validatedData['tanggal']);
+            $umur = $tanggalMasuk->diffInDays($tanggalJual);
 
             //Validasi Ternak Afkir Melebihi Stok Ternak
             if ($validatedData['ternak_mati'] > $currentTernak->quantity) {
@@ -247,13 +260,21 @@ class TernakService
             $ternakMati->penyebab = $validatedData['penyebab'] ?? 'Belum Ditentukan';
             $ternakMati->keterangan = $validatedData['keterangan'] ?? null;
             $ternakMati->created_by = auth()->user()->id;
+            $ternakMati->umur = $umur;
+
             $ternakMati->save();
 
             // Update CurrentTernak
             $currentTernak->quantity -= $ternakMati->quantity;
             $currentTernak->save();
 
-            // Update stok
+            // Update Ternak History
+            $ternakHistory = TernakHistory::where('kelompok_ternak_id',$kelompokTernak->id)->where('tanggal',$validatedData['tanggal'])->first();
+            $ternakHistory->ternak_mati = $validatedData['ternak_mati'];
+            $ternakHistory->save();
+
+            
+
             // $this->updateStok($this->selectedFarm, $this->selectedKandang, $this->quantity, 'kurang');
 
             DB::commit();
@@ -271,6 +292,10 @@ class TernakService
             $kelompokTernak =  $this->kelompokTernak($validatedData);
             $latestData = $this->getLatestKematianTernak($kelompokTernak);
             $currentTernak = $this->currentTernak($kelompokTernak);
+            // Calculate the age of the livestock using Carbon
+            $tanggalMasuk = Carbon::parse($kelompokTernak->tanggal_masuk);
+            $tanggalJual = Carbon::parse($validatedData['tanggal']);
+            $umur = $tanggalMasuk->diffInDays($tanggalJual);
 
             //Validasi Ternak Afkir Melebihi Stok Ternak
             if ($validatedData['ternak_afkir'] > $currentTernak->quantity) {
@@ -290,11 +315,18 @@ class TernakService
             $ternakAfkir->tindakan = 'Belum Ditentukan';
             $ternakAfkir->status = 'Data Belum Lengkap';
             $ternakAfkir->created_by = auth()->user()->id;
+            $ternakAfkir->umur = $umur;
+
             $ternakAfkir->save();
 
             // Update CurrentTernak
             $currentTernak->quantity -= $ternakAfkir->jumlah;
             $currentTernak->save();
+
+            // Update Ternak History
+            $ternakHistory = TernakHistory::where('kelompok_ternak_id',$kelompokTernak->id)->where('tanggal',$validatedData['tanggal'])->first();
+            $ternakHistory->ternak_afkir = $validatedData['ternak_afkir'];
+            $ternakHistory->save();
 
             // Update stok
             // $this->updateStok($this->selectedFarm, $this->selectedKandang, $this->quantity, 'kurang');
@@ -376,6 +408,11 @@ class TernakService
 
             // Update stok
             // $this->updateStok($this->selectedFarm, $this->selectedKandang, $this->quantity, 'kurang');
+
+            // Update Ternak History
+            $ternakHistory = TernakHistory::where('kelompok_ternak_id',$kelompokTernak->id)->where('tanggal',$validatedData['tanggal'])->first();
+            $ternakHistory->ternak_jual = $validatedData['ternak_jual'];
+            $ternakHistory->save();
 
             DB::commit();
             return $transaksiJual;

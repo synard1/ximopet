@@ -7,13 +7,14 @@ use App\Models\KematianTernak;
 use App\Models\Ternak;
 use App\Models\TernakAfkir;
 use App\Models\Kandang;
-
+use App\Models\TernakJual;
 use App\Models\TransaksiJual;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Carbon\Carbon;
 
 class TernakDataTable extends DataTable
 {
@@ -35,6 +36,13 @@ class TernakDataTable extends DataTable
             //         return number_format($ternak->berat_beli / 1000000, 2) . ' Ton';
             //     }
             // })
+            ->editColumn('umur', function (Ternak $ternak) {
+                // Calculate the age of the livestock using Carbon
+                $tanggalMasuk = Carbon::parse($ternak->start_date);
+                $HariIni = Carbon::now();
+                $umur = $tanggalMasuk->diffInDays($HariIni) + 1;
+                return $umur. ' Hari';
+            })
             ->editColumn('jumlah_mati', function (Ternak $ternak) {
                 $jumlah = KematianTernak::where('kelompok_ternak_id',$ternak->id)->sum('quantity');
                 return $jumlah;
@@ -44,16 +52,33 @@ class TernakDataTable extends DataTable
                 return $jumlah;
             })
             ->editColumn('jumlah_terjual', function (Ternak $ternak) {
-                $jumlah = TransaksiJual::where('kelompok_ternak_id',$ternak->id)->sum('jumlah');
+                $jumlah = TernakJual::where('kelompok_ternak_id',$ternak->id)->sum('quantity');
                 return $jumlah  ?? '0';
             })
             ->editColumn('stok_akhir', function (Ternak $ternak) {
-                $ternak = CurrentTernak::where('kelompok_ternak_id',$ternak->id)->first();
-                return $ternak->quantity  ?? '0';
+                $currentTernak = CurrentTernak::where('kelompok_ternak_id',$ternak->id)->first();
+                // return $ternak->quantity  ?? '0';
+
+                $populasi_awal = $ternak->populasi_awal;
+                $populasi_mati = KematianTernak::where('kelompok_ternak_id', $ternak->id)->sum('quantity');
+                $populasi_afkir = TernakAfkir::where('kelompok_ternak_id', $ternak->id)->sum('jumlah');
+                $populasi_terjual = TernakJual::where('kelompok_ternak_id', $ternak->id)->sum('quantity');
+
+                $jumlah = $populasi_awal - $populasi_mati - $populasi_afkir - $populasi_terjual;
+                $currentTernak->quantity = $jumlah; // Ensure the result is not negative
+                $currentTernak->save();
+
+                return max(0, $jumlah); // Ensure the result is not negative
             })
             ->editColumn('name', function (Ternak $ternak) {
-                return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_ternak" data-kt-transaksi-id="' . $ternak->id . '">' . $ternak->name . '</a>';
+                return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_ternak" data-kt-ternak-id="' . $ternak->id . '">' . $ternak->name . '</a>';
             })
+            // ->editColumn('name', function (Ternak $ternak) {
+            //     return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_ternak" data-kt-ternak-id="' . $ternak->id . '">' . $ternak->name . '</a>';
+            // })
+            // ->editColumn('name', function (Ternak $ternak) {
+            //     return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_ternak" data-kt-transaksi-id="' . $ternak->id . '">' . $ternak->name . '</a>';
+            // })
             ->editColumn('start_date', function (Ternak $ternak) {
                 return $ternak->start_date->format('d M Y, h:i a');
             })
@@ -116,7 +141,7 @@ class TernakDataTable extends DataTable
             Column::make('name'),
             Column::make('start_date'),
             Column::make('populasi_awal'),
-            // Column::make('berat_beli'),
+            Column::computed('umur'),
             Column::computed('jumlah_mati')->title('Ternak Mati'),
             Column::computed('jumlah_afkir')->title('Ternak Afkir'),
             Column::computed('jumlah_terjual')->title('Ternak Terjual'),

@@ -30,17 +30,18 @@
                     <table id="detailsStokTable" class="table table-striped table-hover" style="width:100%">
                         <thead>
                             <tr style="border-bottom: 3px double #dee2e6;">
-                                <th class="text-center" style="width: auto">#</th>
-                                <th class="text-center" style="width: auto">Tanggal</th>
-                                <th class="text-center" style="width: auto">Farm</th>
-                                <th class="text-center" style="width: auto">Nama Barang</th>
-                                <th class="text-center" style="width: auto">Supplier</th>
-                                <th class="text-center" style="width: auto">HPP</th>
-                                <th class="text-center" style="width: auto">Stok Awal</th>
+                                <th class="text-left" style="width: auto">#</th>
+                                <th class="text-left" style="width: auto">Tanggal</th>
+                                <th class="text-left" style="width: auto">Jenis</th>
+                                <th class="text-left" style="width: auto">Farm</th>
+                                <th class="text-left" style="width: auto">Nama Barang</th>
+                                <th class="text-left" style="width: auto">Supplier</th>
+                                <th class="text-center" style="width: auto">Jumlah</th>
+                                {{-- <th class="text-center" style="width: auto">Stok Awal</th>
                                 <th class="text-center" style="width: auto">Stok Masuk</th>
                                 <th class="text-center" style="width: auto">Stok Keluar</th>
                                 <th class="text-center" style="width: auto">Stok Akhir</th>
-                                <th class="text-center" style="width: auto">Satuan</th>
+                                <th class="text-center" style="width: auto">Satuan</th> --}}
                             </tr>
                         </thead>
                         <tbody>
@@ -114,21 +115,36 @@
         function resetTableHeader() {
             const headerHtml = `
                 <tr style="border-bottom: 3px double #dee2e6;">
-                    <th class="text-center" style="width: auto">#</th>
-                    <th class="text-center" style="width: auto">Tanggal</th>
-                    <th class="text-center" style="width: auto">Farm</th>
-                    <th class="text-center" style="width: auto">Nama Barang</th>
-                    <th class="text-center" style="width: auto">Supplier</th>
-                    <th class="text-center" style="width: auto">HPP</th>
-                    <th class="text-center" style="width: auto">Stok Awal</th>
-                    <th class="text-center" style="width: auto">Stok Masuk</th>
-                    <th class="text-center" style="width: auto">Stok Keluar</th>
-                    <th class="text-center" style="width: auto">Stok Akhir</th>
-                    <th class="text-center" style="width: auto">Satuan</th>
+                    <th class="text-left" style="width: auto">#</th>
+                    <th class="text-left" style="width: auto">Tanggal</th>
+                    <th class="text-left" style="width: auto">Jenis</th>
+                    <th class="text-left" style="width: auto">Farm</th>
+                    <th class="text-left" style="width: auto">Nama Barang</th>
+                    <th class="text-left" style="width: auto">Supplier</th>
+                    <th class="text-left" style="width: auto">Jumlah</th>
                 </tr>
             `;
             $('#detailsStokTable thead').html(headerHtml);
             // console.log('Table header reset');
         }
+        // function resetTableHeader() {
+        //     const headerHtml = `
+        //         <tr style="border-bottom: 3px double #dee2e6;">
+        //             <th class="text-center" style="width: auto">#</th>
+        //             <th class="text-center" style="width: auto">Tanggal</th>
+        //             <th class="text-center" style="width: auto">Farm</th>
+        //             <th class="text-center" style="width: auto">Nama Barang</th>
+        //             <th class="text-center" style="width: auto">Supplier</th>
+        //             <th class="text-center" style="width: auto">HPP</th>
+        //             <th class="text-center" style="width: auto">Stok Awal</th>
+        //             <th class="text-center" style="width: auto">Stok Masuk</th>
+        //             <th class="text-center" style="width: auto">Stok Keluar</th>
+        //             <th class="text-center" style="width: auto">Stok Akhir</th>
+        //             <th class="text-center" style="width: auto">Satuan</th>
+        //         </tr>
+        //     `;
+        //     $('#detailsStokTable thead').html(headerHtml);
+        //     // console.log('Table header reset');
+        // }
     </script>
 @endpush

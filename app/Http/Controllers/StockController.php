@@ -11,6 +11,10 @@ use App\Services\FIFOService;
 use App\Services\TernakService;
 use App\Models\Item;
 use App\Models\Farm;
+use App\Models\Rekanan;
+use App\Models\StockHistory;
+use App\Models\TransaksiBeli;
+use App\Models\TransaksiBeliDetail;
 
 class StockController extends Controller
 {
@@ -93,17 +97,25 @@ class StockController extends Controller
             DB::beginTransaction();
 
             // Update Detail Items
-            $transaksiDetail = TransaksiDetail::findOrFail($id);
-            // Find the corresponding StokMutasi record
-            $stokMutasi = StokMutasi::where('transaksi_id', $transaksiDetail->transaksi_id)->firstOrFail();
+            $transaksiDetail = TransaksiBeliDetail::findOrFail($id);
+            // Find the corresponding StokMutasi & StockHistory record
+            $stockHistory = StockHistory::where('transaksi_id', $transaksiDetail->transaksi_id)->where('jenis','Pembelian')->first();
+            // $stokMutasi = StokMutasi::where('transaksi_id', $transaksiDetail->transaksi_id)->firstOrFail();
 
             
             if($column == 'qty'){
 
-                $stokMutasi->update([
-                    'stok_awal'  => 0,
-                    'stok_akhir' => $value * $transaksiDetail->items->konversi,
-                    'stok_masuk' => $value * $transaksiDetail->items->konversi,
+                // $stokMutasi->update([
+                //     'stok_awal'  => 0,
+                //     'stok_akhir' => $value * $transaksiDetail->items->konversi,
+                //     'stok_masuk' => $value * $transaksiDetail->items->konversi,
+                //     'updated_by' => auth()->user()->id,
+
+                // ]);
+
+                $stockHistory->update([
+                    'quantity'  =>  $value,
+                    'available_quantity' => $value,
                     'updated_by' => auth()->user()->id,
 
                 ]);
@@ -122,6 +134,12 @@ class StockController extends Controller
                         $column => $value,
                     ]
                 );
+
+                $stockHistory->update([
+                    'hpp'  =>  $value,
+                    'updated_by' => auth()->user()->id,
+
+                ]);
             }
             
 
@@ -131,7 +149,7 @@ class StockController extends Controller
             $transaksiDetail->update(
                 [
                     'sub_total' => ($transaksiDetail->qty / $transaksiDetail->items->konversi) * $transaksiDetail->harga,
-                    // 'total_qty' => ($transaksiDetail->qty / $transaksiDetail->items->konversi),
+                    'sisa' => ($transaksiDetail->qty - $transaksiDetail->terpakai),
                 ]
             );
 
@@ -139,15 +157,15 @@ class StockController extends Controller
             //Update Parent Transaksi
             // $transaksi = Transaksi::where('id', $transaksiDetail->transaksi_id)->first();
 
-            $transaksi = Transaksi::findOrFail($transaksiDetail->transaksi_id);
+            $transaksi = TransaksiBeli::findOrFail($transaksiDetail->transaksi_id);
             // $sumQty = TransaksiDetail::where('transaksi_id',$transaksiDetail->transaksi_id)->sum('qty');
-            $sumQty = TransaksiDetail::where('transaksi_id', $transaksiDetail->transaksi_id)
+            $sumQty = TransaksiBeliDetail::where('transaksi_id', $transaksiDetail->transaksi_id)
                                     ->with('items') // Eager load relasi 'items'
                                     ->get() // Ambil semua data yang sesuai
                                     ->sum(function ($item) {
                                         return $item->qty / $item->items->konversi; // Hitung qty / konversi untuk setiap item
                                     });
-            $sumHarga = TransaksiDetail::where('transaksi_id',$transaksiDetail->transaksi_id)->sum('harga');
+            $sumHarga = TransaksiBeliDetail::where('transaksi_id',$transaksiDetail->transaksi_id)->sum('harga');
             $transaksi->update(
                 [
                     'total_qty' => $sumQty,
@@ -156,7 +174,6 @@ class StockController extends Controller
                     'sub_total' => $sumHarga * $sumQty
                 ]
                 );
-        // return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success' ]);
 
 
             // Commit the transaction
@@ -165,9 +182,11 @@ class StockController extends Controller
             // return response()->json(['success' => true,'message'=>'Berhasil Update Data']);
             return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success' ]);
 
-        } catch (\Throwable $th) {
+        } catch (\Exception $e) {
             //throw $th;
             DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 400);
+
         }
 
 
@@ -200,77 +219,53 @@ class StockController extends Controller
         try {
             $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
 
+            // dd($farmIds);
+
             $item = Item::findOrFail($validatedData['id']);
-            $stockHistory = $item->stokHistory()
+            $stockHistory = $item->stockHistory()
                 ->whereBetween('tanggal', [$validatedData['start_date'], $validatedData['end_date']]);
 
             if ($validatedData['farm_id'] === '2d245e3f-fdc9-4138-b32d-994f3f1953a5') {
-                $stokHistory = $stockHistory->whereIn('farm_id', $farmIds);
+                // $stokHistory = $stockHistory->whereHas('inventoryLocation.farm', function ($q) use ($farmIds) {
+                //         $q->whereIn('id', $farmIds);
+                //     });
+                $stokHistory = $stockHistory->whereHas('inventoryLocation.farm', function ($query) use ($farmIds) {
+                    $query->whereIn('id', $farmIds);
+                });
+                // dd($stokHistory);
+
+
             } else {
                 $stokHistory = $stockHistory->where('farm_id', $validatedData['farm_id']);
             }
 
-            $stokHistory = $stokHistory->orderBy('tanggal', 'DESC')->get();
 
-            $stokHistory->transform(function ($item) {
-                $item->nama_farm = Farm::find($item->farm_id)->nama;
-                return $item;
-            });
+            // Get farm IDs for current user from farmOperators
+            // $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
 
-            $masuk = $item->stokHistory()
-                ->whereIn('farm_id', $farmIds)
-                ->where('jenis','Masuk')
-                ->sum('stok_akhir');
-            $terpakai = $item->stokHistory()
-                ->whereIn('farm_id', $farmIds)
-                ->where('jenis','Pemakaian')
-                ->sum('stok_keluar');
-
-            $stokAkhir = $masuk - $terpakai;
+            // // dd($farmIds);
+            
+            // // Add a condition to filter items based on farm IDs
+            // $stokHistory = $stockHistory->whereHas('inventoryLocation.farm', function ($q) use ($farmIds) {
+            //     $q->whereIn('id', $farmIds);
+            // });
 
             
 
-            // $result = [
-            //     'id' => $item->id,
-            //     'kode' => $item->kode,
-            //     'name' => $item->name,
-            //     'satuan' => $item->satuan_besar,
-            //     'stok_history' => $stokHistory->map(function ($history) {
-            //         $sisa = $history->stok_akhir;
-            //         $terpakai = $history->jenis === 'Pemakaian' ? $history->qty : 0;
-            //         return [
-            //             'tanggal' => $history->tanggal,
-            //             'qty' => $history->qty,
-            //             'terpakai' => $terpakai,
-            //             'sisa' => $sisa,
-            //         ];
-            //     })->toArray(),
-            // ];
+            $stokHistory = $stokHistory->orderBy('tanggal', 'DESC')->get();
 
-            // dd($item);
+            // dd($stokHistory);
 
-            // $stokDetails = DB::table('histori_stok')
-            //     ->join('items', 'histori_stok.item_id', '=', 'items.id')
-            //     ->join('transaksis', 'histori_stok.transaksi_id', '=', 'transaksis.id')
-            //     ->join('transaksi_details', 'histori_stok.transaksi_id', '=', 'transaksi_details.transaksi_id')
-            //     ->select(
-            //         'histori_stok.item_id',
-            //         'transaksis.tanggal',
-            //         // 'histori_stok.qty as qty_masuk',
-            //         // DB::raw('COALESCE(SUM(CASE WHEN histori_stok.jenis = "Masuk" THEN histori_stok.qty ELSE 0 END), 0) as qty_masuk'),
-            //         // DB::raw('COALESCE(SUM(CASE WHEN histori_stok.jenis = "Pemakaian" THEN histori_stok.qty ELSE 0 END), 0) as qty_pemakaian'),
-            //         DB::raw('COALESCE(SUM(CASE WHEN histori_stok.jenis = "Masuk" THEN histori_stok.qty ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN histori_stok.jenis = "Pemakaian" THEN histori_stok.qty ELSE 0 END), 0) as sisa'),
-            //         'items.satuan_besar as satuan',
-            //         'items.konversi'
-            //     )
-            //     ->whereIn('histori_stok.farm_id', $farmIds)
-            //     ->where('transaksi_details.jenis', 'Pembelian')
-            //     ->where('transaksi_details.item_id', $item->id)
-            //     ->where('histori_stok.item_id', $item->id)
-            //     ->groupBy('histori_stok.id')
-            //     ->orderBy('histori_stok.tanggal', 'DESC')
-            //     ->get()
-            //     ->toArray();
+
+
+            $stokHistory->transform(function ($item) {
+                // dd($item->transaksiBeli->rekanans->nama);
+                $item->nama_farm = Farm::find($item->inventoryLocation->farm_id)->nama;
+                $item->item_name = Item::find($item->item_id)->name;
+                $item->perusahaan_nama = Rekanan::find($item->transaksiBeli->rekanan_id)->nama;
+                return $item;
+            });
+
 
             return response()->json(['status' => 'success', 'data' => $stokHistory], 200);
         } catch (\Exception $e) {

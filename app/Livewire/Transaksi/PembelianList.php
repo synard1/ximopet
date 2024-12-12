@@ -232,6 +232,7 @@ class PembelianList extends Component
 
                 // Log the StockHistory
                 StockHistory::create([
+                    'tanggal' => $this->tanggal,
                     'transaksi_id' => $transaksiBeli->id,
                     'jenis' => 'Pembelian',
                     'parent_id' => null,

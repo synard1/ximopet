@@ -356,18 +356,53 @@
                                 // // updateKandang(farmId);
 
                             },
-                            error: function(xhr) { 
+                            error: function(xhr) {
+                                let errorMessage = 'An error occurred';
+                                let errorData = {
+                                    stock: [],
+                                    parameter: { oldestDate: null },
+                                    kandangs: [],
+                                    error: errorMessage
+                                };
+
+                                if (xhr.responseJSON && xhr.responseJSON.error) {
+                                    errorData.error = xhr.responseJSON.error;
+                                }
+
+                                // If kandangs data is available in the error response, use it
+                                if (xhr.responseJSON && xhr.responseJSON.kandangs) {
+                                    errorData.kandangs = xhr.responseJSON.kandangs;
+                                }
+
                                 Swal.fire({
-                                    html: `Error: <b>`+ xhr.responseJSON.error +`</b>`,
+                                    html: `Error: <b>${errorData.error}</b>`,
                                     icon: "error",
                                     buttonsStyling: true,
                                     showConfirmButton: true,
-                                })
-                                // div.style.display = 'none';
-                                updateArea.addClass('grey-block'); 
+                                });
 
-                                // Disable the button
+                                // Update UI elements
+                                updateArea.addClass('grey-block');
                                 saveChangesButton.disabled = true;
+
+                                // Update kandang select if kandangs data is available
+                                if (errorData.kandangs.length > 0) {
+                                    const kandangSelect = document.getElementById('kandangs');
+                                    kandangSelect.innerHTML = '<option value="">=== Pilih Kandang ===</option>';
+                                    errorData.kandangs.forEach(kandang => {
+                                        const option = document.createElement('option');
+                                        option.value = kandang.id;
+                                        option.text = kandang.nama;
+                                        kandangSelect.appendChild(option);
+                                    });
+                                    kandangInput.disabled = false;
+                                } else {
+                                    kandangInput.disabled = true;
+                                }
+
+                                // Clear other data
+                                stocksData.length = 0;
+                                updateTableBody(stocksData);
                             }
                         });
 

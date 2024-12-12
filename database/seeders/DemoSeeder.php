@@ -9,7 +9,6 @@ use App\Models\User;
 use App\Models\Rekanan;
 use App\Models\Farm;
 use App\Models\FarmOperator;
-use App\Models\FarmSilo;
 use App\Models\Kandang;
 use App\Models\Item;
 use App\Models\ItemCategory;
@@ -67,17 +66,17 @@ class DemoSeeder extends Seeder
             $supervisor = User::where('email', 'supervisor@demo.com')->first();
             $category = ItemCategory::create(array_merge($data, ['status' => 'Aktif', 'created_by' => $supervisor->id]));
 
-        //     Item::create([
-        //         'category_id' => $category->id,
-        //         'kode' => $category->code . '001',
-        //         'name' => 'Nama Stok ' . $category->name,
-        //         'satuan_besar' => $this->getSatuanBesar($category->name),
-        //         'satuan_kecil' => $this->getSatuanKecil($category->name),
-        //         'konversi' => $category->name === 'Pakan' ? 1000 : 1,
-        //         'status' => 'Aktif',
-        //         'is_feed' => $category->name === 'Pakan',
-        //         'created_by' => $supervisor->id,
-        //     ]);
+            Item::create([
+                'category_id' => $category->id,
+                'kode' => $category->code . '001',
+                'name' => 'Nama Stok ' . $category->name,
+                'satuan_besar' => $this->getSatuanBesar($category->name),
+                'satuan_kecil' => $this->getSatuanKecil($category->name),
+                'konversi' => $category->name === 'Pakan' ? 1000 : 1,
+                'status' => 'Aktif',
+                'is_feed' => $category->name === 'Pakan',
+                'created_by' => $supervisor->id,
+            ]);
         }
     }
 
@@ -110,9 +109,9 @@ class DemoSeeder extends Seeder
                 'category_id' => $pakanCategory->id,
                 'kode' => $pakanCategory->code . $type['code'],
                 'name' => $type['name'],
-                'satuan_besar' => 'Ton',
+                'satuan_besar' => 'Kg',
                 'satuan_kecil' => 'Kg',
-                'konversi' => 1000,
+                'konversi' => 1,
                 'status' => 'Aktif',
                 'is_feed' => true,
                 'created_by' => $supervisor->id,
@@ -134,30 +133,6 @@ class DemoSeeder extends Seeder
                 'status' => 'Aktif',
                 'created_by' => $supervisor->id,
             ]);
-
-            // Create 4 silos and their locations for each farm
-            // for ($i = 1; $i <= 4; $i++) {
-                // $silo = FarmSilo::create([
-                //     'farm_id' => $farm->id,
-                //     'name' => 'Silo ' . $i,
-                //     'code' => 'SL' . $i . '-' . $farm->kode,
-                //     'capacity' => 5000, // 5 ton capacity
-                //     'description' => 'Feed storage silo ' . $i,
-                //     'status' => 'Aktif',
-                //     'created_by' => $supervisor->id,
-                // ]);
-
-                // Create silo location
-                // InventoryLocation::create([
-                //     'farm_id' => $farm->id,
-                //     'silo_id' => $silo : $silo->id ?? '',
-                //     'name' => 'Silo ' . $i . ' ' . $farm->nama,
-                //     'code' => 'SL-' . $i . '-' . $farm->kode,
-                //     'type' => 'silo',
-                //     'status' => 'Aktif',
-                //     'created_by' => $supervisor->id,
-                // ]);
-            // }
 
             // Create kandang
             Kandang::factory()->create([
@@ -414,19 +389,6 @@ class DemoSeeder extends Seeder
         // Get random item from the selected category
         $item = Item::where('category_id', $category->id)->inRandomOrder()->first();
 
-        // Determine if we're using a silo or warehouse
-        $useSilo = 0;
-
-        if ($useSilo) {
-            $silo = FarmSilo::where('farm_id', $farm->id)->inRandomOrder()->first();
-            $location = InventoryLocation::where('farm_id', $farm->id)
-                ->where('type', 'silo')
-                ->where('silo_id', $silo->id)
-                ->first();
-        } else {
-            $location = $warehouse;
-            $silo = null;
-        }
 
         $qty = $faker->numberBetween(100, 1000);
         $harga = $faker->numberBetween(1000, 10000);
@@ -494,7 +456,6 @@ class DemoSeeder extends Seeder
             'transaksi_id' => $purchase->id,
             'item_id' => $item->id,
             'destination_location_id' => $location->id,
-            'destination_silo_id' => $silo ? $silo->id : null,
             'movement_type' => 'purchase',
             'tanggal' => $tanggal,
             'batch_number' => $batchNumber,

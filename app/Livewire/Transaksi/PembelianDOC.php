@@ -443,6 +443,10 @@ class PembelianDOC extends Component
     private function createCurrentTernak($kelompokTernak, $farm, $kandang, $data)
     {
 
+        $tanggalMasuk = Carbon::parse($kelompokTernak->start_date);
+        $HariIni = Carbon::now();
+        $umur = $tanggalMasuk->diffInDays($HariIni);
+
         // dd($kelompokTernak->id);
         return CurrentTernak::create([
             'kelompok_ternak_id' => $kelompokTernak->id,
@@ -451,6 +455,7 @@ class PembelianDOC extends Component
             'quantity' => $data['total_qty'],
             'berat_total' => $data['total_berat'],
             'avg_berat' => $data['total_berat'] / $data['total_qty'],
+            'umur' => $umur,
             'status' => 'Aktif',
             'created_by' => auth()->id()
         ]);
