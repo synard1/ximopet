@@ -13,6 +13,7 @@ use App\Models\StockHistory;
 use App\Models\StockMovement;
 use App\Models\TransaksiBeli;
 use App\Models\TransaksiBeliDetail;
+use App\Models\TransaksiHarianDetail;
 use App\Models\FarmOperator;
 use App\Models\Farm;
 
@@ -397,7 +398,8 @@ class PembelianList extends Component
             $stockMovement = StockMovement::where('transaksi_id', $id)->first();
 
             // Find related StokHistory records
-            $relatedStokHistories = StockHistory::where('parent_id', $stockHistory->id)->get();
+            $relatedStokHistories = StockHistory::where('parent_id', $detail->id)->get();
+
 
             // Check if there are any related StokHistory records
             if ($relatedStokHistories->isNotEmpty() && $detail->terpakai > 0) {
@@ -440,6 +442,13 @@ class PembelianList extends Component
         }
 
         return $baseNumber . str_pad($newNumber, 2, '0', STR_PAD_LEFT);
+    }
+
+    public function calculateItemTotal($item)
+    {
+        $qty = is_numeric($item['qty']) ? $item['qty'] : 0;
+        $harga = is_numeric($item['harga']) ? $item['harga'] : 0;
+        return $qty * $harga;
     }
     
 
