@@ -15,6 +15,7 @@ use App\Models\Rekanan;
 use App\Models\StockHistory;
 use App\Models\TransaksiBeli;
 use App\Models\TransaksiBeliDetail;
+use App\Models\TransaksiHarianDetail;
 
 class StockController extends Controller
 {
@@ -259,8 +260,10 @@ class StockController extends Controller
 
 
             $stokHistory->transform(function ($item) {
-                // dd($item->transaksiBeli->rekanans->nama);
+                $transaksiHarianDetail = TransaksiHarianDetail::where('parent_id', $item->parent_id)->first();
+                // dd($transaksiHarianDetail->transaksiHarian->kandang->nama);
                 $item->nama_farm = Farm::find($item->inventoryLocation->farm_id)->nama;
+                $item->nama_kandang = $transaksiHarianDetail->transaksiHarian->kandang->nama ?? '';
                 $item->item_name = Item::find($item->item_id)->name;
                 $item->perusahaan_nama = Rekanan::find($item->transaksiBeli->rekanan_id)->nama;
                 return $item;

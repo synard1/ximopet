@@ -77,4 +77,8 @@ class StockHistory extends BaseModel
     public function inventoryLocation(){
         return $this->belongsTo(InventoryLocation::class, 'location_id','id');
     }
+
+    public function transaksiHarianDetail(){
+        return $this->hasMany(TransaksiHarianDetail::class,'stock_history_id','id');
+    }
 }

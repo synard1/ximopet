@@ -34,6 +34,7 @@
                                 <th class="text-left" style="width: auto">Tanggal</th>
                                 <th class="text-left" style="width: auto">Jenis</th>
                                 <th class="text-left" style="width: auto">Farm</th>
+                                <th class="text-left" style="width: auto">Kandang</th>
                                 <th class="text-left" style="width: auto">Nama Barang</th>
                                 <th class="text-left" style="width: auto">Supplier</th>
                                 <th class="text-center" style="width: auto">Jumlah</th>
@@ -119,6 +120,7 @@
                     <th class="text-left" style="width: auto">Tanggal</th>
                     <th class="text-left" style="width: auto">Jenis</th>
                     <th class="text-left" style="width: auto">Farm</th>
+                    <th class="text-left" style="width: auto">Kandang</th>
                     <th class="text-left" style="width: auto">Nama Barang</th>
                     <th class="text-left" style="width: auto">Supplier</th>
                     <th class="text-left" style="width: auto">Jumlah</th>
