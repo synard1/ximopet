@@ -64,7 +64,7 @@
                         <!--begin::Card body-->
                         <div class="card-body pt-0">
                             <!--begin::Form-->
-                            <form>
+                            <form id="ternakForm">
                                 <div class="mb-10">
                                     <label class="form-label fw-bold fs-6 text-gray-700">Ternak Mati</label>
                                     <input type="number" wire:model="ternak_mati"  class="form-control form-control-solid" name="ternak_mati" id="ternak_mati" placeholder="Jumlah Ekor" value="0">
@@ -201,7 +201,7 @@
     @push('scripts')
     <script>
         function getDetailPemakaian(param) {
-            console.log(param);
+            // console.log(param);
             new DataTable('#itemsTable', {
                 ajax: `/api/v1/transaksi/details/${param}`,
                 columns: [
@@ -254,7 +254,7 @@
 
                 farmId = $(this).val();
                 if(farmId == ''){
-                    // break;
+                    return;
                 }
                 const updateArea = $('#formDiva'); 
                 var cardTransaksi = $('#cardTransaksi'); 
@@ -294,7 +294,7 @@
                             // console.log(result.data);
                             kandangsData.push(...data.kandangs);
                             stocksData.push(...data.stock);
-                            console.table(stocksData);
+                            // console.table(stocksData);
                             
 
                                 const kandangSelect = document.getElementById('kandangs');
@@ -415,15 +415,15 @@
                 if(kandangId == ''){
                     // break;
                 }
-                console.log(kandangId);
-                console.log(kandangsData);
+                // console.log(kandangId);
+                // console.log(kandangsData);
 
                 // Find the kandang object with matching id
                 let selectedKandang = kandangsData.find(kandang => kandang.id == kandangId);
 
                 if (selectedKandang) {
                     let startDate = selectedKandang.start_date;
-                    console.log(startDate);
+                    // console.log(startDate);
 
                     tanggalInput.disabled = false;
 
@@ -459,7 +459,7 @@
                     updateTableBody(stocksData); 
                                 // updateKandang(farmId);
                 } else {
-                    console.log('Kandang not found');
+                    // console.log('Kandang not found');
                     // Handle the case where no matching kandang is found
                 }
 
@@ -586,7 +586,7 @@
         };
 
         // You can now send this 'finalData' to your server using AJAX or other methods
-        console.log(JSON.stringify(finalData)); // Example: Log the JSON data to the console
+        // console.log(JSON.stringify(finalData)); // Example: Log the JSON data to the console
 
         $.ajaxSetup({
             headers: {
@@ -602,10 +602,36 @@
             contentType: 'application/json', 
             success: function(response) {
                 // Handle the successful response from the server
-                console.log('Stock data updated successfully!', response);
+                // console.log('Stock data updated successfully!', response);
                 toastr.success(response.message); 
                 // table.ajax.reload();
                 Livewire.dispatch('closeFormPemakaian');
+                // Reset Select2 fields
+                $('#selectedFarm').val('').trigger('change');
+                $('#kandangs').val('').trigger('change');
+                
+                // Reset Flatpickr
+                if (document.getElementById('tanggal')._flatpickr) {
+                    document.getElementById('tanggal')._flatpickr.clear();
+                }
+                
+                // Disable fields
+                $('#kandangs').prop('disabled', true);
+                $('#tanggal').prop('disabled', true);
+                
+                // Reset other form elements if needed
+                
+                // Re-initialize grey blocks
+                $('#formDiva').addClass('grey-block');
+                $('#cardTransaksi').addClass('grey-block');
+                const tableBody = $('#stockTableBody');
+                tableBody.empty(); // Clear existing rows
+                
+                // After successful form submission or when closing the form
+                resetTernakForm();
+                
+                // Disable save button
+                $('#saveChangesButton').prop('disabled', true);
 
                 // Reload DataTables
                 $('.table').each(function() {
@@ -615,7 +641,7 @@
                 });
             },
             error: function(xhr) {
-                console.error('Error updating stock data:', xhr.responseText);
+                // console.error('Error updating stock data:', xhr.responseText);
                 
                 let errorMessage = 'An error occurred while updating stock data.';
                 
@@ -638,6 +664,13 @@
                 });
             }
         });
+    }
+
+    function resetTernakForm() {
+        document.getElementById('ternakForm').reset();
+        document.getElementById('ternak_mati').value = '0';
+        document.getElementById('ternak_afkir').value = '0';
+        document.getElementById('ternak_jual').value = '0';
     }
 
     // Attach the submit function to your button click
@@ -723,7 +756,7 @@ document.addEventListener('livewire:init', function () {
 
         // Update the dropdowns to reflect the current selections
         updateDropdowns();
-                        console.log('test update dropdown');
+                        // console.log('test update dropdown');
                         // $('#itemsSelect').select2();
                         
                     });

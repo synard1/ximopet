@@ -61,6 +61,14 @@ class PemakaianStok extends Component
         $this->dispatch('closeFormPemakaian');
     }
 
+    public function resetForm()
+    {
+        $this->selectedFarm = '';
+        $this->selectedKandang = '';
+        $this->tanggal = '';
+        // Reset any other form fields you have
+    }
+
     public function store()
     {
         $this->dispatch('success', 'Data Pemakaian Stok berhasil ditambahkan');
