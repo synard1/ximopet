@@ -6,8 +6,11 @@
 
     @section('breadcrumbs')
     @endsection
-    <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x mb-5 fs-6">
-        <li class="nav-item">
+    <div class="card">
+        <div class="card-body py-4">
+
+        <ul class="nav nav-tabs nav-line-tabs mb-5 fs-6">
+            <li class="nav-item">
             <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_farm">Data Farm</a>
         </li>
         @if(Auth::user()->hasRole('Supervisor'))
@@ -24,7 +27,7 @@
         <div class="tab-pane fade show active" id="kt_tab_farm" role="tabpanel">
                 <div class="card-body py-4">
                     <div class="table-responsive">
-                        {!! $dataTable->table(['class' => 'table table-bordered'], true) !!}
+                        {!! $dataTable->table(['class' => 'table table-striped table-row-bordered gy-5 gs-7'], true) !!}
                     </div>
                 </div>
             </div>
@@ -100,6 +103,7 @@
             </div>
         </div>
     </div>
+    </div>
     @if(auth()->user()->hasRole(['Manager']))
     @else
     <livewire:master-data.tambah-operator-farm />
@@ -107,9 +111,6 @@
     @include('pages.masterdata.farm._related_data_modal')
         
     @endif
-
-
-
 
     <!-- Farm Details Modal -->
     <div class="modal fade" id="farmDetailsModal" tabindex="-1" aria-labelledby="farmDetailsModalLabel" aria-hidden="true">
@@ -138,6 +139,9 @@
             </div>
         </div>
     </div>
+
+    <div class="card">
+
     @push('scripts')
         {{ $dataTable->scripts() }}
         <script>

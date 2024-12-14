@@ -90,6 +90,9 @@ class DemoSeeder extends Seeder
     {
         $pakanTypes = [
             ['name' => 'S 10', 'code' => 'S10'],
+            ['name' => 'SP 10', 'code' => 'SP10'],
+            ['name' => 'SP 11', 'code' => 'SP11'],
+            ['name' => 'SP 12', 'code' => 'SP12'],
             ['name' => 'TS 11', 'code' => 'TS11'],
             ['name' => 'OS 11', 'code' => 'OS11'],
             ['name' => 'KSS 12', 'code' => 'KSS12'],

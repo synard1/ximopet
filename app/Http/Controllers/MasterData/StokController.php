@@ -23,13 +23,13 @@ class StokController extends Controller
     public function stockPakan(StoksPakanDataTable $dataTable)
     {
         addJavascriptFile('assets/js/custom/fetch-data.js');
-        return $dataTable->render('pages/masterdata.stok.index');
+        return $dataTable->render('pages/masterdata.stok.index_pakan');
     }
 
     public function stockOvk(StoksOvkDataTable $dataTable)
     {
         addJavascriptFile('assets/js/custom/fetch-data.js');
-        return $dataTable->render('pages/masterdata.stok.index');
+        return $dataTable->render('pages/masterdata.stok.index_ovk');
     }
 
     /**
