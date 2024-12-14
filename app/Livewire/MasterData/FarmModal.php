@@ -56,6 +56,9 @@ class FarmModal extends Component
     
             // Emit success event if no errors occurred
             $this->dispatch('success', 'Farm '. $farm->nama .' berhasil ditambahkan');
+
+            // Reset the form
+            $this->resetForm();
         } catch (ValidationException $e) {
             $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
             $this->setErrorBag($e->validator->errors());
@@ -70,6 +73,22 @@ class FarmModal extends Component
             // $this->reset();
         }
     }
+
+    private function resetForm()
+    {
+        $this->reset([
+            'kode_farm',
+            'nama',
+            'alamat',
+            'telp',
+            'pic',
+            'telp_pic',
+            'status',
+        ]);
+        $this->resetErrorBag();
+        $this->resetValidation();
+    }
+
 
     public function openModal()
     {

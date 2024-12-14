@@ -3,7 +3,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Buat Data Stok</h5>
+                    <h5 class="modal-title">Buat Item Data Stok</h5>
                     <!--begin::Close-->
                     <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal" aria-label="Close">
                         {!! getIcon('cross','fs-1') !!}

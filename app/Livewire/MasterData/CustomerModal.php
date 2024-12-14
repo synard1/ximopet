@@ -59,6 +59,8 @@ class CustomerModal extends Component
     
             // Emit success event if no errors occurred
             $this->dispatch('success', 'Customer '. $rekanan->nama .' berhasil ditambahkan');
+            // Reset the form
+            $this->resetForm();
         } catch (ValidationException $e) {
             $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
             $this->setErrorBag($e->validator->errors());
@@ -72,6 +74,23 @@ class CustomerModal extends Component
             // Reset the form in all cases to prepare for new data
             // $this->reset();
         }
+    }
+
+    private function resetForm()
+    {
+        $this->reset([
+            'kode_customer',
+            'jenis',
+            'nama',
+            'alamat',
+            'telp',
+            'pic',
+            'telp_pic',
+            'email',
+            'status',
+        ]);
+        $this->resetErrorBag();
+        $this->resetValidation();
     }
 
     public function openModal()

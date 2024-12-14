@@ -69,6 +69,9 @@ class StokModal extends Component
     
             // Emit success event if no errors occurred
             $this->dispatch('success', 'Stok '. $stok->nama .' berhasil ditambahkan');
+
+            // Reset the form
+            $this->resetForm();
         } catch (ValidationException $e) {
             $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
             $this->setErrorBag($e->validator->errors());
@@ -82,6 +85,22 @@ class StokModal extends Component
             // Reset the form in all cases to prepare for new data
             // $this->reset();
         }
+    }
+
+    private function resetForm()
+    {
+        $this->reset([
+            'stok_id',
+            'kode_stok',
+            'nama',
+            'jenis',
+            'konversi',
+            'satuan_besar',
+            'satuan_kecil',
+            'status'
+        ]);
+        $this->resetErrorBag();
+        $this->resetValidation();
     }
 
     public function openModal()

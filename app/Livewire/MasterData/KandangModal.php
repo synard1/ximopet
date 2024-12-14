@@ -83,6 +83,9 @@ class KandangModal extends Component
     
             // Emit success event if no errors occurred
             $this->dispatch('success', 'Kandang '. $kandang->nama .' berhasil ditambahkan');
+
+            // Reset the form
+            $this->resetForm();
         } catch (ValidationException $e) {
             $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
             $this->setErrorBag($e->validator->errors());
@@ -98,6 +101,19 @@ class KandangModal extends Component
             // Reset the form in all cases to prepare for new data
             // $this->reset();
         }
+    }
+
+    private function resetForm()
+    {
+        $this->reset([
+            'selectedFarm',
+            'kode_kandang',
+            'nama',
+            'kapasitas',
+            'status'
+        ]);
+        $this->resetErrorBag();
+        $this->resetValidation();
     }
 
     public function openModal()

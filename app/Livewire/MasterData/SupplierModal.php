@@ -54,23 +54,13 @@ class SupplierModal extends Component
             ];
         
             $rekanan = Rekanan::where('id', $this->supplier_id)->first() ?? Rekanan::create($data);
-
-            // Log::info("Edit mode ID: " .  $this->supplier_id);
-        
-            // // Handle update logic (if applicable)
-            // if ($this->edit_mode) {
-                
-            //     $this->dispatch('error', 'Terjadi kesalahan saat update data. ');
-            //     // Update the existing supplier
-            //     $rekanan->update($data);
-            // } else {
-            //     // Create a new supplier (already done above with Rekanan::create($data))
-            // }
         
             DB::commit();
     
             // Emit success event if no errors occurred
             $this->dispatch('success', 'Supplier '. $rekanan->nama .' berhasil ditambahkan');
+            // Reset the form
+            $this->resetForm();
         } catch (ValidationException $e) {
             $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
             $this->setErrorBag($e->validator->errors());
@@ -84,16 +74,23 @@ class SupplierModal extends Component
             // Reset the form in all cases to prepare for new data
             $this->reset();
         }
-
-        // $this->validate();
-
-        // // session()->flash('message', $this->nama ? 'Contact updated successfully.' : 'Contact created successfully.');
-        
-        // // Emit a success event with a message
-        // $this->dispatch('success', __('Data Supplier Berhasil Dibuat'));
-
-        // $this->closeModalSupplier();
-        // $this->resetInputFields();
+    }
+    
+    private function resetForm()
+    {
+        $this->reset([
+            'kode_supplier',
+            'jenis',
+            'name',
+            'alamat',
+            'telp',
+            'pic',
+            'telp_pic',
+            'email',
+            'status',
+        ]);
+        $this->resetErrorBag();
+        $this->resetValidation();
     }
 
     public function openModal()
