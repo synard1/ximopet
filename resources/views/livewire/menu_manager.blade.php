@@ -111,6 +111,60 @@
 		<!--end:Menu item-->
 
 		<!--begin:Menu item-->
+		<div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ str_contains($currentUrl, '/stocks') ? 'show' : 'hide' }}">
+			<!--begin:Menu link-->
+			<span class="menu-link">
+				<span class="menu-icon">
+					<i class="ki-outline ki-cube-3 fs-4 text-danger"></i>
+				</span>
+				<span class="menu-title">{{ trans('menu.menu_stock',[],'id') }}</span>
+				<span class="menu-arrow"></span>
+			</span>
+			<!--end:Menu link-->
+			<!--begin:Menu sub-->
+			<div class="menu-sub menu-sub-accordion">
+					{{-- <!--begin:Menu item-->
+					<div class="menu-item">
+						<!--begin:Menu link-->
+						<a class="menu-link {{ request()->is('stocks') ? 'active' : '' }}" href="/stocks">
+							<span class="menu-bullet">
+								<span class="bullet bullet-dot"></span>
+							</span>
+							<span class="menu-title">Overview</span>
+						</a>
+						<!--end:Menu link-->
+					</div>
+					<!--end:Menu item--> --}}
+					<!--begin:Menu item-->
+					<div class="menu-item">
+						<!--begin:Menu link-->
+						<a class="menu-link {{ request()->is('stocks/pakan') ? 'active' : '' }}" href="/stocks/pakan">
+							<span class="menu-bullet">
+								<span class="bullet bullet-dot"></span>
+							</span>
+							<span class="menu-title">Pakan</span>
+						</a>
+						<!--end:Menu link-->
+					</div>
+					<!--end:Menu item-->
+					<!--begin:Menu item-->
+					<div class="menu-item active">
+						<!--begin:Menu link-->
+						<a class="menu-link {{ request()->is('stocks/ovk') ? 'active' : '' }}" href="/stocks/ovk">
+							<span class="menu-bullet">
+								<span class="bullet bullet-dot"></span>
+							</span>
+							<span class="menu-title">OVK</span>
+						</a>
+						<!--end:Menu link-->
+					</div>
+					<!--end:Menu item-->
+			</div>
+			<!--end:Menu sub-->
+		</div>
+		<!--end:Menu item-->
+
+		{{-- <!--begin:Menu item-->
 		<div class="menu-item">
 			<!--begin:Menu link-->
 			<span class="menu-link" onclick="window.location.href='/master-data/stoks'">
@@ -126,7 +180,7 @@
 			</span>
 			<!--end:Menu link-->
 		</div>
-		<!--end:Menu item-->
+		<!--end:Menu item--> --}}
 	</div>
 	<!--end:Menu sub-->
 </div>

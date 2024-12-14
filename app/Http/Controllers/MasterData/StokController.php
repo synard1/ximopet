@@ -6,6 +6,8 @@ use App\Models\Item;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\DataTables\StoksDataTable;
+use App\DataTables\StoksPakanDataTable;
+use App\DataTables\StoksOvkDataTable;
 
 class StokController extends Controller
 {
@@ -13,6 +15,18 @@ class StokController extends Controller
      * Display a listing of the resource.
      */
     public function index(StoksDataTable $dataTable)
+    {
+        addJavascriptFile('assets/js/custom/fetch-data.js');
+        return $dataTable->render('pages/masterdata.stok.index');
+    }
+
+    public function stockPakan(StoksPakanDataTable $dataTable)
+    {
+        addJavascriptFile('assets/js/custom/fetch-data.js');
+        return $dataTable->render('pages/masterdata.stok.index');
+    }
+
+    public function stockOvk(StoksOvkDataTable $dataTable)
     {
         addJavascriptFile('assets/js/custom/fetch-data.js');
         return $dataTable->render('pages/masterdata.stok.index');

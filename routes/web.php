@@ -99,6 +99,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     });
 
+    Route::name('stocks.')->group(function () {
+        Route::get('/stocks/pakan', [StokController::class, 'stockPakan'])->name('pakan.index');
+        Route::get('/stocks/ovk', [StokController::class, 'stockOvk'])->name('ovk.index');
+    });
+
     Route::name('ternak.')->group(function () {
         Route::get('/ternak/afkir', [TernakController::class, 'ternakAfkirIndex'])->name('afkir.index');
         Route::get('/ternak/jual', [TernakController::class, 'ternakJualIndex'])->name('jual.index');

@@ -186,10 +186,12 @@ function getDetailStoks(transaksiId, farmId, startDate, endDate) {
     resetTableHeader();
 
     const table = new DataTable('#detailsStokTable', {
-        info: false,
-        ordering: false,
-        paging: false,
-        dom: 'Bfrtip',
+        info: true,
+        ordering: true,
+        paging: true,
+        pageLength: 10, // Set the initial number of rows per page
+        lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]], // Add options for rows per page, including "All"
+        dom: 'Blfrtip',
         buttons: [
             'excel', 'pdf', 'print'
         ],

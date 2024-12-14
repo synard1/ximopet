@@ -32,6 +32,11 @@ class DemoSeeder extends Seeder
         // Create item categories and items (unchanged)
         $this->createItemCategoriesAndItems($faker);
 
+        // Run OVK Seeder
+        $this->call([
+            OVKSeeder::class,
+        ]);
+
         // Add this line to create pakan items
         $this->createPakan();
 
@@ -56,9 +61,10 @@ class DemoSeeder extends Seeder
         $categoryData = [
             ['name' => 'DOC', 'code' => 'DOC', 'description' => 'Day Old Chick Category'],
             ['name' => 'Pakan', 'code' => 'PKN', 'description' => 'Feed Category'],
-            ['name' => 'Obat', 'code' => 'OBT', 'description' => 'Medicine Category'],
-            ['name' => 'Vaksin', 'code' => 'VKS', 'description' => 'Vaccine Category'],
-            ['name' => 'Vitamin', 'code' => 'VTM', 'description' => 'Vitamin Category'],
+            ['name' => 'OVK', 'code' => 'OVK', 'description' => 'OVK Category'],
+            // ['name' => 'Obat', 'code' => 'OBT', 'description' => 'Medicine Category'],
+            // ['name' => 'Vaksin', 'code' => 'VKS', 'description' => 'Vaccine Category'],
+            // ['name' => 'Vitamin', 'code' => 'VTM', 'description' => 'Vitamin Category'],
             ['name' => 'Lainnya', 'code' => 'LNY', 'description' => 'Other Category'],
         ];
 
@@ -66,17 +72,17 @@ class DemoSeeder extends Seeder
             $supervisor = User::where('email', 'supervisor@demo.com')->first();
             $category = ItemCategory::create(array_merge($data, ['status' => 'Aktif', 'created_by' => $supervisor->id]));
 
-            Item::create([
-                'category_id' => $category->id,
-                'kode' => $category->code . '001',
-                'name' => 'Nama Stok ' . $category->name,
-                'satuan_besar' => $this->getSatuanBesar($category->name),
-                'satuan_kecil' => $this->getSatuanKecil($category->name),
-                'konversi' => $category->name === 'Pakan' ? 1000 : 1,
-                'status' => 'Aktif',
-                'is_feed' => $category->name === 'Pakan',
-                'created_by' => $supervisor->id,
-            ]);
+            // Item::create([
+            //     'category_id' => $category->id,
+            //     'kode' => $category->code . '001',
+            //     'name' => 'Nama Stok ' . $category->name,
+            //     'satuan_besar' => $this->getSatuanBesar($category->name),
+            //     'satuan_kecil' => $this->getSatuanKecil($category->name),
+            //     'konversi' => $category->name === 'Pakan' ? 1000 : 1,
+            //     'status' => 'Aktif',
+            //     'is_feed' => $category->name === 'Pakan',
+            //     'created_by' => $supervisor->id,
+            // ]);
         }
     }
 
