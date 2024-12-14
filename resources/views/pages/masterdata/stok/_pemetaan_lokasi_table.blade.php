@@ -62,7 +62,7 @@
                         </div>
                         <div class="mb-3">
                             <label for="item_select" class="form-label">Item</label>
-                            <select class="form-control" id="item_select" name="item_select" required disabled>
+                            <select class="form-control" id="item_select" name="item_select[]" required disabled multiple>
                                 <!-- Options will be populated dynamically -->
                             </select>
                         </div>
@@ -81,6 +81,8 @@
     <!--end::Modal-->
 
     @push('scripts')
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>  
         <script>
             $(document).ready(function() {
                 document.getElementById('mySearchInput').addEventListener('keyup', function () {
@@ -98,13 +100,26 @@
                     e.preventDefault();
                     var url = $(this).attr('action') || '/api/v2/data/farms/items_mapping';
                     var method = $(this).attr('method') || 'POST';
+
+                    var formData = new FormData(this);
+                    formData.append('task', method === 'POST' ? 'ADD' : 'UPDATE');
+
+                    // Get selected items
+                    var selectedItems = $('#item_select').val();
+                    formData.delete('item_select[]');
+                    selectedItems.forEach(function(item) {
+                        formData.append('item_select[]', item);
+                    });
+
                     
                     // Add your AJAX call here to submit the form data
                     // Example:
                     $.ajax({
                         url: url,
                         type: method,
-                        data: $(this).serialize() + (method === 'POST' ? '&task=ADD' : ''),
+                        data: formData,
+                        processData: false,
+                        contentType: false,
                         headers: {
                             'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
                             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -119,7 +134,7 @@
                             
                             // Reset select fields to their initial state
                             $('#farm_select').val('').trigger('change');
-                            $('#item_select').val('').prop('disabled', true);
+                            $('#item_select').val(null).trigger('change');
                             $('#location_select').val('').prop('disabled', true);
 
                             // Reset form action and method
@@ -154,14 +169,20 @@
 
                         itemSelect.disabled = false;
 
-                        const defaultOption = new Option("=== Pilih Item ===", "", true, true);
-                        itemSelect.append(defaultOption);
+                        // const defaultOption = new Option("=== Pilih Item ===", "", true, true);
+                        // itemSelect.append(defaultOption);
 
                         items.forEach(function(item) {
                             const option = document.createElement('option');
                             option.value = item.item_id;
                             option.textContent = item.item_name;
                             itemSelect.appendChild(option);
+                        });
+
+                        // Initialize Select2 for multiple selection
+                        $(itemSelect).select2({
+                            placeholder: "Select items",
+                            allowClear: true
                         });
                     })
                     .catch(function(error) {

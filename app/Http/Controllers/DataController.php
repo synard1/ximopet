@@ -494,29 +494,55 @@ class DataController extends Controller
         // }
 
         $request->validate([
-            'item_select' => 'required|exists:items,id',
+            'item_select' => 'required|array',
+            'item_select.*' => 'exists:items,id',            
             'farm_select' => 'required|exists:master_farms,id',
             'location_select' => 'required|exists:inventory_locations,id',
         ]);
 
-        // dd($request->all());
-
         try {
-            $itemLocation = ItemLocation::updateOrCreate(
-                [
-                    'item_id' => $request->item_select,
-                    'farm_id' => $request->farm_select,
-                ],
-                ['location_id' => $request->location_select]
-            );
-
+            $itemIds = $request->item_select;
+            $farmId = $request->farm_select;
+            $locationId = $request->location_select;
+    
+            $createdMappings = [];
+    
+            foreach ($itemIds as $itemId) {
+                $itemLocation = ItemLocation::updateOrCreate(
+                    [
+                        'item_id' => $itemId,
+                        'farm_id' => $farmId,
+                    ],
+                    ['location_id' => $locationId]
+                );
+    
+                $createdMappings[] = $itemLocation;
+            }
+    
             return response()->json([
-                'message' => 'Item location mapping saved successfully',
-                'data' => $itemLocation
+                'message' => 'Item location mappings saved successfully',
+                'data' => $createdMappings
             ], 200);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to save item location mapping', 'details' => $e->getMessage()], 500);
+            return response()->json(['error' => 'Failed to save item location mappings', 'details' => $e->getMessage()], 500);
         }
+
+        // try {
+        //     $itemLocation = ItemLocation::updateOrCreate(
+        //         [
+        //             'item_id' => $request->item_select,
+        //             'farm_id' => $request->farm_select,
+        //         ],
+        //         ['location_id' => $request->location_select]
+        //     );
+
+        //     return response()->json([
+        //         'message' => 'Item location mapping saved successfully',
+        //         'data' => $itemLocation
+        //     ], 200);
+        // } catch (\Exception $e) {
+        //     return response()->json(['error' => 'Failed to save item location mapping', 'details' => $e->getMessage()], 500);
+        // }
     }
 
     public function deleteStorageMapping($id)
