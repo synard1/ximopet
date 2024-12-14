@@ -218,7 +218,16 @@ class StockController extends Controller
         ]);
 
         try {
-            $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
+            $user = auth()->user();
+        
+            if ($user->hasRole('Manager')) {
+                // If user is a Manager, get all active farm IDs
+                $farmIds = Farm::where('status', 'Aktif')->pluck('id')->toArray();
+            } else {
+                // For other roles, get farm IDs associated with the user
+                $farmIds = $user->farmOperators()->pluck('farm_id')->toArray();
+            }
+            // $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
 
             // dd($farmIds);
 

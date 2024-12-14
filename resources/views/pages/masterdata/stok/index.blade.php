@@ -84,21 +84,21 @@
                 // Example usage on a specific page
                 fetchItemsData({ task: 'GET', mode: 'LIST' }, function(items) {
                     // Process the itemsData here, e.g., display it in a table
-                    console.log(items);
-                    console.table(items);
+                    // console.log(items);
+                    // console.table(items);
                     // Additional logic for this particular page/component
                 });
                 fetchFarmsData({ task: 'GET', mode: 'LIST' }, function(farms) {
                     // Process the itemsData here, e.g., display it in a table
-                    console.log(farms);
-                    console.table(farms);
+                    // console.log(farms);
+                    // console.table(farms);
                     farmsData = farms;
                     // Additional logic for this particular page/component
                 });
                 fetchFarmsData({ task: 'GET', mode: 'LIST', submodul:'kandangs' }, function(farms) {
                     // Process the itemsData here, e.g., display it in a table
-                    console.log(farms);
-                    console.table(farms);
+                    // console.log(farms);
+                    // console.table(farms);
                     // Additional logic for this particular page/component
                 });
             });

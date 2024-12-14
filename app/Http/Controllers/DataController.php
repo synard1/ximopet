@@ -46,7 +46,7 @@ class DataController extends Controller
 
         if ($userRoleName === 'admin') {
             $data = $this->getAdminData($type);
-        } elseif ($userRoleName === 'Supervisor') {
+        } elseif ($userRoleName === 'Supervisor' || $userRoleName === 'Manager') {
             if ($submodul && $submodul === 'operators') {
                 if ($task === 'GET') {
                     $data = $this->getFarmOperator();

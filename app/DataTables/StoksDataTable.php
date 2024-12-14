@@ -56,7 +56,10 @@ class StoksDataTable extends DataTable
                 return $stok->created_at->format('d M Y, h:i a');
             })
             ->addColumn('action', function (Item $stok) {
-                return view('pages/masterdata.stok._actions', compact('stok'));
+                if (auth()->user()->hasRole('Operator')) {
+
+                    return view('pages/masterdata.stok._actions', compact('stok'));
+                };
             })
             // ->filterColumn('farm', function($query, $keyword) {
 

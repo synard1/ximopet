@@ -185,10 +185,27 @@ class TernakController extends Controller
     public function showTernakDetails($id)
     {
         $kelompokTernak = KelompokTernak::findOrFail($id);
-
-        // $startDate = Carbon::now()->subDays(30); // Get data for the last 30 days
         $startDate = $kelompokTernak->start_date; // Get data for the last 30 days
-        $endDate = Carbon::now();
+        
+        // Get the last transaction date
+        $lastTransactionDate = TransaksiHarian::where('kelompok_ternak_id', $kelompokTernak->id)
+        ->latest('tanggal')
+        ->value('tanggal');
+
+        if($kelompokTernak->status == 'Aktif'){
+            // If there's no transaction, use the current date
+            // Otherwise, use the last transaction date plus 1 days
+            $endDate = $lastTransactionDate 
+            ? Carbon::parse($lastTransactionDate)->addDays(1)->format('Y-m-d')
+            : Carbon::now()->format('Y-m-d');
+
+            // Ensure that the end date is not before the start date
+            $endDate = max(Carbon::parse($endDate), Carbon::parse($startDate)->addDays(1));
+        }else{
+            $endDate = $kelompokTernak->end_date;
+
+        }
+
 
         $dailyData = $this->getDailyData($kelompokTernak, $startDate, $endDate);
 

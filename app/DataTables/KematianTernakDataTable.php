@@ -67,7 +67,10 @@ class KematianTernakDataTable extends DataTable
                 });
             })
             ->addColumn('action', function (KematianTernak $transaksi) {
-                return view('pages/transaksi.kematian-ternak._actions', compact('transaksi'));
+                if (auth()->user()->hasRole('Operator')) {
+
+                    return view('pages/transaksi.kematian-ternak._actions', compact('transaksi'));
+                };
             })
             ->setRowId('id');
     }
@@ -107,18 +110,18 @@ class KematianTernakDataTable extends DataTable
                 [10, 25, 50, -1],
                 ['10 rows', '25 rows', '50 rows', 'Show all']
             ],
-            'buttons'      => [
-                [
-                    'text' => '<i class="fa fa-plus"></i> Add New',
-                    'className' => 'btn btn-primary',
-                    'attr' => [
-                        'data-kt-action' => 'new_kternak'
-                    ]
-                ],
-                // ['extend' => 'excel', 'className' => 'btn btn-success', 'text' => '<i class="fa fa-file-excel"></i> Excel'],
-                ['extend' => 'print', 'className' => 'btn btn-info', 'text' => '<i class="fa fa-print"></i> Print'],
-                ['extend' => 'colvis', 'className' => 'btn btn-warning', 'text' => '<i class="fa fa-columns"></i> Columns']
-            ],
+            // 'buttons'      => [
+            //     [
+            //         'text' => '<i class="fa fa-plus"></i> Add New',
+            //         'className' => 'btn btn-primary',
+            //         'attr' => [
+            //             'data-kt-action' => 'new_kternak'
+            //         ]
+            //     ],
+            //     // ['extend' => 'excel', 'className' => 'btn btn-success', 'text' => '<i class="fa fa-file-excel"></i> Excel'],
+            //     ['extend' => 'print', 'className' => 'btn btn-info', 'text' => '<i class="fa fa-print"></i> Print'],
+            //     ['extend' => 'colvis', 'className' => 'btn btn-warning', 'text' => '<i class="fa fa-columns"></i> Columns']
+            // ],
             'language' => [
                 'search' => 'Search:',
                 'searchPlaceholder' => 'Enter search term...'
