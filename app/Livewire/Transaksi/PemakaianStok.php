@@ -16,6 +16,7 @@ use App\Models\KematianTernak;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+
 class PemakaianStok extends Component
 {
     public $isOpenPemakaian = 0;
@@ -174,7 +175,7 @@ class PemakaianStok extends Component
             'tanggal' => 'required|date',
             'selectedFarm' => 'required',
             'selectedKandang' => 'required',
-            'quantity' => 'required|integer|min:1',
+            'quantity' => 'required|numeric',
             'keterangan' => 'nullable|string',
         ]);
 
