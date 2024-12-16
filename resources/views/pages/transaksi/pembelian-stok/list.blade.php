@@ -34,7 +34,7 @@
                 <!--end::Toolbar-->
 
                 <!--begin::Modal-->
-                <livewire:master-data.kandang-list />
+                {{-- <livewire:master-data.kandang-list /> --}}
                 <!--end::Modal-->
             </div>
             <!--end::Card toolbar-->

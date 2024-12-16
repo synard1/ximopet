@@ -106,71 +106,6 @@
                                     <!--begin::Table wrapper-->
                                     <div class="table-responsive mb-10">
                                         <!--begin::Table-->
-                                        {{-- <table class="table g-5 gs-0 mb-0 fw-bold text-gray-700" data-kt-element="items">
-                                            <!--begin::Table head-->
-                                            <thead>
-                                                <tr class="border-bottom fs-7 fw-bold text-gray-700 text-uppercase">
-                                                    <th class="min-w-300px w-475px">Item</th>
-                                                    <th class="min-w-100px w-100px">QTY</th>
-                                                    <th class="min-w-150px w-150px">Price</th>
-                                                    <th class="min-w-100px w-150px text-end">Total</th>
-                                                </tr>
-                                            </thead>
-                                            <!--end::Table head-->
-
-                                            <!--begin::Table body-->
-                                            <tbody>
-                                                @foreach($items as $index => $item)
-                                                    <tr class="border-bottom border-bottom-dashed" data-kt-element="item">
-                                                        <td>
-                                                            <select wire:model="items.{{ $index }}.name" class="form-select select2" disabled>
-                                                                <option value="">Select Item</option>
-                                                                @foreach($allItems as $availableItem)
-                                                                    <option value="{{ $availableItem->id }}" @if($availableItem->id == $items[$index]['item_id']) selected @endif>{{ $availableItem->nama }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                            <input type="hidden" wire:model="items.{{ $index }}.item_id">
-                                                        </td>
-                                                        <td class="ps-0">
-                                                            <input type="number" class="form-control form-control-solid" wire:model="items.{{ $index }}.qty" min="1" value="{{ $item['qty'] }}">
-                                                        </td>
-                                                        <td>
-                                                            <input type="text" class="form-control form-control-solid text-end" wire:model="items.{{ $index }}.harga" value="{{ $item['harga'] }}">
-                                                        </td>
-                                                        <td class="pt-8 text-end text-nowrap">
-                                                            Rp<span data-kt-element="total">{{ number_format($item['qty'] * $item['harga'], 2) }}</span>
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                            <!--end::Table body-->
-
-                                            <!--begin::Table foot-->
-                                            <tfoot>
-                                                <tr class="border-top border-top-dashed align-top fs-6 fw-bold text-gray-700">
-                                                    <th colspan="2" class="border-bottom border-bottom-dashed ps-0">
-                                                        <div class="d-flex flex-column align-items-start">
-                                                            <div class="fs-5">Subtotal</div>
-                                                        </div>
-                                                    </th>
-
-                                                    <th colspan="2" class="border-bottom border-bottom-dashed text-end">
-                                                        Rp<span data-kt-element="sub-total">0.00</span>
-                                                    </th>
-                                                </tr>
-
-                                                <tr class="align-top fw-bold text-gray-700">
-                                                    <th></th>
-
-                                                    <th colspan="2" class="fs-4 ps-0">Total</th>
-
-                                                    <th colspan="2" class="text-end fs-4 text-nowrap">
-                                                        Rp<span data-kt-element="grand-total">0.00</span>
-                                                    </th>
-                                                </tr>
-                                            </tfoot>
-                                            <!--end::Table foot-->
-                                        </table> --}}
                                         <table id="itemsTable" class="display" style="width:100%">
                                             <thead>
                                                 <tr>
@@ -285,63 +220,6 @@
 
                                 <!--begin::Wrapper-->
                                 <div class="mb-0">
-                                    {{-- <!--begin::Row-->
-                                    <div class="row gx-10 mb-5">
-                                        <!--begin::Col-->
-                                        <div class="col-lg-6">
-                                            <label class="form-label fs-6 fw-bold text-gray-700 mb-3">Bill From</label>
-
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <input type="text" class="form-control form-control-solid"
-                                                    placeholder="Name">
-                                            </div>
-                                            <!--end::Input group-->
-
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <input type="text" class="form-control form-control-solid"
-                                                    placeholder="Email">
-                                            </div>
-                                            <!--end::Input group-->
-
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <textarea name="notes" class="form-control form-control-solid" rows="3"
-                                                    placeholder="Who is this invoice from?"></textarea>
-                                            </div>
-                                            <!--end::Input group-->
-                                        </div>
-                                        <!--end::Col-->
-
-                                        <!--begin::Col-->
-                                        <div class="col-lg-6">
-                                            <label class="form-label fs-6 fw-bold text-gray-700 mb-3">Bill To</label>
-
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <input type="text" class="form-control form-control-solid"
-                                                    placeholder="Name">
-                                            </div>
-                                            <!--end::Input group-->
-
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <input type="text" class="form-control form-control-solid"
-                                                    placeholder="Email">
-                                            </div>
-                                            <!--end::Input group-->
-
-                                            <!--begin::Input group-->
-                                            <div class="mb-5">
-                                                <textarea name="notes" class="form-control form-control-solid" rows="3"
-                                                    placeholder="What is this invoice for?"></textarea>
-                                            </div>
-                                            <!--end::Input group-->
-                                        </div>
-                                        <!--end::Col-->
-                                    </div>
-                                    <!--end::Row--> --}}
 
                                     <!--begin::Table wrapper-->
                                     <div class="table-responsive mb-10">
@@ -373,7 +251,7 @@
                                                             <input type="hidden" wire:model="items.{{ $index }}.item_id">
                                                         </td>
                                                         <td class="ps-0">
-                                                            <input type="number" class="form-control form-control-solid" min="0.01" step="0.01" wire:model="items.{{ $index }}.qty" placeholder="0.00" data-kt-element="quantity">
+                                                            <input type="number" class="form-control form-control-solid" wire:model="items.{{ $index }}.qty" placeholder="0.00" min="0.01" step="0.01" data-kt-element="quantity">
                                                         </td>
                                                         <td>
                                                             <input type="text" class="form-control form-control-solid text-end" wire:model="items.{{ $index }}.harga" placeholder="0.00" data-kt-element="harga">
@@ -435,7 +313,7 @@
                                                 </td>
 
                                                 <td class="ps-0">
-                                                    <input type="text" class="form-control form-control-solid" min="0.01"
+                                                    <input type="number" class="form-control form-control-solid" min="0.01" step="0.01"
                                                         name="quantity[]" placeholder="0.01" data-kt-element="quantity">
                                                 </td>
 
@@ -520,47 +398,6 @@
                             @enderror 
                         </div>
                         <!--end::Input group-->
-{{-- 
-                        <!--begin::Separator-->
-                        <div class="separator separator-dashed mb-8"></div>
-                        <!--end::Separator-->
-
-                        <!--begin::Input group-->
-                        <div class="mb-8">
-                            <!--begin::Option-->
-                            <label
-                                class="form-check form-switch form-switch-sm form-check-custom form-check-solid flex-stack mb-5">
-                                <span class="form-check-label ms-0 fw-bold fs-6 text-gray-700">
-                                    Payment method
-                                </span>
-
-                                <input class="form-check-input" type="checkbox" checked="checked" value="">
-                            </label>
-                            <!--end::Option-->
-
-                            <!--begin::Option-->
-                            <label
-                                class="form-check form-switch form-switch-sm form-check-custom form-check-solid flex-stack mb-5">
-                                <span class="form-check-label ms-0 fw-bold fs-6 text-gray-700">
-                                    Late fees
-                                </span>
-
-                                <input class="form-check-input" type="checkbox" value="">
-                            </label>
-                            <!--end::Option-->
-
-                            <!--begin::Option-->
-                            <label
-                                class="form-check form-switch form-switch-sm form-check-custom form-check-solid flex-stack">
-                                <span class="form-check-label ms-0 fw-bold fs-6 text-gray-700">
-                                    Notes
-                                </span>
-
-                                <input class="form-check-input" type="checkbox" value="">
-                            </label>
-                            <!--end::Option-->
-                        </div>
-                        <!--end::Input group--> --}}
 
                         <!--begin::Separator-->
                         <div class="separator separator-dashed mb-8"></div>

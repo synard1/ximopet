@@ -48,8 +48,8 @@ class PembelianDOC extends Component
             'supplierSelect' => 'required',
             'docSelect' => 'required',
             'selectedKandang' => 'required',
-            'qty' => 'required|integer',
-            'berat' => 'required|integer',
+            'qty' => 'required|numeric',
+            'berat' => 'required|numeric',
             'harga' => 'required|integer',
         ];
 
