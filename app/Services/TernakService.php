@@ -347,8 +347,8 @@ class TernakService
             $latestData = $this->getLatestKematianTernak($kelompokTernak);
             $currentTernak = $this->currentTernak($kelompokTernak);
 
-            //Validasi Penjualan Melebihi Stok Ternak
-            if ($validatedData['ternak_jual'] > $currentTernak->quantity) {
+            //Validasi Penjualan Melebihi Stok Ternak, check validasi negatif
+            if (config('xolution.ALLOW_NEGATIF_SELLING') == false && $validatedData['ternak_jual'] > $currentTernak->quantity) {
                 // return response()->json(['error' => 'Stok ternak yang tersedia hanya '. $currentTernak->quantity.'Ekor.'], 400);
 
                 throw new \Exception('Stok ternak yang tersedia hanya '. $currentTernak->quantity.'Ekor.');
