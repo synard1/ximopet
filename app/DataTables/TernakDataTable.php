@@ -68,7 +68,12 @@ class TernakDataTable extends DataTable
                 $currentTernak->quantity = $jumlah; // Ensure the result is not negative
                 $currentTernak->save();
 
-                return max(0, $jumlah); // Ensure the result is not negative
+                if (config('xolution.ALLOW_NEGATIF_SELLING')){
+                    return $jumlah;
+                }else{
+                    return max(0, $jumlah); // Ensure the result is not negative
+                }
+
             })
             ->editColumn('name', function (Ternak $ternak) {
                 return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_ternak" data-kt-ternak-id="' . $ternak->id . '">' . $ternak->name . '</a>';
