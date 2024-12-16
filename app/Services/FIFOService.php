@@ -174,7 +174,6 @@ class FIFOService
                         'stock_id' => $currentStock->id,
                         'item_id' => $stockEntry->item_id,
                         'location_id' => $currentStock->location_id,
-                        'transaksi_id' => $stockEntry->transaksi_id,
                         'parent_id' => $stockEntry->id ?? null,
                         'jenis' => 'Pemakaian',
                         'batch_number' => $stockEntry->batch_number,
