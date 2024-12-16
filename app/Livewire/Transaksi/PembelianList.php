@@ -28,7 +28,7 @@ class PembelianList extends Component
 {
     public $faktur, $tanggal, $suppliers, $supplier, $name =[], $quantity=[], $allItems, $farms, $selectedFarm;
     public $selectedSupplier = null;
-    public $items = [['name' => '', 'qty' => 1, 'harga' => 0]]; // Initial empty item
+    public $items = [['name' => '', 'qty' => 0.01, 'harga' => 0]]; // Initial empty item
     public $transaksi_id;
 
     public $isOpen = 0;
@@ -87,7 +87,7 @@ class PembelianList extends Component
 
     public function addItem()
     {
-        $this->items[] = ['name' => '', 'qty' => 1, 'harga' => 0];
+        $this->items[] = ['name' => '', 'qty' => 0.01, 'harga' => 0];
         // $this->dispatch('reinitialize-select2'); // Trigger Select2 initialization
     }
 
