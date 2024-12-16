@@ -143,7 +143,7 @@
                                                 <input type="hidden" wire:model="items.{{ $index }}.item_id">
                                             </td>
                                             <td class="ps-0">
-                                                <input type="number" class="form-control form-control-solid" min="1" wire:model="items.{{ $index }}.qty" placeholder="1" data-kt-element="quantity">
+                                                <input type="number" class="form-control form-control-solid" min="0.01" step="0.01" wire:model="items.{{ $index }}.qty" placeholder="0.00" data-kt-element="quantity">
                                             </td>
                                             <td>
                                                 <input type="text" class="form-control form-control-solid text-end" wire:model="items.{{ $index }}.harga" placeholder="0.00" data-kt-element="harga" >
