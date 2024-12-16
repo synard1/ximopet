@@ -37,7 +37,7 @@ return new class extends Migration
             $table->uuid('parent_id');
             $table->string('type'); //['feed', 'medication', 'vitamin', 'sale', 'death', 'culling']
             $table->uuid('item_id');
-            $table->integer('quantity')->nullable(); // For sales, deaths, and culling
+            $table->decimal('quantity', 8, 2)->nullable(); // For sales, deaths, and culling
             $table->decimal('total_berat', 8, 2)->nullable(); // For sales
             $table->decimal('harga', 8, 2)->nullable(); // For sales
             $table->text('notes')->nullable(); // Additional notes for any type of transaction

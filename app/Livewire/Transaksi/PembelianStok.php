@@ -23,7 +23,7 @@ class PembelianStok extends Component
         'supplierSelect' => 'required',
         'docSelect' => 'required',
         'selectedKandang' => 'required',
-        'qty' => 'required|integer',
+        'qty' => 'required|numeric',
         'harga' => 'required|integer',
         'periode' => 'required|unique:transaksis,periode',
     ];
