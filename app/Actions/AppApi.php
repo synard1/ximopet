@@ -89,64 +89,41 @@ class AppApi
 
     public function getTransaksiBeliDetail($id)
     {
-        // $options = TransaksiDetail::where('transaksi_id', $id)->get(['id','jenis','jenis_barang','item_nama','qty','terpakai', 'sisa', 'harga','sub_total']);
-        // Gunakan eager loading untuk mengambil data terkait dari model items
         $options = TransaksiBeliDetail::with(['items' => function ($query) {
-            $query->select('id', 'satuan_besar', 'satuan_kecil','konversi');
+            $query->select('id', 'satuan_besar', 'satuan_kecil', 'konversi');
         }])
         ->where('transaksi_id', $id)
-        ->get(['id','jenis','jenis_barang','item_id','item_name','qty','terpakai', 'sisa', 'harga','sub_total']);
+        ->get(['id', 'jenis', 'jenis_barang', 'item_id', 'item_name', 'qty', 'terpakai', 'sisa', 'harga', 'sub_total']);
 
-        // Map over the collection to calculate the 'sisa' field and include satuan data
         $formattedOptions = $options->map(function ($item) {
+            if ($item->items) {
+                $konversi = floatval($item->items->konversi) ?: 1; // Use 1 as default to avoid division by zero
 
-        // Pastikan relasi 'items' ada sebelum mengakses propertinya
-        if ($item->items) {
-            $item->qty = number_format(($item->qty / $item->items->konversi), 0);
-            $item->sisa = number_format(($item->sisa / $item->items->konversi), 0);
-            
-            // Add type checking and conversion
-            $terpakai = is_numeric($item->terpakai) ? $item->terpakai : 0;
-            $konversi = is_numeric($item->items->konversi) ? $item->items->konversi : 1; // Use 1 as default to avoid division by zero
-            
-            if ($konversi != 0) {
-                $item->terpakai = number_format(($terpakai / $konversi), 0);
+                $item->qty = floatval($item->qty) / $konversi;
+                $item->sisa = floatval($item->sisa) / $konversi;
+                $item->terpakai = floatval($item->terpakai) / $konversi;
+                $item->jumlah = $item->terpakai;
+                $item->satuan_besar = $item->items->satuan_besar;
+                $item->satuan_kecil = $item->items->satuan_kecil;
+                $item->konversi = $konversi;
             } else {
-                $item->terpakai = 0; // or handle this case as appropriate for your application
+                $item->sisa = floatval($item->qty) - floatval($item->terpakai);
+                $item->terpakai = floatval($item->terpakai);
+                $item->jumlah = $item->terpakai;
+                $item->satuan_besar = null;
+                $item->satuan_kecil = null;
+                $item->konversi = null;
             }
-            
-            $item->jumlah = $item->terpakai; // Since terpakai is already formatted
-            $item->satuan_besar = $item->items->satuan_besar;
-            $item->satuan_kecil = $item->items->satuan_kecil;
-            $item->konversi = $item->items->konversi;
-        } else {
-            // Handle the case when items is null
-            $item->sisa = is_numeric($item->qty) && is_numeric($item->terpakai) ? $item->qty - $item->terpakai : 0;
-            $item->terpakai = 0;
-            $item->jumlah = 0;
-            $item->satuan_besar = null;
-            $item->satuan_kecil = null;
-            $item->konversi = null;
-        }
-        // if ($item->items) {
-        //     // $item->qty = number_format(($item->qty / $item->items->konversi), 3);
-        //     $item->qty = number_format(($item->qty / $item->items->konversi), 0);
-        //     // $item->sisa = ((floatval($item->qty) * floatval($item->items->konversi)) -  (floatval($item->terpakai)) / floatval($item->items->konversi));
-        //     $item->sisa = number_format(($item->sisa / $item->items->konversi), 0);
-        //     $item->terpakai = number_format(($item->terpakai / $item->items->konversi), 0);
-        //     $item->jumlah = number_format(($item->terpakai / $item->items->konversi), 0);
-        //     $item->satuan_besar = $item->items->satuan_besar;
-        //     $item->satuan_kecil = $item->items->satuan_kecil;
-        //     $item->konversi = $item->items->konversi;
-        // } else {
-        //     $item->sisa = $item->qty - ( $item->terpakai / $item->items->konversi );
-        //     // Tangani kasus ketika 'items' null (misalnya, berikan nilai default)
-        //     $item->satuan_besar = null; 
-        //     $item->satuan_kecil = null; 
-        //     $item->konversi = null; 
-        // }
 
-        return $item;
+            // Ensure all numeric values are floats
+            $item->qty = floatval($item->qty);
+            $item->sisa = floatval($item->sisa);
+            $item->terpakai = floatval($item->terpakai);
+            $item->jumlah = floatval($item->jumlah);
+            $item->harga = floatval($item->harga);
+            $item->sub_total = floatval($item->sub_total);
+
+            return $item;
         });
 
         return response()->json(['data' => $formattedOptions]);

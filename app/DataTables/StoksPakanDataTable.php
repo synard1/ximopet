@@ -92,6 +92,9 @@ class StoksPakanDataTable extends DataTable
             // Add a condition to filter items based on farm IDs
             $query->whereHas('stockHistory.inventoryLocation.farm', function ($q) use ($farmIds) {
                 $q->whereIn('id', $farmIds);
+            })->with(['itemCategory'])
+            ->whereHas('itemCategory', function ($q) {
+                $q->where('name', 'Pakan');
             });
             // $query = $model::with(['stokHistory', 'transaksiDetail'])
             //     ->where('jenis', '!=', 'DOC')

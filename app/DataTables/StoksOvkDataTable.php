@@ -36,7 +36,7 @@ class StoksOvkDataTable extends DataTable
                 }
                 // return number_format($stokAkhir / $stok->konversi, 2);
                 // dd($stokAkhir);
-                return number_format($stokAkhir);
+                return floatval($stokAkhir);
             })
             // ->editColumn('jumlah', function (Item $stok) {
             //     if (auth()->user()->farmOperators()->exists()) {
@@ -92,6 +92,9 @@ class StoksOvkDataTable extends DataTable
             // Add a condition to filter items based on farm IDs
             $query->whereHas('stockHistory.inventoryLocation.farm', function ($q) use ($farmIds) {
                 $q->whereIn('id', $farmIds);
+            })->with(['itemCategory'])
+            ->whereHas('itemCategory', function ($q) {
+                $q->where('name', 'OVK');
             });
             // $query = $model::with(['stokHistory', 'transaksiDetail'])
             //     ->where('jenis', '!=', 'DOC')
