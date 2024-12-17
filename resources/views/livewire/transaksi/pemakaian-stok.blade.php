@@ -514,7 +514,7 @@
                     <td>${item.item_name}</td>
                     <td id="availableStock_${item.item_id}">${item.total}</td>
                     <td>
-                        <input type="number" class="form-control qty-input" data-item-id="${item.item_id}" min="0" max="${item.total}" placeholder="0" ${item.total === 0 ? 'disabled' : ''}>
+                        <input type="number" class="form-control qty-input" data-item-id="${item.item_id}" min="0.01" max="${item.total}" placeholder="0.00" ${item.total === 0 ? 'disabled' : ''}>
                     </td>
                     <td id="remainingStock_${item.item_id}">${item.total}</td>
                 </tr>
@@ -525,8 +525,8 @@
         // Attach event listeners to qty inputs for dynamic calculation and validation
         $('.qty-input').on('input', function() {
             const itemId = $(this).data('item-id');
-            const availableStock = parseInt($(`#availableStock_${itemId}`).text());
-            let qtyUsed = parseInt($(this).val()) || 0;
+            const availableStock = parseFloat($(`#availableStock_${itemId}`).text());
+            let qtyUsed = parseFloat($(this).val()) || 0;
 
             // Ensure qtyUsed doesn't exceed availableStock
             if (qtyUsed > availableStock) {
@@ -549,7 +549,7 @@
         // Iterate through each row in the table body
         $('#stockTableBody tr').each(function() {
             const itemId = $(this).find('.qty-input').data('item-id');
-            const qtyUsed = parseInt($(this).find('.qty-input').val()) || 0;
+            const qtyUsed = parseFloat($(this).find('.qty-input').val()) || 0;
             const isDisabled = $(this).find('.qty-input').is(':disabled');
 
             // Skip if qtyUsed is 0 or input is disabled
@@ -727,30 +727,6 @@ document.addEventListener('livewire:init', function () {
     });
 }
 
-// Event listener for change on the dropdowns
-// $(document).on('change', 'select.item-select', function() {
-//     updateDropdowns();
-// });
-
-// Initial call to disable already selected options
-// updateDropdowns();
-                // Livewire.on('closeForm', function () {
-                //     showLoadingSpinner();
-                //     const cardList = document.getElementById(`stokTableCard`);
-                //     cardList.style.display = 'block';
-
-                //     const cardForm = document.getElementById(`stokFormCard`);
-                //     cardForm.style.display = 'none';
-
-                //     // Reload DataTables
-                //     $('.table').each(function() {
-                //         if ($.fn.DataTable.isDataTable(this)) {
-                //             $(this).DataTable().ajax.reload();
-                //         }
-                //     });
-
-                    
-                // });
                 Livewire.on('reinitialize-select2-pemakaianStok', function () {
 
 
@@ -770,8 +746,8 @@ document.addEventListener('livewire:init', function () {
         qtyInputs.forEach(input => {
             input.addEventListener('input', function() {
                 const itemId = this.dataset.itemId;
-                const initialStock = parseInt(document.getElementById(`initial_${itemId}`).textContent);
-                const usedQty = parseInt(this.value) || 0; 
+                const initialStock = parseFloat(document.getElementById(`initial_${itemId}`).textContent);
+                const usedQty = parseFloat(this.value) || 0; 
                 const totalUsed = document.getElementById(`used_${itemId}`);
                 const remainingStock = document.getElementById(`remaining_${itemId}`);
 
