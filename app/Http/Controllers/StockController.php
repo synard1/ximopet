@@ -55,7 +55,7 @@ class StockController extends Controller
             'tanggal' => 'required|date',
             'stock' => 'required|array',
             'stock.*.item_id' => 'required|uuid',
-            'stock.*.qty_used' => 'required|integer|min:1',
+            'stock.*.qty_used' => 'required|numeric',
             'ternak_mati' => 'integer',
             'ternak_afkir' => 'integer',
             'ternak_jual' => 'integer'
