@@ -218,9 +218,10 @@ class DataController extends Controller
     public function getFarmDetails($farmId)
     {
         // Retrieve the current stock using the location relation to get the farm ID
+        // Skip If Quantity 0
         $currentStocks = CurrentStock::whereHas('inventoryLocation', function ($query) use ($farmId) {
             $query->where('farm_id', $farmId);
-        })->get();
+        })->where('quantity','>',0)->get();
 
         // $currentTernak = CurrentTernak::where('farm_id', $farmId)->get();
 
