@@ -514,7 +514,7 @@
                     <td>${item.item_name}</td>
                     <td id="availableStock_${item.item_id}">${item.total}</td>
                     <td>
-                        <input type="number" class="form-control qty-input" data-item-id="${item.item_id}" min="0" max="${item.total}" placeholder="0" ${item.total === 0 ? 'disabled' : ''}>
+                        <input type="number" class="form-control qty-input" data-item-id="${item.item_id}" min="0.01" max="${item.total}" placeholder="0.00" ${item.total === 0 ? 'disabled' : ''}>
                     </td>
                     <td id="remainingStock_${item.item_id}">${item.total}</td>
                 </tr>
