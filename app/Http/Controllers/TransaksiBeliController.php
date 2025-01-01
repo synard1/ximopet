@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\TransaksiBeli;
 use Illuminate\Http\Request;
+use App\DataTables\Pembelian\DocsDataTable;
+use App\DataTables\Pembelian\PakanDataTable;
+use App\DataTables\Pembelian\OvkDataTable;
 
 class TransaksiBeliController extends Controller
 {
@@ -13,6 +16,23 @@ class TransaksiBeliController extends Controller
     public function index()
     {
         //
+    }
+
+    public function indexDoc(DocsDataTable $dataTable)
+    {
+        // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
+        return $dataTable->render('pages/pembelian/doc._doc');
+    }
+    public function indexPakan(PakanDataTable $dataTable)
+    {
+        // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
+        return $dataTable->render('pages/pembelian._pakan');
+    }
+
+    public function indexOvk(OvkDataTable $dataTable)
+    {
+        // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
+        return $dataTable->render('pages/pembelian._ovk');
     }
 
     /**

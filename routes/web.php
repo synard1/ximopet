@@ -4,6 +4,7 @@ use App\Http\Controllers\Apps\PermissionManagementController;
 use App\Http\Controllers\Apps\RoleManagementController;
 use App\Http\Controllers\Apps\UserManagementController;
 use App\Http\Controllers\Auth\SocialiteController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ItemCategoryController;
@@ -11,11 +12,15 @@ use App\Http\Controllers\MasterData\RekananController;
 use App\Http\Controllers\MasterData\FarmController;
 use App\Http\Controllers\MasterData\KandangController;
 use App\Http\Controllers\MasterData\StokController;
+use App\Http\Controllers\ReportsController;
 use App\Models\Stok;
 use App\Http\Controllers\Transaksi\TransaksiController;
+use App\Http\Controllers\TransaksiBeliController;
 use App\Http\Controllers\TransaksiHarianController;
+use App\Http\Controllers\TransaksiJualController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TernakController;
+use App\Models\TransaksiJual;
 use Illuminate\Http\Request;
 
 /*
@@ -54,6 +59,10 @@ Route::get('/tokens/create', function (Request $request) {
     return ['token' => $token->plainTextToken];
 });
 
+Route::get('/penjualan/export', [TransaksiJualController::class, 'export'])->name('penjualan.export');
+Route::get('/reports/performance', [ReportsController::class, 'exportPerformance'])->name('reports.performance');
+
+
 Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/', [DashboardController::class, 'index']);
@@ -79,6 +88,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::name('master-data.')->group(function () {
+        Route::resource('/master-data/perusahaans', CompanyController::class);
         Route::resource('/master-data/suppliers', RekananController::class);
         Route::resource('/master-data/farms', FarmController::class);
         Route::resource('/master-data/kandangs', KandangController::class);
@@ -88,7 +98,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/item-categories/list', [ItemCategoryController::class, 'getList'])->name('item-categories.list');
     });
 
+    Route::name('data.')->group(function () {
+        Route::resource('/data/farms', FarmController::class);
+        Route::resource('/data/kandangs', KandangController::class);
+        Route::resource('/data/stoks', StokController::class);
+        Route::resource('/data/ternaks', TernakController::class);
+
+        Route::resource('/master-data/ternaks', TernakController::class);
+        Route::get('/master-data/customers', [RekananController::class, 'customerIndex'])->name('customers.index');
+        // Route::get('/item-categories/list', [ItemCategoryController::class, 'getList'])->name('item-categories.list');
+    });
+
+    Route::name('rekanan.')->group(function () {
+        Route::resource('/rekanan/suppliers', RekananController::class);
+        Route::get('/rekanan/customers', [RekananController::class, 'customerIndex'])->name('rekanan.customers');
+
+    });
+
     Route::name('transaksi.')->group(function () {
+        Route::get('/transaksi/penjualan', [TransaksiJualController::class, 'index'])->name('penjualan.index');
         Route::get('/transaksi/harian', [TransaksiController::class, 'harianIndex'])->name('harian.index');
         Route::get('/transaksi/stoks', [TransaksiController::class, 'stokIndex'])->name('stoks.index');
         Route::get('/transaksi/pakai', [TransaksiController::class, 'stokPakaiIndex'])->name('stoks.pakai.index');
@@ -99,9 +127,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     });
 
+    Route::name('inventory.')->group(function () {
+        Route::get('/inventory/docs', [TransaksiController::class, 'docIndex'])->name('docs.index');
+        Route::get('/inventory/stocks', [TransaksiController::class, 'stokIndex'])->name('stoks.index');
+        Route::get('/inventory/pakan', [TransaksiBeliController::class, 'pakanIndex'])->name('pakan.index');
+        Route::get('/inventory/ovk', [StokController::class, 'stockOvk'])->name('ovk.index');
+    });
+
     Route::name('stocks.')->group(function () {
+        Route::get('/inventory/docs', [TransaksiController::class, 'docIndex'])->name('docs.index');
+        Route::get('/inventory/stocks', [TransaksiController::class, 'stokIndex'])->name('stoks.index');
         Route::get('/stocks/pakan', [StokController::class, 'stockPakan'])->name('pakan.index');
         Route::get('/stocks/ovk', [StokController::class, 'stockOvk'])->name('ovk.index');
+    });
+
+    Route::name('pembelian.')->group(function () {
+        Route::get('/pembelian/stock', [TransaksiController::class, 'stokIndex'])->name('stoks.index');
+        Route::get('/pembelian/doc', [TransaksiBeliController::class, 'indexDoc'])->name('docs.index');
+        Route::get('/pembelian/pakan', [TransaksiBeliController::class, 'indexPakan'])->name('pakan.index');
+        Route::get('/pembelian/ovk', [TransaksiBeliController::class, 'indexOvk'])->name('ovk.index');
     });
 
     Route::name('ternak.')->group(function () {
@@ -118,6 +162,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::name('farm.')->group(function () {
         Route::get('/farm/{farm}/kandangs', [FarmController::class, 'getKandangs'])->name('kandangs');
+
+    });
+
+    Route::name('reports.')->group(function () {
+        Route::get('/reports/penjualan', [ReportsController::class, 'indexPenjualan']);
+        Route::get('/reports/performa', [ReportsController::class, 'indexPerforma']);
 
     });
 

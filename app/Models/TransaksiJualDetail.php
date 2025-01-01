@@ -32,4 +32,35 @@ class TransaksiJualDetail extends BaseModel
 
     protected $casts = [
     ];
+
+        // Define relationships
+    public function transaksiJual()
+    {
+        return $this->belongsTo(TransaksiJual::class);
+    }
+
+    public function rekanan()
+    {
+        return $this->belongsTo(Rekanan::class);
+    }
+
+    public function farm()
+    {
+        return $this->belongsTo(Farm::class);
+    }
+
+    public function kandang()
+    {
+        return $this->belongsTo(Kandang::class);
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updatedBy()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
 }

@@ -39,83 +39,6 @@
                         <span class="menu-link">
                             <span class="menu-title">Account</span>
                         </span>
-                        <!--end:Menu link-->
-                        {{-- <!--begin:Menu sub-->
-                        <div class="menu-sub menu-sub-dropdown px-lg-2 py-lg-4 w-150px w-lg-175px" style="">
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link active" href="index.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-chart-simple fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Dashboard</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link" href="account/settings.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-share fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Settings</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link" href="account/security.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-shield fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Security</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link" href="account/activity.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-scan-barcode fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Activity</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link" href="account/billing.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-dollar fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Billing</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                            <!--begin:Menu item-->
-                            <div class="menu-item">
-                                <!--begin:Menu link-->
-                                <a class="menu-link" href="apps/statements.html">
-                                    <span class="menu-icon">
-                                        <i class="ki-outline ki-two-credit-cart fs-3"></i>
-                                    </span>
-                                    <span class="menu-title">Statements</span>
-                                </a>
-                                <!--end:Menu link-->
-                            </div>
-                            <!--end:Menu item-->
-                        </div>
-                        <!--end:Menu sub--> --}}
                     </div>
                     <!--end:Menu item-->
                     @if(auth()->user()->hasRole(['SuperAdmin','Administrator']))
@@ -131,6 +54,7 @@
                     @endif
 
                     @endif
+                    @if(auth()->user()->hasRole(['Supervisor']))
                     <!--begin:Menu item-->
                     <div class="menu-item">
                         <!--begin:Menu link-->
@@ -140,6 +64,7 @@
                         <!--end:Menu link-->
                     </div>
                     <!--end:Menu item-->
+                    @endif
                     <!--begin:Menu item-->
                     <div class="menu-item">
                         <!--begin:Menu content-->

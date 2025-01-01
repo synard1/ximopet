@@ -16,14 +16,14 @@
 						<!--end::Sidebar toggle-->
 						<!--begin::Logo image-->
 						<a href="index.html">
-							<img alt="Logo" src="/assets/media/logos/demo60.svg" class="mh-25px">
+							<img alt="Logo" src="/assets/media/logos/demo60.svg" class="mh-25px" />
 						</a>
 						<!--end::Logo image-->
 					</div>
 					<!--end::Logo-->
 					<!--begin::Menu wrapper-->
 					<div class="d-flex align-items-stretch" id="kt_app_header_menu_wrapper">
-						{{-- @include(config('settings.KT_THEME_LAYOUT_DIR').'/partials/sidebar-layout/header/_menu/_menu') --}}
+						@include(config('settings.KT_THEME_LAYOUT_DIR').'/partials/sidebar-layout/header/_menu/_menu')
 					</div>
 					<!--end::Menu wrapper-->
 				</div>
@@ -35,7 +35,7 @@
 	</div>
 	<!--end::Header primary-->
 	<!--begin::Header secondary-->
-	@include(config('settings.KT_THEME_LAYOUT_DIR').'/partials/sidebar-layout/header/_secondary')
+	{{-- @include(config('settings.KT_THEME_LAYOUT_DIR').'/partials/sidebar-layout/header/_secondary') --}}
 	<!--end::Header secondary-->
 </div>
 <!--end::Header-->

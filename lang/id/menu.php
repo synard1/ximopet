@@ -29,6 +29,7 @@ return [
     'menu_stock' => 'Data Stok',
     'menu_users' => 'Data User',
     'menu_ternak' => 'Data Ternak',
+    'menu_company' => 'Data Perusahaan',
 
 
     'create_transaction_header' => 'Data Transaksi',
@@ -38,5 +39,9 @@ return [
     'create_mutation_stock' => 'Pemakaian Stok',
     'create_mutation_livestock' => 'Mutasi Ternak',
     'create_death_livestock' => 'Kematian Ternak',
+
+
+    // Error handling
+    'no_inventory_stock_farm' => 'Tidak  ada data stock inventory pada farm'
 
 ];

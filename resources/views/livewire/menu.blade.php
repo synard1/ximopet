@@ -6,7 +6,9 @@
 		<!--begin::sidebar menu-->
 		<div class="menu-sidebar menu menu-fit menu-column menu-rounded menu-title-gray-700 menu-icon-gray-700 menu-arrow-gray-700 fw-semibold fs-6 align-items-stretch flex-grow-1"
 		id="#kt_app_sidebar_menu" data-kt-menu="true" data-kt-menu-expand="true">
-			@if(auth()->user()->hasRole(['SuperAdmin','Administrator']))
+			@if(auth()->user()->hasRole(['SuperAdmin']))
+				@include('livewire.menu_superadmin')
+			@elseif(auth()->user()->hasRole(['Administrator']))
 				@include('livewire.menu_admin')
 			@elseif(auth()->user()->hasRole(['Manager']))
 				@include('livewire.menu_manager')

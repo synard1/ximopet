@@ -14,6 +14,7 @@ use App\Http\Controllers\MasterData\FarmController;
 use App\Http\Controllers\TernakController;
 use App\Http\Controllers\TransaksiTernakController;
 use App\Http\Controllers\DataController;
+use App\Http\Controllers\ReportsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,10 +44,18 @@ Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
     Route::post('/d/item/location', [DataController::class, 'index'])->name('api.v2.item_location_mapping');
 
     Route::post('/d/transaksi/{details?}', [DataController::class, 'transaksi']);
+    Route::post('/reports/performa', [ReportsController::class, 'exportPerformance']);
+    Route::post('/reports/penjualan', [ReportsController::class, 'exportPenjualan']);
+    Route::post('/save-bonus', [TernakController::class, 'addBonus']);
+    Route::post('/save-administrasi', [TernakController::class, 'addAdministrasi']);
 
 });
 
 Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
+
+    Route::post('/ternak/{ternakId}/bonus', [TernakController::class, 'getBonusData']);
+    Route::post('/ternak/{ternakId}/detail-report', [TernakController::class, 'getDetailReportData']);
+
 
     Route::get('/users', function (Request $request) {
         return app(SampleUserApi::class)->datatableList($request);
@@ -212,6 +221,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/get-farms', [AppApi::class, 'getFarms']);
     Route::get('/get-kandangs/{farm}/{status}', [AppApi::class, 'getKandangs']);
     Route::get('/get-farm-stocks/{farm}', [AppApi::class, 'getFarmStoks']);
+    Route::get('/penjualan/{transaksiId}', [AppApi::class, 'getPenjualan']);
     Route::post('/transaksi-ternak/details', [TransaksiTernakController::class, 'getDetails']);
 
     // Route::post('/stocks-edit', function (Request $request) {

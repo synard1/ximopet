@@ -4,7 +4,7 @@ namespace App\DataTables;
 
 use App\Models\CurrentTernak;
 use App\Models\KematianTernak;
-use App\Models\Ternak;
+use App\Models\KelompokTernak as Ternak;
 use App\Models\TernakAfkir;
 use App\Models\Kandang;
 use App\Models\TernakJual;
@@ -90,9 +90,9 @@ class TernakDataTable extends DataTable
             ->editColumn('created_at', function (Ternak $ternak) {
                 return $ternak->created_at->format('d M Y, h:i a');
             })
-            // ->addColumn('action', function (Ternak $ternak) {
-            //     return view('pages/masterdata.ternak._actions', compact('ternak'));
-            // })
+            ->addColumn('action', function (Ternak $ternak) {
+                return view('pages/masterdata.ternak._actions', compact('ternak'));
+            })
             ->setRowId('id');
     }
 
@@ -103,7 +103,7 @@ class TernakDataTable extends DataTable
     public function query(Ternak $model): QueryBuilder
     {
         if (auth()->user()->hasRole('Operator')) {
-            return $model->newQuery()->whereHas('transaksi.farms.farmOperators', function ($query) {
+            return $model->newQuery()->whereHas('transaksiBeli.farms.farmOperators', function ($query) {
                 $query->where('user_id', auth()->id());
             });
         }
@@ -153,11 +153,11 @@ class TernakDataTable extends DataTable
             Column::computed('stok_akhir')->title('Sisa Ternak'),
             Column::make('status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),
-            // Column::computed('action')
-            //     // ->addClass('text-end text-nowrap')
-            //     ->exportable(false)
-            //     ->printable(false)
-                // ->width(60)
+            Column::computed('action')
+                // ->addClass('text-end text-nowrap')
+                ->exportable(false)
+                ->printable(false)
+                ->width(60)
         ];
     }
 

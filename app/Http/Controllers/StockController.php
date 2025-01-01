@@ -32,8 +32,6 @@ class StockController extends Controller
     public function stoks(Request $request)
     {
         $type = $request->input('type');
-        
-        // dd($request->all());
         if($type == 'reduce'){
             return $this->reduceStock($request);
         }elseif($type == 'edit'){
@@ -43,8 +41,6 @@ class StockController extends Controller
         }elseif($type == 'details'){
             return $this->detailsStok($request);
         }
-
-        // return response()->json(['message' => 'Stock reduced successfully'], 200);
     }
 
     public function reduceStock(Request $request)
@@ -63,15 +59,6 @@ class StockController extends Controller
 
         try {
             DB::beginTransaction();
-            // if($validatedData['ternak_mati']){
-            //    $dataTernakMati = $this->ternakService->ternakMati($validatedData);
-            // }
-            // if($validatedData['ternak_afkir']){
-            //    $dataTernakAfkir = $this->ternakService->ternakAfkir($validatedData);
-            // }
-            // if($validatedData['ternak_jual']){
-            //    $dataTernakJual = $this->ternakService->ternakJual($validatedData);
-            // }
             $this->fifoService->reduceStock($validatedData);
 
             DB::commit();
@@ -89,10 +76,6 @@ class StockController extends Controller
         $column = $request->input('column');
         $user_id = auth()->user() ? auth()->user()->id : null;
 
-        // dd($user_id);
-
-        // dd($id, $value, $column);
-
         try {
             // Wrap database operation in a transaction (if applicable)
             DB::beginTransaction();
@@ -101,19 +84,9 @@ class StockController extends Controller
             $transaksiDetail = TransaksiBeliDetail::findOrFail($id);
             // Find the corresponding StokMutasi & StockHistory record
             $stockHistory = StockHistory::where('transaksi_id', $transaksiDetail->transaksi_id)->where('jenis','Pembelian')->first();
-            // $stokMutasi = StokMutasi::where('transaksi_id', $transaksiDetail->transaksi_id)->firstOrFail();
 
             
             if($column == 'qty'){
-
-                // $stokMutasi->update([
-                //     'stok_awal'  => 0,
-                //     'stok_akhir' => $value * $transaksiDetail->items->konversi,
-                //     'stok_masuk' => $value * $transaksiDetail->items->konversi,
-                //     'updated_by' => auth()->user()->id,
-
-                // ]);
-
                 $stockHistory->update([
                     'quantity'  =>  $value,
                     'available_quantity' => $value,
@@ -143,9 +116,7 @@ class StockController extends Controller
                 ]);
             }
             
-
             $test = ($transaksiDetail->qty / $transaksiDetail->items->konversi) * $transaksiDetail->harga ;
-            // dd($transaksiDetail->qty . '-'. $transaksiDetail->items->konversi . '-'. $transaksiDetail->harga . '-'. $test);
             
             $transaksiDetail->update(
                 [
@@ -156,10 +127,7 @@ class StockController extends Controller
 
 
             //Update Parent Transaksi
-            // $transaksi = Transaksi::where('id', $transaksiDetail->transaksi_id)->first();
-
             $transaksi = TransaksiBeli::findOrFail($transaksiDetail->transaksi_id);
-            // $sumQty = TransaksiDetail::where('transaksi_id',$transaksiDetail->transaksi_id)->sum('qty');
             $sumQty = TransaksiBeliDetail::where('transaksi_id', $transaksiDetail->transaksi_id)
                                     ->with('items') // Eager load relasi 'items'
                                     ->get() // Ambil semua data yang sesuai
@@ -189,10 +157,6 @@ class StockController extends Controller
             return response()->json(['error' => $e->getMessage()], 400);
 
         }
-
-
-
-        // return response()->json(['success' => $updated]);
     }
 
     public function reverseStockReduction(Request $request)
@@ -203,9 +167,6 @@ class StockController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
-
-        // return 'aa';
-        // dd($request->all());
     }
 
     public function detailsStok(Request $request)
@@ -227,54 +188,38 @@ class StockController extends Controller
                 // For other roles, get farm IDs associated with the user
                 $farmIds = $user->farmOperators()->pluck('farm_id')->toArray();
             }
-            // $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
-
-            // dd($farmIds);
 
             $item = Item::findOrFail($validatedData['id']);
             $stockHistory = $item->stockHistory()
                 ->whereBetween('tanggal', [$validatedData['start_date'], $validatedData['end_date']]);
 
             if ($validatedData['farm_id'] === '2d245e3f-fdc9-4138-b32d-994f3f1953a5') {
-                // $stokHistory = $stockHistory->whereHas('inventoryLocation.farm', function ($q) use ($farmIds) {
-                //         $q->whereIn('id', $farmIds);
-                //     });
                 $stokHistory = $stockHistory->whereHas('inventoryLocation.farm', function ($query) use ($farmIds) {
                     $query->whereIn('id', $farmIds);
                 });
-                // dd($stokHistory);
 
 
             } else {
                 $stokHistory = $stockHistory->where('farm_id', $validatedData['farm_id']);
             }
 
-
-            // Get farm IDs for current user from farmOperators
-            // $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
-
-            // // dd($farmIds);
-            
-            // // Add a condition to filter items based on farm IDs
-            // $stokHistory = $stockHistory->whereHas('inventoryLocation.farm', function ($q) use ($farmIds) {
-            //     $q->whereIn('id', $farmIds);
-            // });
-
-            
-
             $stokHistory = $stokHistory->orderBy('tanggal', 'DESC')->get();
-
-            // dd($stokHistory);
-
-
 
             $stokHistory->transform(function ($item) {
                 $transaksiHarianDetail = TransaksiHarianDetail::where('parent_id', $item->parent_id)->first();
-                // dd($transaksiHarianDetail->transaksiHarian->kandang->nama);
+
                 $item->nama_farm = Farm::find($item->inventoryLocation->farm_id)->nama;
                 $item->nama_kandang = $transaksiHarianDetail->transaksiHarian->kandang->nama ?? '';
                 $item->item_name = Item::find($item->item_id)->name;
-                $item->perusahaan_nama = Rekanan::find($item->transaksiBeli->rekanan_id)->nama;
+                if($item->parent_id){
+                    $transaksiBeliDetail = TransaksiBeliDetail::where('id', $item->parent_id)->first();
+
+                    $item->perusahaan_nama = $transaksiBeliDetail->transaksiBeli->rekanans->nama;
+                 }else{
+                    $transaksiBeli = TransaksiBeli::where('id', $item->transaksi_id)->first();
+                    $item->perusahaan_nama = $transaksiBeli ? $transaksiBeli->rekanans->nama : '-';
+                }
+
                 return $item;
             });
 

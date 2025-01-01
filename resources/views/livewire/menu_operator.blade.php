@@ -598,6 +598,29 @@
 					<!--end:Menu link-->
 				</div>
 				<!--end:Menu item-->
+
+				<!--begin:Menu item-->
+				<div class="menu-item menu-accordion menu-fit">
+					<!--begin:Menu link-->
+					<span class="menu-link" onclick="window.location.href='/transaksi/penjualan'">
+						<span class="menu-icon">
+							<i class="ki-duotone ki-dollar">
+								<span class="path1"></span>
+								<span class="path2"></span>
+								<span class="path3"></span>
+							</i>
+						</span>
+						<span class="menu-title">Penjualan Ternak</span>
+						<span class="menu-badge">
+							<button class="btn btn-sm btn-icon btn-action">
+								<i class="ki-outline ki-plus fs-4"></i>
+							</button>
+						</span>
+					</span>
+					<!--end:Menu link-->
+				</div>
+				<!--end:Menu item-->
+
 				{{-- <!--begin:Menu item-->
 				<div class="menu-item menu-accordion menu-fit">
 					<!--begin:Menu link-->
@@ -660,27 +683,6 @@
 
 		@endif
 
-		@if($isOpen)
-		{{--
-		<livewire:master-data.kandang-modal /> --}}
-		{{-- @include('livewire.master-data.kandang-modal') --}}
-		{{-- @include('modal') --}}
-		@endif
-
-		{{-- @include('modal') --}}
-		@if(auth()->user()->hasRole(['SuperAdmin','Administrator']))
-		{{-- <p>Commit Hash: {{ trim(exec('git rev-parse --short HEAD')); }}</p>
-		<p>Branch: {{ trim(exec('git rev-parse --abbrev-ref HEAD')); }}</p>
-		@if (!empty(trim(exec('git describe --tags --abbrev=0 2>/dev/null'))))
-		<p>Tag/Release: {{ trim(exec('git describe --tags --abbrev=0 2>/dev/null')); }}</p>
-		@endif --}}
-
-		{{-- @if ($isLatestRelease)
-		<p style="color: green;">You are running the latest release!</p>
-		@else
-		<p style="color: red;">An update is available. Please update your application.</p>
-		@endif --}}
-		@endif
 	</div>
 	<!--end::sidebar menu-->
 

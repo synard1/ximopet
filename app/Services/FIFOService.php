@@ -48,6 +48,11 @@ class FIFOService
             $kandang = Kandang::find($validatedData['kandang_id']);
             $ternak = CurrentTernak::where('farm_id',$validatedData['farm_id'])->where('kandang_id',$validatedData['kandang_id'])->where('status','Aktif')->first();
 
+            // Check if tanggal is earlier than the start_date of kelompokTernaks
+            if (Carbon::parse($validatedData['tanggal'])->lt($ternak->kelompokTernaks->start_date)) {
+                throw new \Exception('Tanggal transaksi tidak boleh lebih awal dari tanggal mulai kelompok ternak.');
+            }
+
             // Create single Transaksi
             $transaksi = TransaksiHarian::create([
                 'tanggal' => $validatedData['tanggal'],

@@ -179,19 +179,19 @@ return new class extends Migration
         Schema::create('konsumsi_pakan', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('kelompok_ternak_id');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
             $table->uuid('item_id')->nullable();    
-            $table->foreign('item_id')->references('id')->on('items');
             $table->decimal('quantity', 10, 2);
             $table->decimal('harga', 10, 2);
             $table->dateTime('tanggal');
-            $table->string('keterangan');
+            $table->string('keterangan')->nullable(); 
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
 
+            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
+            $table->foreign('item_id')->references('id')->on('items');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });

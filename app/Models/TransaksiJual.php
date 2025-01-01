@@ -32,8 +32,13 @@ class TransaksiJual extends BaseModel
         'tanggal' => 'datetime',
     ];
 
-    public function details()
+    public function detail()
     {
-        return $this->hasMany('App\Models\TransaksiJualDetail', 'transaksi_jual_id');
+        return $this->hasOne('App\Models\TransaksiJualDetail', 'transaksi_jual_id');
+    }
+
+    public function kelompokTernak()
+    {
+        return $this->belongsTo(KelompokTernak::class);
     }
 }

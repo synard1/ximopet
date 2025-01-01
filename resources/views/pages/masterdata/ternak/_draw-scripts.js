@@ -161,8 +161,7 @@ document.querySelectorAll('[data-kt-action="view_detail_ternak"]').forEach(funct
                             <td>${item.ternak_afkir || 0}</td>
                             <td>${item.ternak_terjual || 0}</td>
                             <td>${item.pakan_harian}</td>
-                            <td>${item.obat_harian || 0}</td>
-                            <td>${item.vitamin_harian || 0}</td>
+                            <td>${item.ovk_harian || 0}</td>
                         </tr>
                     `;
                     tableBody.insertAdjacentHTML('beforeend', row);
@@ -254,6 +253,97 @@ document.querySelectorAll('[data-kt-action="view_detail_ternak"]').forEach(funct
         //             }
         //         });
         //     });
+    });
+});
+
+document.querySelectorAll('[data-kt-action="update_detail"]').forEach(function (element) {
+    element.addEventListener('click', function (e) {
+        e.preventDefault();
+        var modal = document.getElementById('kt_modal_ternak_detail_report');
+
+        // Select parent row
+        const parent = e.target.closest('tr');
+
+        // Get ternak ID
+        const ternakId = event.currentTarget.getAttribute('data-ternak-id');
+
+        // Get ternak name
+        const ternakName = parent.querySelectorAll('td')[0].innerText;
+
+        // Show loading indication
+        Swal.fire({
+            html: `Loading data for <b>${ternakName}</b>`,
+            icon: "info",
+            buttonsStyling: false,
+            showConfirmButton: false,
+            timer: 2000
+        }).then(function () {
+            // Fetch detail report data
+            fetch(`/api/v1/ternak/${ternakId}/detail-report`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + window.AuthToken,
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+			})
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        modal.addEventListener('show.bs.modal', function (event) {
+                            // document.getElementById('ternak_id').value = ternakId;
+                            // Update all inputs with id 'ternak_id'
+                            document.querySelectorAll('#ternak_id').forEach(input => {
+                                input.value = ternakId;
+                            });
+                            
+                            // Populate form fields if bonus data exists
+                            if (data.bonus) {
+                                document.getElementById('jumlah').value = data.bonus.jumlah || '';
+                                document.getElementById('tanggal').value = data.bonus.tanggal || '';
+                                document.getElementById('keterangan').value = data.bonus.keterangan || '';
+                            } else {
+                                // Clear form fields if no bonus data
+                                document.getElementById('jumlah').value = '';
+                                document.getElementById('tanggal').value = '';
+                                document.getElementById('keterangan').value = '';
+                            }
+
+                            // Populate form field if administrasi data exists
+                            if (data.administrasi) {
+                                document.getElementById('persetujuan_nama').value = data.administrasi.persetujuan_nama || '';
+                                document.getElementById('persetujuan_jabatan').value = data.administrasi.persetujuan_jabatan || '';
+                                document.getElementById('verifikator_nama').value = data.administrasi.verifikator_nama || '';
+                                document.getElementById('verifikator_jabatan').value = data.administrasi.verifikator_jabatan || '';
+                                document.getElementById('tanggal_laporan').value = data.administrasi.tanggal_laporan || '';
+                            } else {
+                                // Clear administrasi fields if no administrasi data
+                                document.getElementById('persetujuan_nama').value = '';
+                                document.getElementById('persetujuan_jabatan').value = '';
+                                document.getElementById('verifikator_nama').value = '';
+                                document.getElementById('verifikator_jabatan').value = '';
+                                document.getElementById('tanggal_laporan').value = '';
+                            }
+                        });
+
+                        $('#kt_modal_ternak_detail_report').modal('show');
+                    } else {
+                        throw new Error(data.message || 'Failed to retrieve bonus data');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching bonus data:', error);
+                    Swal.fire({
+                        text: "An error occurred while loading bonus data.",
+                        icon: "error",
+                        buttonsStyling: false,
+                        confirmButtonText: "Ok, got it!",
+                        customClass: {
+                            confirmButton: "btn btn-primary"
+                        }
+                    });
+                });
+        });
     });
 });
 

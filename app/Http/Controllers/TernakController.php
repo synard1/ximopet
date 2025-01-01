@@ -192,7 +192,7 @@ class TernakController extends Controller
         ->latest('tanggal')
         ->value('tanggal');
 
-        if($kelompokTernak->status == 'Aktif'){
+        if($kelompokTernak->status == 'Aktif' || $kelompokTernak->status == 'Locked'){
             // If there's no transaction, use the current date
             // Otherwise, use the last transaction date plus 1 days
             $endDate = $lastTransactionDate 
@@ -229,8 +229,9 @@ class TernakController extends Controller
         $afkirData = $this->getAfkirData($kelompokTernak, $startDate, $endDate);
         $penjualanData = $this->getPenjualanData($kelompokTernak, $startDate, $endDate);
         $pakanData = $this->getPakanData($kelompokTernak, $startDate, $endDate);
-        $obatData = $this->getObatData($kelompokTernak, $startDate, $endDate);
-        $vitaminData = $this->getVitaminData($kelompokTernak, $startDate, $endDate);
+        $ovkData = $this->getOvkData($kelompokTernak, $startDate, $endDate);
+        // $obatData = $this->getObatData($kelompokTernak, $startDate, $endDate);
+        // $vitaminData = $this->getVitaminData($kelompokTernak, $startDate, $endDate);
 
         // dd($pakanData);
 
@@ -246,8 +247,7 @@ class TernakController extends Controller
                 // 'stok_akhir' => $kematianData[$date]['stok_akhir'] ?? $afkirData[$date]['stok_akhir'] ?? $penjualanData[$date]['stok_akhir'] ?? 0,
                 'stok_akhir' => $kematianData[$date]['stok_akhir'] ?? $afkirData[$date]['stok_akhir'] ?? $penjualanData[$date]['stok_akhir'] ?? 0,
                 'pakan_harian' => $pakanData[$date] ?? 0,
-                'obat_harian' => $obatData[$date] ?? 0,
-                'vitamin_harian' => $vitaminData[$date] ?? 0,
+                'ovk_harian' => $ovkData[$date] ?? 0,
             ];
         }
 
@@ -317,18 +317,18 @@ class TernakController extends Controller
             ->toArray();
     }
 
-    private function getObatData(KelompokTernak $kelompokTernak, Carbon $startDate, Carbon $endDate)
+    private function getOvkData(KelompokTernak $kelompokTernak, Carbon $startDate, Carbon $endDate)
     {
         return $kelompokTernak->transaksiHarian()
             ->whereBetween('tanggal', [$startDate, $endDate])
             ->whereHas('details.item.category', function ($query) {
-                $query->where('name', 'Obat');
+                $query->where('name', 'OVK');
             })
             ->get()
             ->map(function ($transaksi) {
                 return [
                     'tanggal' => $transaksi->tanggal->format('Y-m-d'),
-                    'quantity' => $transaksi->details->where('item.category.name', 'Obat')->sum('quantity')
+                    'quantity' => $transaksi->details->where('item.category.name', 'OVK')->sum('quantity')
                 ];
             })
             ->keyBy('tanggal')
@@ -338,59 +338,6 @@ class TernakController extends Controller
             ->toArray();
     }
 
-    private function getVitaminData(KelompokTernak $kelompokTernak, Carbon $startDate, Carbon $endDate)
-    {
-        return $kelompokTernak->transaksiHarian()
-            ->whereBetween('tanggal', [$startDate, $endDate])
-            ->whereHas('details.item.category', function ($query) {
-                $query->where('name', 'Vitamin');
-            })
-            ->get()
-            ->map(function ($transaksi) {
-                return [
-                    'tanggal' => $transaksi->tanggal->format('Y-m-d'),
-                    'quantity' => $transaksi->details->where('item.category.name', 'Vitamin')->sum('quantity')
-                ];
-            })
-            ->keyBy('tanggal')
-            ->map(function ($item) {
-                return $item['quantity'];
-            })
-            ->toArray();
-    }
-
-    // private function getPakanForTernak($id)
-    // {
-    //     $categories = $this->getCategoriesFromItemCategory();
-    //     return $this->getItemQuantityForTernak($id, 'Pakan', $categories);
-    // }
-
-    // private function getObatForTernak($id)
-    // {
-    //     $categories = $this->getCategoriesFromItemCategory();
-    //     return $this->getItemQuantityForTernak($id, 'Obat', $categories);
-    // }
-
-    // private function getVitaminForTernak($id)
-    // {
-    //     $categories = $this->getCategoriesFromItemCategory();
-    //     return $this->getItemQuantityForTernak($id, 'Vitamin', $categories);
-    // }
-
-    // private function getItemQuantityForTernak($id, $itemType, $categories)
-    // {
-    //     if (!in_array($itemType, $categories)) {
-    //         return 0;
-    //     }
-
-    //     return TransaksiHarianDetail::whereHas('transaksiHarian', function ($query) use ($id) {
-    //         $query->where('kelompok_ternak_id', $id);
-    //     })
-    //     ->whereHas('item.category', function ($query) use ($itemType) {
-    //         $query->where('name', $itemType);
-    //     })
-    //     ->sum('quantity');
-    // }
 
     public function showDetail($id)
     {
@@ -408,4 +355,156 @@ class TernakController extends Controller
         return view('pages.masterdata.ternak._detail_content', compact('ternak', 'mati', 'afkir', 'terjual', 'sisa', 'pakan', 'obat', 'vitamin'));
 
     }
+
+    public function storeBonusData($kelompokTernakId, $bonusData)
+    {
+        $kelompokTernak = KelompokTernak::findOrFail($kelompokTernakId);
+
+        // Get existing data or initialize an empty array
+        $existingData = json_decode($kelompokTernak->data, true) ?? [];
+
+        // Merge the new bonus data with existing data
+        $existingData['bonus'] = $bonusData;
+
+        // Update the data column
+        $kelompokTernak->update([
+            'data' => json_encode($existingData)
+        ]);
+
+        return response()->json(['message' => 'Bonus data stored successfully']);
+    }
+
+    public function addBonus(Request $request)
+    {
+        $bonusData = $request->validate([
+            'jumlah' => 'required|numeric',
+            'keterangan' => '',
+            'tanggal' => 'required',
+            // Add any other validation rules for your bonus data
+        ]);
+
+        $kelompokTernakId = $request->input('ternak_id');
+
+        return $this->storeBonusData($kelompokTernakId, $bonusData);
+    }
+
+    public function getBonusData($ternakId)
+    {
+        try {
+            $ternak = KelompokTernak::findOrFail($ternakId);
+            
+            // Retrieve the entire data column
+            $allData = $ternak->data ? json_decode($ternak->data, true) : [];
+            
+            // Extract the bonus data from the 'bonus' key
+            $bonusData = $allData['bonus'] ?? null;
+
+            return response()->json([
+                'success' => true,
+                'bonus' => $bonusData
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving bonus data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getDetailReportData($ternakId)
+    {
+        try {
+            $ternak = KelompokTernak::findOrFail($ternakId);
+            
+            // Retrieve the entire data column
+            $allData = $ternak->data ? json_decode($ternak->data, true) : [];
+            
+            // Extract the bonus data from the 'bonus' key
+            $bonusData = $allData['bonus'] ?? null;
+            $administrasiData = $allData['administrasi'] ?? null;
+
+            return response()->json([
+                'success' => true,
+                'bonus' => $bonusData,
+                'administrasi' => $administrasiData,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving detail report data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function storeTanggalSurat(Request $request, $ternakId)
+    {
+        try {
+            $request->validate([
+                'tanggal_surat' => 'required|date',
+            ]);
+
+            $kelompokTernak = KelompokTernak::findOrFail($ternakId);
+
+            // Get existing data or initialize an empty array
+            $existingData = json_decode($kelompokTernak->data, true) ?? [];
+
+            // Add or update the tanggal_surat
+            $existingData['tanggal_surat'] = $request->tanggal_surat;
+
+            // Update the data column
+            $kelompokTernak->update([
+                'data' => json_encode($existingData)
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tanggal surat berhasil disimpan',
+                'tanggal_surat' => $request->tanggal_surat
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error menyimpan tanggal surat: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function addAdministrasi(Request $request)
+    {
+        $administrasiData = $request->validate([
+            'persetujuan_nama' => 'required',
+            'persetujuan_jabatan' => 'required',
+            'verifikator_nama' => 'required',
+            'verifikator_jabatan' => 'required',
+            'tanggal_laporan' => '',
+            // Add any other validation rules for your bonus data
+        ]);
+
+        if($request->input('tanggal_laporan') == null){
+            $administrasiData['tanggal_laporan'] = Carbon::now()->format('Y-m-d');
+        }
+
+        $kelompokTernakId = $request->input('ternak_id');
+
+        return $this->storeAdministrasiData($kelompokTernakId, $administrasiData);
+    }
+
+    public function storeAdministrasiData($kelompokTernakId, $administrasiData)
+    {
+        $kelompokTernak = KelompokTernak::findOrFail($kelompokTernakId);
+
+        // Get existing data or initialize an empty array
+        $existingData = json_decode($kelompokTernak->data, true) ?? [];
+
+        // Merge the new bonus data with existing data
+        $existingData['administrasi'] = $administrasiData;
+
+        // Update the data column
+        $kelompokTernak->update([
+            'data' => json_encode($existingData)
+        ]);
+
+        return response()->json(['message' => 'Administrasi data stored successfully']);
+    }
+
 }

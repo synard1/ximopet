@@ -7,22 +7,31 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Traits\KelompokTernakLockCheck;
+
 
 class KelompokTernak extends BaseModel
 {
     use HasFactory, SoftDeletes, HasUuids;
+    use KelompokTernakLockCheck;
+
 
     protected $table = 'kelompok_ternak';
 
     protected $fillable = [
         'transaksi_id',
+        'farm_id',
+        'kandang_id',
         'name',
         'breed',
         'start_date',
         'populasi_awal',
         'berat_awal',
+        'harga_beli',
         'hpp',
+        'pic',
         'status',
+        'data',
         'keterangan',
         'created_by',
         'updated_by',
@@ -30,7 +39,10 @@ class KelompokTernak extends BaseModel
 
     protected $casts = [
         'start_date' => 'datetime',
+        'data' => 'array',
+
     ];
+
 
     public function transaksiBeli()
     {
@@ -68,6 +80,26 @@ class KelompokTernak extends BaseModel
     public function penjualanTernaks()
     {
         return $this->hasMany(TernakJual::class, 'kelompok_ternak_id','id');
+    }
+
+    public function transaksiJuals()
+    {
+        return $this->hasMany(TransaksiJual::class, 'kelompok_ternak_id','id');
+    }
+
+    public function konsumsiPakan()
+    {
+        return $this->hasMany(KonsumsiPakan::class, 'kelompok_ternak_id','id');
+    }
+
+    public function transaksiHarians()
+    {
+        return $this->hasMany(TransaksiHarian::class);
+    }
+
+    public function isLocked()
+    {
+        return $this->status === 'Locked';
     }
     
 }

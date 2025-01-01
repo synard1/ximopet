@@ -153,6 +153,8 @@ class DataController extends Controller
                 }else{
                     $data = $this->getActiveFarms();
                 }
+            }elseif($type === 'ternaks'){
+                    $data = $this->getActiveTernaks();
             }
         } else {
             return response()->json(['error' => 'Unauthorized'], 403);
@@ -228,6 +230,7 @@ class DataController extends Controller
         // Format the data to include necessary details
         $formattedStocks = $currentStocks->map(function ($stock) {
             return [
+                'item_jenis' => $stock->item ? $stock->item->itemCategory->name : 'N/A',
                 'item_id' => $stock->item ? $stock->item->id : 'N/A',
                 'item_name' => $stock->item ? $stock->item->name : 'N/A',
                 'total' => $stock->quantity,
@@ -262,7 +265,7 @@ class DataController extends Controller
         ];
     
         if ($formattedStocks->isEmpty()) {
-            $result['error'] = 'No data found for the specified farm ID.';
+            $result['error'] = trans('menu.no_inventory_stock_farm',[],'id');
         }
     
         return $result;
@@ -337,6 +340,21 @@ class DataController extends Controller
     public function getActiveFarms()
     {
         $activeItems = Farm::where('status', 'Aktif')->get(['id', 'nama']);
+
+        return $activeItems->map(function ($item) {
+            return [
+                'farm_id' => $item->id,
+                'farm_name' => $item->nama,
+            ];
+        });
+    }
+
+    public function getActiveTernaks()
+    {
+        $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
+        $farms = Farm::whereIn('id', $farmIds)->get(['id', 'nama']);
+        
+        $activeTernaks = KelompokTernak::where('status', 'Aktif')->orWhere('status','Locked')->get(['id', 'name','populasi_awal']);
 
         return $activeItems->map(function ($item) {
             return [
@@ -634,12 +652,20 @@ class DataController extends Controller
             $transaksiDetail = TransaksiHarian::findOrFail($id);
             $currentTernak = CurrentTernak::where('kelompok_ternak_id', $transaksiDetail->kelompok_ternak_id)->first();
 
+            if ($transaksiDetail->kelompokTernak->isLocked()) {
+                return response()->json([
+                    'message' => 'Data DOC dikunci',
+                    'status' => 'error'
+                ], 404);
+            }
+
             if (!$currentTernak) {
                 return response()->json([
                     'message' => 'Current ternak tidak ditemukan',
                     'status' => 'error'
                 ], 404);
             }
+
         
             $oldValue = $transaksiDetail->quantity;
             $difference = $value - $oldValue;

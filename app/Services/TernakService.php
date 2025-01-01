@@ -361,13 +361,15 @@ class TernakService
 
             $transaksiBeli = TransaksiBeli::where('kelompok_ternak_id', $kelompokTernak->id)->first();
 
+            // dd($validatedData['ternak_jual']);
+
             $ternakJual = new TernakJual();
             $ternakJual->kelompok_ternak_id = $kelompokTernak->id;
             $ternakJual->transaksi_id = $transaksi->id;
             $ternakJual->tipe_transaksi = 'Harian';
             $ternakJual->tanggal = $validatedData['tanggal'];
             $ternakJual->quantity = $validatedData['ternak_jual'];
-            $ternakJual->total_berat = 0;
+            $ternakJual->total_berat = $validatedData['total_berat'] ?? 0;
             $ternakJual->umur = $umur;
             $ternakJual->status = 'Data Belum Lengkap';
             $ternakJual->created_by = auth()->user()->id;
@@ -375,6 +377,7 @@ class TernakService
 
             // Create TransaksiJual record
             $transaksiJual = new TransaksiJual();
+            $transaksiJual->faktur = $validatedData['faktur'] ?? null;
             $transaksiJual->transaksi_id = $transaksi->id;
             $transaksiJual->tipe_transaksi = 'Harian';
             $transaksiJual->tanggal = $validatedData['tanggal'];
@@ -390,11 +393,11 @@ class TernakService
             // Create TransaksiJualDetail record
             $transaksiJualDetail = new TransaksiJualDetail();
             $transaksiJualDetail->transaksi_jual_id = $transaksiJual->id;
-            $transaksiJualDetail->rekanan_id = null;
+            $transaksiJualDetail->rekanan_id = $validatedData['rekanan_id'] ?? null ;
             $transaksiJualDetail->farm_id = $validatedData['farm_id'];
             $transaksiJualDetail->kandang_id = $validatedData['kandang_id'];
             $transaksiJualDetail->harga_beli = $transaksiBeli->harga;
-            $transaksiJualDetail->harga_jual = 0;
+            $transaksiJualDetail->harga_jual = $validatedData['harga'] ?? 0;
             $transaksiJualDetail->qty = $validatedData['ternak_jual'];
             $transaksiJualDetail->berat = $validatedData['total_berat'] ?? 0;
             $transaksiJualDetail->umur = $umur;
@@ -410,9 +413,13 @@ class TernakService
             // $this->updateStok($this->selectedFarm, $this->selectedKandang, $this->quantity, 'kurang');
 
             // Update Ternak History
-            $ternakHistory = TernakHistory::where('kelompok_ternak_id',$kelompokTernak->id)->where('tanggal',$validatedData['tanggal'])->first();
-            $ternakHistory->ternak_jual = $validatedData['ternak_jual'];
-            $ternakHistory->save();
+            if($validatedData['tanggal_transaksi_harian']){
+
+            }else{
+                $ternakHistory = TernakHistory::where('kelompok_ternak_id',$kelompokTernak->id)->where('tanggal',$validatedData['tanggal'])->first();
+                $ternakHistory->ternak_jual = $validatedData['ternak_jual'];
+                $ternakHistory->save();
+            }
 
             DB::commit();
             return $transaksiJual;

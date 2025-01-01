@@ -34,6 +34,6 @@ class Kandang extends BaseModel
 
     public function kelompokTernak()
     {
-        return $this->belongsTo(KelompokTernak::class,'kelompok_ternak_id');
+        return $this->belongsTo(KelompokTernak::class,'kelompok_ternak_id','id');
     }
 }

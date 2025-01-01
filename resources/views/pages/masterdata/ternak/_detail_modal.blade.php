@@ -17,8 +17,7 @@
                                 <th>Ternak Terjual</th>
                                 {{-- <th>Sisa Ternak</th> --}}
                                 <th>Pakan (Kg)</th>
-                                <th>Obat (ml)</th>
-                                <th>Vitamin (ml)</th>
+                                <th>OVK (ml)</th>
                             </tr>
                         </thead>
                         <tbody>

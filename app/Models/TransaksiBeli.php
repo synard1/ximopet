@@ -45,7 +45,7 @@ class TransaksiBeli extends BaseModel
         return $this->belongsTo(ItemCategory::class, 'category_id','id');
     }
 
-    public function transaksiDetail()
+    public function transaksiDetails()
     {
         return $this->hasMany(TransaksiBeliDetail::class,'transaksi_id','id');
     }

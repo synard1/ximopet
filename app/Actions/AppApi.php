@@ -14,6 +14,7 @@ use App\Models\TransaksiDetail;
 use App\Models\Transaksi;
 use App\Models\TransaksiBeli;
 use App\Models\TransaksiBeliDetail;
+use App\Models\TransaksiJual;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
 
@@ -121,7 +122,13 @@ class AppApi
             $item->terpakai = floatval($item->terpakai);
             $item->jumlah = floatval($item->jumlah);
             $item->harga = floatval($item->harga);
-            $item->sub_total = floatval($item->sub_total);
+            // $item->sub_total = floatval($item->sub_total);
+
+            if(config('xolution.ALLOW_ROUNDUP_PRICE') == true){
+                $item->sub_total = floatval($item->sub_total);
+            }else{
+                $item->sub_total = intval($item->sub_total);
+            }
 
             return $item;
         });
@@ -195,6 +202,21 @@ class AppApi
 
         // Return the formatted data as JSON
         return response()->json($result);
+    }
+
+    public function getPenjualan($transaksiId)
+    {
+        // Fetch operators not associated with the selected farm
+        $data = TransaksiJual::findOrFail($transaksiId);
+
+        // $operators = User::where('role', 'Operator')
+        //     ->whereNotIn('id', $existingOperatorIds)
+        //     ->get(['id', 'name']);
+        $result = ['data' => $data];
+
+
+        return response()->json($result);
+        // return response()->json(['operators' => $operators]);
     }
 
     public function getFarms()

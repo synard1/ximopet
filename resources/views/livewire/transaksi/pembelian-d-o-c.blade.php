@@ -31,7 +31,7 @@
                                     <div class="mb-5">
                                         <label class="form-label fs-8 mb-3">No. Faktur</label>
                                         <input type="text" wire:model="faktur" id="faktur"
-                                            class="form-control form-control-solid" placeholder="No. Faktur" @if ($edit_mode == true) readonly disabled
+                                            class="form-control form-control-solid" placeholder="No. Faktur" @if ($edit_mode == true) readonly
                                                 
                                             @endif>
                                         @error('faktur')
@@ -93,7 +93,7 @@
                                         <label class="form-label fs-8 mb-3">Kandang</label>
                                         <!--begin::Select2-->
                                         <select id="selectedKandang" name="selectedKandang" wire:model="selectedKandang"
-                                            class="js-select2 form-control">
+                                            class="js-select2 form-control" @if($edit_mode) disabled @endif>
                                             <option value="">=== Pilih Kandang ===</option>
                                             @foreach ($kandangs as $kandang)
                                             <option value="{{ $kandang->id }}" @if($selectedKandang == $kandang->id) selected @endif>{{ $kandang->farms->name }} - {{
@@ -111,6 +111,7 @@
                                     </div>
                                     <!--end::Input group-->
 
+
                                     <!--begin::Input group-->
                                     <div class="mb-5">
                                         <label class="form-label fs-8 mb-3">Periode</label>
@@ -122,6 +123,22 @@
                                         @error('periode')
                                         <span class="text-danger">{{ $message }}</span> @enderror
                                         @error('periode')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <!--end::Input group-->
+
+                                    <!--begin::Input group-->
+                                    <div class="mb-5">
+                                        <label class="form-label fs-8 mb-3">PIC</label>
+                                        <!--begin::Input-->
+                                        <input type="text" wire:model="pic" id="pic"
+                                            class="form-control form-control-solid mb-3 mb-lg-0"
+                                            placeholder="Penanggung Jawab" />
+                                        <!--end::Input-->
+                                        @error('pic')
+                                        <span class="text-danger">{{ $message }}</span> @enderror
+                                        @error('pic')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -219,7 +236,11 @@
                     {{-- <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button> --}}
                     <button type="button" class="btn btn-secondary" id="closeModalBtn" data-bs-dismiss="modal" wire:click="resetFormAndErrors" >Close</button>
 
-                    <button type="button" class="btn btn-primary" wire:click="storeDOC()">Save changes</button>
+                    @if($edit_mode)
+                    <button type="button" class="btn btn-primary" wire:click="updateDOC()">Update DOC</button>
+                    @else
+                        <button type="button" class="btn btn-primary" wire:click="storeDOC()">Save DOC</button>
+                    @endif
                 </div>
             </div>
         </div>

@@ -200,7 +200,7 @@ class FarmController extends Controller
     public function getKandangs(Farm $farm)
     {
         $kandangs = $farm->kandangs()->with(['kelompokTernak' => function($query) {
-            $query->where('status', 'Aktif');
+            $query->where('status', 'Aktif')->orWhere('status', 'Locked');
         }])->get()->map(function ($kandang) {
             $kelompokTernak = $kandang->kelompokTernak;
             return [
