@@ -181,7 +181,7 @@ class StockController extends Controller
         try {
             $user = auth()->user();
         
-            if ($user->hasRole('Manager')) {
+            if ($user->hasRole('Manager') || $user->hasRole('Supervisor')) {
                 // If user is a Manager, get all active farm IDs
                 $farmIds = Farm::where('status', 'Aktif')->pluck('id')->toArray();
             } else {
@@ -217,7 +217,7 @@ class StockController extends Controller
                     $item->perusahaan_nama = $transaksiBeliDetail->transaksiBeli->rekanans->nama;
                  }else{
                     $transaksiBeli = TransaksiBeli::where('id', $item->transaksi_id)->first();
-                    $item->perusahaan_nama = $transaksiBeli ? $transaksiBeli->rekanans->nama : '-';
+                    // $item->perusahaan_nama = $transaksiBeli ? $transaksiBeli->rekanans->nama : '-';
                 }
 
                 return $item;

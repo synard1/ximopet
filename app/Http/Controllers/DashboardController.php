@@ -11,7 +11,7 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        addVendors(['amcharts', 'amcharts-maps', 'amcharts-stock']);
+        // addVendors(['amcharts', 'amcharts-maps', 'amcharts-stock']);
         // $user = User::whereDoesntHave('roles', function($query) {
         //     $query->where('name', 'SuperAdmin');
         // })->get();

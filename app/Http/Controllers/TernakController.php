@@ -28,6 +28,8 @@ class TernakController extends Controller
         // $data = Ternak::all();
         // $dataTable->data = $data;
         // $dataTable->setup();
+        addVendors(['datatables']);
+
         return $dataTable->render('pages.masterdata.ternak.list');
     }
 
@@ -234,6 +236,7 @@ class TernakController extends Controller
         // $vitaminData = $this->getVitaminData($kelompokTernak, $startDate, $endDate);
 
         // dd($pakanData);
+        // dd($pakanData['2024-10-29'][0]['nama']);
 
         $dailyData = [];
         foreach ($dateRange as $date) {
@@ -244,12 +247,13 @@ class TernakController extends Controller
                 'ternak_mati' => $kematianData[$date]['quantity'] ?? 0,
                 'ternak_afkir' => $afkirData[$date]['jumlah'] ?? 0,
                 'ternak_terjual' => $penjualanData[$date]['quantity'] ?? 0,
-                // 'stok_akhir' => $kematianData[$date]['stok_akhir'] ?? $afkirData[$date]['stok_akhir'] ?? $penjualanData[$date]['stok_akhir'] ?? 0,
                 'stok_akhir' => $kematianData[$date]['stok_akhir'] ?? $afkirData[$date]['stok_akhir'] ?? $penjualanData[$date]['stok_akhir'] ?? 0,
-                'pakan_harian' => $pakanData[$date] ?? 0,
+                'pakan_nama' => $pakanData[$date][0]['nama'] ?? '',
+                'pakan_quantity' => $pakanData[$date][0]['quantity'] ?? 0,
                 'ovk_harian' => $ovkData[$date] ?? 0,
             ];
         }
+
 
         // dd($dailyData['2024-12-03']);
 
@@ -296,6 +300,27 @@ class TernakController extends Controller
             ->toArray();
     }
 
+    // private function getPakanData(KelompokTernak $kelompokTernak, Carbon $startDate, Carbon $endDate)
+    // {
+    //     return $kelompokTernak->transaksiHarian()
+    //         ->whereBetween('tanggal', [$startDate, $endDate])
+    //         ->whereHas('details.item.category', function ($query) {
+    //             $query->where('name', 'Pakan');
+    //         })
+    //         ->get()
+    //         ->map(function ($transaksi) {
+    //             return [
+    //                 'tanggal' => $transaksi->tanggal->format('Y-m-d'),
+    //                 'nama' => $transaksi->details->item,
+    //                 'quantity' => $transaksi->details->where('item.category.name', 'Pakan')->sum('quantity')
+    //             ];
+    //         })
+    //         ->keyBy('tanggal')
+    //         // ->map(function ($item) {
+    //         //     return $item['quantity'];
+    //         // })
+    //         ->toArray();
+    // }
     private function getPakanData(KelompokTernak $kelompokTernak, Carbon $startDate, Carbon $endDate)
     {
         return $kelompokTernak->transaksiHarian()
@@ -303,16 +328,31 @@ class TernakController extends Controller
             ->whereHas('details.item.category', function ($query) {
                 $query->where('name', 'Pakan');
             })
+            ->with(['details.item' => function ($query) {
+                $query->where('category_id', function ($subQuery) {
+                    $subQuery->select('id')
+                        ->from('item_categories')
+                        ->where('name', 'Pakan');
+                });
+            }])
             ->get()
-            ->map(function ($transaksi) {
-                return [
-                    'tanggal' => $transaksi->tanggal->format('Y-m-d'),
-                    'quantity' => $transaksi->details->where('item.category.name', 'Pakan')->sum('quantity')
-                ];
+            ->flatMap(function ($transaksi) {
+                return $transaksi->details->map(function ($detail) use ($transaksi) {
+                    return [
+                        'tanggal' => $transaksi->tanggal->format('Y-m-d'),
+                        'nama_pakan' => $detail->item->name,
+                        'quantity' => $detail->quantity
+                    ];
+                });
             })
-            ->keyBy('tanggal')
-            ->map(function ($item) {
-                return $item['quantity'];
+            ->groupBy('tanggal')
+            ->map(function ($group) {
+                return $group->groupBy('nama_pakan')->map(function ($items) {
+                    return [
+                        'nama' => $items->first()['nama_pakan'],
+                        'quantity' => $items->sum('quantity')
+                    ];
+                })->values();
             })
             ->toArray();
     }

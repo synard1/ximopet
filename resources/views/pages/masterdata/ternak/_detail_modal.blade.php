@@ -16,6 +16,7 @@
                                 <th>Ternak Afkir</th>
                                 <th>Ternak Terjual</th>
                                 {{-- <th>Sisa Ternak</th> --}}
+                                <th>Pakan Nama</th>
                                 <th>Pakan (Kg)</th>
                                 <th>OVK (ml)</th>
                             </tr>

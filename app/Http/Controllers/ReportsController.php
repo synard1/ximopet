@@ -67,6 +67,30 @@ class ReportsController extends Controller
         return view('pages.reports.index_report_performa', compact(['farms','kandangs','ternak']));
     }
 
+    public function indexInventory()
+    {
+        $kelompokTernak = KelompokTernak::all();
+        $farms = Farm::whereIn('id', $kelompokTernak->pluck('farm_id'))->get();
+        $ternak = $kelompokTernak->map(function ($item) {
+            // Retrieve the entire data column
+            $allData = $item->data ? json_decode($item->data, true) : [];
+
+            return [
+                'id' => $item->id,
+                'farm_id' => $item->farm_id,
+                'farm_name' => $item->farm->nama,
+                'kandang_id' => $item->kandang_id,
+                'kandang_name' => $item->kandang->nama,
+                'name' => $item->name,
+                'start_date' => $item->start_date,
+                'year' => $item->start_date->format('Y'),
+                'tanggal_surat' => $allData['administrasi']['tanggal_laporan'] ?? null,
+            ];
+        })->toArray();
+
+        return view('pages.reports.index_report_inventory', compact(['farms','ternak']));
+    }
+
     /**
      * Show the form for creating a new resource.
      */
@@ -131,10 +155,17 @@ class ReportsController extends Controller
 
         $periode = $startDate->translatedFormat('F') . ' s.d. ' . $endDate->translatedFormat('F Y');
 
-        $penjualanData = TransaksiJual::where('kelompok_ternak_id',$request->periode)->orderBy('faktur','ASC')->get();
+        $penjualanData = TransaksiJual::where('kelompok_ternak_id',$request->periode)->where('status','OK')->orderBy('faktur','ASC')->get();
+
+        if ($penjualanData->isNotEmpty()) {
+            return view('pages.reports.penjualan_details', compact('data', 'kandang', 'periode', 'penjualanData'));
+        } else {
+            return response()->json([
+                'error' => 'Data penjualan belum lengkap'
+            ], 404);
+        }
 
 
-        return view('pages.reports.penjualan_details', compact(['data','kandang','periode','penjualanData']));
     }
 
     public function exportPerformance(Request $request)
@@ -198,11 +229,19 @@ class ReportsController extends Controller
 
         $totalBerat = $ternak->transaksiJuals()
             ->join('transaksi_jual_details', 'transaksi_jual.id', '=', 'transaksi_jual_details.transaksi_jual_id')
+            ->where('transaksi_jual.status','OK')
             ->whereNull('transaksi_jual.deleted_at')
             ->whereNull('transaksi_jual_details.deleted_at')
             ->sum('transaksi_jual_details.berat');
 
-        $fcr = $konsumsiPakan / $totalBerat;
+        if($totalBerat){
+            $fcr = $konsumsiPakan / $totalBerat;
+        }else{
+            return response()->json([
+                'error' => 'Data Penjualan Ternak Masih Belum Lengkap.'
+            ], 404);
+        }
+
 
 
         if($isTernakMati){

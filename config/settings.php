@@ -49,7 +49,7 @@ return [
             'js' => [
                 'assets/plugins/global/plugins.bundle.js',
                 'assets/js/scripts.bundle.js',
-                'assets/js/widgets.bundle.js',
+                // 'assets/js/widgets.bundle.js',
             ],
         ],
     ],

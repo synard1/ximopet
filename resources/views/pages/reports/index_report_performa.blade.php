@@ -248,7 +248,11 @@
                     },
                     error: function(xhr, status, error) {
                         console.error("Error loading report:", error);
-                        $('#report-content').html('<p class="text-danger">Error loading report. Please try again.</p>');
+                        var errorMessage = "Error loading report. Please try again.";
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage = xhr.responseJSON.error;
+                        }
+                        $('#report-content').html('<p class="text-danger">' + errorMessage + '</p>');
                     }
                 });
             });

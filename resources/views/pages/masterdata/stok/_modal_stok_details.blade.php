@@ -13,9 +13,15 @@
                         <label for="farmSelect" class="form-label">Select Farm:</label>
                         <select class="form-select" id="farmSelect">
                             <option value="2d245e3f-fdc9-4138-b32d-994f3f1953a5">All Farms</option>
-                            @foreach(auth()->user()->farmOperators as $farmOperator)
-                                <option value="{{ $farmOperator->farm_id }}">{{ $farmOperator->farm->nama }}</option>
-                            @endforeach
+                            @if(auth()->user()->hasRole(['Operator']))
+                                @foreach(auth()->user()->farmOperators as $farmOperator)
+                                    <option value="{{ $farmOperator->farm_id }}">{{ $farmOperator->farm->nama }}</option>
+                                @endforeach
+                            @else
+                                @foreach($farms as $farm)
+                                    <option value="{{ $farm->id }}">{{ $farm->nama }}</option>
+                                @endforeach
+                            @endif
                         </select>
                     </div>
                     <div class="col-md-8">
@@ -36,7 +42,7 @@
                                 <th class="text-left" style="width: auto">Farm</th>
                                 <th class="text-left" style="width: auto">Kandang</th>
                                 <th class="text-left" style="width: auto">Nama Barang</th>
-                                <th class="text-left" style="width: auto">Supplier</th>
+                                {{-- <th class="text-left" style="width: auto">Supplier</th> --}}
                                 <th class="text-center" style="width: auto">Jumlah</th>
                                 {{-- <th class="text-center" style="width: auto">Stok Awal</th>
                                 <th class="text-center" style="width: auto">Stok Masuk</th>
@@ -122,7 +128,6 @@
                     <th class="text-left" style="width: auto">Farm</th>
                     <th class="text-left" style="width: auto">Kandang</th>
                     <th class="text-left" style="width: auto">Nama Barang</th>
-                    <th class="text-left" style="width: auto">Supplier</th>
                     <th class="text-left" style="width: auto">Jumlah</th>
                 </tr>
             `;

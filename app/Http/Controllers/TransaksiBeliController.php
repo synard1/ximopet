@@ -20,17 +20,24 @@ class TransaksiBeliController extends Controller
 
     public function indexDoc(DocsDataTable $dataTable)
     {
+        addVendors(['datatables']);
+
         // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
         return $dataTable->render('pages/pembelian/doc._doc');
     }
     public function indexPakan(PakanDataTable $dataTable)
     {
+        addVendors(['datatables']);
+
         // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
         return $dataTable->render('pages/pembelian._pakan');
     }
 
     public function indexOvk(OvkDataTable $dataTable)
     {
+
+        addVendors(['datatables']);
+
         // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
         return $dataTable->render('pages/pembelian._ovk');
     }

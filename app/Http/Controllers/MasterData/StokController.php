@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\MasterData;
 
 use App\Models\Item;
+use App\Models\Farm;
+use App\Models\CurrentStock;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\DataTables\StoksDataTable;
@@ -16,8 +18,19 @@ class StokController extends Controller
      */
     public function index(StoksDataTable $dataTable)
     {
+        addVendors(['datatables']);
+
         addJavascriptFile('assets/js/custom/fetch-data.js');
-        return $dataTable->render('pages/masterdata.stok.index');
+
+        // $farms = CurrentStock::where('status', 'Aktif')->get(['id', 'nama']);
+        $farms = Farm::whereHas('inventoryLocations.currentStocks', function ($query) {
+            $query->where('current_stocks.status', 'Aktif');
+        })
+        ->select('id', 'nama')
+        ->distinct()
+        ->get();
+
+        return $dataTable->render('pages/masterdata.stok.index',compact('farms'));
     }
 
     public function stockPakan(StoksPakanDataTable $dataTable)

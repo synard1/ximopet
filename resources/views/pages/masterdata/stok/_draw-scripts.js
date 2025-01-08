@@ -232,7 +232,7 @@ function getDetailStoks(transaksiId, farmId, startDate, endDate) {
             { data: 'nama_farm', autoWidth: true },
             { data: 'nama_kandang', autoWidth: true },
             { data: 'item_name', autoWidth: true },
-            { data: 'perusahaan_nama', autoWidth: true },
+            // { data: 'perusahaan_nama', autoWidth: true },
             { data: 'quantity', autoWidth: true },
             // { 
             //     data: 'hpp',

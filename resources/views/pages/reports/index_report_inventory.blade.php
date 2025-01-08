@@ -1,13 +1,13 @@
 <x-default-layout>
 
     @section('title')
-        Laporan Penjualan
+        Laporan Inventory
     @endsection
 
     <div class="card">
         <!--begin::Card body-->
         <div class="card-body py-4">
-            <h2 class="mb-4">Filter Laporan Penjualan</h2>
+            <h2 class="mb-4">Filter Laporan Iventory</h2>
             
             <form id="filter-form" class="mb-5">
                 <div class="row g-3">
@@ -22,13 +22,13 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label for="kandang" class="form-label">Kandang</label>
-                        <select class="form-select" id="kandang" name="kandang">
-                            <option value="">Pilih Kandang</option>
-                            {{-- @foreach($kandangs as $kandang)
-                            <option value="{{ $kandang->id }}">{{ $kandang->nama }}</option>
-                            @endforeach --}}
-                            <!-- Add kandang options dynamically -->
+                        <label for="tahun" class="form-label">Jenis</label>
+                        <select class="form-select" id="jenis" name="jenis">
+                            <option value="">Pilih Jenis</option>
+                            <option value="Masuk">Masuk</option>
+                            <option value="Keluar">Keluar</option>
+                            <option value="Mutasi">Mutasi</option>
+                            <option value="Semua">Semua</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -37,16 +37,6 @@
                             <option value="">Pilih Tahun</option>
                             <!-- Add year options dynamically -->
                             @for ($i = date('Y'); $i >= date('Y') - 5; $i--)
-                                <option value="{{ $i }}">{{ $i }}</option>
-                            @endfor
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="periode" class="form-label">Periode</label>
-                        <select class="form-select" id="periode" name="periode">
-                            <option value="">Pilih Periode</option>
-                            <!-- Add periode options dynamically -->
-                            @for ($i = 1; $i <= 12; $i++)
                                 <option value="{{ $i }}">{{ $i }}</option>
                             @endfor
                         </select>
@@ -74,15 +64,11 @@
             var ternakData = @json($ternak);
             console.table(ternakData);
 
-            // Show loading spinner
-            const kandangSelect = document.getElementById('kandang');
-            kandangSelect.disabled = true;
-
             const tahunSelect = document.getElementById('tahun');
             tahunSelect.disabled = true;
 
-            const periodeSelect = document.getElementById('periode');
-            periodeSelect.disabled = true;
+            const jenisSelect = document.getElementById('jenis');
+            jenisSelect.disabled = true;
 
             const saveChangesButton = document.getElementById('saveChangesButton');
 
@@ -90,89 +76,42 @@
             saveChangesButton.disabled = true;
 
             // Initialize select2 for dropdowns if needed
-            $('#farm, #kandang, #tahun, #periode').select2();
+            $('#farm, #tahun').select2();
 
             // Handle reset button click
             $('#resetButton').on('click', function() {
                 // Reset all select elements
-                $('#farm, #kandang, #tahun, #periode').val('').trigger('change');
+                $('#farm, #tahun').val('').trigger('change');
 
                 // Disable select elements and button
-                $('#kandang, #tahun, #periode').prop('disabled', true);
+                $('#tahun').prop('disabled', true);
                 $('#saveChangesButton').prop('disabled', true);
 
                 // Clear the report content
                 $('#report-content').empty();
             });
 
-            // Load farms dynamically
-            // $.ajax({
-            //     url: '/api/farms', // Replace with your API endpoint
-            //     method: 'GET',
-            //     success: function(data) {
-            //         var farmSelect = $('#farm');
-            //         $.each(data, function(index, farm) {
-            //             farmSelect.append(new Option(farm.name, farm.id));
-            //         });
-            //     }
-            // });
-
             // Handle farm change
             $('#farm').on('change', function() {
-                var farmId = $(this).val();
-                updateKandangOptions(farmId);
-                kandangSelect.disabled = false;
+                var farmId = $(this).val();                
+                jenisSelect.disabled = false;
 
             });
 
-            // Handle farm change
-            $('#kandang').on('change', function() {
+            // Handle jenis change
+            $('#jenis').on('change', function() {
                 var farmId = $('#farm').val();
-                var kandangId = $(this).val();
-                updateTahunOptions(farmId, kandangId);
-                // tahunsele.disabled = false;
+                updateTahunOptions(farmId);
+                tahunSelect.disabled = false;
 
             });
 
             // Handle tahun change
             $('#tahun').on('change', function() {
                 var farmId = $('#farm').val();
-                var kandangId = $('#kandang').val();
                 var tahun = $(this).val();
-
-                updatePeriodeOptions(farmId, kandangId, tahun);
-
-
-                // console.log('farm ' + farmId + ', kandang'+ kandangId + ', tahun'+ tahun);
-                
-
-                // You can add logic here to handle the year change
-                // For example, update the periode options based on the selected year, farm, and kandang
             });
 
-            // Handle tahun change
-            $('#periode').on('change', function() {
-                var periodeId = $(this).val();
-                saveChangesButton.disabled = false;
-
-
-                // updatePeriodeOptions(farmId, kandangId, tahun);
-            });
-
-            // Handle tahun change
-            // $('#tahun').on('change', function() {
-            //     var farmId = $('#farm').val();
-            //     var kandangId = $('#kandang').val();
-            //     var tahun = $(this).val();
-
-            //     console.log('farm ' + farmId + ', kandang'+ kandangId + ', tahun'+ tahun);
-                
-
-            //     // You can add logic here to handle the year change
-            //     // For example, update the periode options based on the selected year, farm, and kandang
-            // });
-
-            
 
             // Handle form submission
             $('#filter-form').on('submit', function(e) {
@@ -234,42 +173,14 @@
                 });
             });
 
-
-
-            // Function to update kandang options based on selected farm
-            function updateKandangOptions(farmId) {
-                var kandangSelect = $('#kandang');
-                kandangSelect.empty().append(new Option('Pilih Kandang', ''));
-                
-                if (farmId) {
-                    var farmTernak = ternakData.filter(function(ternak) {
-                        return ternak.farm_id == farmId;
-                    });
-
-                    var uniqueKandangs = [];
-                    farmTernak.forEach(function(ternak) {
-                        if (!uniqueKandangs.some(k => k.id === ternak.kandang_id)) {
-                            uniqueKandangs.push({
-                                id: ternak.kandang_id,
-                                name: ternak.kandang_name
-                            });
-                        }
-                    });
-
-                    uniqueKandangs.forEach(function(kandang) {
-                        kandangSelect.append(new Option(kandang.name, kandang.id));
-                    });
-                }
-            }
-
-            function updateTahunOptions(farmId, kandangId) {
+            function updateTahunOptions(farmId) {
                 var tahunSelect = $('#tahun');
                 tahunSelect.empty().append(new Option('Pilih Tahun', ''));
                 tahunSelect.prop('disabled', true);
 
-                if (farmId && kandangId) {
+                if (farmId) {
                     var filteredTernak = ternakData.filter(function(ternak) {
-                        return ternak.farm_id == farmId && ternak.kandang_id == kandangId;
+                        return ternak.farm_id == farmId;
                     });
 
                     var uniqueYears = [...new Set(filteredTernak.map(ternak => new Date(ternak.start_date).getFullYear()))];
@@ -283,55 +194,7 @@
                 }
             }
 
-            function updatePeriodeOptions(farmId, kandangId, tahun) {
-                var periodeSelect = $('#periode');
-                periodeSelect.empty().append(new Option('Pilih Periode', ''));
-                periodeSelect.prop('disabled', true);
-
-                if (farmId && kandangId && tahun) {
-                    var filteredTernak = ternakData.filter(function(ternak) {
-                        return ternak.farm_id == farmId && 
-                               ternak.kandang_id == kandangId && 
-                               new Date(ternak.start_date).getFullYear() == tahun;
-                    });
-
-                    var uniquePeriodes = filteredTernak.map(ternak => ({
-                        id: ternak.id,
-                        name: ternak.name
-                    }));
-
-                    uniquePeriodes.sort((a, b) => a.name.localeCompare(b.name));
-                    uniquePeriodes.forEach(function(periode) {
-                        periodeSelect.append(new Option(periode.name, periode.id));
-                    });
-
-                    periodeSelect.prop('disabled', false);
-                }
-
-
-            }
-
         });
-
-        // Load kandangs based on selected farm
-        // $('#farm').on('change', function() {
-        //         var farmId = $(this).val();
-        //         console.log(farmId);
-                
-        //         if (farmId) {
-        //             $.ajax({
-        //                 url: '/api/kandangs/' + farmId, // Replace with your API endpoint
-        //                 method: 'GET',
-        //                 success: function(data) {
-        //                     var kandangSelect = $('#kandang');
-        //                     kandangSelect.empty().append(new Option('Pilih Kandang', ''));
-        //                     $.each(data, function(index, kandang) {
-        //                         kandangSelect.append(new Option(kandang.name, kandang.id));
-        //                     });
-        //                 }
-        //             });
-        //         }
-        //     });
     </script>
     @endpush
 </x-default-layout>

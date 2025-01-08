@@ -48,7 +48,7 @@
         </div>
         <!--end::Submit button-->
 
-        <!--begin::Sign up-->
+        {{-- <!--begin::Sign up-->
         <div class="text-gray-500 text-center fw-semibold fs-6">
             Not a Member yet?
 
@@ -56,7 +56,7 @@
                 Sign up
             </a>
         </div>
-        <!--end::Sign up-->
+        <!--end::Sign up--> --}}
     </form>
     <!--end::Form-->
 

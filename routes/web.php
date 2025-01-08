@@ -168,6 +168,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::name('reports.')->group(function () {
         Route::get('/reports/penjualan', [ReportsController::class, 'indexPenjualan']);
         Route::get('/reports/performa', [ReportsController::class, 'indexPerforma']);
+        Route::get('/reports/inventory', [ReportsController::class, 'indexInventory']);
 
     });
 

@@ -160,7 +160,8 @@ document.querySelectorAll('[data-kt-action="view_detail_ternak"]').forEach(funct
                             <td>${item.ternak_mati || 0}</td>
                             <td>${item.ternak_afkir || 0}</td>
                             <td>${item.ternak_terjual || 0}</td>
-                            <td>${item.pakan_harian}</td>
+                            <td>${item.pakan_nama}</td>
+                            <td>${item.pakan_quantity}</td>
                             <td>${item.ovk_harian || 0}</td>
                         </tr>
                     `;

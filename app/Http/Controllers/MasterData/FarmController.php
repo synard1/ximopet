@@ -22,6 +22,8 @@ class FarmController extends Controller
      */
     public function index(FarmsDataTable $dataTable, UsersDataTable $kandangDataTable)
     {
+        addVendors(['datatables']);
+
         $availableFarms = Farm::where('status', 'Aktif')->get();
         return $dataTable->render('pages/masterdata.farm.index', ['availableFarms' => $availableFarms]);
     }

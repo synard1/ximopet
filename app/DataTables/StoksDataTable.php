@@ -38,6 +38,9 @@ class StoksDataTable extends DataTable
                 // dd($stokAkhir);
                 return number_format($stokAkhir);
             })
+            ->editColumn('categori_id', function (Item $stok) {
+                return $stok->itemCategory->name ?? 'N/A';
+            })
             // ->editColumn('jumlah', function (Item $stok) {
             //     if (auth()->user()->farmOperators()->exists()) {
             //         $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
@@ -140,6 +143,7 @@ class StoksDataTable extends DataTable
         return [
             Column::make('kode')->searchable(false),
             // Column::computed('farm')->searchable(true),
+            Column::make('category_id')->title('Category')->data('item_category.name'),
             Column::make('name'),
             Column::make('status')
                 ->visible(false),

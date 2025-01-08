@@ -25,10 +25,10 @@ class BootstrapDefault
     public function initAssets()
     {
         # Include global vendors
-        addVendors(['datatables']);
+        // addVendors(['datatables']);
 
         # Include global javascript files
-        addJavascriptFile('assets/js/custom/widgets.js');
+        // addJavascriptFile('assets/js/custom/widgets.js');
         // addJavascriptFile('assets/js/custom/apps/chat/chat.js');
         // addJavascriptFile('assets/js/custom/utilities/modals/upgrade-plan.js');
         // addJavascriptFile('assets/js/custom/utilities/modals/create-app.js');

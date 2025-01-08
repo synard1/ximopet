@@ -32,8 +32,8 @@ class InventoryLocation extends BaseModel
         return $this->belongsTo(Farm::class);
     }
 
-    public function farmSilo()
+    public function currentStocks()
     {
-        return $this->belongsTo(FarmSilo::class);
+        return $this->hasMany(CurrentStock::class,'location_id','id');
     }
 }

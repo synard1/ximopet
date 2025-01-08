@@ -59,10 +59,20 @@
         tfoot th, tfoot td {
             font-weight: bold;
         }
+        
         @media print {
+            @page {
+                margin: 0.5cm;
+            }
             body {
                 width: 210mm;
                 height: 297mm;
+                margin: 0;
+                padding: 0.5cm;
+                zoom: 98%;
+            }
+            .page-break {
+                page-break-before: always;
             }
         }
     </style>

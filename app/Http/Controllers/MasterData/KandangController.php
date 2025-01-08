@@ -14,6 +14,8 @@ class KandangController extends Controller
      */
     public function index(KandangsDataTable $dataTable)
     {
+        addVendors(['datatables']);
+
         return $dataTable->render('pages/masterdata.kandang.list');
     }
 

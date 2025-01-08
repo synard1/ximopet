@@ -14,6 +14,7 @@ $peternakanMenu = [
 'data/farms',
 'data/kandangs',
 'data/ternaks',
+'data/stoks',
 'master-data/farms',
 'master-data/kandangs',
 ];
@@ -385,7 +386,8 @@ return request()->is($route);
 										<!--begin:Menu item-->
 										<div class="menu-item p-0 m-0">
 											<!--begin:Menu link-->
-											<a href="#" class="menu-link">
+											<a href="/data/stoks"
+												class="menu-link {{ request()->is('data/stoks') || request()->is('master-data/stoks') ? 'active' : '' }}">
 												<span class="menu-title">Data Stoks</span>
 											</a>
 											<!--end:Menu link-->
