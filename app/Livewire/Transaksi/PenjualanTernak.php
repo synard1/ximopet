@@ -35,6 +35,7 @@ class PenjualanTernak extends Component
     public $dataTernak;
     public $transaksiHarian;
     public $transaksiJual;
+    public $ternakJual;
     public $transaksiBeli;
     public $transaksiJualDetail;
     public $isEdit = false;
@@ -205,6 +206,7 @@ class PenjualanTernak extends Component
         $this->transaksiHarian = TransaksiHarian::findOrFail($this->transaksiJual->transaksi_id);
         $this->transaksiJualDetail = $this->transaksiJual->detail; // Assuming there's a 'detail' relationship
         $this->dataTernak = KelompokTernak::findOrFail($this->transaksiJual->kelompok_ternak_id);
+        $this->ternakJual = TernakJual::where('kelompok_ternak_id',$this->transaksiJual->kelompok_ternak_id)->where('transaksi_jual_id',$this->transaksiJual->id)->first();
 
         // dd($this->transaksiHarian);
 
@@ -244,6 +246,14 @@ class PenjualanTernak extends Component
                 'jumlah' => $this->ternak_jual,
                 'harga' => $this->harga_jual,
                 'status' => 'OK',
+            ]);
+
+            $this->ternakJual->update([
+                'transaksi_jual_id' => $this->transaksiJual->id,
+                'tanggal' => $this->tanggal,
+                'quantity' => $this->ternak_jual,
+                'total_berat' => $this->total_berat,
+
             ]);
 
             // Update each TransaksiJualDetail
