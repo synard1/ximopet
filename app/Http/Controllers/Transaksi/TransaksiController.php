@@ -20,23 +20,31 @@ class TransaksiController extends Controller
      */
     public function docIndex(DocsDataTable $dataTable)
     {
+        addVendors(['datatables']);
+
         return $dataTable->render('pages/transaksi.pembelian-doc.list');
     }
 
     public function harianIndex(TransaksiHarianDataTable $dataTable)
     {
+        addVendors(['datatables']);
+
         // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
         return $dataTable->render('pages/transaksi.harian.index');
     }
 
     public function stokIndex(PembelianStoksDataTable $dataTable)
     {
+        addVendors(['datatables']);
+
         addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
         return $dataTable->render('pages/transaksi.pembelian-stok.list');
     }
 
     public function stokPakaiIndex(PemakaianStoksDataTable $dataTable)
     {
+        addVendors(['datatables']);
+
         addJavascriptFile('assets/js/custom/pages/transaksi/pemakaian-stok.js');
         return $dataTable->render('pages/transaksi.pemakaian-stok.list');
     }

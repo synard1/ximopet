@@ -16,6 +16,8 @@ class TransaksiJualController extends Controller
      */
     public function index(PenjualansDataTable $dataTable)
     {
+        addVendors(['datatables']);
+
         return $dataTable->render('pages.transaksi.penjualan.index');
     }
 
