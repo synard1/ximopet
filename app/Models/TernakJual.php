@@ -17,6 +17,7 @@ class TernakJual extends BaseModel
         'id',
         'kelompok_ternak_id',
         'transaksi_id',
+        'transaksi_jual_id',
         'tipe_transaksi',
         'tanggal',
         'quantity',

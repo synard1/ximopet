@@ -409,11 +409,26 @@ class TernakService
             $currentTernak->quantity -= $ternakJual->quantity;
             $currentTernak->save();
 
+            // Update Ternak Jual
+            $ternakJual->transaksi_jual_id = $transaksiJual->id;
+            $ternakJual->save();
+
             // Update stok
             // $this->updateStok($this->selectedFarm, $this->selectedKandang, $this->quantity, 'kurang');
 
+            // dd($validatedData);
+
+            $referer = request()->headers->get('referer');
+
+            // dd($referer);
+
+            if (strpos($referer, 'transaksi/harian') !== false) {
+                $validatedData['tanggal_harian'] = $validatedData['tanggal'];
+            }
+
+
             // Update Ternak History
-            if($validatedData['tanggal_transaksi_harian']){
+            if (isset($validatedData['tanggal_harian'])) {
 
             }else{
                 $ternakHistory = TernakHistory::where('kelompok_ternak_id',$kelompokTernak->id)->where('tanggal',$validatedData['tanggal'])->first();

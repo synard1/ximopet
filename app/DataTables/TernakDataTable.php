@@ -90,6 +90,14 @@ class TernakDataTable extends DataTable
             ->editColumn('created_at', function (Ternak $ternak) {
                 return $ternak->created_at->format('d M Y, h:i a');
             })
+            ->orderColumn('jumlah_mati', function ($query, $order) {
+                $query->orderBy(
+                    KematianTernak::selectRaw('SUM(quantity)')
+                        ->whereColumn('kelompok_ternak_id', 'kelompok_ternak.id')
+                        ->whereNull('ternak_mati.deleted_at'),
+                    $order
+                );
+            })
             ->addColumn('action', function (Ternak $ternak) {
                 return view('pages/masterdata.ternak._actions', compact('ternak'));
             })
@@ -147,7 +155,10 @@ class TernakDataTable extends DataTable
             Column::make('start_date'),
             Column::make('populasi_awal'),
             Column::computed('umur'),
-            Column::computed('jumlah_mati')->title('Ternak Mati'),
+            Column::computed('jumlah_mati')
+            ->title('Ternak Mati')
+            ->orderable(true)
+            ->orderDataType('custom-jumlah-mati'),
             Column::computed('jumlah_afkir')->title('Ternak Afkir'),
             Column::computed('jumlah_terjual')->title('Ternak Terjual'),
             Column::computed('stok_akhir')->title('Sisa Ternak'),

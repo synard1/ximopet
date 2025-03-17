@@ -128,7 +128,7 @@
 		<div data-kt-menu-trigger="click" class="menu-item menu-accordion show">
 			<!--begin:Menu link-->
 			<span class="menu-link">
-				<span class="menu-title">{{ trans('menu.create_header',[],'id') }}</span>
+				<span class="menu-title">{{ trans('menu.create_header_new',[],'id') }}</span>
 				<span class="menu-arrow"></span>
 			</span>
 			<!--end:Menu link-->

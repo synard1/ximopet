@@ -20,6 +20,7 @@
             </div>
             <!--begin::Card title-->
 
+            @can('create transaksi')
             <!--begin::Card toolbar-->
             <div class="card-toolbar">
                 <!--begin::Toolbar-->
@@ -34,6 +35,10 @@
                 <!--end::Toolbar-->
             </div>
             <!--end::Card toolbar-->
+                
+            @endcan
+            
+
         </div>
         <!--end::Card header-->
 

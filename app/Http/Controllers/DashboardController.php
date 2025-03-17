@@ -1,20 +1,63 @@
 <?php
 
 namespace App\Http\Controllers;
+
+use App\Models\CurrentStock;
+use App\Models\CurrentTernak;
 use App\Models\User;
 use App\Models\Farm;
 use App\Models\Rekanan;
 use App\Models\Kandang;
+use App\Models\TransaksiJual;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        // addVendors(['amcharts', 'amcharts-maps', 'amcharts-stock']);
-        // $user = User::whereDoesntHave('roles', function($query) {
-        //     $query->where('name', 'SuperAdmin');
-        // })->get();
+        addVendors(['amcharts', 'amcharts-maps', 'amcharts-stock']);
+        addJavascriptFile('assets/js/widgets.bundle.js');
+
+        $user = User::whereDoesntHave('roles', function($query) {
+            $query->where('name', 'SuperAdmin');
+        })->get();
+        $farm = Farm::whereIn('status',['Aktif','Digunakan']);
+        $kandang = Kandang::whereIn('status',['Aktif','Digunakan']);
+        $ternak = CurrentTernak::where('status','Aktif');
+        // get current stocks with category Pakan from relation with item_id category Pakan
+        $currentStocks = CurrentStock::whereHas('item', function ($query) {
+            $query->where('category_id', '9db8c901-b60a-4611-b5c1-01f264e1187a');
+        })
+        ->where('quantity','>',0)
+        ->with('item')
+        ->get();
+
+        // dd($currentStocks);
+
+        if (auth()->user()->hasRole('Manager')) {
+            $totalSalesCount = TransaksiJual::select('master_farms.nama as farm_nama', DB::raw('SUM(transaksi_jual_details.qty) as total_sales'))
+                ->join('transaksi_jual_details', 'transaksi_jual.id', '=', 'transaksi_jual_details.transaksi_jual_id')
+                ->join('master_farms', 'transaksi_jual_details.farm_id', '=', 'master_farms.id')
+                ->where('transaksi_jual.status', 'OK')
+                ->groupBy('transaksi_jual_details.farm_id', 'master_farms.nama')
+                ->get();
+    
+            // Transform the data to match the desired format
+            $formattedChartData = $totalSalesCount->map(function ($item) {
+                return [
+                    'farm_nama' => $item->farm_nama,
+                    'total_sales' => (float) $item->total_sales
+                ];
+            })->toArray();
+        } else {
+            $formattedChartData = [];
+        }
+
+
+        
+
+        // dd($totalSalesCount);
+
 
         // if (auth()->user()->hasRole('Operator')) {
         //     $farmOperator = auth()->user()->farmOperators;
@@ -41,9 +84,9 @@ class DashboardController extends Controller
         //     $kandang = Kandang::all();
         // }
         // $rekanan = Rekanan::all();
-        // $stock = \App\Models\TransaksiDetail::where('jenis', 'Pembelian')
-        //     ->where('jenis_barang', '!=', 'DOC')
-        //     ->select('jenis_barang', 'sisa', 'konversi');
+        $stock = \App\Models\TransaksiBeliDetail::where('jenis', 'Pembelian')
+            ->where('jenis_barang', '!=', 'DOC')
+            ->select('jenis_barang', 'sisa', 'konversi');
 
         // if (auth()->user()->hasRole('Operator')) {
         //     $farmOperator = auth()->user()->farmOperators;
@@ -55,27 +98,34 @@ class DashboardController extends Controller
         //     }
         // }
 
-        // $stock = $stock->get()->sum(function ($item) {
-        //     return $item->sisa / $item->konversi;
-        // });
+        $stock = $stock->get()->sum(function ($item) {
+            return $item->sisa / $item->konversi;
+        });
 
-        // $stockByType = \App\Models\Transaksi::where('transaksis.jenis', 'Pembelian')
-        //     ->join('transaksi_details', 'transaksis.id', '=', 'transaksi_details.transaksi_id')
-        //     ->where('transaksi_details.jenis', 'Pembelian')
-        //     ->select('transaksi_details.jenis_barang', 
-        //         DB::raw('SUM(transaksi_details.sisa / transaksi_details.konversi) as total_sisa'));
+        // dd($stock);
 
-        // if (auth()->user()->hasRole('Operator')) {
-        //     $farmOperator = auth()->user()->farmOperators;
-        //     if ($farmOperator) {
-        //         $farmIds = $farmOperator->pluck('farm_id')->toArray();
-        //         $stockByType = $stockByType->whereIn('transaksis.farm_id', $farmIds)
-        //             ->where('transaksi_details.jenis', 'Pembelian');
-        //     }
-        // }
+        $stockByType = \App\Models\TransaksiBeli::where('transaksi_beli.jenis', 'Stock')
+            ->join('transaksi_beli_details', 'transaksi_beli.id', '=', 'transaksi_beli_details.transaksi_id')
+            ->where('transaksi_beli_details.jenis', 'Pembelian')
+            ->select('transaksi_beli_details.jenis_barang', 
+                DB::raw('SUM(transaksi_beli_details.sisa / transaksi_beli_details.konversi) as total_sisa'));
 
-        // $stockByType = $stockByType->groupBy('transaksi_details.jenis_barang')
-        //     ->get();
+        if (auth()->user()->hasRole('Operator')) {
+            $farmOperator = auth()->user()->farmOperators;
+            if ($farmOperator) {
+                $farmIds = $farmOperator->pluck('farm_id')->toArray();
+                $farm = $farm->whereIn('id', $farmIds)->get();
+                $kandang = $kandang->whereIn('farm_id', $farmIds)->get();
+                $ternak = $ternak->whereIn('farm_id', $farmIds)->get();
+
+                // dd($ternak);
+                $stockByType = $stockByType->whereIn('transaksi_beli.farm_id', $farmIds)
+                    ->where('transaksi_beli_details.jenis', 'Pembelian');
+            }
+        }
+
+        $stockByType = $stockByType->groupBy('jenis_barang')
+            ->get();
 
         // $lastTransactions = \App\Models\TransaksiDetail::join('transaksis', 'transaksi_details.transaksi_id', '=', 'transaksis.id')
         //     ->join('master_farms', 'transaksis.farm_id', '=', 'master_farms.id')
@@ -96,18 +146,27 @@ class DashboardController extends Controller
         //     ->limit(5)
         //     ->get();
 
-            // dd($lastTransactions);
+        // dd($stockByType);
 
 
-        $user =[];
-        $farm =[];
-        $kandang =[];
+        $user = $user ?? [];
+        $farm = $farm ?? [];
+        $kandang = $kandang ?? [];
+        $ternak = $ternak ?? [];
+        $currentStocks = $currentStocks ?? [];
         $rekanan = [];
-        $stock = [];
-        $stockByType = [];
+        $stock = $stok ?? [];
+        $stockByType = $stockByType ?? [];
         $lastTransactions = [];
+        $lastTransactions = [];
+        // $totalSalesCount = $totalSalesCount ?? [];
+        // $chartData = json_encode($totalSalesCount ?? []);
+
+        $chartData = $formattedChartData;
 
 
-        return view('pages/dashboards.index', compact('user', 'farm', 'kandang', 'rekanan', 'stock', 'stockByType', 'lastTransactions'));
+
+
+        return view('pages/dashboards.index', compact('user', 'farm', 'kandang', 'ternak','rekanan', 'currentStocks','stock', 'stockByType', 'lastTransactions','chartData'));
     }
 }

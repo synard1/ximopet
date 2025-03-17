@@ -399,6 +399,21 @@
                         </div>
                         <!--end::Input group-->
 
+                        <!--begin::Input group-->
+                        <div class="mb-10">
+                            <!--begin::Label-->
+                            <label class="form-label fw-bold fs-6 text-gray-700">No. SJ</label>
+                            <!--end::Label-->
+
+                            <input type="text" id="noSjInput" class="form-control form-control-solid text-end" wire:model.defer="noSj" data-kt-element="noSj">
+                            @error('noSj')
+                            <span class="text-danger">{{ $message }}</span> @enderror
+                            @error('noSj')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror 
+                        </div>
+                        <!--end::Input group-->
+
                         <!--begin::Separator-->
                         <div class="separator separator-dashed mb-8"></div>
                         <!--end::Separator-->

@@ -82,9 +82,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::name('user-management.')->group(function () {
-        Route::resource('/user-management/users', UserManagementController::class);
-        Route::resource('/user-management/roles', RoleManagementController::class);
-        Route::resource('/user-management/permissions', PermissionManagementController::class);
+        Route::resource('/users', UserManagementController::class);
+        Route::resource('/user/roles', RoleManagementController::class);
+        Route::resource('/user/permissions', PermissionManagementController::class);
     });
 
     Route::name('master-data.')->group(function () {

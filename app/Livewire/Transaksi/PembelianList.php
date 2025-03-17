@@ -26,7 +26,7 @@ use Carbon\Carbon;
 
 class PembelianList extends Component
 {
-    public $faktur, $tanggal, $suppliers, $supplier, $name =[], $quantity=[], $allItems, $farms, $selectedFarm;
+    public $faktur, $tanggal, $noSj, $suppliers, $supplier, $name =[], $quantity=[], $allItems, $farms, $selectedFarm;
     public $selectedSupplier = null;
     public $items = [['name' => '', 'qty' => 0.01, 'harga' => 0]]; // Initial empty item
     public $transaksi_id;
@@ -47,6 +47,7 @@ class PembelianList extends Component
     protected $listeners = [
         'delete_transaksi_pembelian' => 'deleteTransaksiPembelian',
         'editPembelian' => 'editPembelian',
+        'updateNoSj' => 'updateNoSj',
     ];
 
     public function mount()
@@ -67,6 +68,9 @@ class PembelianList extends Component
 
     public function render()
     {
+
+        $this->dispatch('registerStoreListener');
+
 
         $this->suppliers = Rekanan::where('jenis', 'Supplier')->get();
         // $this->farms = FarmOperator::where('user_id', auth()->user()->id)->get();
@@ -447,6 +451,22 @@ class PembelianList extends Component
         $qty = is_numeric($item['qty']) ? $item['qty'] : 0;
         $harga = is_numeric($item['harga']) ? $item['harga'] : 0;
         return $qty * $harga;
+    }
+
+    public function updateNoSj($transaksiId, $newNoSj)
+    {
+        $transaksiDetails = TransaksiBeliDetail::where('transaksi_id', $transaksiId)->get();
+
+        if ($transaksiDetails->isNotEmpty()) {
+            foreach ($transaksiDetails as $transaksiDetail) {
+                $transaksiDetail->no_sj = $newNoSj;
+                $transaksiDetail->save();
+            }
+            $this->dispatch('noSjUpdated');
+            $this->dispatch('success', 'Nomor SJ berhasil diperbarui untuk semua detail transaksi.');
+        } else {
+            $this->dispatch('error', 'Tidak ada detail transaksi yang ditemukan.');
+        }
     }
     
 

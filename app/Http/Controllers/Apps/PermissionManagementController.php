@@ -13,6 +13,12 @@ class PermissionManagementController extends Controller
      */
     public function index(PermissionsDataTable $dataTable)
     {
+        if (!auth()->check() || !auth()->user()->hasRole('SuperAdmin')) {
+            return redirect()->back()->with('error', 'Access denied.');
+        }
+
+        addVendors(['datatables']);
+
         return $dataTable->render('pages/apps.user-management.permissions.list');
     }
 

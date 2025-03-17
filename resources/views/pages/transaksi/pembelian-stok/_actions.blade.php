@@ -34,11 +34,24 @@
 
     <!--begin::Menu item-->
     <div class="menu-item px-3">
+        <a href="#" class="menu-link px-3" data-kt-transaksi-id="{{ $transaksi->id }}" data-kt-action="edit_sj">
+            No. SJ
+        </a>
+
+    </div>
+    <!--end::Menu item-->
+
+    
+
+    @can('delete transaksi')
+    <!--begin::Menu item-->
+    <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" data-kt-transaksi-id="{{ $transaksi->id }}" data-kt-action="delete_row">
         {{-- <a href="#" class="menu-link px-3" wire:click="delete({{ $transaksi->id }})"> --}}
             Delete
         </a>
     </div>
     <!--end::Menu item-->
+    @endcan
 </div>
 <!--end::Menu-->

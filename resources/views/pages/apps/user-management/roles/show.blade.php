@@ -27,28 +27,34 @@
                     <!--end::Card header-->
                     <!--begin::Card body-->
                     <div class="card-body pt-0">
-                        <!--begin::Permissions-->
                         <div class="d-flex flex-column text-gray-600">
-                            @foreach($role->permissions->shuffle()->take(5) as $permission)
+                            @php
+                                $filteredPermissions = $role->permissions->filter(function ($permission) {
+                                    return !Str::contains(strtolower($permission->name), 'access');
+                                });
+                            @endphp
+                    
+                            @foreach($filteredPermissions->shuffle()->take(5) as $permission)
                                 <div class="d-flex align-items-center py-2">
                                     <span class="bullet bg-primary me-3"></span>
                                     {{ ucfirst($permission->name) }}
                                 </div>
                             @endforeach
-                            @if($role->permissions->count() > 5)
+                    
+                            @if($filteredPermissions->count() > 5)
                                 <div class="d-flex align-items-center py-2">
                                     <span class='bullet bg-primary me-3'></span>
-                                    <em>and {{ $role->permissions->count()-5 }} more...</em>
+                                    <em>and {{ $filteredPermissions->count() - 5 }} more...</em>
                                 </div>
                             @endif
-                            @if($role->permissions->count() ===0)
+                    
+                            @if($filteredPermissions->count() === 0)
                                 <div class="d-flex align-items-center py-2">
                                     <span class='bullet bg-primary me-3'></span>
                                     <em>No permissions given...</em>
                                 </div>
                             @endif
                         </div>
-                        <!--end::Permissions-->
                     </div>
                     <!--end::Card body-->
                     <!--begin::Card footer-->

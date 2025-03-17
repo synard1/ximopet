@@ -27,6 +27,7 @@
                         </div>
                     </div>
 
+                @can('create transaksi')
                 <!--begin::Card toolbar-->
                 <div class="card-toolbar">
                     <!--begin::Toolbar-->
@@ -120,6 +121,9 @@
                     <!--end::Group actions-->
                 </div>
                 <!--end::Card toolbar-->
+                    
+                @endcan
+                
 
                 </div>     
             @endif
@@ -223,6 +227,13 @@
                         //     $('#operatorsTable').DataTable().search(this.value).draw();
                         // });
                     } else if (e.target.href.includes('#kt_tab_details')) {
+                        Livewire.dispatch('close');
+                        const cardList = document.getElementById(`stokTableCard`);
+                        cardList.style.display = 'block';
+
+                        const cardForm = document.getElementById(`pemakaianStokFormCard`);
+                        cardForm.style.display = 'none';
+
                         getJenis();
                     }
                 });

@@ -32,12 +32,12 @@ class PenjualanTernak extends Component
         $this->ternakService = app(TernakService::class);
     }
 
-    public $dataTernak;
-    public $transaksiHarian;
-    public $transaksiJual;
-    public $ternakJual;
-    public $transaksiBeli;
-    public $transaksiJualDetail;
+    public $dataTernak = null;
+    public $transaksiHarian = null;
+    public $transaksiJual = null;
+    public $ternakJual = null;
+    public $transaksiBeli = null;
+    public $transaksiJualDetail = null;
     public $isEdit = false;
     public $modalTitle = 'Tambah Penjualan';
     public $isOpen = false;
@@ -166,7 +166,7 @@ class PenjualanTernak extends Component
             $transaksiHarian = TransaksiHarian::where('kelompok_ternak_id',$ternak->kelompok_ternak_id)->where('tanggal',$this->tanggal_harian)->first();
 
             // Check If Ternak quantity is sufficient
-            if($ternak->quantity - $validatedData['ternak_jual'] < 0){
+            if($ternak->quantity < 0){
                 DB::rollback();
                 $this->dispatch('error', 'Stok ternak terbatas. Stok Saat ini : '. $ternak->quantity);
                 $this->dispatch('hideModal');

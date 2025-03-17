@@ -9,6 +9,8 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Http\Request;
+
 
 class StoksDataTable extends DataTable
 {
@@ -17,7 +19,7 @@ class StoksDataTable extends DataTable
      *
      * @param QueryBuilder $query Results from query() method.
      */
-    public function dataTable(QueryBuilder $query): EloquentDataTable
+    public function dataTable(QueryBuilder $query, Request $request): EloquentDataTable
     {
         return (new EloquentDataTable($query))
             ->editColumn('kode', function (Item $item) {
@@ -38,7 +40,7 @@ class StoksDataTable extends DataTable
                 // dd($stokAkhir);
                 return number_format($stokAkhir);
             })
-            ->editColumn('categori_id', function (Item $stok) {
+            ->editColumn('category_id', function (Item $stok) {
                 return $stok->itemCategory->name ?? 'N/A';
             })
             // ->editColumn('jumlah', function (Item $stok) {
@@ -70,6 +72,40 @@ class StoksDataTable extends DataTable
             //         $query->where('nama', 'like', "%{$keyword}%");
             //     });
             // })
+            ->filter(function ($query) use ($request) {
+                if ($request->has('search') && $request->get('search')['value'] != '') {
+                    $searchTerm = $request->get('search')['value'];
+            
+                    $query->where(function ($q) use ($searchTerm) {
+                        // $q->whereHas('detail', function ($subquery) use ($searchTerm) {
+                        //     // Handle d-m-Y format
+                        //     $formattedDate = null;
+                        //     if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $searchTerm, $matches)) {
+                        //         $formattedDate = "{$matches[3]}-{$matches[2]}-{$matches[1]}";
+                        //     }
+
+                        //     $subquery->where(function ($query) use ($searchTerm, $formattedDate) {
+                        //         $query->where('tanggal', 'like', "%$searchTerm%")
+                        //             ->orWhereDate('tanggal', $formattedDate);
+                        //     });
+                        // })
+                        $q->where('name', 'like', "%$searchTerm%")
+                              ->orWhere('kode', 'like', "%$searchTerm%")
+                              ->orWhereHas('itemCategory', function ($subquery) use ($searchTerm) {
+                                  $subquery->where('name', 'like', "%$searchTerm%");
+                        })
+                        ->orWhereHas('itemCategory', function ($subquery) use ($searchTerm) {
+                            $subquery->where('name', 'like', "%$searchTerm%");
+                            // Add more 'orWhere' conditions on 'farms' columns if needed
+                        });
+                        // ->orWhere('name', function ($subquery) use ($searchTerm) {
+                        //     $subquery->where('name', 'like', "%$searchTerm%");
+                        //     // Add more 'orWhere' conditions on 'farms' columns if needed
+                        // });
+                        // Add more 'orWhereHas' conditions for other relationships if needed
+                    });
+                }
+            })
             ->setRowId('id')
             ->rawColumns(['kode']);
             // ->make(true);
@@ -143,8 +179,9 @@ class StoksDataTable extends DataTable
         return [
             Column::make('kode')->searchable(false),
             // Column::computed('farm')->searchable(true),
-            Column::make('category_id')->title('Category')->data('item_category.name'),
-            Column::make('name'),
+            // Column::make('category_id')->title('Category')->data('item_category.name'),
+            Column::make('category_id')->title('Category'),
+            Column::make('name')->searchable(true),
             Column::make('status')
                 ->visible(false),
             Column::make('satuan_kecil')

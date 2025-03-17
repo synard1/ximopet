@@ -247,6 +247,8 @@
         let jsonData = '';
         const farmSelect = document.getElementById('farms');
 
+        var minDat;
+
 
         // let farmId = '';
 
@@ -430,7 +432,7 @@
 
                 tanggalInput.disabled = false;
 
-                let minDat = startDate;
+                minDat = startDate;
 
                 flatpickr("#tanggal", {
                     minDate: minDat,
@@ -467,6 +469,22 @@
             }
 
 
+        });
+
+        $('#tanggal').change(function() {
+            let currentDate = new Date($(this).val());
+            let startDate = new Date(minDat);
+            let dateDifference = (currentDate - startDate) / (1000 * 60 * 60 * 24); // Difference in days
+
+            console.log(currentDate);
+            console.log(startDate);
+            console.log(dateDifference);
+            // Check if current date is more than 90 days from start date
+            if (dateDifference > 90) {
+                alert("The selected date is more than 90 days from the start date.");
+            } else {
+                console.log("Selected date is within the allowed range.");
+            }
         });
     });
 

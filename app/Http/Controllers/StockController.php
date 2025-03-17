@@ -200,7 +200,9 @@ class StockController extends Controller
 
 
             } else {
-                $stokHistory = $stockHistory->where('farm_id', $validatedData['farm_id']);
+                $stokHistory = $stockHistory->whereHas('inventoryLocation', function ($query) use ($validatedData) {
+                    $query->where('farm_id', $validatedData['farm_id']);
+                });            
             }
 
             $stokHistory = $stokHistory->orderBy('tanggal', 'DESC')->get();

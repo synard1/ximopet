@@ -7,6 +7,9 @@ $generalMenu = [
 'rekanan/customers',
 'inventory/docs',
 'inventory/stocks',
+'users',
+'user/roles',
+'user/permissions',
 
 ];
 
@@ -17,6 +20,9 @@ $peternakanMenu = [
 'data/stoks',
 'master-data/farms',
 'master-data/kandangs',
+'ternak/afkir',
+'ternak/jual',
+'ternak/mati',
 ];
 
 $transaksiMenu = [
@@ -138,7 +144,9 @@ return request()->is($route);
 											<!--end:Menu item-->
 										</div>
 										<!--end:Col-->
-										<!--begin:Col-->
+
+										@can('read supplier management' , 'read customer management')
+											<!--begin:Col-->
 										<div class="col-lg-3 mb-6 mb-lg-0">
 											<!--begin:Menu section-->
 											<div class="mb-6">
@@ -205,19 +213,23 @@ return request()->is($route);
 											<!--end:Menu section-->
 										</div>
 										<!--end:Col-->
-										{{--
-										<!--begin:Col-->
+										@endcan
+										
+
+										@can('read user management')
+											<!--begin:Col-->
 										<div class="col-lg-3 mb-6 mb-lg-0">
 											<!--begin:Menu section-->
 											<div class="mb-6">
 												<!--begin:Menu heading-->
-												<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">FAQ</h4>
+												<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">User</h4>
 												<!--end:Menu heading-->
 												<!--begin:Menu item-->
 												<div class="menu-item p-0 m-0">
 													<!--begin:Menu link-->
-													<a href="pages/faq/classic.html" class="menu-link">
-														<span class="menu-title">FAQ Classic</span>
+													<a href="/users"
+														class="menu-link {{ request()->is('rekanan/suppliers') ? 'active' : '' }}">
+														<span class="menu-title">User List</span>
 													</a>
 													<!--end:Menu link-->
 												</div>
@@ -225,114 +237,32 @@ return request()->is($route);
 												<!--begin:Menu item-->
 												<div class="menu-item p-0 m-0">
 													<!--begin:Menu link-->
-													<a href="pages/faq/extended.html" class="menu-link">
-														<span class="menu-title">FAQ Extended</span>
+													<a href="/user/roles"
+														class="menu-link {{ request()->is('user/roles') ? 'active' : '' }}">
+														<span class="menu-title">User Role</span>
 													</a>
 													<!--end:Menu link-->
 												</div>
 												<!--end:Menu item-->
-											</div>
-											<!--end:Menu section-->
-											<!--begin:Menu section-->
-											<div class="mb-6">
-												<!--begin:Menu heading-->
-												<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Blog</h4>
-												<!--end:Menu heading-->
+												@if(auth()->user()->hasRole(['SuperAdmin']))
 												<!--begin:Menu item-->
 												<div class="menu-item p-0 m-0">
 													<!--begin:Menu link-->
-													<a href="pages/blog/home.html" class="menu-link">
-														<span class="menu-title">Blog Home</span>
+													<a href="/user/permissions"
+														class="menu-link {{ request()->is('user/permissions') ? 'active' : '' }}">
+														<span class="menu-title">User Permission</span>
 													</a>
 													<!--end:Menu link-->
 												</div>
 												<!--end:Menu item-->
-												<!--begin:Menu item-->
-												<div class="menu-item p-0 m-0">
-													<!--begin:Menu link-->
-													<a href="pages/blog/post.html" class="menu-link">
-														<span class="menu-title">Blog Post</span>
-													</a>
-													<!--end:Menu link-->
-												</div>
-												<!--end:Menu item-->
-											</div>
-											<!--end:Menu section-->
-											<!--begin:Menu section-->
-											<div class="mb-0">
-												<!--begin:Menu heading-->
-												<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Pricing</h4>
-												<!--end:Menu heading-->
-												<!--begin:Menu item-->
-												<div class="menu-item p-0 m-0">
-													<!--begin:Menu link-->
-													<a href="pages/pricing.html" class="menu-link">
-														<span class="menu-title">Column Pricing</span>
-													</a>
-													<!--end:Menu link-->
-												</div>
-												<!--end:Menu item-->
-												<!--begin:Menu item-->
-												<div class="menu-item p-0 m-0">
-													<!--begin:Menu link-->
-													<a href="pages/pricing/table.html" class="menu-link">
-														<span class="menu-title">Table Pricing</span>
-													</a>
-													<!--end:Menu link-->
-												</div>
-												<!--end:Menu item-->
+												@endif
 											</div>
 											<!--end:Menu section-->
 										</div>
-										<!--end:Col--> --}}
-										{{--
-										<!--begin:Col-->
-										<div class="col-lg-3 mb-6 mb-lg-0">
-											<!--begin:Menu section-->
-											<div class="mb-0">
-												<!--begin:Menu heading-->
-												<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Social</h4>
-												<!--end:Menu heading-->
-												<!--begin:Menu item-->
-												<div class="menu-item p-0 m-0">
-													<!--begin:Menu link-->
-													<a href="pages/social/feeds.html" class="menu-link">
-														<span class="menu-title">Feeds</span>
-													</a>
-													<!--end:Menu link-->
-												</div>
-												<!--end:Menu item-->
-												<!--begin:Menu item-->
-												<div class="menu-item p-0 m-0">
-													<!--begin:Menu link-->
-													<a href="pages/social/activity.html" class="menu-link">
-														<span class="menu-title">Activty</span>
-													</a>
-													<!--end:Menu link-->
-												</div>
-												<!--end:Menu item-->
-												<!--begin:Menu item-->
-												<div class="menu-item p-0 m-0">
-													<!--begin:Menu link-->
-													<a href="pages/social/followers.html" class="menu-link">
-														<span class="menu-title">Followers</span>
-													</a>
-													<!--end:Menu link-->
-												</div>
-												<!--end:Menu item-->
-												<!--begin:Menu item-->
-												<div class="menu-item p-0 m-0">
-													<!--begin:Menu link-->
-													<a href="pages/social/settings.html" class="menu-link">
-														<span class="menu-title">Settings</span>
-													</a>
-													<!--end:Menu link-->
-												</div>
-												<!--end:Menu item-->
-											</div>
-											<!--end:Menu section-->
-										</div>
-										<!--end:Col--> --}}
+										<!--end:Col-->
+										@endcan
+										
+
 									</div>
 									<!--end:Row-->
 								</div>
@@ -508,8 +438,9 @@ return request()->is($route);
 			<!--end:Menu sub-->
 		</div>
 		<!--end:Menu item-->
-		<!--begin:Menu item-->
 
+		@can('read report management')
+		<!--begin:Menu item-->
 		<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"
 			class="menu-item menu-lg-down-accordion menu-sub-lg-down-indention me-0 me-lg-2 {{ !$isDashboard && (isActive($reportMenu)) ? 'here show menu-here-bg' : '' }}">
 			<!--begin:Menu link--><span class="menu-link"><span class="menu-title">Reports</span><span
@@ -517,41 +448,6 @@ return request()->is($route);
 			<!--end:Menu link-->
 			<!--begin:Menu sub-->
 			<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-lg-2 py-lg-4 w-lg-200px" style="">
-				{{-- <!--begin:Menu item-->
-				<div class="menu-item">
-					<!--begin:Menu link--><a class="menu-link"
-						href="#" target="_blank"
-						data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-dismiss="click"
-						data-bs-placement="right"
-						data-bs-original-title="Check out over 200 in-house components, plugins and ready for use solutions"
-						data-kt-initialized="1"><span class="menu-icon"><i
-								class="ki-outline ki-rocket fs-2"></i></span><span
-							class="menu-title">Pembelian DOC</span></a>
-					<!--end:Menu link-->
-				</div>
-				<!--end:Menu item-->
-				<!--begin:Menu item-->
-				<div class="menu-item">
-					<!--begin:Menu link--><a class="menu-link" href="#"
-						target="_blank" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-dismiss="click"
-						data-bs-placement="right" data-bs-original-title="Check out the complete documentation"
-						data-kt-initialized="1"><span class="menu-icon"><i
-								class="ki-outline ki-abstract-26 fs-2"></i></span><span
-							class="menu-title">Pembelian OVK</span></a>
-					<!--end:Menu link-->
-				</div>
-				<!--end:Menu item-->
-				<!--begin:Menu item-->
-				<div class="menu-item">
-					<!--begin:Menu link--><a class="menu-link" href="#"
-						data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-dismiss="click"
-						data-bs-placement="right"
-						data-bs-original-title="Build your layout and export HTML for server side integration"
-						data-kt-initialized="1"><span class="menu-icon"><i
-								class="ki-outline ki-switch fs-2"></i></span><span class="menu-title">Data Harian</span></a>
-					<!--end:Menu link-->
-				</div>
-				<!--end:Menu item--> --}}
 				<!--begin:Menu item-->
 				<div class="menu-item">
 					<!--begin:Menu link--><a class="menu-link {{ request()->is('reports/penjualan') ? 'active' : '' }}"
@@ -560,7 +456,6 @@ return request()->is($route);
 							class="menu-title">Penjualan</span></a>
 					<!--end:Menu link-->
 				</div>
-				<!--end:Menu item-->
 				<!--end:Menu item-->
 				<!--begin:Menu item-->
 				<div class="menu-item">
@@ -575,6 +470,9 @@ return request()->is($route);
 			<!--end:Menu sub-->
 		</div>
 		<!--end:Menu item-->
+			
+		@endcan
+		
 
 	</div>
 	<!--end::Menu-->

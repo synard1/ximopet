@@ -17,6 +17,9 @@ class RekananController extends Controller
     public function index(SuppliersDataTable $dataTable)
     {
         // return view('pages/masterdata.supplier.list');
+
+        addVendors(['datatables']);
+
         return $dataTable->render('pages/masterdata.supplier.list');
         // return $dataTable->render('test2');
     }
@@ -24,6 +27,8 @@ class RekananController extends Controller
     public function customerIndex(CustomersDataTable $dataTable)
     {
         // return view('pages/masterdata.supplier.list');
+        addVendors(['datatables']);
+
         return $dataTable->render('pages/masterdata.customer.list');
         // return $dataTable->render('test2');
     }

@@ -34,6 +34,41 @@
             var table = new DataTable('#itemsTable');
             table.destroy();
         }
+
+        function checkNoSj() {
+            return new Promise((resolve) => {
+                var noSjInput = document.getElementById('noSjInput');
+                if (noSjInput.value.trim() === '') {
+                    Swal.fire({
+                        title: 'Warning!',
+                        text: 'No. SJ masih kosong. Apakah anda ingin melanjutkan?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Simpan Data',
+                        cancelButtonText: 'Tidak'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            resolve(true);
+                        } else {
+                            resolve(false);
+                        }
+                    });
+                } else {
+                    resolve(true);
+                }
+            });
+        }
+
+        // Modify the existing store button to call checkNoSj before submitting
+        document.querySelector('button[wire\\:click="store()"]').addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            checkNoSj().then((shouldProceed) => {
+                if (shouldProceed) {
+                    Livewire.dispatch('store');
+                }
+            });
+        });
         
     </script>
   @endpush

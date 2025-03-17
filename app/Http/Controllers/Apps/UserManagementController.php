@@ -14,6 +14,8 @@ class UserManagementController extends Controller
      */
     public function index(UsersDataTable $dataTable)
     {
+        addVendors(['datatables']);
+
         return $dataTable->render('pages/apps.user-management.users.list');
     }
 

@@ -11,6 +11,8 @@ use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+
 
 class PenjualansDataTable extends DataTable
 {
@@ -34,7 +36,7 @@ class PenjualansDataTable extends DataTable
      *
      * @param QueryBuilder $query Results from query() method.
      */
-    public function dataTable(QueryBuilder $query): EloquentDataTable
+    public function dataTable(QueryBuilder $query, Request $request): EloquentDataTable
     {
         return (new EloquentDataTable($query))
             ->editColumn('created_at', function (TransaksiJual $transaksi) {
@@ -97,6 +99,45 @@ class PenjualansDataTable extends DataTable
                     return view('pages/transaksi.penjualan._actions', compact('transaksi'));
                 };
             })
+            ->filter(function ($query) use ($request) {
+                if ($request->has('search') && $request->get('search')['value'] != '') {
+                    $searchTerm = $request->get('search')['value'];
+            
+                    $query->where(function ($q) use ($searchTerm) {
+                        // $q->whereHas('detail', function ($subquery) use ($searchTerm) {
+                        //     // Handle d-m-Y format
+                        //     $formattedDate = null;
+                        //     if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $searchTerm, $matches)) {
+                        //         $formattedDate = "{$matches[3]}-{$matches[2]}-{$matches[1]}";
+                        //     }
+
+                        //     $subquery->where(function ($query) use ($searchTerm, $formattedDate) {
+                        //         $query->where('tanggal', 'like', "%$searchTerm%")
+                        //             ->orWhereDate('tanggal', $formattedDate);
+                        //     });
+                        // })
+                        $q->whereHas('detail.farm', function ($subquery) use ($searchTerm) {
+                            $subquery->where('nama', 'like', "%$searchTerm%");
+                            // Add more 'orWhere' conditions on 'farms' columns if needed
+                        })
+                        ->orWhereHas('detail.kandang', function ($subquery) use ($searchTerm) {
+                            $subquery->where('nama', 'like', "%$searchTerm%");
+                            // Add more 'orWhere' conditions on 'farms' columns if needed
+                        });
+                        // Add more 'orWhereHas' conditions for other relationships if needed
+                    });
+                }
+            })
+            // ->filterColumn('kandang_id', function($query, $keyword) {
+            //     $query->whereHas('detail.kandang', function($q) use ($keyword) {
+            //         $q->where('nama', 'like', "%{$keyword}%");
+            //     });
+            // })
+            // ->filterColumn('rekanan_id', function($query, $keyword) {
+            //     $query->whereHas('detail.rekanan', function($q) use ($keyword) {
+            //         $q->where('nama', 'like', "%{$keyword}%");
+            //     });
+            // })
             ->setRowId('id')
             ->rawColumns(['kode']);
             // ->make(true);
@@ -128,7 +169,7 @@ class PenjualansDataTable extends DataTable
                 'scrollX'      =>  true,
                 'scrollY'      => '400px', // Set a fixed height for vertical scrolling
                 'scrollCollapse' => true,
-                'searching'       =>  false,
+                'searching'       =>  true,
                 // 'responsive'       =>  true,
                 'lengthMenu' => [
                         [ 10, 25, 50, -1 ],
@@ -174,7 +215,7 @@ class PenjualansDataTable extends DataTable
             Column::make('tanggal_beli')
                 ->title('Tanggal Masuk DOC')
                 ->visible(false)
-                ->searchable(true),
+                ->searchable(false),
             Column::make('tanggal')
                 ->title('Tanggal Penjualan')
                 ->searchable(true),

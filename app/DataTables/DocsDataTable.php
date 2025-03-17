@@ -38,7 +38,7 @@ class DocsDataTable extends DataTable
                 return $transaksi->rekanans->nama ?? '';
             })
             ->editColumn('total_qty', function (Transaksi $transaksi) {
-                return $transaksi->transaksiDetail->sum('qty') ?? '';
+                return $transaksi->transaksiDetails->sum('qty') ?? '';
             })
             ->editColumn('payload.doc.nama', function (Transaksi $transaksi) {
                 if($transaksi->payload){
@@ -103,9 +103,9 @@ class DocsDataTable extends DataTable
         $query = $model->newQuery();
 
         // return $model->newQuery();
-        $query = $model::with('transaksiDetail')
+        $query = $model::with('transaksiDetails')
             ->where('jenis','DOC')
-            ->whereHas('transaksiDetail', function ($query) {
+            ->whereHas('transaksiDetails', function ($query) {
                 // $query->where('jenis_barang', 'DOC');
             })
             // ->where('user_id',auth()->user()->id)

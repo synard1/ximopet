@@ -17,6 +17,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('transaksi_id')->nullable();
             $table->uuid('parent_id')->nullable();
+            $table->string('no_sj')->nullable();
             $table->string('jenis')->nullable();
             $table->string('jenis_barang')->nullable();
             $table->dateTime('tanggal')->nullable();

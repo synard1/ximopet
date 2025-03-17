@@ -163,7 +163,7 @@ class TransaksiHarianDataTable extends DataTable
                 ->orderBy('tanggal', 'DESC');
         } else {
             $query = $model::with('farm')
-                ->orderBy('nama', 'DESC');
+                ->orderBy('tanggal', 'DESC');
         }
 
         return $query;
@@ -185,21 +185,21 @@ class TransaksiHarianDataTable extends DataTable
             // ->setTableId('pemakaianStoks-table')
             // ->columns($this->getColumns())
             // ->minifiedAjax()
-            // ->dom('Bfrtip')
+            ->dom('Bfrtip')
             // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
             // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             // // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
             // ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             ->orderBy(0)
-            // ->parameters([
-            //     // 'scrollX'      =>  true,
-            //     // 'searching'     => false,
-            //     'lengthMenu' => [
-            //             [ 10, 25, 50, -1 ],
-            //             [ '10 rows', '25 rows', '50 rows', 'Show all' ]
-            //     ],
-            //     'buttons'      => ['export', 'print', 'reload','colvis'],
-            // ])
+            ->parameters([
+                // 'scrollX'      =>  true,
+                'searching'     => true,
+                'lengthMenu' => [
+                        [ 10, 25, 50, -1 ],
+                        [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+                ],
+                'buttons'      => ['export', 'print', 'reload','colvis'],
+            ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaksi/harian/_draw-scripts.js')) . "}");
     }
 

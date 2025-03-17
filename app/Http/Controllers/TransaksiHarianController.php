@@ -171,6 +171,9 @@ class TransaksiHarianController extends Controller
             ], 404);
         }
 
+        // Ensure each transaksiHarian is loaded with kandang_id
+        $filteredData->load('transaksiHarian:kandang_id,id,tanggal');
+
         // Group the data by date
         $groupedData = $filteredData->groupBy(function ($item) {
             return $item->transaksiHarian->tanggal->format('Y-m-d');

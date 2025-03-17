@@ -15,9 +15,10 @@ class RolesPermissionsSeeder extends Seeder
     public function run(): void
     {
         $abilities = [
-            'read',
-            'write',
+            'access',
             'create',
+            'read',
+            'update',
             'delete',
         ];
 
@@ -62,7 +63,7 @@ class RolesPermissionsSeeder extends Seeder
 
         foreach ($permissions_by_role['SuperAdmin'] as $permission) {
             foreach ($abilities as $ability) {
-                Permission::create(['name' => $ability . ' ' . $permission]);
+                Permission::firstOrCreate(['name' => $ability . ' ' . $permission]);
             }
         }
 
@@ -73,7 +74,7 @@ class RolesPermissionsSeeder extends Seeder
                     $full_permissions_list[] = $ability . ' ' . $permission;
                 }
             }
-            Role::create(['name' => $role])->syncPermissions($full_permissions_list);
+            Role::firstOrCreate(['name' => $role])->syncPermissions($full_permissions_list);
         }
 
         User::find(1)->assignRole('SuperAdmin');

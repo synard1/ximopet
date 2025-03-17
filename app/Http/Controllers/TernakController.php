@@ -86,6 +86,8 @@ class TernakController extends Controller
         // $data = Ternak::all();
         // $dataTable->data = $data;
         // $dataTable->setup();
+        addVendors(['datatables']);
+
         return $dataTable->render('pages.ternak.afkir.list');
     }
 
@@ -94,6 +96,8 @@ class TernakController extends Controller
         // $data = Ternak::all();
         // $dataTable->data = $data;
         // $dataTable->setup();
+        addVendors(['datatables']);
+
         return $dataTable->render('pages.transaksi.kematian-ternak.list');
     }
 
@@ -102,6 +106,8 @@ class TernakController extends Controller
         // $data = Ternak::all();
         // $dataTable->data = $data;
         // $dataTable->setup();
+        addVendors(['datatables']);
+
         return $dataTable->render('pages.ternak.jual.list');
     }
 

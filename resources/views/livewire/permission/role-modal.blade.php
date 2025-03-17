@@ -1,6 +1,6 @@
 <div class="modal fade" id="kt_modal_update_role" tabindex="-1" aria-hidden="true" wire:ignore.self>
     <!--begin::Modal dialog-->
-    <div class="modal-dialog modal-dialog-centered mw-750px">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
         <!--begin::Modal content-->
         <div class="modal-content">
             <!--begin::Modal header-->
@@ -57,6 +57,7 @@
                                         <td>
                                             <!--begin::Checkbox-->
                                             <label class="form-check form-check-sm form-check-custom form-check-solid me-9">
+                                                {{-- <input class="form-check-input" type="checkbox" id="kt_roles_select_all" /> --}}
                                                 <input class="form-check-input" type="checkbox" id="kt_roles_select_all" wire:model="check_all" wire:change="checkAll" />
                                                 <span class="form-check-label" for="kt_roles_select_all">Select all</span>
                                             </label>
@@ -77,7 +78,7 @@
                                                     <div class="d-flex">
                                                         <!--begin::Checkbox-->
                                                         <label class="form-check form-check-sm form-check-custom form-check-solid me-5 me-lg-20">
-                                                            <input class="form-check-input" type="checkbox" wire:model="checked_permissions" value="{{ $permission->name }}"/>
+                                                            <input class="form-check-input permission-checkbox" type="checkbox" wire:model="checked_permissions" value="{{ $permission->name }}"/>
                                                             <span class="form-check-label">{{ ucwords(Str::before($permission->name, ' ')) }}</span>
                                                         </label>
                                                         <!--end::Checkbox-->
@@ -105,7 +106,7 @@
                         <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal" aria-label="Close" wire:loading.attr="disabled">Discard</button>
                         <button type="submit" class="btn btn-primary">
                             <span class="indicator-label" wire:loading.remove>Submit</span>
-                            <span class="indicator-progress" wire:loading wire:target="submit">
+                            <span class="indicator-progress" wire:loading wire:target="submitRole">
                                 Please wait...
                                 <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
                             </span>
@@ -114,6 +115,19 @@
                     <!--end::Actions-->
                 </form>
                 <!--end::Form-->
+                <!-- Notification Messages -->
+                <div>
+                    @if (session()->has('success'))
+                        <div class="alert alert-success">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+                    @if (session()->has('error'))
+                        <div class="alert alert-danger">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+                </div>
             </div>
             <!--end::Modal body-->
         </div>
@@ -128,6 +142,28 @@
 
         modal.addEventListener('show.bs.modal', (e) => {
             Livewire.dispatch('modal.show.role_name', [e.relatedTarget.getAttribute('data-role-id')]);
+
+            // const selectAllCheckbox = document.getElementById('kt_roles_select_all'); // Make sure this ID is correct in your HTML
+            // const permissionCheckboxes = document.querySelectorAll('.permission-checkbox'); // Select by class
+
+            // if (permissionCheckboxes.length > 0) {
+            //     selectAllCheckbox.addEventListener('change', function () {
+            //         permissionCheckboxes.forEach(function (checkbox) {
+            //             checkbox.checked = selectAllCheckbox.checked;
+            //             // Important: Trigger Livewire update HERE, after setting checkbox.checked
+            //             Livewire.dispatch('updateCheckedPermissions', checkbox.value, selectAllCheckbox.checked);
+
+            //         });
+            //     });
+            // }
         });
+
+        modal.addEventListener('hidden.bs.modal', function () {
+            const selectAllCheckbox = document.getElementById('kt_roles_select_all');
+            selectAllCheckbox.checked = false; // Uncheck the select all checkbox
+        });
+
+
+
     </script>
 @endpush

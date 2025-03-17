@@ -16,7 +16,8 @@
 						<!--end::Sidebar toggle-->
 						<!--begin::Logo image-->
 						<a href="index.html">
-							<img alt="Logo" src="/assets/media/logos/demo60.svg" class="mh-25px" />
+							<img alt="Logo" src="/assets/media/logos/logo.png" class="mh-85px"/>
+							{{-- <img alt="Logo" src="/assets/media/logos/logo.png" class="mh-25px" /> --}}
 						</a>
 						<!--end::Logo image-->
 					</div>

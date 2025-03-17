@@ -28,7 +28,7 @@
         </div>
         <!--end::Input group--->
 
-        <!--begin::Wrapper-->
+        {{-- <!--begin::Wrapper-->
         <div class="d-flex flex-stack flex-wrap gap-3 fs-base fw-semibold mb-8">
             <div></div>
 
@@ -38,7 +38,7 @@
             </a>
             <!--end::Link-->
         </div>
-        <!--end::Wrapper-->
+        <!--end::Wrapper--> --}}
 
         <!--begin::Submit button-->
         <div class="d-grid mb-10">

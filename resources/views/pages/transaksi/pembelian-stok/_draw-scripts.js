@@ -132,6 +132,83 @@ document.querySelectorAll('[data-kt-action="view_details"]').forEach(function (e
     });
 });
 
+// Add click event listener to edit No. SJ buttons
+document.querySelectorAll('[data-kt-action="edit_sj"]').forEach(function (element) {
+    element.addEventListener('click', function (e) {
+        e.preventDefault();
+        
+        // Select parent row
+        const parent = e.target.closest('tr');
+
+        // Get transaksi ID
+        const transaksiId = this.getAttribute('data-kt-transaksi-id');
+
+        // Get current No. SJ
+        const currentNoSj = parent.querySelectorAll('td')[1].innerText;
+
+        // Create modal HTML
+        const modalHtml = `
+            <div class="modal fade" id="editNoSjModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit No. SJ</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="text" class="form-control" id="noSjInputModal" value="${currentNoSj}">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary" id="saveNoSj">Save changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Append modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Initialize modal
+        const modal = new bootstrap.Modal(document.getElementById('editNoSjModal'));
+        modal.show();
+
+        // Add event listener to save button
+        document.getElementById('saveNoSj').addEventListener('click', function() {
+            const newNoSj = document.getElementById('noSjInputModal').value;
+
+            console.log(newNoSj);
+            
+            
+            // Here you would typically send an AJAX request or use Livewire to update the No. SJ
+            // For this example, we'll just use a Livewire dispatch
+            Livewire.dispatch('updateNoSj', { transaksiId: transaksiId, newNoSj: newNoSj });
+
+            // // Close the modal
+            // modal.hide();
+
+            // // Show success message
+            // Swal.fire({
+            //     text: 'No. SJ has been updated successfully.',
+            //     icon: 'success',
+            //     buttonsStyling: false,
+            //     confirmButtonText: 'Ok, got it!',
+            //     customClass: {
+            //         confirmButton: 'btn btn-primary'
+            //     }
+            // }).then(function() {
+            //     // Optionally, you can refresh the table or update the specific row here
+            // });
+        });
+
+        // Remove modal from DOM when it's hidden
+        document.getElementById('editNoSjModal').addEventListener('hidden.bs.modal', function () {
+            this.remove();
+        });
+    });
+});
+
 
 
 // // Listen for 'success' event emitted by Livewire

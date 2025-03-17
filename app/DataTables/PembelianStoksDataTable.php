@@ -38,6 +38,9 @@ class PembelianStoksDataTable extends DataTable
             ->editColumn('farm_id', function (Transaksi $transaksi) {
                 return $transaksi->farms->nama;
             })
+            ->editColumn('no_sj', function (Transaksi $transaksi) {
+                return $transaksi->transaksiDetails->first()->no_sj ?? '';
+            })
             ->editColumn('rekanan_id', function (Transaksi $transaksi) {
                 return $transaksi->rekanans->nama;
             })
@@ -109,21 +112,18 @@ class PembelianStoksDataTable extends DataTable
             $farmOperator = auth()->user()->farmOperators;
             if ($farmOperator) {
                 $farmIds = $farmOperator->pluck('farm_id')->toArray();
-                $query = $model::whereNotIn('jenis', ['DOC'])
-                    // ->whereHas('transaksiDetail', function ($query) {
-                    //     $query->whereNotIn('jenis_barang', ['DOC']);
-                    // })
+                $query = $model::with('transaksiDetails')
+                    ->whereNotIn('jenis', ['DOC'])
                     ->whereIn('farm_id', $farmIds)
-                    ->orderBy('tanggal', 'DESC')
-                    ->newQuery();
+                    ->orderBy('tanggal', 'DESC');
             }
         } else {
-            $query = $model::where('jenis', 'Pembelian')
-                ->whereHas('transaksiDetail', function ($query) {
+            $query = $model::with('transaksiDetails')
+                ->where('jenis', 'Pembelian')
+                ->whereHas('transaksiDetails', function ($query) {
                     $query->whereNotIn('jenis_barang', ['DOC']);
                 })
-                ->orderBy('tanggal', 'DESC')
-                ->newQuery();
+                ->orderBy('tanggal', 'DESC');
         }
 
         return $query;
@@ -143,10 +143,10 @@ class PembelianStoksDataTable extends DataTable
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
-            ->orderBy(1)
+            ->orderBy(0, 'desc')  // This will order by the first visible column (tanggal) in descending order
             ->parameters([
                 'scrollX'      =>  true,
-                'searching'       =>  false,
+                'searching'       =>  true,
                 // 'responsive'       =>  true,
                 'lengthMenu' => [
                         [ 10, 25, 50, -1 ],
@@ -163,9 +163,10 @@ class PembelianStoksDataTable extends DataTable
     public function getColumns(): array
     {
         return [
+            Column::make('tanggal')->title('Tanggal Pembelian')->searchable(true),
+            Column::make('no_sj')->title('No. SJ')->searchable(false),
             Column::make('faktur')->searchable(true),
             Column::make('farm_id')->title('Farm')->searchable(true),
-            Column::make('tanggal')->title('Tanggal Pembelian')->searchable(true),
             Column::make('rekanan_id')->title('Nama Supplier')->searchable(true),
             // Column::make('payload.doc.nama')->title('Nama DOC')->searchable(true),
             // Column::make('qty')->searchable(true),
