@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-        Data Kematian Ternak
+        Data Kematian {{ trans('content.ternak',[],'id') }}
     @endsection
 
     @section('breadcrumbs')

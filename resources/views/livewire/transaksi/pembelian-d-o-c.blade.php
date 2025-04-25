@@ -14,7 +14,8 @@
                 <div class="modal-body">
                     <!--begin::Form-->
                     <form id="kt_modal_master_doc_form" class="form" enctype="multipart/form-data">
-                        <input type="hidden" wire:model="parent_id" name="parent_id" />
+                        <input type="hidden" wire:model="transaksi_id" id="transaksi_id">
+                        {{-- <input type="hidden" wire:model="parent_id" name="parent_id" /> --}}
                         <!--begin::Scroll-->
                         <div class="d-flex flex-column scroll-y px-5 px-lg-10" id="kt_modal_master_doc_scroll"
                             data-kt-scroll="true" data-kt-scroll-activate="true" data-kt-scroll-max-height="auto"
@@ -96,9 +97,7 @@
                                             class="js-select2 form-control" @if($edit_mode) disabled @endif>
                                             <option value="">=== Pilih Kandang ===</option>
                                             @foreach ($kandangs as $kandang)
-                                            <option value="{{ $kandang->id }}" @if($selectedKandang == $kandang->id) selected @endif>{{ $kandang->farms->name }} - {{
-                                                $kandang->kode
-                                                }} - {{ $kandang->nama }}</option>
+                                            <option value="{{ $kandang->id }}" @if($selectedKandang == $kandang->id) selected @endif>{{ $kandang->farm->nama }} - {{ $kandang->nama }}</option>
                                             @endforeach
                                         </select>
                                         <!--end::Select2-->
@@ -117,8 +116,8 @@
                                         <label class="form-label fs-8 mb-3">Periode</label>
                                         <!--begin::Input-->
                                         <input type="text" wire:model="periode" id="periode"
-                                            class="form-control form-control-solid mb-3 mb-lg-0" disabled
-                                            placeholder="[Auto Generate]" />
+                                            class="form-control form-control-solid mb-3 mb-lg-0"
+                                            placeholder="Isi atau kosongkan untuk Auto Generate" />
                                         <!--end::Input-->
                                         @error('periode')
                                         <span class="text-danger">{{ $message }}</span> @enderror
@@ -162,13 +161,35 @@
                                     class="js-select2 form-control">
                                     <option value="">=== Pilih ===</option>
                                     @foreach ($docs as $doc)
-                                    <option value="{{ $doc->id }}">{{ $doc->kode }} -- {{ $doc->name }}</option>
+                                    <option value="{{ $doc->id }}" @if($docSelect == $doc->id) selected @endif>{{ $doc->name }}</option>
                                     @endforeach
                                 </select>
                                 <!--end::Select2-->
                                 @error('docSelect')
                                 <span class="text-danger">{{ $message }}</span> @enderror
                                 @error('docSelect')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <!--end::Input group-->
+
+                            <!--begin::Input group-->
+                            <div class="fv-row mb-7">
+                                <!--begin::Label-->
+                                <label class="fw-semibold fs-6 mb-2">Standar DOC</label>
+                                <!--end::Label-->
+                                <!--begin::Select2-->
+                                <select id="standarDocSelect" name="standarDocSelect" wire:model="standarDocSelect"
+                                    class="js-select2 form-control">
+                                    <option value="">=== Pilih ===</option>
+                                    @foreach ($standarDocs as $standarDoc)
+                                    <option value="{{ $standarDoc->id }}" @if($standarDocSelect == $standarDoc->id) selected @endif>{{ $standarDoc->breed }} -- {{ $standarDoc->description }}</option>
+                                    @endforeach
+                                </select>
+                                <!--end::Select2-->
+                                @error('standarDocSelect')
+                                <span class="text-danger">{{ $message }}</span> @enderror
+                                @error('standarDocSelect')
                                 <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -211,11 +232,11 @@
                             <!--begin::Input group-->
                             <div class="fv-row mb-7">
                                 <!--begin::Label-->
-                                <label class="required fw-semibold fs-6 mb-2">Total Berat ( Gram )</label>
+                                <label class="required fw-semibold fs-6 mb-2">Berat Rata - Rata ( Gram )</label>
                                 <!--end::Label-->
                                 <!--begin::Input-->
                                 <input type="number" wire:model="berat" id="berat"
-                                    class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Total Berat ( Gram )" />
+                                    class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Berat Rata - Rata ( Gram )" />
                                 <!--end::Input-->
                                 @error('berat')
                                 <span class="text-danger">{{ $message }}</span> @enderror

@@ -13,16 +13,16 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-        Schema::create('master_farms', function (Blueprint $table) {
+        Schema::create('farms', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('kode', 64)->unique();
-            $table->string('nama');
-            $table->text('alamat');
-            $table->string('telp', 50)->nullable();
-            $table->string('pic', 64)->nullable();
-            $table->string('telp_pic', 50)->nullable();
-            $table->string('jumlah')->nullable();
-            $table->string('kapasitas')->nullable();
+            $table->string('code', 64)->unique();
+            $table->string('name');
+            $table->string('contact_person')->nullable();
+            $table->string('phone_number')->nullable();
+            $table->text('address')->nullable();
+            $table->text('description')->nullable();
+            $table->string('quantity')->default(0);
+            $table->string('capacity')->default(0);
             $table->string('status');
             $table->unsignedBigInteger('created_by');
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -42,6 +42,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('master_farms');
+        Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('farms');
+
+        Schema::enableForeignKeyConstraints();
+
+
     }
 };

@@ -29,7 +29,7 @@ class TransaksiBeli extends BaseModel
         'sub_total',
         'terpakai',
         'sisa',
-        'kelompok_ternak_id',
+        'ternak_id',
         'status',
         'notes',
         'created_by',
@@ -65,8 +65,8 @@ class TransaksiBeli extends BaseModel
         return $this->belongsTo(Kandang::class, 'kandang_id','id');
     }
 
-    public function kelompokTernak()
+    public function ternak()
     {
-        return $this->hasOne(KelompokTernak::class,'transaksi_id','id');
+        return $this->hasOne(Ternak::class,'transaksi_id','id');
     }
 }

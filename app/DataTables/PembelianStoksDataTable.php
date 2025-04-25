@@ -44,9 +44,9 @@ class PembelianStoksDataTable extends DataTable
             ->editColumn('rekanan_id', function (Transaksi $transaksi) {
                 return $transaksi->rekanans->nama;
             })
-            // ->editColumn('sub_total', function (Transaksi $transaksi) {
-            //     return $this->formatRupiah($transaksi->sub_total);
-            // })
+            ->editColumn('sub_total', function (Transaksi $transaksi) {
+                return $this->formatRupiah($transaksi->sub_total);
+            })
             ->addColumn('action', function (Transaksi $transaksi) {
                 return view('pages/transaksi.pembelian-stok._actions', compact('transaksi'));
             })
@@ -171,7 +171,7 @@ class PembelianStoksDataTable extends DataTable
             // Column::make('payload.doc.nama')->title('Nama DOC')->searchable(true),
             // Column::make('qty')->searchable(true),
             // Column::make('harga')->searchable(true),
-            // Column::make('sub_total')->searchable(true),
+            Column::make('sub_total')->searchable(false),
             // Column::make('periode')->searchable(true),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),
             Column::computed('action')

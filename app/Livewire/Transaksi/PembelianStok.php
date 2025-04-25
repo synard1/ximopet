@@ -7,6 +7,7 @@ use App\Models\Item;
 use App\Models\Rekanan;
 use App\Models\Kandang;
 use App\Models\FarmOperator;
+use App\Models\Ternak;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
@@ -15,7 +16,7 @@ use App\Models\TransaksiDetail;
 
 class PembelianStok extends Component
 {
-    public $transaksi_id, $docs, $kode_doc, $suppliers, $kandangs, $periode, $faktur, $tanggal, $supplierSelect, $docSelect, $selectedKandang, $qty, $harga, $selectedFarm, $farms;
+    public $transaksi_id, $docs, $kode_doc, $suppliers, $kandangs, $periode, $faktur, $tanggal, $supplierSelect, $docSelect, $selectedKandang, $qty, $harga, $selectedFarm, $farms, $ternaks, $selectedTernak;
 
     protected $rules = [
         'faktur' => 'required|unique:transaksis,faktur',
@@ -34,14 +35,19 @@ class PembelianStok extends Component
 
     public function render()
     {
+        $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
+
         $this->docs = Item::where('jenis','DOC')->get();
         $this->suppliers = Rekanan::where('jenis','Supplier')->get();
         $this->farms = FarmOperator::where('user_id', auth()->user()->id)->get();
         $this->kandangs = Kandang::where('status','Aktif')->get();
+        $this->ternaks = Ternak::whereIn('id', $farmIds)->where('status','Aktif')->get(['id', 'nama']);
+
         return view('livewire.transaksi.pembelian-stok',[
             'docs' => $this->docs,
             'suppliers' => $this->suppliers,
             'kandangs' => $this->kandangs,
+            'ternaks' => $this->ternaks,
         ]);
     }
 

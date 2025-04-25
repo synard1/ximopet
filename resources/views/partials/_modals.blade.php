@@ -21,6 +21,7 @@
 
 <livewire:user.add-user-modal />
 <livewire:master-data.supplier-modal />
+<livewire:master-data.ekspedisi-modal />
 <livewire:master-data.customer-modal />
 <livewire:master-data.farm-modal />
 <livewire:master-data.kandang-modal />

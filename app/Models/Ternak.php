@@ -7,40 +7,47 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Traits\TernakLockCheck;
 
 class Ternak extends BaseModel
 {
     use HasFactory, SoftDeletes, HasUuids;
+    use TernakLockCheck;
 
-    protected $table = 'kelompok_ternak';
+
+    protected $table = 'ternaks';
 
     protected $fillable = [
         'transaksi_id',
+        'farm_id',
+        'kandang_id',
+        'standar_bobot_id',
         'name',
         'breed',
         'start_date',
-        'estimated_end_date',
-        'initial_quantity',
-        'current_quantity',
-        'death_quantity',
-        'slaughter_quantity',
-        'sold_quantity',
-        'remaining_quantity',
-        'berat_beli',
-        'berat_jual',
+        'end_date',
+        'populasi_awal',
+        'berat_awal',
+        'harga',
+        'pic',
         'status',
-        'farm_id',
-        'kandang_id',
+        'data',
+        'keterangan',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
         'start_date' => 'datetime',
-        'estimated_end_date' => 'datetime',
+        'end_date' => 'datetime',
     ];
 
     public function transaksi()
+    {
+        return $this->belongsTo(TransaksiBeli::class, 'transaksi_id','id');
+    }
+
+    public function transaksiBeli()
     {
         return $this->belongsTo(TransaksiBeli::class, 'transaksi_id','id');
     }
@@ -59,8 +66,17 @@ class Ternak extends BaseModel
         return $this->hasMany(KematianTernak::class, 'kelompok_ternak_id', 'id');
     }
 
+    public function ternakDepletion(){
+        return $this->hasMany(TernakDepletion::class, 'ternak_id', 'id');
+    }
+
     public function jenisTernak(){
         return $this->belongsTo(Item::class, 'item_id', 'id');
+    }
+
+    public function isLocked()
+    {
+        return $this->status === 'Locked';
     }
     
 }

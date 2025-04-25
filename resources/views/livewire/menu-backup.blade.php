@@ -480,7 +480,7 @@
 			<!--end:Menu content-->
 		</div>
 		<!--end:Menu item-->
-		@can('create transaksi')
+		@can('create transaction')
 		<!--begin:Menu item-->
 		<div data-kt-menu-trigger="click" class="menu-item menu-accordion show">
 			<!--begin:Menu link-->

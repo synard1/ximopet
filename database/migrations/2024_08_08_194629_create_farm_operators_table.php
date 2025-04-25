@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
         
             $table->foreign('user_id')->references('id')->on('users');
-            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('farm_id')->references('id')->on('farms');
         
             // Define the composite primary key
             $table->primary(['farm_id', 'user_id']); 

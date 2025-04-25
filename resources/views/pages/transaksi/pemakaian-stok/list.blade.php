@@ -20,7 +20,7 @@
             </div>
             <!--begin::Card title-->
 
-            @can('create transaksi')
+            @can('create transaction')
             <!--begin::Card toolbar-->
             <div class="card-toolbar">
                 <!--begin::Toolbar-->

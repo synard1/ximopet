@@ -104,6 +104,10 @@
             toastr.error(message);
         });
 
+        Livewire.on('info', (message) => {
+            toastr.info(message);
+        });
+
         Livewire.on('swal', (message, icon, confirmButtonText) => {
             if (typeof icon === 'undefined') {
                 icon = 'success';

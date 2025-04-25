@@ -8,7 +8,9 @@ use App\DataTables\TernakDataTable;
 use App\DataTables\ternakAfkirDataTable;
 use App\DataTables\ternakJualDataTable;
 use App\DataTables\KematianTernakDataTable;
+use App\DataTables\LivestockDepletionDataTable;
 use App\Models\KematianTernak;
+use App\Models\Recording;
 use App\Models\TernakAfkir;
 use App\Models\TernakJual;
 use App\Models\TransaksiHarian;
@@ -17,6 +19,7 @@ use App\Models\CurrentTernak;
 use App\Models\TransaksiJual;
 use App\Models\KelompokTernak;
 use Carbon\Carbon;
+use App\Models\TernakDepletion;
 
 class TernakController extends Controller
 {
@@ -31,6 +34,42 @@ class TernakController extends Controller
         addVendors(['datatables']);
 
         return $dataTable->render('pages.masterdata.ternak.list');
+    }
+
+    public function recordingIndex(TernakDataTable $dataTable)
+    {
+        // $data = Ternak::all();
+        // $dataTable->data = $data;
+        // $dataTable->setup();
+        // addVendors(['datatables']);
+
+        return view('pages.recording.index');
+
+        // return $dataTable->render('pages.recording.index');
+    }
+
+    public function mutasiIndex(TernakDataTable $dataTable)
+    {
+        // $data = Ternak::all();
+        // $dataTable->data = $data;
+        // $dataTable->setup();
+        // addVendors(['datatables']);
+
+        return view('pages.pakan.mutasi');
+
+        // return $dataTable->render('pages.recording.index');
+    }
+
+    public function rollbackIndex(TernakDataTable $dataTable)
+    {
+        // $data = Ternak::all();
+        // $dataTable->data = $data;
+        // $dataTable->setup();
+        // addVendors(['datatables']);
+
+        return view('pages.pakan.rollback');
+
+        // return $dataTable->render('pages.recording.index');
     }
 
     /**
@@ -91,7 +130,7 @@ class TernakController extends Controller
         return $dataTable->render('pages.ternak.afkir.list');
     }
 
-    public function ternakMatiIndex(KematianTernakDataTable $dataTable)
+    public function ternakMatiIndex(LivestockDepletionDataTable $dataTable)
     {
         // $data = Ternak::all();
         // $dataTable->data = $data;
@@ -123,7 +162,7 @@ class TernakController extends Controller
         if($type == 'detail' || $type == 'Detail'){
             if($roles == 'Operator'){
                 // Fetch ternak details based on the provided $id
-                $result = Ternak::where('id', $id)
+                $result = KelompokTernak::where('id', $id)
                     ->with(['jenisTernak','kandang', 'kematianTernak' => function($query) {
                         $query->orderBy('tanggal', 'asc');
                     }])
@@ -132,12 +171,6 @@ class TernakController extends Controller
                 if (!$result) {
                     return response()->json(['error' => 'Ternak not found'], 404);
                 }
-
-                // dd($result);
-
-                // Calculate total jumlah_mati and berat_mati from kematianTernak relation
-                // $totalJumlahMati = $result->kematianTernak->sum('jumlah');
-                // $totalBeratMati = $result->kematianTernak->sum('berat');
 
                 // Map kematian ternak data chronologically
                 $kematianData = $result->kematianTernak->map(function($item) use($result) {
@@ -157,21 +190,6 @@ class TernakController extends Controller
                     ];
                 });
 
-                // // Format the result as needed
-                // $formattedResult = [
-                //     'id' => $result->id,
-                //     'jenis_barang' => $result->jenisTernak->name,
-                //     'item_name' => $result->name,
-                //     'stok_awal' => $result->jumlah,
-                //     'jumlah_mati' => $totalJumlahMati,
-                //     'berat_mati' => $totalBeratMati,
-                //     'stok_akhir' => $result->jumlah - $totalJumlahMati,
-                //     'kandang' => $result->kandang->nama,
-                //     'kematian_data' => $kematianData
-                // ];
-
-                // $result = [$formattedResult];
-
                 return response()->json($kematianData);
             }elseif($roles == 'Supervisor'){
 
@@ -181,6 +199,62 @@ class TernakController extends Controller
             }
         }
     }
+
+    // public function getDataAjax(Request $request)
+    // {
+    //     $roles = $request->get('roles');
+    //     $task = $request->get('task');
+    //     $type = $request->get('type');
+    //     $jenis = $request->get('jenis');
+    //     $id = $request->get('id');
+
+
+    //     if($type == 'detail' || $type == 'Detail'){
+    //         if($roles == 'Operator'){
+    //             // Fetch ternak details based on the provided $id
+    //             $result = KelompokTernak::where('id', $id)
+    //                 ->with(['jenisTernak','kandang', 'kematianTernak' => function($query) {
+    //                     $query->orderBy('tanggal', 'asc');
+    //                 }])
+    //                 ->first();
+
+    //             if (!$result) {
+    //                 return response()->json(['error' => 'Ternak not found'], 404);
+    //             }
+
+    //             // dd($result);
+
+    //             // Calculate total jumlah_mati and berat_mati from kematianTernak relation
+    //             // $totalJumlahMati = $result->kematianTernak->sum('jumlah');
+    //             // $totalBeratMati = $result->kematianTernak->sum('berat');
+
+    //             // Map kematian ternak data chronologically
+    //             $kematianData = $result->kematianTernak->map(function($item) use($result) {
+
+    //                 // dd($item);
+    //                 return [
+    //                     'id' => $result->id,
+    //                     'tanggal' => $item->tanggal,
+    //                     // 'item_name' => $item->name,
+    //                     // 'tanggal' => $item->tanggal,
+    //                     'stok_awal' => $item->stok_awal,
+    //                     'jumlah_mati' => $item->quantity,
+    //                     'stok_akhir' => $item->stok_akhir,
+    //                     'berat_mati' => $item->total_berat,
+    //                     'penyebab' => $item->penyebab,
+    //                     // 'keterangan' => $item->keterangan
+    //                 ];
+    //             });
+
+    //             return response()->json($kematianData);
+    //         }elseif($roles == 'Supervisor'){
+
+    //             // $result = Kandang::where('status', $status)->get(['id','kode','nama','kapasitas','jumlah']);
+
+    //             // return response()->json($result);
+    //         }
+    //     }
+    // }
 
     private function getCategoriesFromItemCategory()
     {
@@ -193,40 +267,129 @@ class TernakController extends Controller
     public function showTernakDetails($id)
     {
         $kelompokTernak = KelompokTernak::findOrFail($id);
-        $startDate = $kelompokTernak->start_date; // Get data for the last 30 days
+        $startDate = Carbon::parse($kelompokTernak->start_date);
+        $today = Carbon::today();
+
+        // Generate daily records
+        $records = collect();
         
         // Get the last transaction date
         $lastTransactionDate = TransaksiHarian::where('kelompok_ternak_id', $kelompokTernak->id)
-        ->latest('tanggal')
-        ->value('tanggal');
+            ->latest('tanggal')
+            ->value('tanggal');
 
         if($kelompokTernak->status == 'Aktif' || $kelompokTernak->status == 'Locked'){
             // If there's no transaction, use the current date
             // Otherwise, use the last transaction date plus 1 days
             $endDate = $lastTransactionDate 
-            ? Carbon::parse($lastTransactionDate)->addDays(1)->format('Y-m-d')
-            : Carbon::now()->format('Y-m-d');
+                ? Carbon::parse($lastTransactionDate)->addDays(1)->format('Y-m-d')
+                : Carbon::now()->format('Y-m-d');
 
             // Ensure that the end date is not before the start date
             $endDate = max(Carbon::parse($endDate), Carbon::parse($startDate)->addDays(1));
-        }else{
+        } else {
             $endDate = $kelompokTernak->end_date;
-
         }
 
+        // Get standar data for FCR target
+        $standarData = $kelompokTernak->data ? $kelompokTernak->data[0]['standar_bobot'] ?? [] : [];
+        
+        // Generate daily records
+        $records = collect();
+        $currentDate = $startDate->copy();
+        $stockAwal = $kelompokTernak->populasi_awal;
+        $totalPakanUsage = 0; // Initialize cumulative pakan usage
+        $totalDeplesi = 0; // Initialize cumulative deplesi
 
-        $dailyData = $this->getDailyData($kelompokTernak, $startDate, $endDate);
+        // while ($currentDate <= Carbon::parse($endDate)) {
+        while ($currentDate <= $today) {
 
-        $result = ['result' => $dailyData,
-                'nama' => $kelompokTernak->name];
+            $dateStr = $currentDate->format('Y-m-d');
 
-        // return view('pages.masterdata.ternak._detail_modal', compact('kelompokTernak', 'dailyData'));
+            $existingRecord = Recording::where('ternak_id', $kelompokTernak->id)
+                                    ->whereDate('tanggal', $dateStr)
+                                    ->first();
+            
+            // Get deplesi for this date
+            $deplesi = TernakDepletion::where('ternak_id', $kelompokTernak->id)
+                ->whereDate('tanggal_deplesi', $dateStr)
+                ->get();
+                
+            $mortality = $deplesi->where('jenis_deplesi', 'Mati')->sum('jumlah_deplesi');
+            $culling = $deplesi->where('jenis_deplesi', 'Afkir')->sum('jumlah_deplesi');
+            $dailyDeplesi = $mortality + $culling;
+            $totalDeplesi += $dailyDeplesi;
+            
+            // Calculate age
+            $age = $startDate->diffInDays($currentDate);
+            
+            // Get pakan usage for this date
+            $pakanUsage = TransaksiHarianDetail::whereHas('transaksiHarian', function($query) use ($dateStr, $kelompokTernak) {
+                $query->where('kelompok_ternak_id', $kelompokTernak->id)
+                    ->whereDate('tanggal', $dateStr);
+            })
+            ->whereHas('item.category', function($query) {
+                $query->where('name', 'Pakan');
+            })
+            ->get();
+
+            $pakanHarian = $pakanUsage->sum('quantity');
+            $totalPakanUsage += $pakanHarian; // Add today's usage to cumulative total
+
+            // Get OVK usage for this date
+            $ovkUsage = TransaksiHarianDetail::whereHas('transaksiHarian', function($query) use ($dateStr, $kelompokTernak) {
+                $query->where('kelompok_ternak_id', $kelompokTernak->id)
+                    ->whereDate('tanggal', $dateStr);
+            })
+            ->whereHas('item.category', function($query) {
+                $query->where('name', 'OVK');
+            })
+            ->get();
+
+            $ovkHarian = $ovkUsage->sum('quantity');
+
+            // Get standar data for this age
+            $standarBobot = isset($standarData['data'][$age]) ? $standarData['data'][$age] : null;
+            
+            $record = [
+                'recording_id' => $existingRecord->id ?? null,
+                'tanggal' => $dateStr,
+                'umur' => $age,
+                'fcr_target' => $standarBobot ? $standarBobot['fcr']['target'] : 0,
+                'bobot_target' => $standarBobot ? $standarBobot['bobot']['target'] : 0,
+                'stock_awal' => $stockAwal,
+                'mati' => $mortality,
+                'afkir' => $culling,
+                'total_deplesi' => $dailyDeplesi,
+                'deplesi_percentage' => $stockAwal > 0 ? round(($totalDeplesi / $stockAwal) * 100, 2) : 0,
+                'stock_akhir' => $stockAwal - $dailyDeplesi,
+                'pakan_jenis' => $pakanUsage->pluck('item.name')->first() ?? '-',
+                'pakan_harian' => $pakanHarian,
+                'pakan_total' => $totalPakanUsage,
+                'ovk_harian' => $ovkHarian,
+                'fcr_actual' => $stockAwal - $dailyDeplesi > 0 ? round($totalPakanUsage / ($stockAwal - $dailyDeplesi), 2) : 0,
+            ];
+
+            $records->push($record);
+            
+            // Update stock for next iteration
+            $stockAwal = $record['stock_akhir'];
+            $currentDate->addDay();
+        }
+
+        $result = [
+            'result' => $records->sortByDesc('tanggal')->values(),
+            'ternak_id' => $kelompokTernak->id,
+            'nama' => $kelompokTernak->name,
+            'populasi_awal' => $kelompokTernak->populasi_awal,
+            'populasi_akhir' => $stockAwal,
+            'total_deplesi' => $totalDeplesi,
+            'deplesi_percentage' => $kelompokTernak->populasi_awal > 0 ? round(($totalDeplesi / $kelompokTernak->populasi_awal) * 100, 2) : 0,
+            'total_pakan' => $totalPakanUsage,
+            'fcr_actual' => $stockAwal > 0 ? round($totalPakanUsage / $stockAwal, 2) : 0,
+        ];
+
         return response()->json($result);
-
-        // return view('pages.masterdata.ternak._detail_modal', compact('dailyData'));
-
-        // dd($dailyData);
-
     }
 
     private function getDailyData(KelompokTernak $kelompokTernak, Carbon $startDate, Carbon $endDate)
@@ -551,6 +714,20 @@ class TernakController extends Controller
         ]);
 
         return response()->json(['message' => 'Administrasi data stored successfully']);
+    }
+
+    public function destroyRecording($id)
+    {
+        $recording = Recording::find($id);
+
+        if (!$recording) {
+            return response()->json(['message' => 'Data tidak ditemukan'], 404);
+        }
+
+        // Atau bisa soft delete: $recording->update(['status' => 'Dihapus']);
+        $recording->delete();
+
+        return response()->json(['message' => 'Data berhasil dihapus']);
     }
 
 }

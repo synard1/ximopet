@@ -21,15 +21,14 @@ return new class extends Migration
             $table->string('jumlah')->default(0);
             $table->string('berat')->default(0);
             $table->string('kapasitas')->default(0);
-            $table->uuid('kelompok_ternak_id')->nullable();
+            $table->foreignUuid('livestock_id')->nullable()->constrained('livestocks')->onDelete('cascade');
             $table->string('status');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('farm_id')->references('id')->on('master_farms');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
+            $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -42,6 +41,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         Schema::dropIfExists('master_kandangs');
+        
+        Schema::enableForeignKeyConstraints();
+
     }
 };

@@ -22,18 +22,18 @@ class Kandang extends BaseModel
         'berat',
         'kapasitas',
         'status',
-        'kelompok_ternak_id',
+        'livestock_id',
         'created_by',
         'updated_by',
     ];
 
-    public function farms()
+    public function farm()
     {
         return $this->belongsTo(Farm::class,'farm_id');
     }
 
-    public function kelompokTernak()
+    public function livestock()
     {
-        return $this->belongsTo(KelompokTernak::class,'kelompok_ternak_id','id');
+        return $this->belongsTo(Livestock::class,'livestock_id');
     }
 }

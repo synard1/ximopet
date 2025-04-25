@@ -77,6 +77,6 @@ class TransaksiHarian extends BaseModel
 
     public function kelompokTernak()
     {
-        return $this->belongsTo(KelompokTernak::class,'kelompok_ternak_id','id');
+        return $this->belongsTo(Ternak::class,'kelompok_ternak_id','id');
     }
 }

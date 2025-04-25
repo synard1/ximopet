@@ -90,6 +90,7 @@ class AppApi
 
     public function getTransaksiBeliDetail($id)
     {
+        dd($id);
         $options = TransaksiBeliDetail::with(['items' => function ($query) {
             $query->select('id', 'satuan_besar', 'satuan_kecil', 'konversi');
         }])
@@ -135,6 +136,7 @@ class AppApi
 
         return response()->json(['data' => $formattedOptions]);
     }
+    
     public function getTransaksiDetail($id)
     {
         // $options = TransaksiDetail::where('transaksi_id', $id)->get(['id','jenis','jenis_barang','item_nama','qty','terpakai', 'sisa', 'harga','sub_total']);

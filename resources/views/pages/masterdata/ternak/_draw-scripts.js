@@ -35,7 +35,7 @@ document.querySelectorAll('[data-kt-action="delete_row"]').forEach(function (ele
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                Livewire.dispatch('delete_farm', [this.getAttribute('data-kt-farm-id')]);
+                Livewire.dispatch('delete_transaksi_doc', [this.getAttribute('data-ternak-id')]);
             }
         });
     });
@@ -49,23 +49,55 @@ document.querySelectorAll('[data-kt-action="update_row"]').forEach(function (ele
         const parent = e.target.closest('tr');
 
         // Get farm ID
-        const farmId = event.currentTarget.getAttribute('data-kt-farm-id');
+        const ternakId = event.currentTarget.getAttribute('data-ternak-id');
 
         // Get subject name
-        const farmName = parent.querySelectorAll('td')[1].innerText;
+        const ternakName = parent.querySelectorAll('td')[0].innerText;
 
         // Simulate delete request -- for demo purpose only
         Swal.fire({
-            html: `Membuka Data <b>`+ farmName +`</b>`,
+            html: `Membuka Data <b>`+ ternakName +`</b>`,
             icon: "info",
             buttonsStyling: false,
             showConfirmButton: false,
             timer: 2000
         }).then(function () {
-            Livewire.dispatch('editFarm', [farmId]);
+            console.log(ternakId);
+            Livewire.dispatch('editDoc', [ternakId]);
+            // Show modal
+            $('#kt_modal_new_doc').modal('show');
         });
         
     });
+});
+
+const recordsContainer = document.getElementById("livewireRecordsContainer");
+const tableContainer = document.getElementById("ternaksTables");
+const closeRecordsBtn = document.getElementById("closeRecordsBtn");
+
+document.querySelectorAll("[data-kt-action='update_records']").forEach(item => {
+    item.addEventListener("click", function (e) {
+        e.preventDefault();
+        const ternakId = this.getAttribute("data-ternak-id");
+
+        // Use Livewire dispatch with proper payload format
+        Livewire.dispatch('setTernakId', [ternakId]);
+
+        // Toggle visibility
+        tableContainer.style.display = "none";
+        recordsContainer.style.display = "block";
+
+        // Smooth scroll
+        recordsContainer.scrollIntoView({ behavior: "smooth" });
+    });
+});
+
+// Tombol kembali ke tabel
+closeRecordsBtn.addEventListener("click", function () {
+    recordsContainer.style.display = "none";
+    tableContainer.style.display = "block";
+    LaravelDataTables['ternaks-table'].ajax.reload();
+
 });
 
 // Add click event listener to update buttons
@@ -73,6 +105,9 @@ document.querySelectorAll('[data-kt-action="view_detail_ternak"]').forEach(funct
     element.addEventListener('click', function (e) {
         e.preventDefault();
         var modal = document.getElementById('kt_modal_ternak_details');
+
+        console.log('okk');
+        
 
         // Select parent row
         const parent = e.target.closest('tr');
@@ -157,16 +192,38 @@ document.querySelectorAll('[data-kt-action="view_detail_ternak"]').forEach(funct
                     const row = `
                         <tr>
                             <td>${item.tanggal}</td>
-                            <td>${item.ternak_mati || 0}</td>
-                            <td>${item.ternak_afkir || 0}</td>
+                            <td>${item.mati || 0}</td>
+                            <td>${item.afkir || 0}</td>
                             <td>${item.ternak_terjual || 0}</td>
-                            <td>${item.pakan_nama}</td>
-                            <td>${item.pakan_quantity}</td>
+                            <td>${item.pakan_jenis}</td>
+                            <td>${item.pakan_harian}</td>
                             <td>${item.ovk_harian || 0}</td>
                         </tr>
                     `;
                     tableBody.insertAdjacentHTML('beforeend', row);
                 });
+                // // Populate table with data
+                // data.result.forEach(item => {
+                //     const row = `
+                //         <tr>
+                //             <td>${item.tanggal}</td>
+                //             <td>${item.mati || 0}</td>
+                //             <td>${item.afkir || 0}</td>
+                //             <td>${item.ternak_terjual || 0}</td>
+                //             <td>${item.pakan_jenis}</td>
+                //             <td>${item.pakan_harian}</td>
+                //             <td>${item.ovk_harian || 0}</td>
+                //             <td>
+                //                 <button class="btn btn-danger btn-sm delete-btn" 
+                //                     data-id="${item.recording_id}" 
+                //                     data-tanggal="${item.tanggal}">
+                //                     Hapus
+                //                 </button>
+                //             </td>
+                //         </tr>
+                //     `;
+                //     tableBody.insertAdjacentHTML('beforeend', row);
+                // });
 
                 // Show the modal
                 $('#kt_modal_ternak_details').modal('show');
@@ -256,6 +313,37 @@ document.querySelectorAll('[data-kt-action="view_detail_ternak"]').forEach(funct
         //     });
     });
 });
+
+$(document).on('click', '.delete-btn', function () {
+    const id = $(this).data('id');
+    const tanggal = $(this).data('tanggal');
+
+    // Validasi ID dan Tanggal
+    if (!id || !tanggal) {
+        alert('Data tidak valid. ID atau tanggal tidak ditemukan.');
+        return;
+    }
+
+    if (confirm(`Yakin ingin menghapus data tanggal ${tanggal}?`)) {
+        $.ajax({
+            url: `/recording/delete/${id}`,
+            type: 'DELETE',
+            data: {
+                _token: '{{ csrf_token() }}',
+                tanggal: tanggal // kirim juga tanggal jika perlu di-backend
+            },
+            success: function (response) {
+                alert(response.message);
+                location.reload(); // atau panggil data ulang tanpa reload
+            },
+            error: function (xhr) {
+                console.error(xhr);
+                alert('Terjadi kesalahan saat menghapus data.');
+            }
+        });
+    }
+});
+
 
 document.querySelectorAll('[data-kt-action="update_detail"]').forEach(function (element) {
     element.addEventListener('click', function (e) {
@@ -349,7 +437,7 @@ document.querySelectorAll('[data-kt-action="update_detail"]').forEach(function (
 });
 
 // Listen for 'success' event emitted by Livewire
-Livewire.on('success', (message) => {
-    // Reload the farms-table datatable
-    LaravelDataTables['farms-table'].ajax.reload();
-});
+// Livewire.on('success', (message) => {
+//     // Reload the farms-table datatable
+//     LaravelDataTables['farms-table'].ajax.reload();
+// });

@@ -14,13 +14,7 @@ class RolesPermissionsSeeder extends Seeder
      */
     public function run(): void
     {
-        $abilities = [
-            'access',
-            'create',
-            'read',
-            'update',
-            'delete',
-        ];
+        $abilities = ['access', 'create', 'read', 'update', 'delete'];
 
         $permissions_by_role = [
             'SuperAdmin' => [
@@ -35,53 +29,97 @@ class RolesPermissionsSeeder extends Seeder
                 'api controls',
                 'database management',
                 'repository management',
-                'transaksi'
+                'records management',
+                'transaction',
+                'pembelian',
+                'penjualan',
+                'ekspedisi',
+                'roles',
+                'permissions'
             ],
             'Administrator' => [
                 'user management',
                 'supplier management',
                 'customer management',
+                'farm management',
+                'kandang management',
+                'stok management',
+                'inventory management',
+                'report management',
+                'database management',
+                'repository management',
+                'records management',
+                'transaction',
+                'pembelian',
+                'penjualan',
+                'ekspedisi',
+                'roles',
+                'permissions'
             ],
             'Supervisor' => [
                 'supplier management',
                 'customer management',
-                'transaksi'
+                'transaction'
             ],
             'Manager' => [
                 'supplier management',
                 'customer management',
                 'inventory management',
-                'transaksi'
+                'report management',
+                'transaction'
             ],
             'Operator' => [
                 'stok management',
-                'transaksi'
+                'transaction',
+                'records management',
+                'report management',
             ],
-            // 'trial' => [
-            // ],
         ];
 
+        // Buat semua permissions berdasarkan SuperAdmin scope
         foreach ($permissions_by_role['SuperAdmin'] as $permission) {
             foreach ($abilities as $ability) {
-                Permission::firstOrCreate(['name' => $ability . ' ' . $permission]);
+                Permission::firstOrCreate(['name' => "$ability $permission"]);
             }
         }
 
-        foreach ($permissions_by_role as $role => $permissions) {
-            $full_permissions_list = [];
-            foreach ($abilities as $ability) {
-                foreach ($permissions as $permission) {
-                    $full_permissions_list[] = $ability . ' ' . $permission;
+        // Buat roles & assign permissions
+        foreach ($permissions_by_role as $role => $modules) {
+            $permissions = [];
+            foreach ($modules as $module) {
+                foreach ($abilities as $ability) {
+                    $permissions[] = "$ability $module";
                 }
             }
-            Role::firstOrCreate(['name' => $role])->syncPermissions($full_permissions_list);
+
+            Role::firstOrCreate(['name' => $role])->syncPermissions($permissions);
         }
 
-        User::find(1)->assignRole('SuperAdmin');
-        User::find(2)->assignRole('Administrator');
-        User::find(3)->assignRole('Supervisor');
-        User::find(4)->assignRole('Operator');
-        User::find(5)->assignRole('Operator');
-        User::find(6)->assignRole('Manager');
+        // Mapping email => role
+        $userRoleMap = [
+            'admin@demo.com'      => 'Administrator',
+            'supervisor@demo.com' => 'Supervisor',
+            'operator@demo.com'   => 'Operator',
+            'operator2@demo.com'  => 'Operator',
+            'manager@demo.com'    => 'Manager',
+
+            'admin@demo2.com'      => 'Administrator',
+            'supervisor@demo2.com' => 'Supervisor',
+            'operator@demo2.com'   => 'Operator',
+            'operator2@demo2.com'  => 'Operator',
+            'manager@demo2.com'    => 'Manager',
+        ];
+
+        // Assign roles to users by email
+        foreach ($userRoleMap as $email => $role) {
+            $user = \App\Models\User::where('email', $email)->first();
+            if ($user) {
+                $user->assignRole($role);
+            }
+        }
+
+        // Assign SuperAdmin ke user ID 1 (creator utama)
+        \App\Models\User::find(1)?->assignRole('SuperAdmin');
     }
+
 }

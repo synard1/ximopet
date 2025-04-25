@@ -59,6 +59,8 @@
             });
         }
 
+        
+
         // Modify the existing store button to call checkNoSj before submitting
         document.querySelector('button[wire\\:click="store()"]').addEventListener('click', function(e) {
             e.preventDefault();

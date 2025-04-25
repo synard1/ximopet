@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Transaksi;
 use Illuminate\Http\Request;
 use App\DataTables\DocsDataTable;
+use App\DataTables\FeedPurchaseDataTable;
 use App\DataTables\PembelianStoksDataTable;
 use App\DataTables\PemakaianStoksDataTable;
 use App\DataTables\TransaksiHarianDataTable;
@@ -33,13 +34,29 @@ class TransaksiController extends Controller
         return $dataTable->render('pages/transaksi.harian.index');
     }
 
-    public function stokIndex(PembelianStoksDataTable $dataTable)
+    public function feedIndex(FeedPurchaseDataTable $dataTable)
     {
         addVendors(['datatables']);
 
-        addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
+        // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
         return $dataTable->render('pages/transaksi.pembelian-stok.list');
     }
+
+    public function supplyIndex(FeedPurchaseDataTable $dataTable)
+    {
+        addVendors(['datatables']);
+
+        // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
+        return $dataTable->render('pages/transaksi.pembelian-supply.list');
+    }
+
+    // public function stokIndex(PembelianStoksDataTable $dataTable)
+    // {
+    //     addVendors(['datatables']);
+
+    //     addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
+    //     return $dataTable->render('pages/transaksi.pembelian-stok.list');
+    // }
 
     public function stokPakaiIndex(PemakaianStoksDataTable $dataTable)
     {

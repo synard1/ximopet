@@ -3,14 +3,17 @@
 namespace App\Livewire\Transaksi;
 
 use Livewire\Component;
+use Illuminate\Support\Facades\Log;
+
 use App\Models\Item;
 use App\Models\Rekanan;
 use App\Models\Farm;
 use App\Models\Kandang;
-use App\Models\KelompokTernak;
+use App\Models\Ternak;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
+use App\Models\StandarBobot;
 use App\Models\Transaksi;
 use App\Models\TernakHistory;
 use App\Models\TransaksiBeli;
@@ -19,12 +22,23 @@ use App\Models\TransaksiHarian;
 use App\Models\TransaksiTernak;
 use App\Models\CurrentTernak;
 use App\Models\InventoryLocation;
+use App\Models\Livestock;
+use App\Models\LivestockBreed;
+use App\Models\LivestockBreedStandard;
+use App\Models\LivestockPurchaseItem;
+use App\Services\TernakService;
+use App\Services\Livestock\LivestockPurchaseService;
 use Carbon\Carbon;
+
+use App\Models\Partner;
 
 class PembelianDOC extends Component
 {
-    public $parent_id, $transaksi_id, $docs, $kode_doc, $suppliers, $kandangs, $periode, $faktur, $tanggal, $supplierSelect, $docSelect, $selectedKandang, $qty, $harga, $berat, $pic;
+    public $parent_id, $transaksi_id, $docs, $kode_doc, $suppliers, $kandangs, $periode, $faktur, $tanggal, $supplierSelect, $docSelect, $selectedKandang, $qty, $harga, $berat, $pic, $standarDocSelect, $standarDocs =[];
     public $edit_mode=0;
+    public Ternak $kelompokTernak; // Public property holding the model instance
+    public $livestockId = null;
+
 
     protected $listeners = [
         'delete_transaksi_doc' => 'deleteTransaksiDoc',
@@ -56,6 +70,7 @@ class PembelianDOC extends Component
             'harga' => 'required|numeric',
             'pic' => 'required',
             'faktur' => 'required',
+            'standarDocSelect' => 'nullable',
         ];
 
         if (!$this->edit_mode) { // Only add the 'faktur' rule if NOT in edit mode
@@ -68,15 +83,18 @@ class PembelianDOC extends Component
 
     public function render()
     {
-        $this->docs = Item::whereHas('itemCategory', function($query) {
-            $query->where('name', 'DOC');
-        })->with('itemCategory')->get();
+        $this->docs = LivestockBreed::all();
+        // $this->docs = Item::whereHas('itemCategory', function($query) {
+        //     $query->where('name', 'DOC');
+        // })->with('itemCategory')->get();
 
-        $this->suppliers = Rekanan::where('jenis','Supplier')->get();
-        // $this->kandangs = Kandang::where('status','Aktif')->get();
+        $this->standarDocs = LivestockBreedStandard::all();
+        $this->suppliers = Partner::where('type','Supplier')->get();
         $this->kandangs = Kandang::all();
+        // $this->kandangs = Kandang::all();
         return view('livewire.transaksi.pembelian-d-o-c',[
             'docs' => $this->docs,
+            'standarDocs' => $this->standarDocs,
             'suppliers' => $this->suppliers,
             'kandangs' => $this->kandangs,
         ]);
@@ -84,6 +102,8 @@ class PembelianDOC extends Component
 
     public function storeDOC()
     {
+
+        // dd($this->all());
         try {
             // Validate the form input data
             $this->validate(); 
@@ -91,7 +111,7 @@ class PembelianDOC extends Component
             // Wrap database operation in a transaction (if applicable)
             DB::beginTransaction();
 
-            $supplier = Rekanan::where('id', $this->supplierSelect)->first();
+            $supplier = Partner::where('id', $this->supplierSelect)->first();
             $kandang = Kandang::where('id', $this->selectedKandang)->first();
             $farm = Farm::where('id', $kandang->farm_id)->first();
             $doc = Item::where('id',$this->docSelect)->first();
@@ -108,7 +128,7 @@ class PembelianDOC extends Component
                 'jenis' => 'DOC',
                 'faktur' => $this->faktur,
                 'tanggal' => $this->tanggal,
-                'rekanan_id' => $this->supplierSelect,
+                'partner_id' => $this->supplierSelect,
                 'farm_id' => $kandang->farm_id,
                 'kandang_id' => $this->selectedKandang,
                 'pic' => $this->pic,
@@ -220,16 +240,23 @@ class PembelianDOC extends Component
             }
     
             // Emit success event if no errors occurred
-            $this->reset();
+            $this->resetFormAndErrors();
+            // $this->reset();
         } catch (ValidationException $e) {
             $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
             $this->setErrorBag($e->validator->errors());
         } catch (\Exception $e) {
             DB::rollBack();
+
+            // Detailed error message for logging (optional)
+            $detailedErrorMessage = 'Terjadi kesalahan saat menyimpan data. ' . $e->getMessage() . ' (Line: ' . $e->getLine() . ', File: ' . $e->getFile() . ')';
     
             // Handle validation and general errors
             $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. '.$e->getMessage());
             // Optionally log the error: Log::error($e->getMessage());
+
+            // Log the detailed error for debugging
+            Log::error($detailedErrorMessage);
         } finally {
             // Reset the form in all cases to prepare for new data
             // $this->reset();
@@ -238,40 +265,83 @@ class PembelianDOC extends Component
 
     public function editDoc($id)
     {
-        $pembelian = TransaksiBeli::with('transaksiDetails')->where('id',$id)->first();
-        $ternak = KelompokTernak::where('id',$pembelian->kelompok_ternak_id)->first();
-        // dd($pembelian);
+        // Ambil data ternak
+        $ternak = Livestock::findOrFail($id);
 
-        // Format the date using Carbon
-        // $formattedTanggal = $this->formatDateTime($pembelian->tanggal);
+        // Ambil data pembelian berdasarkan ternak → join lewat LivestockPurchaseItem
+        $pembelianItem = LivestockPurchaseItem::with(['livestockPurchase'])
+            ->where('livestock_id', $id)
+            ->firstOrFail();
 
-        $this->transaksi_id = $id;
-        $this->faktur = $pembelian->faktur;
+        $pembelian = $pembelianItem->livestockPurchase;
+
+        // dd($ternak->kandang_id);
+
+        // Mapping data ke property Livewire
+        $this->livestockId = $ternak->id;
+        $this->faktur = $pembelian->invoice_number;
         $this->tanggal = $pembelian->tanggal;
-        $this->supplierSelect = $pembelian->rekanan_id;
-        $this->docSelect = $pembelian->transaksiDetails[0]['item_id'];
-        $this->selectedKandang = $pembelian->kandang_id;
-        $this->qty = $pembelian->total_qty;
-        $this->harga = $pembelian->harga;
-        $this->periode = $pembelian->periode;
+        $this->supplierSelect = $pembelian->vendor_id;
+
+        $this->docSelect = $ternak->livestock_breed_id  ?? null; // asumsi `doc_id` di ternak
+        $this->selectedKandang = $ternak->kandang_id ?? null;
+        $this->standarDocSelect = $ternak->livestock_breed_standard_id ;
+        $this->qty = $pembelianItem->jumlah;
+        $this->harga = $pembelianItem->harga_per_ekor;
+        $this->periode = $ternak->name;
         $this->pic = $ternak->pic;
         $this->berat = $ternak->berat_awal;
-        $this->periode = $ternak->name;
 
         $this->edit_mode = true;
-
-        // dd($this->selectedKandang);
-        // $this->openModal();
     }
+
+
+
+    // public function editDoc($id)
+    // {
+    //     $ternak = Ternak::where('id',$id)->first();
+    //     $pembelian = TransaksiBeli::with('transaksiDetails')->where('id',$ternak->transaksi_id)->first();
+
+    //     // dd($pembelian);
+
+    //     // Format the date using Carbon
+    //     // $formattedTanggal = $this->formatDateTime($pembelian->tanggal);
+
+    //     $this->transaksi_id = $id;
+    //     $this->faktur = $pembelian->faktur;
+    //     $this->tanggal = $pembelian->tanggal;
+    //     $this->supplierSelect = $pembelian->rekanan_id;
+    //     $this->docSelect = $pembelian->transaksiDetails[0]['item_id'];
+    //     $this->selectedKandang = $pembelian->kandang_id;
+    //     $this->standarDocSelect = $ternak->standar_bobot_id;
+    //     $this->qty = $pembelian->total_qty;
+    //     $this->harga = $pembelian->harga;
+    //     $this->periode = $pembelian->periode;
+    //     $this->pic = $ternak->pic;
+    //     $this->berat = $ternak->berat_awal;
+    //     $this->periode = $ternak->name;
+
+    //     $this->edit_mode = true;
+
+    //     // dd($this->selectedKandang);
+    //     // $this->openModal();
+    // }
 
     public function deleteTransaksiDoc($id)
     {
         try {
             DB::beginTransaction();
 
-            $transaksi = TransaksiBeli::with('transaksiDetails')->findOrFail($id);
+            $ternak = Ternak::where('id',$id)->first();
+            $currentTernak = CurrentTernak::where('kelompok_ternak_id',$id)->first();
+            $transaksi = TransaksiBeli::with('transaksiDetails')->findOrFail($ternak->transaksi_id);
             $transaksiDetail = $transaksi->transaksiDetails()->first();
             $kandang = Kandang::find($transaksi->kandang_id);
+
+            if($ternak->populasi_awal !== $currentTernak->quantity){
+                $this->dispatch('error', 'Terjadi kesalahan, populasi awal ternak tidak sama dengan populasi saat ini / Sudah ada data transaksi');
+                return;
+            }
 
             $this->updateKandangStatusToAktif($kandang, $transaksi->kandang_id);
 
@@ -302,7 +372,7 @@ class PembelianDOC extends Component
             DB::beginTransaction();
 
             $transaksi = TransaksiBeli::with('transaksiDetails')->findOrFail($id);
-            $ternak = KelompokTernak::find($transaksi->kelompok_ternak_id);
+            $ternak = Ternak::find($transaksi->kelompok_ternak_id);
 
             $ternak->status = 'Locked';
             $ternak->save();
@@ -327,7 +397,7 @@ class PembelianDOC extends Component
             DB::beginTransaction();
 
             $transaksi = TransaksiBeli::with('transaksiDetails')->findOrFail($id);
-            $ternak = KelompokTernak::find($transaksi->kelompok_ternak_id);
+            $ternak = Ternak::find($transaksi->kelompok_ternak_id);
 
             $ternak->status = 'Aktif';
             $ternak->save();
@@ -353,6 +423,7 @@ class PembelianDOC extends Component
                 'status' => 'Aktif',
                 'jumlah' => '0',
                 'berat' => '0',
+                'kelompok_ternak_id' => null,
                 'updated_by' => auth()->user()->id,
             ]);
         } else {
@@ -362,14 +433,14 @@ class PembelianDOC extends Component
 
     private function deleteRelatedRecords($kelompokTernakId)
     {
-        $this->deleteKelompokTernakAndHistory($kelompokTernakId);
+        $this->deleteTernakAndHistory($kelompokTernakId);
         $this->deleteCurrentTernak($kelompokTernakId);
         $this->deleteTransaksiTernak($kelompokTernakId);
     }
 
-    private function deleteKelompokTernakAndHistory($kelompokTernakId)
+    private function deleteTernakAndHistory($kelompokTernakId)
     {
-        $kelompokTernak = KelompokTernak::find($kelompokTernakId);
+        $kelompokTernak = Ternak::find($kelompokTernakId);
         if ($kelompokTernak) {
             try {
                 $historyTernak = TernakHistory::where('kelompok_ternak_id', $kelompokTernak->id)->first();
@@ -400,8 +471,11 @@ class PembelianDOC extends Component
         $this->resetValidation(); // Additional step to clear validation state
     }
 
-    public function mount()
+    public function mount(Ternak $kelompokTernak)
     {
+        // If creating new, $this->post = new Post();
+        // If editing, $this->post = $post; (or Post::find($id))
+        $this->kelompokTernak = $kelompokTernak ?? new kelompokTernak();
         $this->resetFormAndErrors();
     }
 
@@ -423,7 +497,7 @@ class PembelianDOC extends Component
         $purchaseDetail = $this->createDocPurchaseDetail($purchase, $docItem, $data);
 
         // Create kelompok ternak
-        $kelompokTernak = $this->createKelompokTernak($purchase, $farm, $kandang);
+        $kelompokTernak = $this->createTernak($purchase, $farm, $kandang);
 
         // Create transaksi ternak record
         $this->createTransaksiTernak($kelompokTernak, $purchase, $farm, $kandang);
@@ -446,95 +520,26 @@ class PembelianDOC extends Component
     {
         $this->validate();
 
-        $validatedData = $this->validate();
-        $validatedData['rekanan_id'] = $this->supplierSelect;
-        $validatedData['kandang_id'] = $this->selectedKandang;
+        // dd($this->all());
 
         try {
-            DB::beginTransaction();
+            $kandang = Kandang::findOrFail($this->selectedKandang);
+            $farmId = $kandang->farm_id;
 
-            $purchase = TransaksiBeli::with(['transaksiDetails', 'kelompokTernak'])->findOrFail($this->transaksi_id);
-            $kandang = Kandang::where('id', $this->selectedKandang)->first();
-            $farm = Farm::where('id', $kandang->farm_id)->first();
-            $validatedData['farm_id'] = $farm->id;
+            $data = [
+                'tanggal' => $this->tanggal,
+                'qty' => $this->qty,
+                'berat' => $this->berat,
+                'harga' => $this->harga,
+                'sub_total' => $this->qty * $this->harga,
+                'partner_id' => $this->supplierSelect,
+                'kandang_id' => $this->selectedKandang,
+                'farm_id' => $farmId,
+                'pic' => $this->pic,
+                'standar_bobot_id' => $this->standarDocSelect,
+            ];
 
-            // Check if quantity has changed and if there are any TransaksiHarian records
-            if ($purchase->total_qty != $validatedData['qty']) {
-                $hasTransaksiHarian = TransaksiHarian::where('kelompok_ternak_id', $purchase->kelompok_ternak_id)->exists();
-                if ($hasTransaksiHarian) {
-                    throw new \Exception('Tidak dapat mengubah jumlah DOC karena sudah ada transaksi harian terkait.');
-                }
-            }
-
-            // Update TransaksiBeli
-            $purchase->update([
-                'tanggal' => $validatedData['tanggal'],
-                'faktur' => $validatedData['faktur'],
-                'rekanan_id' => $validatedData['rekanan_id'],
-                'farm_id' => $validatedData['farm_id'],
-                'kandang_id' => $validatedData['kandang_id'],
-                'total_qty' => $validatedData['qty'],
-                'total_berat' => $validatedData['qty'] * 0.1,
-                'harga' => $validatedData['harga'],
-                'sub_total' => $validatedData['qty'] * $validatedData['harga'],
-                'pic' => $validatedData['pic'],
-                'updated_by' => auth()->id(),
-            ]);
-
-            // Update TransaksiBeliDetail
-            $purchase->transaksiDetails->first()->update([
-                'tanggal' => $validatedData['tanggal'],
-                'qty' => $validatedData['qty'],
-                'berat' => $validatedData['qty'] * 0.1,
-                'harga' => $validatedData['harga'],
-                'sub_total' => $validatedData['qty'] * $validatedData['harga'],
-                'sisa' => $validatedData['qty'],
-                'updated_by' => auth()->id(),
-            ]);
-
-            // Update KelompokTernak
-            $purchase->kelompokTernak->update([
-                'start_date' => $validatedData['tanggal'],
-                'populasi_awal' => $validatedData['qty'],
-                'berat_awal' => $validatedData['qty'] * 0.1,
-                'harga_beli' => $validatedData['harga'],
-                'pic' => $validatedData['pic'],
-                'updated_by' => auth()->id(),
-            ]);
-
-            // Update TransaksiTernak
-            TransaksiTernak::where('kelompok_ternak_id', $purchase->kelompok_ternak_id)->update([
-                'tanggal' => $validatedData['tanggal'],
-                'farm_id' => $validatedData['farm_id'],
-                'kandang_id' => $validatedData['kandang_id'],
-                'quantity' => $validatedData['qty'],
-                'berat_total' => $validatedData['qty'] * 0.1,
-                'berat_rata' => 0.1,
-                'harga_satuan' => $validatedData['harga'],
-                'total_harga' => $validatedData['qty'] * $validatedData['harga'],
-                'updated_by' => auth()->id(),
-            ]);
-
-            // Update CurrentTernak
-            CurrentTernak::where('kelompok_ternak_id', $purchase->kelompok_ternak_id)->update([
-                'farm_id' => $validatedData['farm_id'],
-                'kandang_id' => $validatedData['kandang_id'],
-                'quantity' => $validatedData['qty'],
-                'berat_total' => $validatedData['qty'] * 0.1,
-                'avg_berat' => 0.1,
-                'updated_by' => auth()->id(),
-            ]);
-
-            // Update Kandang
-            Kandang::find($validatedData['kandang_id'])->update([
-                'jumlah' => $validatedData['qty'],
-                'berat' => $validatedData['qty'] * 0.1,
-                'kelompok_ternak_id' => $purchase->kelompok_ternak_id,
-                'status' => 'Digunakan',
-                'updated_by' => auth()->id(),
-            ]);
-
-            DB::commit();
+            app(LivestockPurchaseService::class)->updateDOC($data, $this->livestockId);
 
             $this->dispatch('success', 'Data pembelian DOC berhasil diperbarui');
             $this->reset();
@@ -542,12 +547,135 @@ class PembelianDOC extends Component
             $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
             $this->setErrorBag($e->validator->errors());
         } catch (\Exception $e) {
-            DB::rollBack();
-            $this->dispatch('error', 'Terjadi kesalahan saat memperbarui data. ' . $e->getMessage());
-        } finally {
-            // $this->reset();
+            $this->dispatch('error', 'Gagal memperbarui data: ' . $e->getMessage());
         }
     }
+
+    // public function updateDOC()
+    // {
+    //     $this->validate();
+
+    //     $validatedData = $this->validate();
+    //     $validatedData['rekanan_id'] = $this->supplierSelect;
+    //     $validatedData['kandang_id'] = $this->selectedKandang;
+
+    //     // dd($this->transaksi_id);
+    //     // dd($validatedData);
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $ternak = Livestock::where('id',$this->livestockId)->first();
+    //         $purchase = TransaksiBeli::with(['transaksiDetails', 'kelompokTernak'])->findOrFail($ternak->transaksi_id);
+    //         $kandang = Kandang::where('id', $this->selectedKandang)->first();
+    //         $farm = Farm::where('id', $kandang->farm_id)->first();
+    //         $validatedData['farm_id'] = $farm->id;
+
+    //         // Check if quantity has changed and if there are any TransaksiHarian records
+    //         if ($purchase->total_qty != $validatedData['qty']) {
+    //             $hasTransaksiHarian = TransaksiHarian::where('kelompok_ternak_id', $purchase->kelompok_ternak_id)->exists();
+    //             if ($hasTransaksiHarian) {
+    //                 throw new \Exception('Tidak dapat mengubah jumlah DOC karena sudah ada transaksi.');
+    //             }
+    //         }
+
+    //         // Update TransaksiBeli
+    //         $purchase->update([
+    //             'tanggal' => $validatedData['tanggal'],
+    //             'faktur' => $validatedData['faktur'],
+    //             'rekanan_id' => $validatedData['rekanan_id'],
+    //             'farm_id' => $validatedData['farm_id'],
+    //             'kandang_id' => $validatedData['kandang_id'],
+    //             'total_qty' => $validatedData['qty'],
+    //             'total_berat' => $validatedData['qty'] * $validatedData['berat'],
+    //             'harga' => $validatedData['harga'],
+    //             'sub_total' => $validatedData['qty'] * $validatedData['harga'],
+    //             'pic' => $validatedData['pic'],
+    //             'updated_by' => auth()->id(),
+    //         ]);
+
+    //         // Update TransaksiBeliDetail
+    //         $purchase->transaksiDetails->first()->update([
+    //             'tanggal' => $validatedData['tanggal'],
+    //             'qty' => $validatedData['qty'],
+    //             'berat' => $validatedData['qty'] * $validatedData['berat'],
+    //             'harga' => $validatedData['harga'],
+    //             'sub_total' => $validatedData['qty'] * $validatedData['harga'],
+    //             'sisa' => $validatedData['qty'],
+    //             'updated_by' => auth()->id(),
+    //         ]);
+
+
+    //         $data = [
+    //             'ternak_id'=> $purchase->kelompok_ternak_id,
+    //             'standar_bobot_id'=> $validatedData['standarDocSelect'],
+    //         ];
+
+    //         // Get the kelompok ternak instance
+    //         $kelompokTernak = Ternak::find($purchase->kelompok_ternak_id);
+            
+    //         // Check if standar_bobot_id has changed
+    //         if ($kelompokTernak && $kelompokTernak->standar_bobot_id != $validatedData['standarDocSelect']) {
+    //             app(TernakService::class)->updateStandarTernak($data);
+    //         }
+
+    //         // Update Ternak
+    //         $purchase->kelompokTernak->update([
+    //             'start_date' => $validatedData['tanggal'],
+    //             'populasi_awal' => $validatedData['qty'],
+    //             'berat_awal' => $validatedData['berat'],
+    //             'harga' => $validatedData['harga'],
+    //             'standar_bobot_id' => $validatedData['standarDocSelect'],
+    //             'pic' => $validatedData['pic'],
+    //             'updated_by' => auth()->id(),
+    //         ]);
+
+    //         // Update TransaksiTernak
+    //         TransaksiTernak::where('kelompok_ternak_id', $purchase->kelompok_ternak_id)->update([
+    //             'tanggal' => $validatedData['tanggal'],
+    //             'farm_id' => $validatedData['farm_id'],
+    //             'kandang_id' => $validatedData['kandang_id'],
+    //             'quantity' => $validatedData['qty'],
+    //             'berat_total' => $validatedData['qty'] * 0.1,
+    //             'berat_rata' => 0.1,
+    //             'harga_satuan' => $validatedData['harga'],
+    //             'total_harga' => $validatedData['qty'] * $validatedData['harga'],
+    //             'updated_by' => auth()->id(),
+    //         ]);
+
+    //         // Update CurrentTernak
+    //         CurrentTernak::where('kelompok_ternak_id', $purchase->kelompok_ternak_id)->update([
+    //             'farm_id' => $validatedData['farm_id'],
+    //             'kandang_id' => $validatedData['kandang_id'],
+    //             'quantity' => $validatedData['qty'],
+    //             'berat_total' => $validatedData['qty'] * 0.1,
+    //             'avg_berat' => 0.1,
+    //             'updated_by' => auth()->id(),
+    //         ]);
+
+    //         // Update Kandang
+    //         Kandang::find($validatedData['kandang_id'])->update([
+    //             'jumlah' => $validatedData['qty'],
+    //             'berat' => $validatedData['qty'] * 0.1,
+    //             'kelompok_ternak_id' => $purchase->kelompok_ternak_id,
+    //             'status' => 'Digunakan',
+    //             'updated_by' => auth()->id(),
+    //         ]);
+
+    //         DB::commit();
+
+    //         $this->dispatch('success', 'Data pembelian DOC berhasil diperbarui');
+    //         $this->reset();
+    //     } catch (ValidationException $e) {
+    //         $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
+    //         $this->setErrorBag($e->validator->errors());
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         $this->dispatch('error', 'Terjadi kesalahan saat memperbarui data. ' . $e->getMessage());
+    //     } finally {
+    //         // $this->reset();
+    //     }
+    // }
 
 
     private function createDocPurchaseDetail($purchase, $docItem, $data){
@@ -560,7 +688,7 @@ class PembelianDOC extends Component
             'item_name' => $docItem->name,
             'qty' => $purchase->total_qty,
             'berat' => $purchase->total_qty * 0.1,
-            'harga' => $purchase->harga,
+            'harga' => $this->harga,
             'sub_total' => $purchase->total_qty * $purchase->harga,
             'terpakai' =>  0,
             'sisa' => $purchase->total_qty,
@@ -572,20 +700,22 @@ class PembelianDOC extends Component
         ]);
     }
 
-    private function createKelompokTernak($purchase, $farm, $kandang)
+    private function createTernak($purchase, $farm, $kandang)
     {
-        return KelompokTernak::create([
+        // dd($purchase->total_qty);
+        $periodeFormat = 'PR-' . $farm->kode . '-' . $kandang->kode . '-' . Carbon::parse($purchase->tanggal)->format('dmY');
+        $periode = $this->periode ?? $periodeFormat;
+        return Ternak::create([
             'transaksi_id' => $purchase->id,
             'farm_id' => $farm->id,
             'kandang_id' => $kandang->id,
-            'name' => 'PR-' . $farm->kode . '-' . $kandang->kode . '-' . Carbon::parse($purchase->tanggal)->format('dmY'),
-            'breed' => 'DOC',
+            'name' => $periode,
+            'breed' => $this->docSelect,
             'start_date' => $purchase->tanggal,
             'populasi_awal' => $purchase->total_qty,
             'berat_awal' => $purchase->total_berat,
-            'harga_beli' => $purchase->harga,
-            'hpp' => 0,
-            'pic' => $purchase->pic,
+            'harga' => $this->harga,
+            'pic' => $this->pic,
             'status' => 'Aktif',
             'keterangan' => 'DOC Purchase',
             'created_by' => auth()->id()

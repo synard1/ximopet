@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('kelompok_ternak', function (Blueprint $table) {
-            $table->uuid('farm_id')->nullable()->after('transaksi_id');
-            $table->uuid('kandang_id')->nullable()->after('farm_id');
+        Schema::create('expedition_tariffs', function (Blueprint $table) {
+            $table->id();
+            $table->timestamps();
         });
     }
 
@@ -22,8 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('kelompok_ternak', function (Blueprint $table) {
-            //
-        });
+        Schema::dropIfExists('expedition_tariffs');
     }
 };

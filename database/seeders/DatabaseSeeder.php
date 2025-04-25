@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             UsersSeeder::class,
             RolesPermissionsSeeder::class,
             DemoSeeder::class,
+            LivestockPurchaseSeeder::class,
         ]);
 
         // \App\Models\User::factory(20)->create();

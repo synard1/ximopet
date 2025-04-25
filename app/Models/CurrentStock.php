@@ -16,6 +16,7 @@ class CurrentStock extends BaseModel
     protected $fillable = [
         'id',
         'item_id',
+        'kelompok_ternak_id',
         'location_id',
         'expiry_date',
         'quantity',

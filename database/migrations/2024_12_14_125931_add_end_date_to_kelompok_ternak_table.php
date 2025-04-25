@@ -8,15 +8,15 @@ class AddEndDateToKelompokTernakTable extends Migration
 {
     public function up()
     {
-        Schema::table('kelompok_ternak', function (Blueprint $table) {
-            $table->date('end_date')->nullable()->after('start_date');
-        });
+        // Schema::table('kelompok_ternak', function (Blueprint $table) {
+        //     $table->date('end_date')->nullable()->after('start_date');
+        // });
     }
 
     public function down()
     {
-        Schema::table('kelompok_ternak', function (Blueprint $table) {
-            $table->dropColumn('end_date');
-        });
+        // Schema::table('kelompok_ternak', function (Blueprint $table) {
+        //     $table->dropColumn('end_date');
+        // });
     }
 }

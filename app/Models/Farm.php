@@ -13,16 +13,14 @@ class Farm extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $table = 'master_farms';
-
     protected $fillable = [
         'id',
-        'kode',
-        'nama',
-        'alamat',
-        'telp',
-        'pic',
-        'telp_pic',
+        'code',
+        'name',
+        'contact_person',
+        'phone_number',
+        'address',
+        'description',
         'status',
         'created_by',
         'updated_by',

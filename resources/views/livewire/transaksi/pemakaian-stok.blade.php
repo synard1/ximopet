@@ -754,6 +754,7 @@ $('select.item-select').each(function() {
 
     // Update the dropdowns to reflect the current selections
     updateDropdowns();
+    initSelect2();
                     // console.log('test update dropdown');
                     // $('#itemsSelect').select2();
                     

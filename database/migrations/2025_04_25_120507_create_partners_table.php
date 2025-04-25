@@ -11,19 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('companies', function (Blueprint $table) {
+        Schema::disableForeignKeyConstraints();
+
+        Schema::create('partners', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->string('type'); // Supplier or Buyer
+            $table->string('code', 64)->unique();
             $table->string('name');
-            $table->string('address')->nullable();
-            $table->string('phone')->nullable();
             $table->string('email')->nullable();
-            $table->text('logo')->nullable();
-            $table->string('domain')->unique()->nullable();
-            $table->string('database')->unique()->nullable();
-            $table->string('package')->nullable();
+            $table->string('contact_person')->nullable();
+            $table->string('phone_number')->nullable();
+            $table->text('address')->nullable();
+            $table->text('description')->nullable();
             $table->string('status');
-            $table->string('keterangan')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('created_by');
             $table->unsignedBigInteger('updated_by')->nullable();
 
             $table->timestamps();
@@ -32,6 +33,8 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
+
+        Schema::enableForeignKeyConstraints();
     }
 
     /**
@@ -39,6 +42,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('companies');
+        Schema::dropIfExists('partners');
     }
 };

@@ -2,66 +2,71 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\User;
-use App\Models\Item;
-use App\Models\ItemCategory;
+use App\Models\SupplyCategory; // Assuming this is in App\Models
+use App\Models\Supply;        // Assuming this is in App\Models
+use App\Models\User;         // Assuming this is in App\Models
+use Illuminate\Support\Str;
 
 class OVKSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $ovkCategory = ItemCategory::where('name', 'OVK')->first();
+        // 1. Get or Create the OVK Supply Category
+        $ovkCategory = SupplyCategory::firstOrCreate(
+            ['name' => 'OVK'],
+            ['created_by' => User::where('email', 'supervisor@demo.com')->firstOrFail()->id]
+        );
 
-        $ovkData = [
-            ['category_id' => $ovkCategory->id , 'name' => 'Biocid', 'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Biodes',  'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Cevac New L 1000',  'satuan_besar' => 'Vial', 'satuan_kecil' => 'Vial', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Cevamune',  'satuan_besar' => 'Tablet', 'satuan_kecil' => 'Tablet', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Chickofit',  'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'CID 2000',  'satuan_besar' => 'Kg', 'satuan_kecil' => 'Kg', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Coxymas',  'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Cupri Sulfate',  'satuan_besar' => 'Kg', 'satuan_kecil' => 'Kg', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Elektrovit',  'satuan_besar' => 'Kg', 'satuan_kecil' => 'Kg', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Enroforte',  'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Formalin',  'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Hiptovit',  'satuan_besar' => 'Kg', 'satuan_kecil' => 'Kg', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Kaporit Tepung',  'satuan_besar' => 'Kg', 'satuan_kecil' => 'Kg', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Kumavit @250 Gram',  'satuan_besar' => 'Bungkus', 'satuan_kecil' => 'Bungkus', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Nopstress',  'satuan_besar' => 'Kg', 'satuan_kecil' => 'Kg', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Rhodivit',  'satuan_besar' => 'Kg', 'satuan_kecil' => 'Kg', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Selco',  'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Starbio',  'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'TH4',  'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Toltracox',  'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Vigosine',  'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Vitamin C',  'satuan_besar' => 'Kg', 'satuan_kecil' => 'Kg', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Virukill',  'satuan_besar' => 'Liter', 'satuan_kecil' => 'Liter', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Zuramox',  'satuan_besar' => 'Kg', 'satuan_kecil' => 'Kg', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Cyprotylogrin',  'satuan_besar' => 'Kg', 'satuan_kecil' => 'Kg', 'konversi' => 1],
-            ['category_id' => $ovkCategory->id , 'name' => 'Acid Pack 4 Way',  'satuan_besar' => 'Kg', 'satuan_kecil' => 'Kg', 'konversi' => 1],
-        ];
+        // 2. OVK Data (Simplified)
+        $ovkData = collect([
+            ['name' => 'Biocid', 'unit' => 'Liter'],
+            ['name' => 'Biodes', 'unit' => 'Liter'],
+            ['name' => 'Cevac New L 1000', 'unit' => 'Vial'],
+            ['name' => 'Cevamune', 'unit' => 'Tablet'],
+            ['name' => 'Chickofit', 'unit' => 'Liter'],
+            ['name' => 'CID 2000', 'unit' => 'Kg'],
+            ['name' => 'Coxymas', 'unit' => 'Liter'],
+            ['name' => 'Cupri Sulfate', 'unit' => 'Kg'],
+            ['name' => 'Elektrovit', 'unit' => 'Kg'],
+            ['name' => 'Enroforte', 'unit' => 'Liter'],
+            ['name' => 'Formalin', 'unit' => 'Liter'],
+            ['name' => 'Hiptovit', 'unit' => 'Kg'],
+            ['name' => 'Kaporit Tepung', 'unit' => 'Kg'],
+            ['name' => 'Kumavit @250 Gram', 'unit' => 'Bungkus'],
+            ['name' => 'Nopstress', 'unit' => 'Kg'],
+            ['name' => 'Rhodivit', 'unit' => 'Kg'],
+            ['name' => 'Selco', 'unit' => 'Liter'],
+            ['name' => 'Starbio', 'unit' => 'Liter'],
+            ['name' => 'TH4', 'unit' => 'Liter'],
+            ['name' => 'Toltracox', 'unit' => 'Liter'],
+            ['name' => 'Vigosine', 'unit' => 'Liter'],
+            ['name' => 'Vitamin C', 'unit' => 'Kg'],
+            ['name' => 'Virukill', 'unit' => 'Liter'],
+            ['name' => 'Zuramox', 'unit' => 'Kg'],
+            ['name' => 'Cyprotylogrin', 'unit' => 'Kg'],
+            ['name' => 'Acid Pack 4 Way', 'unit' => 'Kg'],
+        ])->map(function ($item) {
+            $codePrefix = 'OVK-';
+            $randomCode = strtoupper(Str::random(8));
+            $item['code'] = $codePrefix . $randomCode;
+            $item['unit_conversion'] = $item['unit'];
+            $item['conversion'] = 1;
+            return $item;
+        })->toArray();
+
+        // 3. Create Supplies
+        $supervisorId = User::where('email', 'supervisor@demo.com')->firstOrFail()->id;
 
         foreach ($ovkData as $data) {
-            $supervisor = User::where('email', 'supervisor@demo.com')->first();
-            // $category = ItemCategory::create(array_merge($data, ['status' => 'Aktif', 'created_by' => $supervisor->id]));
-
-            // dd($ovkCategory->id);
-
-            Item::create([
-                'category_id' => $data['category_id'],
-                'kode' => 'OVK-' . str_pad(Item::count() + 1, 3, '0', STR_PAD_LEFT),
+            Supply::create([
+                'supply_category_id' => $ovkCategory->id,
+                'code' => $data['code'],
                 'name' => $data['name'],
-                'satuan_besar' => $data['satuan_besar'],
-                'satuan_kecil' => $data['satuan_kecil'],
-                'konversi' => $data['konversi'],
-                'status' => 'Aktif',
-                'is_feed' => false,
-                'created_by' => $supervisor->id,
+                'unit' => $data['unit'],
+                'unit_conversion' => $data['unit_conversion'],
+                'conversion' => $data['conversion'],
+                'created_by' => $supervisorId,
             ]);
         }
     }

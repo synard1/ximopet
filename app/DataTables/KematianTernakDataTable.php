@@ -2,7 +2,8 @@
 
 namespace App\DataTables;
 
-use App\Models\KematianTernak;
+// use App\Models\KematianTernak;
+use App\Models\TernakDepletion as KematianTernak;
 use App\Models\Kandang;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
@@ -30,42 +31,42 @@ class KematianTernakDataTable extends DataTable
                     return number_format($ternak->total_berat / 1000000, 2) . ' Ton';
                 }
             })
-            ->editColumn('tanggal', function (KematianTernak $ternak) {
-                return $ternak->tanggal->format('d M Y, h:i a');
+            ->editColumn('tanggal_deplesi', function (KematianTernak $ternak) {
+                return $ternak->tanggal_deplesi->format('d M Y, h:i a');
             })
-            ->editColumn('quantity', function (KematianTernak $ternak) {
-                return $ternak->quantity . ' Ekor';
+            ->editColumn('jumlah_deplesi', function (KematianTernak $ternak) {
+                return $ternak->jumlah_deplesi . ' Ekor';
             })
             ->editColumn('id', function (KematianTernak $ternak) {
                 return strtoupper(substr(strrchr($ternak->id, '-'), 4));
             })
-            ->editColumn('kelompok_ternak_id', function (KematianTernak $ternak) {
-                return $ternak->kelompokTernaks->name;
+            ->editColumn('ternak_id', function (KematianTernak $data) {
+                return $data->ternak->name;
             })
-            ->editColumn('farm_id', function (KematianTernak $ternak) {
-                return $ternak->farm->nama;
-            })
-            ->editColumn('kandang_id', function (KematianTernak $ternak) {
-                return $ternak->kandang->nama;
-            })
+            // ->editColumn('farm_id', function (KematianTernak $ternak) {
+            //     return $ternak->farm->nama;
+            // })
+            // ->editColumn('kandang_id', function (KematianTernak $ternak) {
+            //     return $ternak->kandang->nama;
+            // })
             ->editColumn('created_at', function (KematianTernak $ternak) {
                 return $ternak->created_at->format('d M Y, h:i a');
             })
-            ->filterColumn('kelompok_ternak_id', function($query, $keyword) {
-                $query->whereHas('kelompokTernaks', function($q) use ($keyword) {
-                    $q->where('name', 'like', "%{$keyword}%");
-                });
-            })
-            ->filterColumn('farm_id', function($query, $keyword) {
-                $query->whereHas('farm', function($q) use ($keyword) {
-                    $q->where('nama', 'like', "%{$keyword}%");
-                });
-            })
-            ->filterColumn('kandang_id', function($query, $keyword) {
-                $query->whereHas('kandang', function($q) use ($keyword) {
-                    $q->where('nama', 'like', "%{$keyword}%");
-                });
-            })
+            // ->filterColumn('kelompok_ternak_id', function($query, $keyword) {
+            //     $query->whereHas('kelompokTernak', function($q) use ($keyword) {
+            //         $q->where('name', 'like', "%{$keyword}%");
+            //     });
+            // })
+            // ->filterColumn('farm_id', function($query, $keyword) {
+            //     $query->whereHas('farm', function($q) use ($keyword) {
+            //         $q->where('nama', 'like', "%{$keyword}%");
+            //     });
+            // })
+            // ->filterColumn('kandang_id', function($query, $keyword) {
+            //     $query->whereHas('kandang', function($q) use ($keyword) {
+            //         $q->where('nama', 'like', "%{$keyword}%");
+            //     });
+            // })
             ->addColumn('action', function (KematianTernak $transaksi) {
                 if (auth()->user()->hasRole('Operator')) {
 
@@ -82,7 +83,7 @@ class KematianTernakDataTable extends DataTable
     public function query(KematianTernak $model): QueryBuilder
     {
         if (auth()->user()->hasRole('Operator')) {
-            return $model->newQuery()->whereHas('kandang.farms.farmOperators', function ($query) {
+            return $model->newQuery()->whereHas('ternak.farm.farmOperators', function ($query) {
                 $query->where('user_id', auth()->id());
             });
         }
@@ -137,13 +138,13 @@ class KematianTernakDataTable extends DataTable
     {
         return [
             Column::make('id')->visible(false),
-            Column::make('tanggal'),
-            Column::make('kelompok_ternak_id'),
-            Column::make('farm_id')->title('Farm')->visible(false),
-            Column::make('kandang_id')->title('Kandang')->visible(false),
-            Column::make('quantity'),
-            Column::make('total_berat'),
-            Column::make('penyebab')->visible(false),
+            Column::make('tanggal_deplesi')->title('Tanggal'),
+            Column::make('ternak_id'),
+            // Column::computed('farm_id')->title('Farm')->visible(false),
+            // Column::computed('kandang_id')->title('Kandang')->visible(false),
+            Column::make('jumlah_deplesi'),
+            // Column::make('total_berat'),
+            // Column::make('penyebab')->visible(false),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),
             Column::computed('action')
                 // ->addClass('text-end text-nowrap')

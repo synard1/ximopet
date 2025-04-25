@@ -39,6 +39,7 @@
     {{-- @include('partials/_drawers') --}}
 
     @include('/livewire/modal/_create_supplier')
+    {{-- @include('/livewire/modal/_create_ekspedisi') --}}
 
     {{-- <livewire:modal._create_supplier /> --}}
 

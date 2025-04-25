@@ -52,6 +52,7 @@
         <!--end::Col-->
     @endforeach
 
+    @can('create roles')
     <!--begin::Add new card-->
     <div class="ol-md-4">
         <!--begin::Card-->
@@ -74,4 +75,8 @@
         <!--begin::Card-->
     </div>
     <!--begin::Add new card-->
+        
+    @endcan
+    
+
 </div>

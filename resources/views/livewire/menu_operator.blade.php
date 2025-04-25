@@ -46,6 +46,26 @@
 					<!--end:Menu link-->
 				</div>
 				<!--end:Menu item-->
+				
+				<!--begin:Menu item-->
+				<div class="menu-item">
+					<!--begin:Menu link-->
+					<span class="menu-link">
+						<span class="menu-icon">
+							<i class="ki-outline ki-courier fs-4 text-danger"></i>
+						</span>
+						<span class="menu-title">Data Ekspedisi</span>
+						<span class="menu-badge">
+							<button class="btn btn-sm btn-icon btn-action" data-bs-toggle="modal"
+								data-bs-target="#kt_modal_new_ekspedisi">
+								<i class="ki-outline ki-plus fs-4"></i>
+							</button>
+						</span>
+					</span>
+					<!--end:Menu link-->
+				</div>
+				<!--end:Menu item-->
+
 				<!--begin:Menu item-->
 				<div class="menu-item">
 					<!--begin:Menu link-->
@@ -64,6 +84,7 @@
 					<!--end:Menu link-->
 				</div>
 				<!--end:Menu item-->
+
 				<!--begin:Menu item-->
 				<div class="menu-item">
 					<!--begin:Menu link-->
@@ -366,7 +387,7 @@
 				{{-- <!--begin:Menu item-->
 				<div class="menu-item">
 					<!--begin:Menu link-->
-					<span class="menu-link" onclick="window.location.href='/master-data/ternaks'">
+					<span class="menu-link" onclick="window.location.href='/master-data/livestocks'">
 						<span class="menu-icon">
 							<i class="ki-outline ki-cube-3 fs-4 text-danger"></i>
 						</span>
@@ -382,7 +403,7 @@
 				<!--end:Menu item--> --}}
 
 		<!--begin:Menu item-->
-		<div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ str_contains($currentUrl, '/ternak') ? 'show' : 'hide' }}">
+		<div data-kt-menu-trigger="click" class="menu-item menu-accordion {{ str_contains($currentUrl, 'livestock') ? 'show' : 'hide' }}">
 			<!--begin:Menu link-->
 			<span class="menu-link">
 				<span class="menu-icon">
@@ -397,7 +418,7 @@
 					<!--begin:Menu item-->
 					<div class="menu-item">
 						<!--begin:Menu link-->
-						<a class="menu-link {{ request()->is('ternak') ? 'active' : '' }}" href="/ternak">
+						<a class="menu-link {{ request()->is('data/livestock') ? 'active' : 'n' }}" href="/data/livestock">
 							<span class="menu-bullet">
 								<span class="bullet bullet-dot"></span>
 							</span>
@@ -409,11 +430,11 @@
 					<!--begin:Menu item-->
 					<div class="menu-item">
 						<!--begin:Menu link-->
-						<a class="menu-link {{ request()->is('ternak/mati') ? 'active' : '' }}" href="/ternak/mati">
+						<a class="menu-link {{ request()->is('livestock/mati') ? 'active' : '' }}" href="/livestock/mati">
 							<span class="menu-bullet">
 								<span class="bullet bullet-dot"></span>
 							</span>
-							<span class="menu-title">Ternak Mati</span>
+							<span class="menu-title">{{ trans('content.ternak',[],'id') }} Mati</span>
 						</a>
 						<!--end:Menu link-->
 					</div>
@@ -421,11 +442,11 @@
 					<!--begin:Menu item-->
 					<div class="menu-item active">
 						<!--begin:Menu link-->
-						<a class="menu-link {{ request()->is('ternak/afkir') ? 'active' : '' }}" href="/ternak/afkir">
+						<a class="menu-link {{ request()->is('livestock/afkir') ? 'active' : '' }}" href="/livestock/afkir">
 							<span class="menu-bullet">
 								<span class="bullet bullet-dot"></span>
 							</span>
-							<span class="menu-title">Ternak Afkir</span>
+							<span class="menu-title">{{ trans('content.ternak',[],'id') }} Afkir</span>
 						</a>
 						<!--end:Menu link-->
 					</div>
@@ -433,11 +454,11 @@
 					<!--begin:Menu item-->
 					<div class="menu-item">
 						<!--begin:Menu link-->
-						<a class="menu-link {{ request()->is('ternak/jual') ? 'active' : '' }}" href="/ternak/jual">
+						<a class="menu-link {{ request()->is('livestock/jual') ? 'active' : '' }}" href="/livestock/jual">
 							<span class="menu-bullet">
 								<span class="bullet bullet-dot"></span>
 							</span>
-							<span class="menu-title">Ternak Jual</span>
+							<span class="menu-title">{{ trans('content.ternak',[],'id') }} Jual</span>
 						</a>
 						<!--end:Menu link-->
 					</div>
@@ -487,11 +508,11 @@
 					<!--begin:Menu item-->
 					<div class="menu-item active">
 						<!--begin:Menu link-->
-						<a class="menu-link {{ request()->is('stocks/ovk') ? 'active' : '' }}" href="/stocks/ovk">
+						<a class="menu-link {{ request()->is('stocks/supply') ? 'active' : '' }}" href="/stocks/supply">
 							<span class="menu-bullet">
 								<span class="bullet bullet-dot"></span>
 							</span>
-							<span class="menu-title">OVK</span>
+							<span class="menu-title">Supply</span>
 						</a>
 						<!--end:Menu link-->
 					</div>
@@ -532,7 +553,7 @@
 			<!--end:Menu content-->
 		</div>
 		<!--end:Menu item-->
-		@can('read transaksi')
+		@can('read transaction')
 		<!--begin:Menu item-->
 		<div data-kt-menu-trigger="click" class="menu-item menu-accordion show">
 			<!--begin:Menu link-->
@@ -564,7 +585,7 @@
 				<!--end:Menu item-->
 				@endif
 				@if(auth()->user()->hasRole(['Operator']))
-				<!--begin:Menu item-->
+				{{-- <!--begin:Menu item-->
 				<div class="menu-item menu-accordion menu-fit">
 					<!--begin:Menu link-->
 					<span class="menu-link" onclick="window.location.href='/transaksi/harian'">
@@ -580,15 +601,34 @@
 					</span>
 					<!--end:Menu link-->
 				</div>
-				<!--end:Menu item-->
+				<!--end:Menu item--> --}}
+
 				<!--begin:Menu item-->
 				<div class="menu-item menu-accordion menu-fit">
 					<!--begin:Menu link-->
-					<span class="menu-link" onclick="window.location.href='/transaksi/stoks'">
+					<span class="menu-link" onclick="window.location.href='/transaction/feed'">
 						<span class="menu-icon">
 							<i class="ki-outline ki-basket-ok fs-4 text-gray-700"></i>
 						</span>
-						<span class="menu-title">{{ trans('menu.create_purchasing',[],'id') }}</span>
+						<span class="menu-title">{{ trans('menu.create_purchasing_feed',[],'id') }}</span>
+						<span class="menu-badge">
+							<button class="btn btn-sm btn-icon btn-action">
+								<i class="ki-outline ki-plus fs-4"></i>
+							</button>
+						</span>
+					</span>
+					<!--end:Menu link-->
+				</div>
+				<!--end:Menu item-->
+
+				<!--begin:Menu item-->
+				<div class="menu-item menu-accordion menu-fit">
+					<!--begin:Menu link-->
+					<span class="menu-link" onclick="window.location.href='/transaction/supply'">
+						<span class="menu-icon">
+							<i class="ki-outline ki-basket-ok fs-4 text-gray-700"></i>
+						</span>
+						<span class="menu-title">{{ trans('menu.create_purchasing_supply',[],'id') }}</span>
 						<span class="menu-badge">
 							<button class="btn btn-sm btn-icon btn-action">
 								<i class="ki-outline ki-plus fs-4"></i>

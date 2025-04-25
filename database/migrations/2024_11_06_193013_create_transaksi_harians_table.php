@@ -16,6 +16,7 @@ return new class extends Migration
         Schema::create('transaksi_harians', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->date('tanggal');
+            $table->uuid('rekanan_id')->nullable()->comment('ID rekanan/supplier');
             $table->uuid('kelompok_ternak_id')->nullable();
             $table->uuid('farm_id')->nullable();
             $table->uuid('kandang_id')->nullable();
@@ -25,7 +26,8 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('rekanan_id')->references('id')->on('partners');
+            $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
@@ -63,7 +65,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('transaksi_harians');
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('transaksi_harian_details');
+        Schema::dropIfExists('transaksi_harians');
+        Schema::enableForeignKeyConstraints();
     }
 };

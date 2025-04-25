@@ -22,16 +22,16 @@ class AddPermissionToUser extends Command
             return 1;
         }
 
-        // $permission = Permission::whereName($permissionName);
+        $permission = Permission::whereName($permissionName);
 
-        // if (!$permission) {
-        //     $this->error('Permission not found.');
-        //     return 1;
-        // }
+        if (!$permission) {
+            $this->error('Permission not found.');
+            return 1;
+        }
 
-        // $user->givePermissionTo($permission);
+        $user->givePermissionTo($permissionName);
 
-        $user->givePermissionTo('access user management', 'delete transaksi');
+        // $user->givePermissionTo('access user management', 'delete transaksi');
 
         $this->info("Permission '{$permissionName}' added to user '{$user->name}'.");
         return 0;

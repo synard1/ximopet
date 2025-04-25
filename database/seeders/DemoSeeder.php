@@ -21,9 +21,14 @@ use App\Models\TransaksiBeli;
 use App\Models\TransaksiBeliDetail;
 use App\Models\KelompokTernak;
 use App\Models\CurrentTernak;
+use App\Models\Ternak;
 use App\Models\TransaksiTernak;
+use App\Models\StandarBobot;
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+use App\Models\Partner;
 
 class DemoSeeder extends Seeder
 {
@@ -34,8 +39,13 @@ class DemoSeeder extends Seeder
 
         // Run OVK Seeder
         $this->call([
+            SupplyCategorySeeder::class,
             OVKSeeder::class,
+            BreedSeeder::class,
         ]);
+
+        // Add this line to create doc items
+        $this->createDoc();
 
         // Add this line to create pakan items
         $this->createPakan();
@@ -43,13 +53,16 @@ class DemoSeeder extends Seeder
         // Create Rekanan records
         $this->createRekanan($faker);
 
-        // Create farms and related data
-        $this->createFarms($faker);
+        // Create the specific Demo Farm
+        $this->createDemoFarms($faker);
 
         // Add this line to create item location mappings before purchases
         $this->createItemLocationMappings();
 
-        // Now create purchases for each farm
+        // Assign Farm Operator
+        $this->createFarmOperator();
+
+        // Now create purchases for each farm (Adjust if needed for only Demo Farm)
         // $this->createPurchases($faker);
 
         // Create additional users with roles (unchanged)
@@ -83,6 +96,45 @@ class DemoSeeder extends Seeder
             //     'is_feed' => $category->name === 'Pakan',
             //     'created_by' => $supervisor->id,
             // ]);
+        }
+    }
+
+    private function createDoc()
+    {
+        $pakanTypes = [
+            ['name' => 'Grade 1', 'code' => 'grade1'],
+            ['name' => 'Grade 2', 'code' => 'grade2'],
+            ['name' => 'Grade 3', 'code' => 'grade3'],
+            ['name' => 'Cobb', 'code' => 'cobb'],
+            ['name' => 'Ross', 'code' => 'ross'],
+
+        ];
+
+        $supervisor = User::where('email', 'supervisor@demo.com')->first();
+        $pakanCategory = ItemCategory::where('name', 'DOC')->first();
+
+        if (!$pakanCategory) {
+            $pakanCategory = ItemCategory::create([
+                'name' => 'Pakan',
+                'code' => 'PKN',
+                'description' => 'Feed Category',
+                'status' => 'Aktif',
+                'created_by' => $supervisor->id
+            ]);
+        }
+
+        foreach ($pakanTypes as $type) {
+            Item::create([
+                'category_id' => $pakanCategory->id,
+                'kode' => $pakanCategory->code . $type['code'],
+                'name' => $type['name'],
+                'satuan_besar' => 'Kg',
+                'satuan_kecil' => 'Kg',
+                'konversi' => 1,
+                'status' => 'Aktif',
+                'is_feed' => false,
+                'created_by' => $supervisor->id,
+            ]);
         }
     }
 
@@ -151,6 +203,77 @@ class DemoSeeder extends Seeder
             ]);
         });
     }
+
+    private function createDemoFarms(Generator $faker)
+    {
+        $demoSupervisors = [
+            [
+                'email'    => 'supervisor@demo.com',
+                'kode'     => 'DF01',
+                'farmName' => 'Demo Farm',
+            ],
+            [
+                'email'    => 'supervisor@demo2.com',
+                'kode'     => 'DF02',
+                'farmName' => 'Demo Farm 2',
+            ],
+        ];
+
+        foreach ($demoSupervisors as $data) {
+            $supervisor = User::where('email', $data['email'])->first();
+
+            if (!$supervisor) {
+                continue; // Skip if supervisor not found
+            }
+
+            // Create the Demo Farm
+            $farm = Farm::create([
+                'code'       => $data['kode'],
+                'name'       => $data['farmName'],
+                'address'     => $faker->address,
+                'status'     => 'Aktif',
+                'created_by' => $supervisor->id,
+                'updated_by' => $supervisor->id,
+            ]);
+
+            // Create warehouse location for the farm
+            InventoryLocation::create([
+                'farm_id'    => $farm->id,
+                'name'       => 'Gudang ' . $data['farmName'],
+                'code'       => 'WH-' . $data['kode'],
+                'type'       => 'warehouse',
+                'status'     => 'Aktif',
+                'created_by' => $supervisor->id,
+            ]);
+
+            // Create two Kandang for each farm
+            for ($i = 1; $i <= 2; $i++) {
+                Kandang::create([
+                    'farm_id'    => $farm->id,
+                    'kode'       => "K0{$i}-" . $data['kode'],
+                    'nama'       => "Kandang {$i} - " . $data['farmName'],
+                    'kapasitas'  => 20000,
+                    'status'     => 'Aktif',
+                    'created_by' => $supervisor->id,
+                ]);
+            }
+        }
+    }
+
+
+    private function createFarmOperator()
+    {
+        Farm::where('status','Aktif')->each(function ($farm) {
+            $supervisor = User::where('email', 'supervisor@demo.com')->first();
+            $operator = User::where('email', 'operator@demo.com')->first();
+
+            // Assign operator
+            $farm->operators()->attach($operator);
+
+        });
+
+    }
+    
 
     private function createPurchases(Generator $faker)
     {
@@ -256,14 +379,14 @@ class DemoSeeder extends Seeder
         $rekananTypes = ['Supplier', 'Customer', 'Both'];
         foreach ($rekananTypes as $type) {
             for ($i = 0; $i < 5; $i++) {
-                Rekanan::create([
-                    'jenis' => $type,
-                    'kode' => 'REK-' . $type[0] . '-' . str_pad(Rekanan::count() + 1, 3, '0', STR_PAD_LEFT),
-                    'nama' => $faker->company,
-                    'alamat' => $faker->address,
-                    'telp' => $faker->phoneNumber,
-                    'pic' => $faker->name,
-                    'telp_pic' => $faker->phoneNumber,
+                Partner::create([
+                    'type' => $type,
+                    'code' => 'REK-' . $type[0] . '-' . str_pad(Partner::count() + 1, 3, '0', STR_PAD_LEFT),
+                    'name' => $faker->company,
+                    'address' => $faker->address,
+                    'phone_number' => $faker->phoneNumber,
+                    'contact_person' => $faker->name,
+                    'phone_number' => $faker->phoneNumber,
                     'email' => $faker->companyEmail,
                     'status' => 'Aktif',
                     'created_by' => 3,
@@ -275,7 +398,7 @@ class DemoSeeder extends Seeder
     private function createDocPurchase($farm, $kandang, $location, $supervisor, $faker)
     {
         if ($supervisor) {
-            $supplier = Rekanan::where('jenis', 'Supplier')->inRandomOrder()->first();
+            $supplier = Partner::where('type', 'Supplier')->inRandomOrder()->first();
             $docItem = Item::whereHas('category', function($q) {
                 $q->where('name', 'DOC');
             })->first();
@@ -329,7 +452,7 @@ class DemoSeeder extends Seeder
             ]);
 
             // Create kelompok ternak
-            $kelompokTernak = KelompokTernak::create([
+            $ternak = Ternak::create([
                 'transaksi_id' => $purchase->id,
                 'name' => 'PR-' . $farm->kode . '-' . $kandang->kode . '-' . Carbon::parse($purchase->tanggal)->format('dmY'),
                 'breed' => 'DOC',
@@ -344,7 +467,7 @@ class DemoSeeder extends Seeder
 
         // Add new code: Create transaksi_ternak record
         TransaksiTernak::create([
-            'kelompok_ternak_id' => $kelompokTernak->id,
+            'kelompok_ternak_id' => $ternak->id,
             'jenis_transaksi' => 'Pembelian',
             'tanggal' => $purchase->tanggal,
             'farm_id' => $farm->id,
@@ -355,18 +478,18 @@ class DemoSeeder extends Seeder
             'harga_satuan' => $harga,
             'total_harga' => $qty * $harga,
             'status' => 'Aktif',
-            'keterangan' => 'Pembelian DOC Batch ' . $kelompokTernak->name,
+            'keterangan' => 'Pembelian DOC Batch ' . $ternak->name,
             'created_by' => 3,
         ]);
 
         // Update purchase with kelompok_ternak_id
         $purchase->update([
-            'kelompok_ternak_id' => $kelompokTernak->id
+            'kelompok_ternak_id' => $ternak->id
         ]);
 
             // Create current ternak record
             CurrentTernak::create([
-                'kelompok_ternak_id' => $kelompokTernak->id,
+                'kelompok_ternak_id' => $ternak->id,
                 'farm_id' => $farm->id,
                 'kandang_id' => $kandang->id,
                 'quantity' => $qty,
@@ -380,7 +503,7 @@ class DemoSeeder extends Seeder
         $kandang->update([
             'jumlah' => $qty,
             'berat' => $qty * 0.1,
-            'kelompok_ternak_id' => $kelompokTernak->id,
+            'kelompok_ternak_id' => $ternak->id,
             'status' => 'Digunakan',
             'updated_by' => $supervisor->id,
         ]);
@@ -390,7 +513,7 @@ class DemoSeeder extends Seeder
     private function createInventoryPurchase($farm, $kandang, $warehouse, $operator, $faker)
     {
         // Get a random supplier
-        $supplier = Rekanan::where('jenis', 'Supplier')->inRandomOrder()->first();
+        $supplier = Partner::where('type', 'Supplier')->inRandomOrder()->first();
 
         // Get random item category (excluding DOC)
         $category = ItemCategory::where('name', '!=', 'DOC')->inRandomOrder()->first();
@@ -451,7 +574,7 @@ class DemoSeeder extends Seeder
         // Create inventory stock
         $currentStock = CurrentStock::create([
             'item_id' => $item->id,
-            'location_id' => $location->id,
+            'location_id' => $warehouse->id,
             'quantity' => $qty,
             'reserved_quantity' => 0,
             'available_quantity' => $qty,
@@ -464,7 +587,7 @@ class DemoSeeder extends Seeder
         StockMovement::create([
             'transaksi_id' => $purchase->id,
             'item_id' => $item->id,
-            'destination_location_id' => $location->id,
+            'destination_location_id' => $warehouse->id,
             'movement_type' => 'purchase',
             'tanggal' => $tanggal,
             'batch_number' => $batchNumber,
@@ -527,5 +650,6 @@ class DemoSeeder extends Seeder
 
         return $baseNumber . str_pad($newNumber, 2, '0', STR_PAD_LEFT);
     }
+
     // ... rest of the helper methods
 }

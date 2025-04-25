@@ -24,8 +24,9 @@ return new class extends Migration
             $table->decimal('qty', 15, 2)->nullable();
             $table->decimal('berat', 15, 2)->nullable();
             $table->integer('umur')->nullable();
-            $table->string('status')->nullable();
             $table->text('notes')->nullable();
+            $table->json('payload')->nullable(); // JSON/array type column to save data
+            $table->string('status')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
 
@@ -33,8 +34,8 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->foreign('transaksi_jual_id')->references('id')->on('transaksi_jual');
-            $table->foreign('rekanan_id')->references('id')->on('master_rekanan');
-            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('rekanan_id')->references('id')->on('partners');
+            $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');

@@ -13,12 +13,15 @@ use App\Models\Farm;
 use App\Models\FarmOperator;
 use App\Models\Kandang;
 use App\Models\KelompokTernak;
+use App\Models\Livestock;
 use App\Models\Rekanan;
 use App\Models\TransaksiHarian;
 use App\Models\TransaksiHarianDetail;
 use App\Models\TernakJual;
 
 use App\Services\TernakService;
+
+use App\Models\LivestockSales;
 
 use Carbon\Carbon;
 
@@ -328,9 +331,9 @@ class PenjualanTernak extends Component
     public function loadKandangs()
     {
         $farmIds = FarmOperator::where('user_id', auth()->id())->pluck('farm_id')->toArray();
-        $this->kandangs = Kandang::whereIn('farm_id', $farmIds)->where('status', 'Digunakan')->get(['id', 'farm_id','kode','nama','jumlah','kapasitas','kelompok_ternak_id','status']);
+        $this->kandangs = Kandang::whereIn('farm_id', $farmIds)->where('status', 'Digunakan')->get(['id', 'farm_id','kode','nama','jumlah','kapasitas','livestock_id','status']);
 
-        $this->ternaks  = KelompokTernak::whereIn('farm_id', $farmIds)->get(['id','farm_id','kandang_id','name','start_date','populasi_awal','hpp','status','transaksi_id']);
+        $this->ternaks  = Livestock::whereIn('farm_id', $farmIds)->get(['id','farm_id','kandang_id','name','start_date','populasi_awal','harga','status']);
     }
 
     public function updatedKandangId($value)

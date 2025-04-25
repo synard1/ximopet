@@ -231,6 +231,468 @@ class FIFOService
         });
     }
 
+    public function reduceStockBaru(array $validatedData)
+    {
+        DB::transaction(function () use ($validatedData) {
+            $ternak = CurrentTernak::where('kelompok_ternak_id', $validatedData['ternak_id'])
+                ->where('status', 'Aktif')->first();
+
+            if (Carbon::parse($validatedData['tanggal'])->lt($ternak->ternak->start_date)) {
+                throw new \Exception('Tanggal transaksi tidak boleh lebih awal dari tanggal mulai kelompok ternak.');
+            }
+
+            $transaksi = TransaksiHarian::updateOrCreate(
+                [
+                    'kelompok_ternak_id' => $ternak->kelompok_ternak_id,
+                    'tanggal' => $validatedData['tanggal'],
+                ],
+                [
+                    'farm_id' => $ternak->ternak->farm_id,
+                    'kandang_id' => $ternak->ternak->kandang_id,
+                    'created_by' => Auth::id(),
+                ]
+            );
+
+            $tanggalMasuk = Carbon::parse($ternak->ternak->start_date);
+            $tanggalTransaksi = Carbon::parse($transaksi->tanggal);
+            $umur = $tanggalMasuk->diffInDays($tanggalTransaksi);
+
+            TernakHistory::updateOrCreate(
+                [
+                    'kelompok_ternak_id' => $transaksi->kelompok_ternak_id,
+                    'tanggal' => $transaksi->tanggal,
+                ],
+                [
+                    'stok_awal' => $ternak->quantity,
+                    'umur' => $umur,
+                    'status' => 'OK',
+                ]
+            );
+
+            // Rollback pemakaian sebelumnya jika ada
+            $this->rollbackTransaksi($transaksi, $ternak->kelompok_ternak_id);
+
+            $totalQty = 0;
+            $totalTerpakai = 0;
+            $totalSisa = 0;
+            $totalHarga = 0;
+            $totalSubTotal = 0;
+
+            foreach ($validatedData['stock'] as $stockItem) {
+                $itemId = $stockItem['item_id'];
+                $quantityUsed = $stockItem['qty'];
+
+                $stockEntries = TransaksiBeliDetail::where('item_id', $itemId)
+                    ->where('jenis', 'Pembelian')
+                    ->where('sisa', '>', 0)
+                    ->whereNotIn('jenis_barang', ['DOC'])
+                    ->orderBy('tanggal', 'asc')
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($stockEntries->isEmpty()) {
+                    throw new \Exception('Stok tidak tersedia untuk item ID: ' . $itemId);
+                }
+
+                $currentStock = CurrentStock::where('kelompok_ternak_id', $validatedData['ternak_id'])
+                    ->where('item_id', $itemId)
+                    ->first();
+
+                if ($quantityUsed > ($currentStock->quantity ?? 0)) {
+                    throw new \Exception("Jumlah pemakaian melebihi stok tersedia untuk item ID: $itemId.");
+                }
+
+                $remainingQuantity = $quantityUsed;
+
+                foreach ($stockEntries as $stockEntry) {
+                    if ($remainingQuantity <= 0) break;
+
+                    $deductQuantity = min($stockEntry->sisa, $remainingQuantity);
+
+                    $stockEntry->sisa -= $deductQuantity;
+                    $stockEntry->terpakai += $deductQuantity;
+                    $stockEntry->save();
+
+                    TransaksiHarianDetail::updateOrCreate(
+                        [
+                            'transaksi_id' => $transaksi->id,
+                            'parent_id' => $stockEntry->id,
+                            'type' => 'Pemakaian',
+                            'harga' => $stockEntry->harga,
+                            'item_id' => $stockEntry->item_id,
+                        ],
+                        [
+                            'quantity' => $deductQuantity,
+                            'total_berat' => $stockEntry->harga ?? 0,
+                        ]
+                    );
+
+                    StockHistory::updateOrCreate(
+                        [
+                            'kelompok_ternak_id' => $transaksi->kelompok_ternak_id,
+                            'tanggal' => $transaksi->tanggal,
+                            'stock_id' => $currentStock->id,
+                            'item_id' => $stockEntry->item_id,
+                            'jenis' => 'Pemakaian',
+                            'transaksi_id' => $transaksi->id,
+                        ],
+                        [
+                            'parent_id' => $stockEntry->id ?? null,
+                            'batch_number' => $stockEntry->batch_number,
+                            'expiry_date' => $stockEntry->expiry_date,
+                            'quantity' => $deductQuantity,
+                            'harga' => $stockEntry->harga,
+                            'status' => 'Aktif',
+                            'created_by' => Auth::id(),
+                        ]
+                    );
+
+                    if ($currentStock) {
+                        $currentStock->quantity -= $deductQuantity;
+                        $currentStock->save();
+                    }
+
+                    $remainingQuantity -= $deductQuantity;
+                    $totalQty += $deductQuantity;
+                    $totalTerpakai += $deductQuantity;
+                    $totalSisa += $stockEntry->sisa;
+                }
+
+                if ($remainingQuantity > 0) {
+                    throw new \Exception("Stok tidak mencukupi untuk item ID: $itemId");
+                }
+            }
+
+            $transaksi->update([
+                'total_qty' => $totalQty,
+                'terpakai' => $totalTerpakai,
+                'sisa' => $totalSisa,
+                'harga' => $totalHarga,
+                'sub_total' => $totalSubTotal,
+            ]);
+        });
+    }
+    // public function reduceStockBaru(array $validatedData)
+    // {
+    //     DB::transaction(function () use ($validatedData) {
+    //         $ternak = CurrentTernak::where('kelompok_ternak_id', $validatedData['ternak_id'])
+    //             ->where('status', 'Aktif')->first();
+
+    //         if (Carbon::parse($validatedData['tanggal'])->lt($ternak->ternak->start_date)) {
+    //             throw new \Exception('Tanggal transaksi tidak boleh lebih awal dari tanggal mulai kelompok ternak.');
+    //         }
+
+    //         $transaksi = TransaksiHarian::updateOrCreate(
+    //             [
+    //                 'kelompok_ternak_id' => $ternak->kelompok_ternak_id,
+    //                 'tanggal' => $validatedData['tanggal'],
+    //             ],
+    //             [
+    //                 'farm_id' => $ternak->ternak->farm_id,
+    //                 'kandang_id' => $ternak->ternak->kandang_id,
+    //                 'created_by' => Auth::id(),
+    //             ]
+    //         );
+
+    //         $tanggalMasuk = Carbon::parse($ternak->ternak->start_date);
+    //         $tanggalTransaksi = Carbon::parse($transaksi->tanggal);
+    //         $umur = $tanggalMasuk->diffInDays($tanggalTransaksi);
+
+    //         TernakHistory::updateOrCreate(
+    //             [
+    //                 'kelompok_ternak_id' => $transaksi->kelompok_ternak_id,
+    //                 'tanggal' => $transaksi->tanggal,
+    //             ],
+    //             [
+    //                 'stok_awal' => $ternak->quantity,
+    //                 'umur' => $umur,
+    //                 'status' => 'OK',
+    //             ]
+    //         );
+
+    //         // Rollback pemakaian sebelumnya jika ada
+    //         $this->rollbackTransaksi($transaksi, $ternak->kelompok_ternak_id);
+
+    //         $totalQty = 0;
+    //         $totalTerpakai = 0;
+    //         $totalSisa = 0;
+    //         $totalHarga = 0;
+    //         $totalSubTotal = 0;
+
+    //         foreach ($validatedData['stock'] as $stockItem) {
+    //             $itemId = $stockItem['item_id'];
+    //             $quantityUsed = $stockItem['qty'];
+
+    //             $stockEntries = TransaksiBeliDetail::where('item_id', $itemId)
+    //                 ->where('jenis', 'Pembelian')
+    //                 ->where('sisa', '>', 0)
+    //                 ->whereNotIn('jenis_barang', ['DOC'])
+    //                 ->orderBy('tanggal', 'asc')
+    //                 ->lockForUpdate()
+    //                 ->get();
+
+    //             if ($stockEntries->isEmpty()) {
+    //                 throw new \Exception('Stok tidak tersedia untuk item ID: ' . $itemId);
+    //             }
+
+    //             $currentStock = CurrentStock::where('kelompok_ternak_id', $validatedData['ternak_id'])
+    //                 ->where('item_id', $itemId)
+    //                 ->first();
+
+    //             if ($quantityUsed > ($currentStock->quantity ?? 0)) {
+    //                 throw new \Exception("Jumlah pemakaian melebihi stok tersedia untuk item ID: $itemId.");
+    //             }
+
+    //             $remainingQuantity = $quantityUsed;
+
+    //             foreach ($stockEntries as $stockEntry) {
+    //                 if ($remainingQuantity <= 0) break;
+
+    //                 $deductQuantity = min($stockEntry->sisa, $remainingQuantity);
+
+    //                 $stockEntry->sisa -= $deductQuantity;
+    //                 $stockEntry->terpakai += $deductQuantity;
+    //                 $stockEntry->save();
+
+    //                 TransaksiHarianDetail::updateOrCreate(
+    //                     [
+    //                         'transaksi_id' => $transaksi->id,
+    //                         'parent_id' => $stockEntry->id,
+    //                         'type' => 'Pemakaian',
+    //                         'harga' => $stockEntry->harga,
+    //                         'item_id' => $stockEntry->item_id,
+    //                     ],
+    //                     [
+    //                         'quantity' => $deductQuantity,
+    //                         'total_berat' => $stockEntry->harga ?? 0,
+    //                     ]
+    //                 );
+
+    //                 StockHistory::updateOrCreate(
+    //                     [
+    //                         'kelompok_ternak_id' => $transaksi->kelompok_ternak_id,
+    //                         'tanggal' => $transaksi->tanggal,
+    //                         'stock_id' => $currentStock->id,
+    //                         'item_id' => $stockEntry->item_id,
+    //                         'jenis' => 'Pemakaian',
+    //                         'transaksi_id' => $transaksi->id,
+    //                     ],
+    //                     [
+    //                         'parent_id' => $stockEntry->id ?? null,
+    //                         'batch_number' => $stockEntry->batch_number,
+    //                         'expiry_date' => $stockEntry->expiry_date,
+    //                         'quantity' => $deductQuantity,
+    //                         'harga' => $stockEntry->harga,
+    //                         'status' => 'Aktif',
+    //                         'created_by' => Auth::id(),
+    //                     ]
+    //                 );
+
+    //                 if ($currentStock) {
+    //                     $currentStock->quantity -= $deductQuantity;
+    //                     $currentStock->save();
+    //                 }
+
+    //                 $remainingQuantity -= $deductQuantity;
+    //                 $totalQty += $deductQuantity;
+    //                 $totalTerpakai += $deductQuantity;
+    //                 $totalSisa += $stockEntry->sisa;
+    //             }
+
+    //             if ($remainingQuantity > 0) {
+    //                 throw new \Exception("Stok tidak mencukupi untuk item ID: $itemId");
+    //             }
+    //         }
+
+    //         $transaksi->update([
+    //             'total_qty' => $totalQty,
+    //             'terpakai' => $totalTerpakai,
+    //             'sisa' => $totalSisa,
+    //             'harga' => $totalHarga,
+    //             'sub_total' => $totalSubTotal,
+    //         ]);
+    //     });
+    // }
+
+    private function rollbackTransaksi($transaksi, $kelompokTernakId)
+    {
+        $details = TransaksiHarianDetail::where('transaksi_id', $transaksi->id)->get();
+
+        foreach ($details as $detail) {
+            $stockEntry = TransaksiBeliDetail::find($detail->parent_id);
+            if ($stockEntry) {
+                // Kembalikan kuantitas ke pembelian awal
+                $stockEntry->sisa += $detail->quantity;
+                $stockEntry->terpakai -= $detail->quantity;
+                $stockEntry->save();
+            }
+
+            $currentStock = CurrentStock::where('item_id', $detail->item_id)
+                ->where('kelompok_ternak_id', $kelompokTernakId)
+                ->first();
+
+            if ($currentStock) {
+                // Tambahkan kembali kuantitas yang sudah terpakai
+                $currentStock->quantity += $detail->quantity;
+                $currentStock->save();
+            }
+
+            // Update TransaksiHarianDetail jadi 0 (bukan hapus)
+            $detail->update([
+                'quantity' => 0,
+                'total_berat' => 0,
+            ]);
+
+            // Update StockHistory jadi 0 (bukan hapus)
+            StockHistory::where([
+                'transaksi_id' => $transaksi->id,
+                'item_id' => $detail->item_id,
+                'stock_id' => $currentStock->id ?? null,
+            ])->update([
+                'quantity' => 0,
+                'harga' => 0,
+                'status' => 'Aktif',
+                'updated_by' => Auth::id(),
+            ]);
+        }
+    }
+
+
+
+    // private function rollbackTransaksi($transaksi, $kelompokTernakId)
+    // {
+    //     $existingDetails = TransaksiHarianDetail::where('transaksi_id', $transaksi->id)->get();
+
+    //     foreach ($existingDetails as $detail) {
+    //         $stockEntry = TransaksiBeliDetail::find($detail->parent_id);
+    //         if ($stockEntry) {
+    //             $stockEntry->sisa += $detail->quantity;
+    //             $stockEntry->terpakai -= $detail->quantity;
+    //             $stockEntry->save();
+    //         }
+
+    //         $currentStock = CurrentStock::where('item_id', $detail->item_id)
+    //             ->where('kelompok_ternak_id', $kelompokTernakId)
+    //             ->first();
+
+    //         if ($currentStock) {
+    //             $currentStock->quantity += $detail->quantity;
+    //             $currentStock->save();
+    //         }
+
+    //         $detail->delete();
+
+    //         StockHistory::where([
+    //             'transaksi_id' => $transaksi->id,
+    //             'item_id' => $detail->item_id,
+    //             'stock_id' => $currentStock->id ?? null,
+    //         ])->delete();
+    //     }
+    // }
+
+
+    /**
+     * Revert a previous stock reduction
+     * 
+     * @param array $validatedData Contains ternak_id, tanggal, and stock items to revert
+     * @return void
+     */
+    public function revertStockReduction(array $validatedData)
+    {
+        DB::transaction(function () use ($validatedData) {
+            $ternak = CurrentTernak::where('kelompok_ternak_id', $validatedData['ternak_id'])
+                ->where('status', 'Aktif')
+                ->first();
+
+            // Find the original transaction
+            $transaksi = TransaksiHarian::where('kelompok_ternak_id', $ternak->kelompok_ternak_id)
+                ->whereDate('tanggal', $validatedData['tanggal'])
+                ->first();
+
+            if (!$transaksi) {
+                throw new \Exception('Transaksi tidak ditemukan untuk tanggal tersebut.');
+            }
+
+            foreach ($validatedData['stock'] as $stockItem) {
+                $itemId = $stockItem['item_id'];
+                $quantityToRevert = $stockItem['qty'];
+
+                // Find the original transaction details
+                $transaksiDetails = TransaksiHarianDetail::where('transaksi_id', $transaksi->id)
+                    ->where('item_id', $itemId)
+                    ->get();
+
+                if ($transaksiDetails->isEmpty()) {
+                    throw new \Exception('Detail transaksi tidak ditemukan untuk item ID: ' . $itemId);
+                }
+
+                $remainingQuantity = $quantityToRevert;
+
+                foreach ($transaksiDetails as $detail) {
+                    if ($remainingQuantity <= 0) {
+                        break;
+                    }
+
+                    // Find the original stock entry
+                    $stockEntry = TransaksiBeliDetail::find($detail->parent_id);
+                    if (!$stockEntry) {
+                        throw new \Exception('Stock entry tidak ditemukan untuk detail ID: ' . $detail->id);
+                    }
+
+                    $revertQuantity = min($detail->quantity, $remainingQuantity);
+
+                    // Revert the stock entry
+                    $stockEntry->sisa += $revertQuantity;
+                    $stockEntry->terpakai -= $revertQuantity;
+                    $stockEntry->save();
+
+                    // Update the transaction detail
+                    $detail->quantity -= $revertQuantity;
+                    $detail->save();
+
+                    // Update StockHistory
+                    $stockHistory = StockHistory::where('transaksi_id', $transaksi->id)
+                        ->where('item_id', $itemId)
+                        ->where('parent_id', $stockEntry->id)
+                        ->first();
+
+                    if ($stockHistory) {
+                        $stockHistory->quantity -= $revertQuantity;
+                        $stockHistory->save();
+                    }
+
+                    // Update CurrentStock
+                    $currentStock = CurrentStock::where('item_id', $itemId)
+                        ->where('kelompok_ternak_id', $validatedData['ternak_id'])
+                        ->first();
+
+                    if ($currentStock) {
+                        $currentStock->quantity += $revertQuantity;
+                        $currentStock->save();
+                    }
+
+                    // Update remaining quantity to revert
+                    $remainingQuantity -= $revertQuantity;
+                }
+
+                if ($remainingQuantity > 0) {
+                throw new \Exception('Tidak dapat membalikkan stok untuk item ID: ' . $itemId . ' karena jumlah melebihi transaksi asli.');
+            }
+        }
+
+        // Update transaction totals
+        $totalQty = $transaksi->details()->sum('quantity');
+        $totalTerpakai = $totalQty;
+        $totalSisa = 0; // This would need to be calculated based on your business logic
+
+        $transaksi->update([
+            'total_qty' => $totalQty,
+            'terpakai' => $totalTerpakai,
+            'sisa' => $totalSisa,
+        ]);
+    });
+}
+
     /**
      * Reverse the stock reduction process.
      *

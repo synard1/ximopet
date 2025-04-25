@@ -66,7 +66,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
@@ -84,46 +84,50 @@ return new class extends Migration
 
             $table->foreign('item_id')->references('id')->on('items');
             $table->foreign('location_id')->references('id')->on('inventory_locations');
-            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
 
         Schema::create('current_stocks', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->uuid('kelompok_ternak_id');
             $table->uuid('item_id');
-            $table->uuid('location_id');
-            $table->dateTime('expiry_date')->nullable();
-            $table->decimal('quantity', 15, 2)->default(0);
-            $table->decimal('reserved_quantity', 15, 2)->default(0);
-            $table->decimal('available_quantity', 15, 2)->default(0);
-            $table->decimal('hpp', 15, 2)->default(0);
+            
+            $table->decimal('quantity', 15, 2)->default(0)->comment('Jumlah stok');
+            
             $table->string('status');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
-
+        
+            // Foreign keys
             $table->foreign('item_id')->references('id')->on('items');
-            $table->foreign('location_id')->references('id')->on('inventory_locations');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
+        
+            // Indexes
+            $table->index('kelompok_ternak_id');
+            $table->index('item_id');
         });
 
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->uuid('kelompok_ternak_id');
             $table->uuid('transaksi_id')->nullable();
             $table->uuid('parent_id')->nullable();
             $table->uuid('item_id');
-            $table->uuid('source_location_id')->nullable();
-            $table->uuid('destination_location_id')->nullable();
+            $table->uuid('source_id')->nullable();
+            $table->uuid('destination_id')->nullable();
             $table->string('movement_type'); // purchase, transfer, adjustment, consumption, silo_fill, silo_consume
             $table->dateTime('tanggal');
             $table->string('batch_number')->nullable();
             $table->dateTime('expiry_date')->nullable();
             $table->decimal('quantity', 15, 2);
             $table->string('satuan');
-            $table->decimal('hpp', 15, 2);
+            $table->decimal('harga', 15, 2);
             $table->string('status');
             $table->text('keterangan')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
@@ -133,18 +137,21 @@ return new class extends Migration
 
             $table->foreign('transaksi_id')->references('id')->on('transaksi_beli');
             $table->foreign('item_id')->references('id')->on('items');
-            $table->foreign('source_location_id')->references('id')->on('inventory_locations');
-            $table->foreign('destination_location_id')->references('id')->on('inventory_locations');
+            $table->foreign('source_id')->references('id')->on('ternaks');
+            $table->foreign('destination_id')->references('id')->on('ternaks');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
+
         });
 
         Schema::create('stock_histories', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->uuid('kelompok_ternak_id');
             $table->dateTime('tanggal');
             $table->uuid('stock_id');
             $table->uuid('item_id');
-            $table->uuid('location_id');
+            $table->uuid('location_id')->nullable();
             $table->uuid('transaksi_id')->nullable();
             $table->uuid('parent_id')->nullable();
             $table->string('jenis')->nullable(); // Pembelian Penjualan Mutasi
@@ -153,7 +160,7 @@ return new class extends Migration
             $table->decimal('quantity', 15, 2);
             $table->decimal('reserved_quantity', 15, 2)->default(0);
             $table->decimal('available_quantity', 15, 2)->default(0);
-            $table->decimal('hpp', 15, 2);
+            $table->decimal('harga', 15, 2);
             $table->string('status');
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
@@ -166,6 +173,8 @@ return new class extends Migration
             $table->foreign('location_id')->references('id')->on('inventory_locations');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
+
         });
 
         Schema::enableForeignKeyConstraints();
@@ -176,6 +185,8 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         Schema::dropIfExists('item_categories');
         Schema::dropIfExists('items');
         Schema::dropIfExists('inventory_locations');
@@ -183,5 +194,8 @@ return new class extends Migration
         Schema::dropIfExists('current_stocks');
         Schema::dropIfExists('stock_movements');
         Schema::dropIfExists('stock_histories');
+
+        Schema::enableForeignKeyConstraints();
+
     }
 };

@@ -13,18 +13,20 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-        Schema::create('master_rekanan', function (Blueprint $table) {
+
+        Schema::create('companies', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('jenis'); // Supplier or Buyer
-            $table->string('kode', 64)->unique();
-            $table->string('nama');
-            $table->text('alamat');
-            $table->string('telp', 50)->nullable();
-            $table->string('pic', 64)->nullable();
-            $table->string('telp_pic', 50)->nullable();
-            $table->string('email')->unique();
+            $table->string('name');
+            $table->string('address')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('email')->nullable();
+            $table->text('logo')->nullable();
+            $table->string('domain')->unique()->nullable();
+            $table->string('database')->unique()->nullable();
+            $table->string('package')->nullable();
             $table->string('status');
-            $table->unsignedBigInteger('created_by');
+            $table->string('keterangan')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
 
             $table->timestamps();
@@ -35,6 +37,7 @@ return new class extends Migration
         });
 
         Schema::enableForeignKeyConstraints();
+
     }
 
     /**
@@ -42,6 +45,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('master_rekanan');
+        Schema::dropIfExists('companies');
     }
 };

@@ -90,7 +90,7 @@ class StoksPakanDataTable extends DataTable
             // dd($farmIds);
             
             // Add a condition to filter items based on farm IDs
-            $query->whereHas('stockHistory.inventoryLocation.farm', function ($q) use ($farmIds) {
+            $query->whereHas('stockHistory.kelompokTernak.farm', function ($q) use ($farmIds) {
                 $q->whereIn('id', $farmIds);
             })->with(['itemCategory'])
             ->whereHas('itemCategory', function ($q) {

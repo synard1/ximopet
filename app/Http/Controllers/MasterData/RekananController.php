@@ -7,7 +7,7 @@ use App\Models\Rekanan;
 use Illuminate\Http\Request;
 use App\DataTables\SuppliersDataTable;
 use App\DataTables\CustomersDataTable;
-
+use App\DataTables\EkspedisisDataTable;
 
 class RekananController extends Controller
 {
@@ -30,6 +30,15 @@ class RekananController extends Controller
         addVendors(['datatables']);
 
         return $dataTable->render('pages/masterdata.customer.list');
+        // return $dataTable->render('test2');
+    }
+
+    public function ekspedisiIndex(EkspedisisDataTable $dataTable)
+    {
+        // return view('pages/masterdata.supplier.list');
+        addVendors(['datatables']);
+
+        return $dataTable->render('pages/masterdata.ekspedisi.list');
         // return $dataTable->render('test2');
     }
 

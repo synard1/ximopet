@@ -20,55 +20,42 @@ class UsersSeeder extends Seeder
      */
     public function run(Generator $faker)
     {
-
-        $superUser = User::create([
+        // Super admin manual
+        User::create([
             'name'              => 'Mhd Iqbal Syahputra',
             'email'             => 'synard1@gmail.com',
             'password'          => Hash::make('Admin123!@'),
             'email_verified_at' => now(),
         ]);
 
-        $demoUser = User::create([
-            'name'              => $faker->name,
-            'email'             => 'admin@demo.com',
-            'password'          => Hash::make('demo'),
-            'email_verified_at' => now(),
-        ]);
+        // Template demo emails
+        $demoAccounts = [
+            'admin@demo.com',
+            'supervisor@demo.com',
+            'operator@demo.com',
+            'operator2@demo.com',
+            'manager@demo.com',
+        ];
 
-        $demoUser2 = User::create([
-            'name'              => $faker->name,
-            'email'             => 'supervisor@demo.com',
-            'password'          => Hash::make('demo'),
-            'email_verified_at' => now(),
-        ]);
-        
-        $demoUser3 = User::create([
-            'name'              => $faker->name,
-            'email'             => 'operator@demo.com',
-            'password'          => Hash::make('demo'),
-            'email_verified_at' => now(),
-        ]);
+        foreach ($demoAccounts as $demoEmail) {
+            // Buat akun original @demo.com
+            User::create([
+                'name'              => $faker->name,
+                'email'             => $demoEmail,
+                'password'          => Hash::make('demo'),
+                'email_verified_at' => now(),
+            ]);
 
-        $demoUser4 = User::create([
-            'name'              => $faker->name,
-            'email'             => 'operator2@demo.com',
-            'password'          => Hash::make('demo'),
-            'email_verified_at' => now(),
-        ]);
+            // Ganti domain ke @demo2.com
+            $demo2Email = str_replace('@demo.com', '@demo2.com', $demoEmail);
 
-        $demoUser5 = User::create([
-            'name'              => $faker->name,
-            'email'             => 'manager@demo.com',
-            'password'          => Hash::make('demo'),
-            'email_verified_at' => now(),
-        ]);
-
-        
-
-        // Create 1000 users using the factory
-        // User::factory()->count(1000)->create();
-        // User::factory()->count(10000)->create()->each(function ($user) {
-        //     dispatch(new SendEmailJob($user));
-        // });
+            // Buat akun duplikat @demo2.com
+            User::create([
+                'name'              => $faker->name,
+                'email'             => $demo2Email,
+                'password'          => Hash::make('demo'),
+                'email_verified_at' => now(),
+            ]);
+        }
     }
 }

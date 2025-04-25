@@ -17,6 +17,8 @@ class TransaksiBeliDetail extends BaseModel
         'id',
         'transaksi_id',
         'parent_id',
+        'ekspedisi_id',
+        'tarif_ekspedisi',
         'jenis',
         'jenis_barang',
         'tanggal',

@@ -13,15 +13,21 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-        Schema::create('kelompok_ternak', function (Blueprint $table) {
+        Schema::create('ternaks', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('transaksi_id')->nullable();
+            $table->uuid('standar_bobot_id')->nullable();
+            $table->uuid('farm_id');
+            $table->uuid('kandang_id');
             $table->string('name'); //name for batch code / periode
             $table->string('breed'); //jenis
-            $table->date('start_date'); //tanggal mulai
+            $table->dateTime('start_date'); //tanggal mulai
+            $table->dateTime('end_date')->nullable();
             $table->integer('populasi_awal'); //jumlah awal
-            $table->decimal('berat_awal', 10, 2)->default(0); //berat beli
-            $table->decimal('hpp', 10, 2);        // Harga per unit saat beli
+            $table->decimal('berat_awal', 10, 2)->default(0); //berat beli rata - rata
+            $table->decimal('harga', 10, 2);        // Harga per unit saat beli
+            $table->string('pic')->nullable();
+            $table->json('data')->nullable();
             $table->string('status'); //status
             $table->string('keterangan')->nullable(); //keterangan
             $table->unsignedBigInteger('created_by');
@@ -32,9 +38,37 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('farm_id')->references('id')->on('farms');
+            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
             $table->foreign('transaksi_id')->references('id')->on('transaksi_beli')->onDelete('cascade');
-
+            $table->foreign('standar_bobot_id')->references('id')->on('standar_bobots')->onDelete('cascade');
         });
+
+        // Schema::create('kelompok_ternak', function (Blueprint $table) {
+        //     $table->uuid('id')->primary();
+        //     $table->uuid('transaksi_id')->nullable();
+        //     $table->uuid('standar_bobot_id')->nullable();
+        //     $table->string('name'); //name for batch code / periode
+        //     $table->string('breed'); //jenis
+        //     $table->dateTime('start_date'); //tanggal mulai
+        //     $table->integer('populasi_awal'); //jumlah awal
+        //     $table->decimal('berat_awal', 10, 2)->default(0); //berat beli rata - rata
+        //     $table->decimal('harga', 10, 2);        // Harga per unit saat beli
+        //     $table->string('pic')->nullable();
+        //     $table->json('data')->nullable();
+        //     $table->string('status'); //status
+        //     $table->string('keterangan')->nullable(); //keterangan
+        //     $table->unsignedBigInteger('created_by');
+        //     $table->unsignedBigInteger('updated_by')->nullable();
+
+        //     $table->timestamps();
+        //     $table->softDeletes();
+
+        //     $table->foreign('created_by')->references('id')->on('users');
+        //     $table->foreign('updated_by')->references('id')->on('users');
+        //     $table->foreign('transaksi_id')->references('id')->on('transaksi_beli')->onDelete('cascade');
+        //     $table->foreign('standar_bobot_id')->references('id')->on('standar_bobots')->onDelete('cascade');
+        // });
 
         // Tambah tabel baru untuk tracking transaksi ternak
         Schema::create('transaksi_ternak', function (Blueprint $table) {
@@ -69,12 +103,12 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
             
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
-            $table->foreign('farm_tujuan_id')->references('id')->on('master_farms');
-            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
+            $table->foreign('farm_tujuan_id')->references('id')->on('farms');
+            $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('kandang_tujuan_id')->references('id')->on('master_kandangs');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
-            $table->foreign('pembeli_id')->references('id')->on('master_rekanan');
+            $table->foreign('pembeli_id')->references('id')->on('partners');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -96,8 +130,8 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
             
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
-            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
+            $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
@@ -136,13 +170,13 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-            $table->foreign('source_farm_id')->references('id')->on('master_farms');
-            $table->foreign('destination_farm_id')->references('id')->on('master_farms');
+            $table->foreign('source_farm_id')->references('id')->on('farms');
+            $table->foreign('destination_farm_id')->references('id')->on('farms');
             $table->foreign('source_kandang_id')->references('id')->on('master_kandangs');
             $table->foreign('destination_kandang_id')->references('id')->on('master_kandangs');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
-            $table->foreign('pembeli_id')->references('id')->on('master_rekanans');
-            $table->foreign('current_ternak_id')->references('id')->on('current_ternak');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
+            $table->foreign('pembeli_id')->references('id')->on('partners');
+            $table->foreign('current_ternak_id')->references('id')->on('current_ternaks');
         });
 
         Schema::create('mutasi_ternak', function (Blueprint $table) {
@@ -166,10 +200,10 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('kelompok_ternak_asal_id')->references('id')->on('kelompok_ternak');
-            $table->foreign('kelompok_ternak_tujuan_id')->references('id')->on('kelompok_ternak');
-            $table->foreign('farm_asal_id')->references('id')->on('master_farms');
-            $table->foreign('farm_tujuan_id')->references('id')->on('master_farms');
+            $table->foreign('kelompok_ternak_asal_id')->references('id')->on('ternaks');
+            $table->foreign('kelompok_ternak_tujuan_id')->references('id')->on('ternaks');
+            $table->foreign('farm_asal_id')->references('id')->on('farms');
+            $table->foreign('farm_tujuan_id')->references('id')->on('farms');
             $table->foreign('kandang_asal_id')->references('id')->on('master_kandangs');
             $table->foreign('kandang_tujuan_id')->references('id')->on('master_kandangs');
             $table->foreign('created_by')->references('id')->on('users');
@@ -190,7 +224,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
             $table->foreign('item_id')->references('id')->on('items');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
@@ -219,15 +253,15 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
         });
 
         Schema::create('ternak_jual', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('kelompok_ternak_id');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
             $table->uuid('transaksi_id');
             $table->string('tipe_transaksi');
             $table->dateTime('tanggal');
@@ -238,7 +272,7 @@ return new class extends Migration
             // $table->decimal('harga_jual', 10, 2); //harga jual
             // $table->decimal('total_harga', 10, 2);
             // $table->uuid('pembeli_id');
-            // $table->foreign('pembeli_id')->references('id')->on('master_rekanan');
+            // $table->foreign('pembeli_id')->references('id')->on('partners');
             // $table->string('jenis_penjualan'); // normal/afkir
             $table->string('keterangan')->nullable();
             $table->string('status');
@@ -271,7 +305,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -294,7 +328,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
+            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -307,12 +341,18 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         Schema::dropIfExists('afkir_ternak');
         Schema::dropIfExists('penjualan_ternak');
         Schema::dropIfExists('kematian_ternak');
         Schema::dropIfExists('konsumsi_pakan');
         Schema::dropIfExists('mutasi_ternak');
         Schema::dropIfExists('histori_ternak');
+        Schema::dropIfExists('ternaks');
         Schema::dropIfExists('kelompok_ternak');
+
+        Schema::enableForeignKeyConstraints();
+
     }
 };

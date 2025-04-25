@@ -20,8 +20,10 @@
                 <!--begin::Form-->
                 <form id="kt_modal_update_role_form" class="form" action="#" wire:submit="submit">
                     <!--begin::Scroll-->
-                    <div class="d-flex flex-column scroll-y me-n7 pe-7" id="kt_modal_update_role_scroll" data-kt-scroll="true" data-kt-scroll-activate="{default: false, lg: true}" data-kt-scroll-max-height="auto"
-                         data-kt-scroll-dependencies="#kt_modal_update_role_header" data-kt-scroll-wrappers="#kt_modal_update_role_scroll" data-kt-scroll-offset="300px">
+                    <div class="d-flex flex-column scroll-y me-n7 pe-7" id="kt_modal_update_role_scroll"
+                        data-kt-scroll="true" data-kt-scroll-activate="{default: false, lg: true}"
+                        data-kt-scroll-max-height="auto" data-kt-scroll-dependencies="#kt_modal_update_role_header"
+                        data-kt-scroll-wrappers="#kt_modal_update_role_scroll" data-kt-scroll-offset="300px">
                         <!--begin::Input group-->
                         <div class="fv-row mb-10">
                             <!--begin::Label-->
@@ -30,7 +32,8 @@
                             </label>
                             <!--end::Label-->
                             <!--begin::Input-->
-                            <input class="form-control form-control-solid" placeholder="Enter a role name" name="name" wire:model="name"/>
+                            <input class="form-control form-control-solid" placeholder="Enter a role name" name="name"
+                                wire:model="name" />
                             <!--end::Input-->
                             @error('name')
                             <span class="text-danger">{{ $message }}</span> @enderror
@@ -47,25 +50,31 @@
                                 <table class="table align-middle table-row-dashed fs-6 gy-5">
                                     <!--begin::Table body-->
                                     <tbody class="text-gray-600 fw-semibold">
-                                    <!--begin::Table row-->
-                                    <tr>
-                                        <td class="text-gray-800">Administrator Access
-                                            <span class="ms-1" data-bs-toggle="tooltip" title="Allows a full access to the system">
-                                                {!! getIcon('information-5','text-gray-500 fs-6') !!}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <!--begin::Checkbox-->
-                                            <label class="form-check form-check-sm form-check-custom form-check-solid me-9">
-                                                {{-- <input class="form-check-input" type="checkbox" id="kt_roles_select_all" /> --}}
-                                                <input class="form-check-input" type="checkbox" id="kt_roles_select_all" wire:model="check_all" wire:change="checkAll" />
-                                                <span class="form-check-label" for="kt_roles_select_all">Select all</span>
-                                            </label>
-                                            <!--end::Checkbox-->
-                                        </td>
-                                    </tr>
-                                    <!--end::Table row-->
-                                    @foreach($permissions_by_group as $group => $permissions)
+                                        <!--begin::Table row-->
+                                        <tr>
+                                            <td class="text-gray-800">Administrator Access
+                                                <span class="ms-1" data-bs-toggle="tooltip"
+                                                    title="Allows a full access to the system">
+                                                    {!! getIcon('information-5','text-gray-500 fs-6') !!}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <!--begin::Checkbox-->
+                                                <label
+                                                    class="form-check form-check-sm form-check-custom form-check-solid me-9">
+                                                    {{-- <input class="form-check-input" type="checkbox"
+                                                        id="kt_roles_select_all" /> --}}
+                                                    <input class="form-check-input" type="checkbox"
+                                                        id="kt_roles_select_all" wire:model="check_all"
+                                                        wire:change="checkAll" />
+                                                    <span class="form-check-label" for="kt_roles_select_all">Select
+                                                        all</span>
+                                                </label>
+                                                <!--end::Checkbox-->
+                                            </td>
+                                        </tr>
+                                        <!--end::Table row-->
+                                        @foreach($permissions_by_group as $group => $permissions)
                                         <!--begin::Table row-->
                                         <tr>
                                             <!--begin::Label-->
@@ -73,24 +82,28 @@
                                             <!--end::Label-->
                                             <!--begin::Input group-->
                                             @foreach($permissions as $permission)
-                                                <td>
-                                                    <!--begin::Wrapper-->
-                                                    <div class="d-flex">
-                                                        <!--begin::Checkbox-->
-                                                        <label class="form-check form-check-sm form-check-custom form-check-solid me-5 me-lg-20">
-                                                            <input class="form-check-input permission-checkbox" type="checkbox" wire:model="checked_permissions" value="{{ $permission->name }}"/>
-                                                            <span class="form-check-label">{{ ucwords(Str::before($permission->name, ' ')) }}</span>
-                                                        </label>
-                                                        <!--end::Checkbox-->
-                                                    </div>
-                                                    <!--end::Wrapper-->
-                                                </td>
+                                            <td>
+                                                <!--begin::Wrapper-->
+                                                <div class="d-flex">
+                                                    <!--begin::Checkbox-->
+                                                    <label
+                                                        class="form-check form-check-sm form-check-custom form-check-solid me-5 me-lg-20">
+                                                        <input class="form-check-input permission-checkbox"
+                                                            type="checkbox" wire:model="checked_permissions"
+                                                            value="{{ $permission->name }}" />
+                                                        <span class="form-check-label">{{
+                                                            ucwords(Str::before($permission->name, ' ')) }}</span>
+                                                    </label>
+                                                    <!--end::Checkbox-->
+                                                </div>
+                                                <!--end::Wrapper-->
+                                            </td>
                                             @endforeach
                                             <!--end::Input group-->
                                         </tr>
                                         <!--end::Table row-->
-                                    @endforeach
-                                    <!--begin::Table row-->
+                                        @endforeach
+                                        <!--begin::Table row-->
                                     </tbody>
                                     <!--end::Table body-->
                                 </table>
@@ -103,7 +116,8 @@
                     <!--end::Scroll-->
                     <!--begin::Actions-->
                     <div class="text-center pt-15">
-                        <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal" aria-label="Close" wire:loading.attr="disabled">Discard</button>
+                        <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal" aria-label="Close"
+                            wire:loading.attr="disabled">Discard</button>
                         <button type="submit" class="btn btn-primary">
                             <span class="indicator-label" wire:loading.remove>Submit</span>
                             <span class="indicator-progress" wire:loading wire:target="submitRole">
@@ -118,14 +132,14 @@
                 <!-- Notification Messages -->
                 <div>
                     @if (session()->has('success'))
-                        <div class="alert alert-success">
-                            {{ session('success') }}
-                        </div>
+                    <div class="alert alert-success">
+                        {{ session('success') }}
+                    </div>
                     @endif
                     @if (session()->has('error'))
-                        <div class="alert alert-danger">
-                            {{ session('error') }}
-                        </div>
+                    <div class="alert alert-danger">
+                        {{ session('error') }}
+                    </div>
                     @endif
                 </div>
             </div>
@@ -137,25 +151,11 @@
 </div>
 
 @push('scripts')
-    <script>
-        const modal = document.querySelector('#kt_modal_update_role');
+<script>
+    const modal = document.querySelector('#kt_modal_update_role');
 
         modal.addEventListener('show.bs.modal', (e) => {
             Livewire.dispatch('modal.show.role_name', [e.relatedTarget.getAttribute('data-role-id')]);
-
-            // const selectAllCheckbox = document.getElementById('kt_roles_select_all'); // Make sure this ID is correct in your HTML
-            // const permissionCheckboxes = document.querySelectorAll('.permission-checkbox'); // Select by class
-
-            // if (permissionCheckboxes.length > 0) {
-            //     selectAllCheckbox.addEventListener('change', function () {
-            //         permissionCheckboxes.forEach(function (checkbox) {
-            //             checkbox.checked = selectAllCheckbox.checked;
-            //             // Important: Trigger Livewire update HERE, after setting checkbox.checked
-            //             Livewire.dispatch('updateCheckedPermissions', checkbox.value, selectAllCheckbox.checked);
-
-            //         });
-            //     });
-            // }
         });
 
         modal.addEventListener('hidden.bs.modal', function () {
@@ -163,7 +163,5 @@
             selectAllCheckbox.checked = false; // Uncheck the select all checkbox
         });
 
-
-
-    </script>
+</script>
 @endpush

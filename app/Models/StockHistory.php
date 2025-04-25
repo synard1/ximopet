@@ -16,6 +16,7 @@ class StockHistory extends BaseModel
     protected $fillable = [
         'id',
         'tanggal',
+        'kelompok_ternak_id',
         'stock_id',
         'item_id',
         'location_id',
@@ -27,7 +28,7 @@ class StockHistory extends BaseModel
         'quantity',
         'reserved_quantity',
         'available_quantity',
-        'hpp',
+        'harga',
         'status',
         'keterangan',
         'user_id',
@@ -76,6 +77,10 @@ class StockHistory extends BaseModel
 
     public function inventoryLocation(){
         return $this->belongsTo(InventoryLocation::class, 'location_id','id');
+    }
+
+    public function kelompokTernak(){
+        return $this->belongsTo(KelompokTernak::class, 'kelompok_ternak_id','id');
     }
 
     public function transaksiHarianDetail(){

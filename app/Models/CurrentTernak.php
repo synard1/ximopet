@@ -27,7 +27,11 @@ class CurrentTernak extends BaseModel
         'updated_by',
     ];
 
-    public function kelompokTernaks(){
+    public function kelompokTernak(){
         return $this->belongsTo(KelompokTernak::class, 'kelompok_ternak_id', 'id');
+    }
+
+    public function ternak(){
+        return $this->belongsTo(Ternak::class, 'kelompok_ternak_id', 'id');
     }
 }

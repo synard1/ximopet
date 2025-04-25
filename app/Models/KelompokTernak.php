@@ -22,13 +22,13 @@ class KelompokTernak extends BaseModel
         'transaksi_id',
         'farm_id',
         'kandang_id',
+        'standar_bobot_id',
         'name',
         'breed',
         'start_date',
         'populasi_awal',
         'berat_awal',
-        'harga_beli',
-        'hpp',
+        'harga',
         'pic',
         'status',
         'data',
@@ -38,7 +38,7 @@ class KelompokTernak extends BaseModel
     ];
 
     protected $casts = [
-        'start_date' => 'datetime',
+        'start_date' => 'date',
         'data' => 'array',
 
     ];
@@ -57,6 +57,11 @@ class KelompokTernak extends BaseModel
     public function kandang()
     {
         return $this->belongsTo(Kandang::class, 'kandang_id', 'id');
+    }
+
+    public function standarBobot()
+    {
+        return $this->belongsTo(StandarBobot::class, 'standar_bobot_id', 'id');
     }
 
     public function historyTernaks(){
@@ -100,6 +105,10 @@ class KelompokTernak extends BaseModel
     public function isLocked()
     {
         return $this->status === 'Locked';
+    }
+
+    public function ternakDepletion(){
+        return $this->hasMany(TernakDepletion::class, 'ternak_id', 'id');
     }
     
 }

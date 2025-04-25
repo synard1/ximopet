@@ -7,7 +7,7 @@
     <div class="card">
         <!--begin::Card body-->
         <div class="card-body py-4">
-            <h2 class="mb-4">Filter Laporan Performa</h2>
+            <h2 class="mb-4">Filter Laporan Performa </h2>
             
             <form id="filter-form" class="mb-5">
                 <div class="row g-3">
@@ -30,19 +30,6 @@
                                 <option value="{{ $i }}">{{ $i }}</option>
                             @endfor
                         </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="tanggal_surat" class="form-label">Tanggal Surat</label>
-                        <input type="date" class="form-control" id="tanggal_surat" name="tanggal_surat">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Integrasi ?</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="ternak_mati" name="integrasi[]" value="ternak_mati">
-                            <label class="form-check-label" for="ternak_mati">
-                                Ternak Mati
-                            </label>
-                        </div>
                     </div>
                 </div>
                 <div class="row g-3">

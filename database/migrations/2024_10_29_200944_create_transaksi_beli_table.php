@@ -28,7 +28,7 @@ return new class extends Migration
             $table->decimal('sub_total', 15, 2)->nullable()->comment('Total harga (qty x harga)');
             $table->decimal('terpakai', 15, 2)->nullable()->comment('Jumlah yang sudah terpakai');
             $table->decimal('sisa', 15, 2)->nullable()->comment('Sisa dari total pembelian');
-            $table->uuid('kelompok_ternak_id')->nullable()->comment('ID kelompok ternak terkait');
+            $table->uuid('ternak_id')->nullable()->comment('ID kelompok ternak terkait');
             $table->string('status')->nullable()->comment('Status transaksi');
             $table->text('notes')->nullable()->comment('Catatan tambahan');
             $table->unsignedBigInteger('created_by')->nullable()->comment('ID user yang membuat');
@@ -37,10 +37,10 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('rekanan_id')->references('id')->on('master_rekanan');
-            $table->foreign('farm_id')->references('id')->on('master_farms');
+            $table->foreign('rekanan_id')->references('id')->on('partners');
+            $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('kelompok_ternak');
+            $table->foreign('ternak_id')->references('id')->on('ternaks');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -54,6 +54,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         Schema::dropIfExists('transaksi_beli');
+
+        Schema::enableForeignKeyConstraints();
+
     }
 };

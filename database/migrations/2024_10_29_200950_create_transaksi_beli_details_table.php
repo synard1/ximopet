@@ -17,6 +17,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('transaksi_id')->nullable();
             $table->uuid('parent_id')->nullable();
+            $table->uuid('ekspedisi_id')->nullable();
             $table->string('no_sj')->nullable();
             $table->string('jenis')->nullable();
             $table->string('jenis_barang')->nullable();
@@ -29,9 +30,11 @@ return new class extends Migration
             $table->decimal('sub_total', 15, 2)->nullable();
             $table->decimal('terpakai', 15, 2)->nullable();
             $table->decimal('sisa', 15, 2)->nullable();
+            $table->decimal('tarif_ekspedisi', 15, 2)->nullable();
             $table->string('satuan_besar')->nullable();
             $table->string('satuan_kecil')->nullable();
             $table->string('konversi')->nullable();
+            $table->json('payload')->nullable(); // JSON/array type column to save data
             $table->string('status')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -40,6 +43,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->foreign('item_id')->references('id')->on('items');
+            $table->foreign('ekspedisi_id')->references('id')->on('partners');
             $table->foreign('transaksi_id')->references('id')->on('transaksi_beli');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');

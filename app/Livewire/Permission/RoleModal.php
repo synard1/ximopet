@@ -57,6 +57,10 @@ class RoleModal extends Component
         } else {
             // For other roles, set checked permissions from the role
             $this->checked_permissions = $this->role->permissions->pluck('name');
+
+            // dd($this->role->permissions->pluck('name'));
+            // dd($this->permissions);
+
         }
     }
 
@@ -65,18 +69,22 @@ class RoleModal extends Component
         // Check if the user is an Admin
         if (auth()->user()->hasRole('Administrator')) {
             // Get only the permissions that the current user has
-            $this->permissions = Permission::whereIn('id', function($query) {
-                $query->select('permission_id')
-                    ->from('model_has_permissions')
-                    ->where('model_type', User::class)
-                    ->where('model_id', auth()->id())
-                    ->where('name', 'like','%access%');
-            })->get();
+            // $this->permissions = Permission::whereIn('id', function($query) {
+            //     $query->select('permission_id')
+            //         ->from('model_has_permissions')
+            //         ->where('model_type', User::class)
+            //         ->where('model_id', auth()->id())
+            //         ->where('name', 'like','%access%');
+            // })->get();
+
+           // Get only the access permissions
+            $this->permissions = Permission::where('name', 'like', '%access%')->get();
         } else {
             // For other roles (like SuperAdmin), get all permissions
             // $this->permissions = Permission::all();
             $this->permissions = Permission::where('name', 'like','%access%')->get();
         }
+
 
         // dump($this->permissions);
 
@@ -96,31 +104,25 @@ class RoleModal extends Component
         // Create an array of permissions grouped by ability.
         $permissions_by_group = [];
         foreach ($this->permissions ?? [] as $permission) {
-            // dump($permission);
-
             $ability = Str::after($permission->name, ' ');
-
-            if (auth()->user()->hasRole('SuperAdmin')) {
-                $a = Permission::where('name', 'like', '%' . $ability . '%')
-                                ->get();
-            }else{
-                $a = Permission::where('name', 'like', '%' . $ability . '%')
-                                ->where('name', '!=', $permission->name)
-                                ->get();
-
+        
+            $query = Permission::where('name', 'like', "%{$ability}%");
+        
+            if (!auth()->user()->hasRole('SuperAdmin')) {
+                $query->where('name', '!=', $permission->name);
             }
-
-            // dump($a[0]);
-
-            for ($i=0; $i < count($a); $i++) { 
-                # code...
-                $permissions_by_group[$ability][] = $a[$i];
-
+        
+            $permissions = $query->get();
+        
+            // Urutkan permission berdasarkan aturan
+            $ordered_permissions = collect(['read', 'create', 'update', 'delete', 'access'])
+                ->map(fn($action) => $permissions->firstWhere('name', "{$action} {$ability}"))
+                ->filter() // Hapus null jika tidak ada permission yang cocok
+                ->values(); // Reset array index agar rapi
+        
+            if ($ordered_permissions->isNotEmpty()) {
+                $permissions_by_group[$ability] = $ordered_permissions->all();
             }
-
-
-            // $permissions_by_group[$ability][] = $a;
-            // $permissions_by_group[$ability][] = $permission;
         }
 
         // dump($permissions_by_group);

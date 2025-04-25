@@ -57,7 +57,7 @@ class KematianTernak extends BaseModel
     }
 
     public function kelompokTernaks(){
-        return $this->belongsTo(KelompokTernak::class, 'kelompok_ternak_id', 'id');
+        return $this->belongsTo(Ternak::class, 'kelompok_ternak_id', 'id');
     }
     
 }

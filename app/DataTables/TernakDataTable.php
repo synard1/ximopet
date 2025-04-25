@@ -3,8 +3,10 @@
 namespace App\DataTables;
 
 use App\Models\CurrentTernak;
+use App\Models\TernakDepletion;
 use App\Models\KematianTernak;
-use App\Models\KelompokTernak as Ternak;
+// use App\Models\KelompokTernak as Ternak;
+use App\Models\Ternak;
 use App\Models\TernakAfkir;
 use App\Models\Kandang;
 use App\Models\TernakJual;
@@ -44,12 +46,14 @@ class TernakDataTable extends DataTable
                 return $umur. ' Hari';
             })
             ->editColumn('jumlah_mati', function (Ternak $ternak) {
-                $jumlah = KematianTernak::where('kelompok_ternak_id',$ternak->id)->sum('quantity');
-                return $jumlah;
+                $deplesi = TernakDepletion::where('ternak_id', $ternak->id)->where('jenis_deplesi', 'Mati')->sum('jumlah_deplesi');
+                // $jumlah = KematianTernak::where('kelompok_ternak_id',$ternak->id)->sum('quantity');
+                return $deplesi;
             })
             ->editColumn('jumlah_afkir', function (Ternak $ternak) {
-                $jumlah = TernakAfkir::where('kelompok_ternak_id',$ternak->id)->sum('jumlah');
-                return $jumlah;
+                $deplesi = TernakDepletion::where('ternak_id', $ternak->id)->where('jenis_deplesi', 'Afkir')->sum('jumlah_deplesi');
+                // $jumlah = TernakAfkir::where('kelompok_ternak_id',$ternak->id)->sum('jumlah');
+                return $deplesi;
             })
             ->editColumn('jumlah_terjual', function (Ternak $ternak) {
                 $jumlah = TernakJual::where('kelompok_ternak_id',$ternak->id)->sum('quantity');
@@ -57,16 +61,18 @@ class TernakDataTable extends DataTable
             })
             ->editColumn('stok_akhir', function (Ternak $ternak) {
                 $currentTernak = CurrentTernak::where('kelompok_ternak_id',$ternak->id)->first();
+                // $deplesi = TernakDepletion::where('ternak_id', $ternak->id)->sum('jumlah_deplesi');
                 // return $ternak->quantity  ?? '0';
 
-                $populasi_awal = $ternak->populasi_awal;
-                $populasi_mati = KematianTernak::where('kelompok_ternak_id', $ternak->id)->sum('quantity');
-                $populasi_afkir = TernakAfkir::where('kelompok_ternak_id', $ternak->id)->sum('jumlah');
-                $populasi_terjual = TernakJual::where('kelompok_ternak_id', $ternak->id)->sum('quantity');
+                // $populasi_awal = $ternak->populasi_awal;
+                // $populasi_mati = KematianTernak::where('kelompok_ternak_id', $ternak->id)->sum('quantity');
+                // $populasi_afkir = TernakAfkir::where('kelompok_ternak_id', $ternak->id)->sum('jumlah');
+                // $populasi_terjual = TernakJual::where('kelompok_ternak_id', $ternak->id)->sum('quantity');
 
-                $jumlah = $populasi_awal - $populasi_mati - $populasi_afkir - $populasi_terjual;
-                $currentTernak->quantity = $jumlah; // Ensure the result is not negative
-                $currentTernak->save();
+                $jumlah = $currentTernak->quantity;
+                // $jumlah = $populasi_awal - $populasi_mati - $populasi_afkir - $populasi_terjual;
+                // $currentTernak->quantity = $jumlah; // Ensure the result is not negative
+                // $currentTernak->save();
 
                 if (config('xolution.ALLOW_NEGATIF_SELLING')){
                     return $jumlah;
@@ -90,14 +96,14 @@ class TernakDataTable extends DataTable
             ->editColumn('created_at', function (Ternak $ternak) {
                 return $ternak->created_at->format('d M Y, h:i a');
             })
-            ->orderColumn('jumlah_mati', function ($query, $order) {
-                $query->orderBy(
-                    KematianTernak::selectRaw('SUM(quantity)')
-                        ->whereColumn('kelompok_ternak_id', 'kelompok_ternak.id')
-                        ->whereNull('ternak_mati.deleted_at'),
-                    $order
-                );
-            })
+            // ->orderColumn('jumlah_mati', function ($query, $order) {
+            //     $query->orderBy(
+            //         KematianTernak::selectRaw('SUM(quantity)')
+            //             ->whereColumn('kelompok_ternak_id', 'kelompok_ternak.id')
+            //             ->whereNull('ternak_mati.deleted_at'),
+            //         $order
+            //     );
+            // })
             ->addColumn('action', function (Ternak $ternak) {
                 return view('pages/masterdata.ternak._actions', compact('ternak'));
             })
@@ -110,11 +116,11 @@ class TernakDataTable extends DataTable
      */
     public function query(Ternak $model): QueryBuilder
     {
-        if (auth()->user()->hasRole('Operator')) {
-            return $model->newQuery()->whereHas('transaksiBeli.farms.farmOperators', function ($query) {
-                $query->where('user_id', auth()->id());
-            });
-        }
+        // if (auth()->user()->hasRole('Operator')) {
+        //     return $model->newQuery()->whereHas('transaksiBeli.farms.farmOperators', function ($query) {
+        //         $query->where('user_id', auth()->id());
+        //     });
+        // }
         return $model->newQuery();
     }
 
@@ -156,12 +162,12 @@ class TernakDataTable extends DataTable
             Column::make('populasi_awal'),
             Column::computed('umur'),
             Column::computed('jumlah_mati')
-            ->title('Ternak Mati')
+            ->title(trans('content.ternak',[],'id').' Mati')
             ->orderable(true)
             ->orderDataType('custom-jumlah-mati'),
-            Column::computed('jumlah_afkir')->title('Ternak Afkir'),
-            Column::computed('jumlah_terjual')->title('Ternak Terjual'),
-            Column::computed('stok_akhir')->title('Sisa Ternak'),
+            Column::computed('jumlah_afkir')->title(trans('content.ternak',[],'id').' Afkir'),
+            Column::computed('jumlah_terjual')->title(trans('content.ternak',[],'id').' Terjual'),
+            Column::computed('stok_akhir')->title('Sisa '.trans('content.ternak',[],'id')),
             Column::make('status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),
             Column::computed('action')

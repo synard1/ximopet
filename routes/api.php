@@ -15,6 +15,8 @@ use App\Http\Controllers\TernakController;
 use App\Http\Controllers\TransaksiTernakController;
 use App\Http\Controllers\DataController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\FeedController;
+use App\Http\Controllers\SupplyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,10 +46,42 @@ Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
     Route::post('/d/item/location', [DataController::class, 'index'])->name('api.v2.item_location_mapping');
 
     Route::post('/d/transaksi/{details?}', [DataController::class, 'transaksi']);
+    Route::post('/reports/performa-mitra', [ReportsController::class, 'exportPerformancePartner']);
     Route::post('/reports/performa', [ReportsController::class, 'exportPerformance']);
     Route::post('/reports/penjualan', [ReportsController::class, 'exportPenjualan']);
+    Route::post('/reports/harian', [ReportsController::class, 'exportHarian']);
     Route::post('/save-bonus', [TernakController::class, 'addBonus']);
     Route::post('/save-administrasi', [TernakController::class, 'addAdministrasi']);
+
+    
+    Route::name('feed.')->group(function () {
+        Route::get('/feed/purchase/details/{id}', function ($id) {
+            return app(FeedController::class)->getFeedPurchaseBatchDetail($id);
+        });
+        Route::post('/feed/usages/details', [FeedController::class, 'getFeedCardByLivestock']);
+        // Route::post('/feed/usages/details', function ($id) {
+        //     return app(FeedController::class)->getFeedUsageByLivestock($id);
+        // });
+        Route::post('/feed/reports/purchase', [FeedController::class, 'exportPembelian']);
+        Route::post('/feed/purchase/edit', function (Request $request) {
+            return app(FeedController::class)->stockEdit($request);
+        });
+
+    });
+
+    Route::name('supply.')->group(function () {
+        Route::get('/supply/purchase/details/{id}', function ($id) {
+            return app(SupplyController::class)->getFeedPurchaseBatchDetail($id);
+        });
+        Route::post('/supply/usages/details', [FeedController::class, 'getFeedCardByLivestock']);
+        Route::post('/supply/reports/purchase', [FeedController::class, 'exportPembelian']);
+        Route::post('/supply/purchase/edit', function (Request $request) {
+            return app(SupplyController::class)->stockEdit($request);
+        });
+
+    });
+
+    
 
 });
 

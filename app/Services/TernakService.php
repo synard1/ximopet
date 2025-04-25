@@ -11,8 +11,13 @@ use App\Models\TransaksiDetail;
 use App\Models\TransaksiJual;
 use App\Models\TransaksiJualDetail;
 use App\Models\StokMutasi;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Collection; // If using Collection methods explicitly
+use Illuminate\Support\Facades\Log;
+
+use App\Models\StandarBobot;
 use App\Models\StokHistory;
 use App\Models\TransaksiBeli;
 use App\Models\TernakAfkir;
@@ -219,10 +224,6 @@ class TernakService
     public function ternakMati(array $validatedData, $transaksi)
     {
         $kelompokTernak =  $this->kelompokTernak($validatedData);
-
-
-
-
         // dd($test);
 
         DB::beginTransaction();
@@ -335,6 +336,106 @@ class TernakService
         } catch (\Exception $e) {
             DB::rollBack();
             throw new \Exception('Data ternak mati gagal ditambahkan. '. $e->getMessage());
+        }
+    }
+
+    public function ternakJualBaru(array $validatedData, $transaksi)
+    {
+        DB::beginTransaction();
+
+        // dd($transaksi);
+
+        try {
+            $kelompokTernak = KelompokTernak::where('id', $validatedData['ternakId'])->firstOrFail();
+            $currentTernak = CurrentTernak::where('kelompok_ternak_id', $validatedData['ternakId'])->first();
+
+            //Validasi Penjualan Melebihi Stok Ternak, check validasi negatif
+            if (config('xolution.ALLOW_NEGATIF_SELLING') == false && $validatedData['sales_quantity'] > $currentTernak->quantity) {
+                // return response()->json(['error' => 'Stok ternak yang tersedia hanya '. $currentTernak->quantity.'Ekor.'], 400);
+
+                throw new \Exception('Stok ternak yang tersedia hanya '. $currentTernak->quantity.'Ekor.');
+            }
+
+            // Calculate the age of the livestock using Carbon
+            $tanggalMasuk = Carbon::parse($kelompokTernak->tanggal_masuk);
+            $tanggalJual = Carbon::parse($validatedData['date']);
+            $umur = $tanggalMasuk->diffInDays($tanggalJual);
+
+            $transaksiBeli = TransaksiBeli::where('kelompok_ternak_id', $kelompokTernak->id)->first();
+
+            // dd($validatedData['ternak_jual']);
+
+            $ternakJual = new TernakJual();
+            $ternakJual->kelompok_ternak_id = $kelompokTernak->id;
+            $ternakJual->transaksi_id = $transaksi->id;
+            $ternakJual->tipe_transaksi = 'Harian';
+            $ternakJual->tanggal = $validatedData['date'];
+            $ternakJual->quantity = $validatedData['sales_quantity'];
+            $ternakJual->total_berat = $validatedData['sales_weight'] ?? 0;
+            $ternakJual->umur = $umur;
+            $ternakJual->status = 'Data Belum Lengkap';
+            $ternakJual->created_by = auth()->user()->id;
+            $ternakJual->save();
+
+            // Create TransaksiJual record
+            $transaksiJual = new TransaksiJual();
+            $transaksiJual->faktur = $validatedData['faktur'] ?? null;
+            $transaksiJual->transaksi_id = $transaksi->id;
+            $transaksiJual->tipe_transaksi = 'Harian';
+            $transaksiJual->tanggal = $validatedData['date'];
+            $transaksiJual->transaksi_beli_id = $transaksiBeli->id;
+            $transaksiJual->kelompok_ternak_id = $kelompokTernak->id;
+            $transaksiJual->ternak_jual_id = $ternakJual->id;
+            $transaksiJual->jumlah = $validatedData['sales_quantity'];
+            $transaksiJual->harga = $validatedData['total_harga'] ?? 0;
+            $transaksiJual->status = 'Data Belum Lengkap';
+            $transaksiJual->created_by = auth()->user()->id;
+            $transaksiJual->save();
+
+            // Create TransaksiJualDetail record
+            $transaksiJualDetail = new TransaksiJualDetail();
+            $transaksiJualDetail->transaksi_jual_id = $transaksiJual->id;
+            $transaksiJualDetail->rekanan_id = $validatedData['rekanan_id'] ?? null ;
+            $transaksiJualDetail->farm_id = $kelompokTernak->farm_id;
+            $transaksiJualDetail->kandang_id = $kelompokTernak->kandang_id;
+            $transaksiJualDetail->harga_beli = $transaksiBeli->harga;
+            $transaksiJualDetail->harga_jual = $validatedData['sales_price'] ?? 0;
+            $transaksiJualDetail->qty = $validatedData['sales_quantity'];
+            $transaksiJualDetail->berat = $validatedData['sales_weight'] ?? 0;
+            $transaksiJualDetail->umur = $umur;
+            $transaksiJualDetail->status = 'Data Belum Lengkap';
+            $transaksiJualDetail->created_by = auth()->user()->id;
+            $transaksiJualDetail->save();
+
+            // Update CurrentTernak
+            $currentTernak->quantity -= $ternakJual->quantity;
+            $currentTernak->save();
+
+            // Update Ternak Jual
+            $ternakJual->transaksi_jual_id = $transaksiJual->id;
+            $ternakJual->save();
+
+            $referer = request()->headers->get('referer');
+
+            if (strpos($referer, 'transaksi/harian') !== false) {
+                $validatedData['tanggal_harian'] = $validatedData['tanggal'];
+            }
+
+            // Update Ternak History
+            if (isset($validatedData['date'])) {
+
+            }else{
+                $ternakHistory = TernakHistory::where('kelompok_ternak_id',$kelompokTernak->id)->where('tanggal',$validatedData['date'])->first();
+                $ternakHistory->ternak_jual = $validatedData['sales_quantity'];
+                $ternakHistory->save();
+            }
+
+            DB::commit();
+            return $transaksiJual;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw new \Exception('Gagal menambahkan data penjualan ternak: '. $e->getMessage());
         }
     }
 
@@ -489,5 +590,48 @@ class TernakService
             'stok_akhir' => $latestKematianTernak->stok_akhir
         ];
 
+    }
+
+    public function updateStandarTernak($data){
+        try {
+            DB::beginTransaction();
+
+            $standarBobot = StandarBobot::where('id', $data['standar_bobot_id'])->first();
+            $kelompokTernak = KelompokTernak::findOrFail($data['ternak_id']);
+
+            // Prepare the new data structure
+            $newData = [
+                'standar_bobot' => [
+                    'id' => $standarBobot->id,
+                    'nama' => $standarBobot->strain ?? '',
+                    'keterangan' => $standarBobot->keterangan ?? '',
+                    'data' => $standarBobot->standar_data,
+                ]
+            ];
+
+            // Get current data or initialize empty array
+            $currentData = $kelompokTernak->data ?? [];
+
+            // Remove any existing standar_bobot entries
+            $filteredData = array_filter($currentData, function($item) {
+                return !isset($item['standar_bobot']);
+            });
+
+            // Add the new standar_bobot data
+            $filteredData[] = $newData;
+
+            // Update the kelompok_ternak with new data
+            $kelompokTernak->data = array_values($filteredData);
+            $kelompokTernak->save();
+
+            DB::commit();
+            Log::info("Updated Standar Bobot data for KelompokTernak ID: {$kelompokTernak->id} with new Standar Bobot ID: {$standarBobot->id}");
+            
+            return response()->json(['message' => 'Kelompok Ternak updated successfully.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Failed to update Standar Bobot data: " . $e->getMessage());
+            throw new \Exception('Failed to update Standar Bobot data: ' . $e->getMessage());
+        }
     }
 }

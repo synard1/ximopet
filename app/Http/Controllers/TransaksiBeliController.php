@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\TransaksiBeli;
 use Illuminate\Http\Request;
 use App\DataTables\Pembelian\DocsDataTable;
+use App\DataTables\Pembelian\LivestockDataTable;
 use App\DataTables\Pembelian\PakanDataTable;
 use App\DataTables\Pembelian\OvkDataTable;
 
@@ -18,13 +19,20 @@ class TransaksiBeliController extends Controller
         //
     }
 
-    public function indexDoc(DocsDataTable $dataTable)
+    public function indexDoc(LivestockDataTable $dataTable)
     {
         addVendors(['datatables']);
 
         // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
         return $dataTable->render('pages/pembelian/doc._doc');
     }
+    // public function indexDoc(DocsDataTable $dataTable)
+    // {
+    //     addVendors(['datatables']);
+
+    //     // addJavascriptFile('assets/js/custom/pages/transaksi/pembelian-stok.js');
+    //     return $dataTable->render('pages/pembelian/doc._doc');
+    // }
     public function indexPakan(PakanDataTable $dataTable)
     {
         addVendors(['datatables']);

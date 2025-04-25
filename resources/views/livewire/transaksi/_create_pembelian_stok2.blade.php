@@ -129,7 +129,7 @@
                             <!--end::Form-->
                         
                         @else
-                            <!--begin::Form-->
+                            <!--begin::Form--> 
                             <form action="" id="kt_pembelian_stok_form">
                                 <!--begin::Wrapper-->
                                 <div class="d-flex flex-column align-items-start flex-xxl-row">
@@ -212,7 +212,7 @@
                                     <!--end::Input group-->
 
                                 </div>
-                                <!--end::Top-->
+                                <!--end::Wrapper-->
 
                                 <!--begin::Separator-->
                                 <div class="separator separator-dashed my-10"></div>
@@ -220,12 +220,9 @@
 
                                 <!--begin::Wrapper-->
                                 <div class="mb-0">
-
                                     <!--begin::Table wrapper-->
                                     <div class="table-responsive mb-10">
-                                        <!--begin::Table-->
                                         <table class="table g-5 gs-0 mb-0 fw-bold text-gray-700" data-kt-element="items">
-                                            <!--begin::Table head-->
                                             <thead>
                                                 <tr class="border-bottom fs-7 fw-bold text-gray-700 text-uppercase">
                                                     <th class="min-w-300px w-475px">Item</th>
@@ -235,31 +232,36 @@
                                                     <th class="min-w-75px w-75px text-end">Action</th>
                                                 </tr>
                                             </thead>
-                                            <!--end::Table head-->
-
-                                            <!--begin::Table body-->
                                             <tbody>
                                                 @foreach($items as $index => $item)
                                                     <tr class="border-bottom border-bottom-dashed" data-kt-element="item">
                                                         <td>
-                                                            <select wire:model="items.{{ $index }}.name" class="form-select select2">
+                                                            <select wire:model="items.{{ $index }}.id" class="form-select">
                                                                 <option value="">Select Item</option>
                                                                 @foreach($allItems as $availableItem)
                                                                     <option value="{{ $availableItem->id }}">{{ $availableItem->itemCategory->name .' - '.$availableItem->name }}</option>
                                                                 @endforeach
                                                             </select>
-                                                            <input type="hidden" wire:model="items.{{ $index }}.item_id">
-                                                        </td>
-                                                        <td class="ps-0">
-                                                            <input type="number" class="form-control form-control-solid" wire:model="items.{{ $index }}.qty" placeholder="0.00" min="0.01" step="0.01" data-kt-element="quantity">
+                                                            @error("items.$index.id")
+                                                                <span class="text-danger">{{ $message }}</span>
+                                                            @enderror
                                                         </td>
                                                         <td>
-                                                            <input type="text" class="form-control form-control-solid text-end" wire:model="items.{{ $index }}.harga" placeholder="0.00" data-kt-element="harga">
+                                                            <input type="number" class="form-control form-control-solid" wire:model="items.{{ $index }}.qty" min="0.01" step="0.01" data-kt-element="quantity">
+                                                            @error("items.$index.qty")
+                                                                <span class="text-danger">{{ $message }}</span>
+                                                            @enderror
                                                         </td>
-                                                        <td class="pt-8 text-end text-nowrap">
+                                                        <td>
+                                                            <input type="text" class="form-control form-control-solid text-end" wire:model="items.{{ $index }}.harga" data-kt-element="harga">
+                                                            @error("items.$index.harga")
+                                                                <span class="text-danger">{{ $message }}</span>
+                                                            @enderror
+                                                        </td>
+                                                        <td class="text-end">
                                                             Rp<span data-kt-element="total">{{ number_format($this->calculateItemTotal($item), 2) }}</span>
                                                         </td>
-                                                        <td class="pt-5 text-end">
+                                                        <td class="text-end">
                                                             <button type="button" class="btn btn-sm btn-icon btn-active-color-primary" wire:click="removeItem({{ $index }})">
                                                                 <i class="ki-outline ki-trash fs-3"></i>
                                                             </button>
@@ -267,10 +269,8 @@
                                                     </tr>
                                                 @endforeach
                                             </tbody>
-                                            <!--end::Table body-->
-
-                                            <!--begin::Table foot-->
-                                            <tfoot>
+                                             <!--begin::Table foot-->
+                                             <tfoot>
                                                 <tr
                                                     class="border-top border-top-dashed align-top fs-6 fw-bold text-gray-700">
                                                     <th class="text-primary">
@@ -300,10 +300,7 @@
                                             </tfoot>
                                             <!--end::Table foot-->
                                         </table>
-                                    </div>
-                                    <!--end::Table-->
-
-                                    <!--begin::Item template-->
+                                        <!--begin::Item template-->
                                     <table class="table d-none" data-kt-element="item-template">
                                         <tbody>
                                             <tr class="border-bottom border-bottom-dashed" data-kt-element="item">
@@ -346,19 +343,27 @@
                                         </tbody>
                                     </table>
                                     <!--end::Item template-->
-
-                                    {{-- <!--begin::Notes-->
-                                    <div class="mb-0">
-                                        <label class="form-label fs-6 fw-bold text-gray-700">Notes</label>
-
-                                        <textarea name="notes" class="form-control form-control-solid" rows="3"
-                                            placeholder="Thanks for your business"></textarea>
                                     </div>
-                                    <!--end::Notes--> --}}
+                                    <!--end::Table wrapper-->
+
+                                    <!--begin::Error Messages at Bottom-->
+                                    <div class="mt-3">
+                                        @if(session()->has('validation-errors'))
+                                            <div class="alert alert-danger">
+                                                <ul>
+                                                    @foreach(session('validation-errors')['errors'] as $error)
+                                                        <li>{{ $error }}</li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <!--end::Error Messages at Bottom-->
                                 </div>
                                 <!--end::Wrapper-->
                             </form>
                             <!--end::Form-->
+
                         @endif
                         
                     </div>
@@ -381,19 +386,43 @@
                         <!--begin::Input group-->
                         <div class="mb-10">
                             <!--begin::Label-->
-                            <label class="form-label fw-bold fs-6 text-gray-700">Farm</label>
+                            <label class="form-label fw-bold fs-6 text-gray-700">DOC Batch</label>
                             <!--end::Label-->
 
-                            <select id="selectedFarm" name="selectedFarm" class="form-control" wire:model="selectedFarm" @if ($editMode) disabled @endif>
-                                <option value="">=== Pilih Farm ===</option>
-                                @foreach($farms as $farm)
-                                    <option value="{{ $farm->id }}" @if($farm->id == $selectedFarm) selected @endif>{{ $farm->nama }}</option>
+                            <select id="selectedTernak" name="selectedTernak" class="form-control" wire:model="selectedTernak" @if ($editMode) disabled @endif>
+                                <option value="">=== Pilih DOC Batch ===</option>
+                                @foreach($ternaks as $ternak)
+                                    <option value="{{ $ternak->id }}" @if($ternak->id == $selectedTernak) selected @endif>{{ $ternak->name }}</option>
 
                                 @endforeach
                             </select>
-                            @error('selectedFarm')
+                            @error('selectedTernak')
                             <span class="text-danger">{{ $message }}</span> @enderror
-                            @error('selectedFarm')
+                            @error('selectedTernak')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror 
+                        </div>
+                        <!--end::Input group-->
+
+                        <!--begin::Input group-->
+                        <div class="mb-10">
+                            <!--begin::Label-->
+                            <label class="form-label fw-bold fs-6 text-gray-700">Ekspedisi</label>
+                            <!--end::Label-->
+
+                            <select id="selectedEkspedisi" name="selectedEkspedisi" class="form-control" wire:model="selectedEkspedisi" @if ($editMode) disabled @endif>
+                                <option value="">=== Pilih Ekspedisi ===</option>
+                                @if ($ekspedisis->isEmpty())
+                                    <option value="" disabled>Belum ada data</option>
+                                @else
+                                    @foreach($ekspedisis as $ekspedisi)
+                                        <option value="{{ $ekspedisi->id }}" @if($ekspedisi->id == $selectedEkspedisi) selected @endif>{{ $ekspedisi->nama }}</option>
+                                    @endforeach
+                                @endif
+                            </select>
+                            @error('selectedEkspedisi')
+                            <span class="text-danger">{{ $message }}</span> @enderror
+                            @error('selectedEkspedisi')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror 
                         </div>
@@ -409,6 +438,21 @@
                             @error('noSj')
                             <span class="text-danger">{{ $message }}</span> @enderror
                             @error('noSj')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror 
+                        </div>
+                        <!--end::Input group-->
+
+                        <!--begin::Input group-->
+                        <div class="mb-10">
+                            <!--begin::Label-->
+                            <label class="form-label fw-bold fs-6 text-gray-700">Tarif Ekspedisi</label>
+                            <!--end::Label-->
+
+                            <input type="number" id="tarifEkspedisi" class="form-control form-control-solid text-end" wire:model.defer="tarifEkspedisi" data-kt-element="tarifEkspedisi" min="0" step="0.01" oninput="this.value = this.value.replace(/[^0-9.]/g, '')">
+                            @error('tarifEkspedisi')
+                            <span class="text-danger">{{ $message }}</span> @enderror
+                            @error('tarifEkspedisi')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror 
                         </div>

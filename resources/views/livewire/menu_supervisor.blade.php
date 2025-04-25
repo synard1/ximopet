@@ -46,6 +46,7 @@
 					<!--end:Menu link-->
 				</div>
 				<!--end:Menu item-->
+
 				<!--begin:Menu item-->
 				<div class="menu-item">
 					<!--begin:Menu link-->
@@ -64,6 +65,7 @@
 					<!--end:Menu link-->
 				</div>
 				<!--end:Menu item-->
+
 				<!--begin:Menu item-->
 				<div class="menu-item">
 					<!--begin:Menu link-->
@@ -239,6 +241,34 @@
 					<!--end:Menu link-->
 				</div>
 				<!--end:Menu item-->
+
+				@can('create ekspedisi')
+					<!--begin:Menu item-->
+					<div class="menu-item">
+						<!--begin:Menu link-->
+						<span class="menu-link">
+							<span class="menu-icon">
+								<i class="ki-duotone ki-truck">
+									<span class="path1"></span>
+									<span class="path2"></span>
+									<span class="path3"></span>
+									<span class="path4"></span>
+									<span class="path5"></span>
+								</i>
+							</span>
+							<span class="menu-title">Buat Data Ekspedisi</span>
+							<span class="menu-badge">
+								<button class="btn btn-sm btn-icon btn-action" data-bs-toggle="modal"
+									data-bs-target="#kt_modal_new_ekspedisi">
+									<i class="ki-outline ki-plus fs-4"></i>
+								</button>
+							</span>
+						</span>
+						<!--end:Menu link-->
+					</div>
+					<!--end:Menu item-->
+				@endcan
+				
 
 				{{-- Data Farm --}}
 				<!--begin:Menu item-->
@@ -515,7 +545,7 @@
 			<!--end:Menu content-->
 		</div>
 		<!--end:Menu item-->
-		@can('create transaksi')
+		@can('create transaction')
 		<!--begin:Menu item-->
 		<div data-kt-menu-trigger="click" class="menu-item menu-accordion show">
 			<!--begin:Menu link-->

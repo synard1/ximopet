@@ -28,17 +28,18 @@ return [
     'menu_cage' => 'Data Kandang',
     'menu_stock' => 'Data Stok',
     'menu_users' => 'Data User',
-    'menu_ternak' => 'Data Ternak',
+    'menu_ternak' => 'Data Ayam',
     'menu_company' => 'Data Perusahaan',
 
 
     'create_transaction_header' => 'Data Transaksi',
     'create_daily_transaction' => 'Transaksi Harian',
-    'create_purchasing' => 'Pembelian Stok',
+    'create_purchasing_supply' => 'Pembelian Supply',
+    'create_purchasing_feed' => 'Pembelian Pakan',
     'create_purchasing_doc' => 'Pembelian DOC',
     'create_mutation_stock' => 'Pemakaian Stok',
-    'create_mutation_livestock' => 'Mutasi Ternak',
-    'create_death_livestock' => 'Kematian Ternak',
+    'create_mutation_livestock' => 'Mutasi Ayam',
+    'create_death_livestock' => 'Kematian Ayam',
 
 
     // Error handling

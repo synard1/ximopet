@@ -13,7 +13,7 @@ class Rekanan extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $table = 'master_rekanan';
+    protected $table = 'master_rekanans';
 
     protected $fillable = [
         'id',
@@ -30,7 +30,15 @@ class Rekanan extends BaseModel
         'updated_by',
     ];
 
-    public function transaksi(){
-        return $this->hasMany(Transaksi::class);
+    public function transaksiBelis(){
+        return $this->hasMany(TransaksiBeli::class, 'rekanan_id','id');
+    }
+
+    public function transaksiHarians(){
+        return $this->hasMany(TransaksiHarian::class, 'rekanan_id','id');
+    }
+
+    public function transaksiJuals(){
+        return $this->hasMany(TransaksiJual::class, 'rekanan_id','id');
     }
 }

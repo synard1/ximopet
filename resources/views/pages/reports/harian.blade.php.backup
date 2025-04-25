@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Harian Kandang</title>
+    <style>
+        @page {
+            size: landscape;
+            margin: 1cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 4px 8px;
+            text-align: center;
+        }
+        .header {
+            font-weight: bold;
+            text-align: left;
+            margin-bottom: 10px;
+        }
+        .header-row td {
+            background-color: #e6e6ff;
+            font-weight: bold;
+        }
+        .footer-signatures {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .text-left { text-align: left; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .no-border { border: none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        LAPORAN HARIAN KANDANG<br>
+        FARM : {{ $farm }}<br>
+        TANGGAL : {{ $tanggal }}
+    </div>
+
+    <table>
+        <tr class="header-row">
+            <th rowspan="3">KDG</th>
+            <th rowspan="3">UMUR</th>
+            <th colspan="8">POPULASI AYAM</th>
+            <th colspan="3">BERAT BADAN AYAM</th>
+            <th colspan="3">PEMAKAIAN PAKAN</th>
+            {{-- <th colspan="3">STRAIN ROSS</th> --}}
+        </tr>
+        <tr class="header-row">
+            <th rowspan="2">EKOR AYAM</th>
+            <th colspan="3">DEPLESI</th>
+            <th>%</th>
+            <th colspan="2">PENJUALAN AYAM</th>
+            <th rowspan="2">SISA AYAM</th>
+            <th rowspan="2">SEMALAM (Gr)</th>
+            <th rowspan="2">HARI INI (Gr)</th>
+            <th rowspan="2">KENAIKAN (Gr)</th>
+            <th rowspan="2">JENIS PAKAN</th>
+            <th rowspan="2">PAKAN TERPAKAI</th>
+            <th rowspan="2">TOTAL TERPAKAI</th>
+            {{-- <th>NORMAL %</th>
+            <th>BM-TK %</th>
+            <th>GP %</th> --}}
+        </tr>
+        <tr class="header-row">
+            <th>MATI</th>
+            <th>AFKIR</th>
+            <th>TOTAL</th>
+            <th>MORTALITAS</th>
+            <th>EKOR</th>
+            <th>KG</th>
+            {{-- <th></th>
+            <th></th>
+            <th></th> --}}
+        </tr>
+
+        <!-- Previous code remains the same until line 99 -->
+
+        @foreach($recordings as $kandangNama => $record)
+        <tr>
+            {{-- <td>{{ explode('-', $kandangNama)[0] ?? '' }}</td> --}}
+            <td>{{ $kandangNama ?? '' }}</td>
+            <td>{{ $record['umur'] ?? '' }}</td>
+            <td>{{ formatNumber($record['stock_awal'],0) ?? '' }}</td>
+            <td>{{ $record['mati'] ?? '' }}</td>
+            <td>{{ $record['afkir'] ?? '' }}</td>
+            <td>{{ $record['total_deplesi'] ?? '' }}</td>
+            <td>{{ $record['deplesi_percentage'] ?? '' }}</td>
+            <td>{{ $record['jual_ekor'] ?? '' }}</td>
+            <td>{{ $record['jual_kg'] ?? '' }}</td>
+            <td>{{ $record['stock_akhir'] ?? '' }}</td>
+            <td>{{ $record['berat_semalam'] ?? '' }}</td>
+            <td>{{ $record['berat_hari_ini'] ?? '' }}</td>
+            <td>{{ $record['kenaikan_berat'] ?? '' }}</td>
+            <td>{{ $record['pakan_jenis'] ?? '' }}</td>
+            <td>{{ $record['pakan_harian'] ?? '' }}</td>
+            <td>{{ $record['pakan_total'] ?? '' }}</td>
+            {{-- <td>{{ $record['normal_percentage'] ?? '' }}</td>
+            <td>{{ $record['bmtk_percentage'] ?? '' }}</td>
+            <td>{{ $record['gp_percentage'] ?? '' }}</td> --}}
+        </tr>
+        @endforeach
+
+
+        <!-- Total Row -->
+        <tr class="header-row">
+            <td colspan="2">TOTAL</td>
+            <td>{{ $totals['stock_awal'] ?? '' }}</td>
+            <td>{{ $totals['mati'] ?? '' }}</td>
+            <td>{{ $totals['afkir'] ?? '' }}</td>
+            <td>{{ $totals['total_deplesi'] ?? '' }}</td>
+            <td></td>
+            <td>{{ $totals['tangkap_ekor'] ?? '' }}</td>
+            <td>{{ $totals['tangkap_kg'] ?? '' }}</td>
+            <td>{{ $totals['stock_akhir'] ?? '' }}</td>
+            <td colspan="3"></td>
+            <td></td>
+            <td>{{ $totals['pakan_harian'] ?? '' }}</td>
+            <td>{{ $totals['pakan_total'] ?? '' }}</td>
+            {{-- <td colspan="3"></td> --}}
+        </tr>
+    </table>
+
+    <div class="footer-signatures">
+        {{-- <div>
+            Diketahui oleh,<br><br><br>
+            ( {{ $diketahui }} )
+        </div>
+        <div>
+            Dibuat oleh,<br><br><br>
+            ( {{ $dibuat }} )
+        </div> --}}
+    </div>
+</body>
+</html>
