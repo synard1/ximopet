@@ -6,6 +6,8 @@ use Illuminate\Database\Seeder;
 use App\Models\SupplyCategory; // Assuming this is in App\Models
 use App\Models\Supply;        // Assuming this is in App\Models
 use App\Models\User;         // Assuming this is in App\Models
+use App\Models\Unit;
+use App\Models\UnitConversion;
 use Illuminate\Support\Str;
 
 class OVKSeeder extends Seeder
@@ -20,32 +22,32 @@ class OVKSeeder extends Seeder
 
         // 2. OVK Data (Simplified)
         $ovkData = collect([
-            ['name' => 'Biocid', 'unit' => 'Liter'],
-            ['name' => 'Biodes', 'unit' => 'Liter'],
-            ['name' => 'Cevac New L 1000', 'unit' => 'Vial'],
-            ['name' => 'Cevamune', 'unit' => 'Tablet'],
-            ['name' => 'Chickofit', 'unit' => 'Liter'],
-            ['name' => 'CID 2000', 'unit' => 'Kg'],
-            ['name' => 'Coxymas', 'unit' => 'Liter'],
-            ['name' => 'Cupri Sulfate', 'unit' => 'Kg'],
-            ['name' => 'Elektrovit', 'unit' => 'Kg'],
-            ['name' => 'Enroforte', 'unit' => 'Liter'],
-            ['name' => 'Formalin', 'unit' => 'Liter'],
-            ['name' => 'Hiptovit', 'unit' => 'Kg'],
-            ['name' => 'Kaporit Tepung', 'unit' => 'Kg'],
-            ['name' => 'Kumavit @250 Gram', 'unit' => 'Bungkus'],
-            ['name' => 'Nopstress', 'unit' => 'Kg'],
-            ['name' => 'Rhodivit', 'unit' => 'Kg'],
-            ['name' => 'Selco', 'unit' => 'Liter'],
-            ['name' => 'Starbio', 'unit' => 'Liter'],
-            ['name' => 'TH4', 'unit' => 'Liter'],
-            ['name' => 'Toltracox', 'unit' => 'Liter'],
-            ['name' => 'Vigosine', 'unit' => 'Liter'],
-            ['name' => 'Vitamin C', 'unit' => 'Kg'],
-            ['name' => 'Virukill', 'unit' => 'Liter'],
-            ['name' => 'Zuramox', 'unit' => 'Kg'],
-            ['name' => 'Cyprotylogrin', 'unit' => 'Kg'],
-            ['name' => 'Acid Pack 4 Way', 'unit' => 'Kg'],
+            ['name' => 'Biocid', 'unit' => 'LITER'],
+            ['name' => 'Biodes', 'unit' => 'LITER'],
+            ['name' => 'Cevac New L 1000', 'unit' => 'VIAL'],
+            ['name' => 'Cevamune', 'unit' => 'TABLET'],
+            ['name' => 'Chickofit', 'unit' => 'LITER'],
+            ['name' => 'CID 2000', 'unit' => 'KG'],
+            ['name' => 'Coxymas', 'unit' => 'LITER'],
+            ['name' => 'Cupri Sulfate', 'unit' => 'KG'],
+            ['name' => 'Elektrovit', 'unit' => 'KG'],
+            ['name' => 'Enroforte', 'unit' => 'LITER'],
+            ['name' => 'Formalin', 'unit' => 'LITER'],
+            ['name' => 'Hiptovit', 'unit' => 'KG'],
+            ['name' => 'Kaporit Tepung', 'unit' => 'KG'],
+            ['name' => 'Kumavit @250 Gram', 'unit' => 'BUNGKUS'],
+            ['name' => 'Nopstress', 'unit' => 'KG'],
+            ['name' => 'Rhodivit', 'unit' => 'KG'],
+            ['name' => 'Selco', 'unit' => 'LITER'],
+            ['name' => 'Starbio', 'unit' => 'LITER'],
+            ['name' => 'TH4', 'unit' => 'LITER'],
+            ['name' => 'Toltracox', 'unit' => 'LITER'],
+            ['name' => 'Vigosine', 'unit' => 'LITER'],
+            ['name' => 'Vitamin C', 'unit' => 'KG'],
+            ['name' => 'Virukill', 'unit' => 'LITER'],
+            ['name' => 'Zuramox', 'unit' => 'KG'],
+            ['name' => 'Cyprotylogrin', 'unit' => 'KG'],
+            ['name' => 'Acid Pack 4 Way', 'unit' => 'KG'],
         ])->map(function ($item) {
             $codePrefix = 'OVK-';
             $randomCode = strtoupper(Str::random(8));
@@ -59,15 +61,52 @@ class OVKSeeder extends Seeder
         $supervisorId = User::where('email', 'supervisor@demo.com')->firstOrFail()->id;
 
         foreach ($ovkData as $data) {
-            Supply::create([
+            $unit = Unit::where('name',$data['unit'])->first();
+            // dd($data['unit']);
+            $supply = Supply::create([
                 'supply_category_id' => $ovkCategory->id,
                 'code' => $data['code'],
                 'name' => $data['name'],
-                'unit' => $data['unit'],
-                'unit_conversion' => $data['unit_conversion'],
-                'conversion' => $data['conversion'],
+                'payload' => [
+                    'unit_id' => $unit->id,
+                    'unit_details' => [
+                            'id' => $unit->id, // Sesuaikan jika ada ID lain yang relevan
+                            'name' => $unit->name, // Atau $unitKG->name jika yakin ada
+                            'description' => $unit->description, // Deskripsi sesuai kebutuhan
+                    ],
+                    'conversion_units' => [
+                        [
+                            'unit_id' => $unit->id,
+                            'unit_name' => $unit->name,
+                            'value' => 1,
+                            'is_default_purchase' => true,
+                            'is_default_mutation' => true,
+                            'is_default_sale' => true,
+                            'is_smallest' => true,
+                        ],   
+                    ],
+                ],
                 'created_by' => $supervisorId,
             ]);
+
+            UnitConversion::updateOrCreate(
+                [
+                    'type' => 'Supply',
+                    'item_id' => $supply->id,
+                    'unit_id' => $unit->id,
+                    'conversion_unit_id' => $unit->id,
+                ],
+                [
+                    'conversion_value' => 1,
+                    'default_purchase' => true,
+                    'default_mutation' => true,
+                    'default_sale' => true,
+                    'smallest' => true,
+                    'created_by' => $supervisorId,
+                ]
+            );
+            $this->command->info('Supply '.$supply->name.' Created');
+
         }
     }
 }

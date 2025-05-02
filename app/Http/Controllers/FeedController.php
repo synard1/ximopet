@@ -23,18 +23,18 @@ class FeedController extends Controller
     {
 
         $feedPurchases = FeedPurchase::with([
-            'feedItem:id,kode,name,satuan_besar,satuan_kecil,konversi',
+            'feedItem:id,code,name,unit,unit_conversion,conversion',
             'feedStocks' // <- relasi baru nanti ditambahkan
         ])
         ->where('feed_purchase_batch_id', $batchId)
-        ->get(['id', 'feed_purchase_batch_id', 'feed_id', 'quantity', 'price_per_kg']);
+        ->get(['id', 'feed_purchase_batch_id', 'feed_id', 'quantity', 'price_per_unit']);
 
         $formatted = $feedPurchases->map(function ($item) {
             $feedItem = optional($item->feedItem);
-            $konversi = floatval($feedItem->konversi) ?: 1;
+            $konversi = floatval($feedItem->conversion) ?: 1;
 
             $quantity = floatval($item->quantity);
-            $converted_quantity = $quantity / $konversi;
+            $converted_quantity = $quantity * $konversi;
 
             // Summary dari semua FeedStock berdasarkan purchase
             $used = $item->feedStocks->sum('quantity_used');
@@ -43,19 +43,18 @@ class FeedController extends Controller
 
             return [
                 'id' => $item->id,
-                'kode' => $feedItem->kode,
+                'kode' => $feedItem->code,
                 'name' => $feedItem->name,
                 'quantity' => $quantity,
                 'converted_quantity' => $converted_quantity,
-                'qty' => $converted_quantity,
                 'sisa' => $quantity - $used,
-                'satuan_besar' => $feedItem->satuan_besar,
-                'satuan_kecil' => $feedItem->satuan_kecil,
-                'konversi' => $konversi,
-                'price_per_kg' => floatval($item->price_per_kg),
+                'unit' => $feedItem->unit,
+                'unit_conversion' => $feedItem->unit_conversion,
+                'conversion' => $konversi,
+                'price_per_unit' => floatval($item->price_per_unit),
                 'total' => config('xolution.ALLOW_ROUNDUP_PRICE')
-                    ? floatval($quantity * $item->price_per_kg)
-                    : intval($quantity * $item->price_per_kg),
+                    ? floatval($quantity * $item->price_per_unit)
+                    : intval($quantity * $item->price_per_unit),
 
                 // Tambahan penggunaan dan mutasi
                 'terpakai' => $used / $konversi,
@@ -81,11 +80,11 @@ class FeedController extends Controller
 
             $feedPurchase = FeedPurchase::with('feedItem')->findOrFail($id);
             $feedItem = $feedPurchase->feedItem;
-            $konversi = floatval($feedItem->konversi) ?: 1;
+            $konversi = floatval($feedItem->conversion) ?: 1;
 
             $feedStock = FeedStock::where('feed_purchase_id', $feedPurchase->id)->first();
 
-            if ($column === 'qty') {
+            if ($column === 'quantity') {
                 $usedQty = $feedStock->quantity_used ?? 0;
                 $mutatedQty = $feedStock->quantity_mutated ?? 0;
                 $sisa = $usedQty + $mutatedQty;
@@ -112,7 +111,7 @@ class FeedController extends Controller
             } else {
                 // Update price
                 $feedPurchase->update([
-                    'price_per_kg' => $value,
+                    'price_per_unit' => $value,
                     'updated_by' => $user_id,
                 ]);
 
@@ -123,7 +122,7 @@ class FeedController extends Controller
             }
 
             // Update sub_total dan sisa berdasarkan usage
-            $subTotal = $feedPurchase->quantity * $feedPurchase->price_per_kg;
+            $subTotal = $feedPurchase->quantity * $feedPurchase->price_per_unit;
             $usedQty = $feedStock->quantity_used ?? 0;
             $mutatedQty = $feedStock->quantity_mutated ?? 0;
             $available = ($feedPurchase->quantity * $konversi) - $usedQty - $mutatedQty;
@@ -142,7 +141,7 @@ class FeedController extends Controller
             });
 
             $totalHarga = $batch->feedPurchases->sum(function ($purchase) {
-                return $purchase->price_per_kg * $purchase->quantity;
+                return $purchase->price_per_unit * $purchase->quantity;
             });
 
             $batch->update([
@@ -219,7 +218,7 @@ class FeedController extends Controller
                             'feed_name' => $first->feed->name ?? '-',
                             'no_batch' => optional($first->feedPurchase->batch)->invoice_number ?? '-',
                             'tanggal' => $purchaseDate->format('Y-m-d'),
-                            'harga' => $first->feedPurchase->price_per_kg ?? 0,
+                            'harga' => $first->feedPurchase->price_per_unit ?? 0,
                             'tipe' => 'Pembelian',
                         ],
                         'histories' => $histories,
@@ -440,7 +439,7 @@ class FeedController extends Controller
     //                     'feed_name' => $first->feed->name ?? '-',
     //                     'no_batch' => $first->feedPurchase->batch->invoice_number ?? '-',
     //                     'tanggal' => optional($first->feedPurchase->batch)->date?->format('Y-m-d'),
-    //                     'harga' => $first->feedPurchase->price_per_kg ?? 0,
+    //                     'harga' => $first->feedPurchase->price_per_unit ?? 0,
     //                 ],
     //                 'histories' => $histories,
     //             ];
@@ -591,7 +590,7 @@ class FeedController extends Controller
     //                     'feed_name' => $first->feed->name ?? '-',
     //                     'no_batch' => $first->feedPurchase->batch->invoice_number ?? '-',
     //                     'expired_date' => optional($first->feedPurchase->batch)->date?->format('Y-m-d'),
-    //                     'hpp' => $first->feedPurchase->price_per_kg ?? 0,
+    //                     'hpp' => $first->feedPurchase->price_per_unit ?? 0,
     //                 ],
     //                 'histories' => $histories,
     //             ];
@@ -697,7 +696,7 @@ class FeedController extends Controller
     //                     'feed_name' => $first->feed->name ?? '-',
     //                     'no_batch' => $first->feedPurchase->batch->invoice_number ?? '-',
     //                     'expired_date' => optional($first->feedPurchase->batch)->date?->format('Y-m-d'),
-    //                     'hpp' => $first->feedPurchase->price_per_kg ?? 0,
+    //                     'hpp' => $first->feedPurchase->price_per_unit ?? 0,
     //                 ],
     //                 'histories' => $histories,
     //             ];
@@ -785,7 +784,7 @@ class FeedController extends Controller
     //                     'feed_name' => $first->feed->name ?? '-',
     //                     'no_batch' => $first->feedPurchase->batch->invoice_number ?? '-',
     //                     'expired_date' => optional($first->feedPurchase->batch)->date?->format('Y-m-d'),
-    //                     'hpp' => $first->feedPurchase->price_per_kg ?? 0,
+    //                     'hpp' => $first->feedPurchase->price_per_unit ?? 0,
     //                 ],
     //                 'histories' => $histories,
     //             ];

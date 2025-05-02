@@ -17,9 +17,9 @@ class SupplyPurchase extends BaseModel
         'farm_id',
         'supply_purchase_batch_id',
         'supply_id',
+        'original_unit',
         'quantity',
         'price_per_unit',
-        'total',
         'created_by',
         'updated_by',
     ];
@@ -44,7 +44,7 @@ class SupplyPurchase extends BaseModel
 
     public function batch()
     {
-        return $this->belongsTo(FeedPurchaseBatch::class, 'feed_purchase_batch_id');
+        return $this->belongsTo(SupplyPurchaseBatch::class, 'supply_purchase_batch_id');
     }
 
     // FeedPurchase.php

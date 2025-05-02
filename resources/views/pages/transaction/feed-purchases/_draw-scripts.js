@@ -134,7 +134,7 @@ document.querySelectorAll('[data-kt-action="view_details"]').forEach(function (e
         const parent = e.target.closest('tr');
 
         // Get transaksi ID
-        const transaksiId = event.currentTarget.getAttribute('data-kt-transaksi-id');
+        const transaksiId = event.currentTarget.getAttribute('data-kt-transaction-id');
 
         // Get suppliers name
         const transaksiSupplier = parent.querySelectorAll('td')[2].innerText;
@@ -158,6 +158,8 @@ document.querySelectorAll('[data-kt-action="view_details"]').forEach(function (e
                 modalTitle.textContent = title;
             });
             getDetails(transaksiId);
+            // console.log(transaksiId);
+            
 
             $('#kt_modal_pembelian_details').modal('show');
             // Livewire.dispatch('editKandang', [transaksiId]);

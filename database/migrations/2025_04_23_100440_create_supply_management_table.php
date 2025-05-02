@@ -30,10 +30,8 @@ return new class extends Migration
             $table->foreignUuid('supply_category_id')->constrained()->cascadeOnDelete();
             $table->string('code');
             $table->string('name');
-            $table->string('unit');
-            $table->string('unit_conversion');
-            $table->string('conversion');
             $table->json('payload')->nullable();
+            $table->string('status')->default('active')->index();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -69,9 +67,9 @@ return new class extends Migration
             $table->foreignUuid('farm_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('supply_purchase_batch_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('supply_id')->constrained()->onDelete('cascade');
+            $table->uuid('original_unit')->nullable();
             $table->decimal('quantity', 12, 2);
             $table->decimal('price_per_unit', 12, 2);
-            $table->decimal('total', 12, 2);
 
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -135,8 +133,8 @@ return new class extends Migration
 
         Schema::create('supply_mutations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('from_livestock_id');
-            $table->uuid('to_livestock_id');
+            $table->uuid('from_farm_id');
+            $table->uuid('to_farm_id');
             $table->dateTime('date');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();

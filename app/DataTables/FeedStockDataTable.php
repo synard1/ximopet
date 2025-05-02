@@ -33,13 +33,17 @@ class FeedStockDataTable extends DataTable
 						</span>' . $stock->livestock->name . '</a>';
             })
 
-            // ->editColumn('livestock_id', function (FeedStock $stock) {
-            //     return $stock->livestock->name;
-            // })
+            ->editColumn('unit', function (FeedStock $stock) {
+                return $stock->feed->unit_conversion;
+            })
 
             ->editColumn('quantity', function (FeedStock $stock) {
                 $quantity = $stock->total_in - $stock->total_used - $stock->total_mutated;
                 return $quantity;
+            })
+            ->addColumn('action', function (FeedStock $transaction) {
+                // dd($transaction);
+                return view('pages.masterdata.stock._feedstock_actions', compact('transaction'));
             })
 
             // ->editColumn('created_at', function (FeedStock $stok) {
@@ -85,7 +89,7 @@ class FeedStockDataTable extends DataTable
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             // ->orderBy(1)
-            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/stok/_draw-scripts.js')) . "}");
+            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/stock/_draw-scripts.js')) . "}");
     }
 
     /**
@@ -103,8 +107,8 @@ class FeedStockDataTable extends DataTable
             Column::make('feed_id')->title('Nama Pakan'),
             Column::computed('quantity')->title('Jumlah')
                 ->visible(true),
-            // Column::make('satuan_kecil')
-            //     ->visible(false),
+            Column::computed('unit')
+                ->visible(true),
             // Column::make('konversi')
             //     ->visible(false),
             // Column::computed('jumlah')
@@ -114,11 +118,11 @@ class FeedStockDataTable extends DataTable
             // Column::make('created_at')->title('Created Date')->addClass('text-nowrap')
             //     ->searchable(false)
             //     ->visible(false),
-            // Column::computed('action')
-            //     // ->addClass('text-end text-nowrap')
-            //     ->exportable(false)
-            //     ->printable(false)
-            //     // ->width(60)
+            Column::computed('action')
+                // ->addClass('text-end text-nowrap')
+                ->exportable(false)
+                ->printable(false)
+                // ->width(60)
         ];
     }
 

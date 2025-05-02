@@ -16,7 +16,7 @@ class FeedPurchaseBatch extends BaseModel
         'id',
         'invoice_number',
         'do_number',
-        'master_rekanan_id',
+        'supplier_id',
         'expedition_id',
         'date',
         'expedition_fee',
@@ -32,9 +32,9 @@ class FeedPurchaseBatch extends BaseModel
     ];
 
     // FeedStock.php
-    public function vendor()
+    public function supplier()
     {
-        return $this->belongsTo(Rekanan::class,'master_rekanan_id','id');
+        return $this->belongsTo(Partner::class,'supplier_id','id');
     }
 
     // FeedStock.php

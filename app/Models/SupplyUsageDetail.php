@@ -9,7 +9,7 @@ class SupplyUsageDetail extends Model
 {
     use HasFactory;
 
-    public function usage()
+    public function supplyUsage()
     {
         return $this->belongsTo(SupplyUsage::class,'supply_usage_id');
     }

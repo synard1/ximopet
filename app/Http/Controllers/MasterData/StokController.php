@@ -21,6 +21,7 @@ use App\Models\TransaksiBeliDetail;
 use App\Models\Livestock;
 
 use App\DataTables\FeedMutationDataTable;
+use App\Models\Supply;
 
 class StokController extends Controller
 {
@@ -69,12 +70,32 @@ class StokController extends Controller
         return $dataTable->render('pages/masterdata.stok.index_ovk');
     }
 
+    // public function stockSupply(StockSupplyDataTable $dataTable)
+    // {
+    //     addVendors(['datatables']);
+
+    //     addJavascriptFile('assets/js/custom/fetch-data.js');
+    //     return $dataTable->render('pages/masterdata.stock.index_supply');
+    // }
+
     public function stockSupply(StockSupplyDataTable $dataTable)
     {
         addVendors(['datatables']);
-
         addJavascriptFile('assets/js/custom/fetch-data.js');
-        return $dataTable->render('pages/masterdata.stock.index_supply');
+                                
+        // $kelompokTernaks = Livestock::all();
+        $farms = Farm::all();
+        $items = Supply::with(['category'])
+                        ->orderBy('name', 'DESC')
+                        ->get();
+        // $items = Item::with(['itemCategory'])
+        // ->whereHas('itemCategory', function ($q) {
+        //     $q->where('name', '!=', 'DOC');
+        // })
+        // ->orderBy('name', 'DESC')
+        // ->get();
+
+        return $dataTable->render('pages/masterdata.stock.index_supply', compact(['farms','items']));
     }
 
     public function stockMutasi(FeedMutationDataTable $dataTable)

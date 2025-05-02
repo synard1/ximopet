@@ -103,21 +103,21 @@
                 $('#cardToolbar').show();
             });
 
-            Livewire.on('closeForm', function () {
-                showLoadingSpinner();
-                const cardList = document.getElementById(`stokTableCard`);
-                cardList.style.display = 'block';
+            // Livewire.on('closeForm', function () {
+            //     showLoadingSpinner();
+            //     const cardList = document.getElementById(`stokTableCard`);
+            //     cardList.style.display = 'block';
 
-                const cardForm = document.getElementById(`cardForm`);
-                cardForm.style.display = 'none';
+            //     const cardForm = document.getElementById(`cardForm`);
+            //     cardForm.style.display = 'none';
 
-                // Reload DataTables
-                $('.table').each(function() {
-                    if ($.fn.DataTable.isDataTable(this)) {
-                        $(this).DataTable().ajax.reload();
-                    }
-                });
-            });
+            //     // Reload DataTables
+            //     $('.table').each(function() {
+            //         if ($.fn.DataTable.isDataTable(this)) {
+            //             $(this).DataTable().ajax.reload();
+            //         }
+            //     });
+            // });
 
             Livewire.on('showForm', function () {
                 // Show the form card
@@ -142,21 +142,21 @@
             // });
 
             // Fix for printable false not working
-            $(document).ready(function() {
-                window.LaravelDataTables['pembelianStoks-table'].on('preXhr.dt', function(e, settings, data) {
-                    data.columns = settings.aoColumns.map(function(col, index) {
-                        return {
-                            data: col.data,
-                            name: col.name,
-                            searchable: col.searchable,
-                            orderable: col.orderable,
-                            search: {value: "", regex: false}
-                        };
-                    }).filter(function(col) {
-                        return col.data !== 'action';
-                    });
-                });
-            });
+            // $(document).ready(function() {
+            //     window.LaravelDataTables['pembelianStoks-table'].on('preXhr.dt', function(e, settings, data) {
+            //         data.columns = settings.aoColumns.map(function(col, index) {
+            //             return {
+            //                 data: col.data,
+            //                 name: col.name,
+            //                 searchable: col.searchable,
+            //                 orderable: col.orderable,
+            //                 search: {value: "", regex: false}
+            //             };
+            //         }).filter(function(col) {
+            //             return col.data !== 'action';
+            //         });
+            //     });
+            // });
         </script>
     @endpush
 </x-default-layout>

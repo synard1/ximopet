@@ -18,9 +18,9 @@ return new class extends Migration
             $table->uuid('farm_id');
             $table->string('kode');
             $table->string('nama');
-            $table->string('jumlah')->default(0);
-            $table->string('berat')->default(0);
-            $table->string('kapasitas')->default(0);
+            $table->decimal('jumlah', 10, 2)->default(0);
+            $table->decimal('berat', 10, 2)->default(0);
+            $table->decimal('kapasitas', 10, 2)->default(0);
             $table->foreignUuid('livestock_id')->nullable()->constrained('livestocks')->onDelete('cascade');
             $table->string('status');
             $table->unsignedBigInteger('created_by')->nullable();

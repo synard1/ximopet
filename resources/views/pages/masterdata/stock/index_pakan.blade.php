@@ -28,8 +28,8 @@
     </div>
 
     {{-- @include('pages.masterdata.stok._modal_stok_details') --}}
-    @include('pages.masterdata.stok._modal_feedstock_details')
-    @include('pages.masterdata.stok._modal_stok_transfer')
+    @include('pages.masterdata.stock._modal_feedstock_details')
+    @include('pages.masterdata.stock._modal_feedstock_transfer')
 
 
     @push('scripts')

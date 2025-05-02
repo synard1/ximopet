@@ -60,10 +60,10 @@ class StocksDataTable extends DataTable
             ->editColumn('created_at', function (Item $stok) {
                 return $stok->created_at->format('d M Y, h:i a');
             })
-            ->addColumn('action', function (Item $stok) {
+            ->addColumn('action', function (Item $transaction) {
                 if (auth()->user()->hasRole('Operator')) {
 
-                    return view('pages/masterdata.stok._actions', compact('stok'));
+                    return view('pages/masterdata.stock._actions', compact('transaction'));
                 };
             })
             // ->filterColumn('farm', function($query, $keyword) {
@@ -168,7 +168,7 @@ class StocksDataTable extends DataTable
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             ->orderBy(1)
-            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/stok/_draw-scripts.js')) . "}");
+            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/stock/_draw-scripts.js')) . "}");
     }
 
     /**

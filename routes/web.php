@@ -7,14 +7,17 @@ use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeedController;
-use App\Http\Controllers\MasterData\ExpeditionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\LivestockController;
+
+use App\Http\Controllers\MasterData\ExpeditionController;
 use App\Http\Controllers\MasterData\RekananController;
 use App\Http\Controllers\MasterData\FarmController;
 use App\Http\Controllers\MasterData\KandangController;
 use App\Http\Controllers\MasterData\StokController;
+use App\Http\Controllers\MasterData\UnitController;
+
 use App\Http\Controllers\ReportsController;
 use App\Models\Stok;
 use App\Http\Controllers\TransactionController;
@@ -100,7 +103,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('/master-data/kandangs', KandangController::class);
         Route::resource('/master-data/stoks', StokController::class);
         Route::resource('/master-data/ternaks', TernakController::class);
+        Route::resource('/master-data/feeds', App\Http\Controllers\MasterData\FeedController::class);
+        Route::resource('/master-data/supplies', App\Http\Controllers\MasterData\SupplyController::class);
         Route::resource('/master-data/livestocks', LivestockController::class);
+        Route::resource('/master-data/units', UnitController::class);
         Route::get('/master-data/customers', [RekananController::class, 'customerIndex'])->name('customers.index');
         Route::get('/item-categories/list', [ItemCategoryController::class, 'getList'])->name('item-categories.list');
     });
@@ -157,12 +163,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/inventory/docs', [TransaksiController::class, 'docIndex'])->name('docs.index');
         Route::get('/inventory/stocks', [TransaksiController::class, 'stokIndex'])->name('stoks.index');
         Route::get('/stocks/mutasi', [StokController::class, 'stockMutasi'])->name('mutasi.index');
-        Route::get('/stocks/pakan', [StokController::class, 'stockPakan'])->name('pakan.index');
+        // Route::get('/stocks/pakan', [StokController::class, 'stockPakan'])->name('pakan.index');
         Route::get('/stocks/ovk', [StokController::class, 'stockOvk'])->name('ovk.index');
         Route::post('/stocks/transfer', [StokController::class, 'transferStock'])->name('transfer');
         Route::get('/stocks/check-available', [StockController::class, 'checkAvailableStock'])->name('check-available');
 
-        Route::get('/stocks/supply', [StokController::class, 'stockSupply'])->name('supply');
+        Route::get('/stocks/supply', [StockController::class, 'stockSupply'])->name('supply');
+        Route::get('/stocks/pakan', [StockController::class, 'stockPakan'])->name('pakan');
+
 
     });
 

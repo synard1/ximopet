@@ -69,19 +69,22 @@ document.querySelectorAll('[data-kt-action="update_row"]').forEach(function (ele
 });
 
 // Add click event listener to update buttons
-document.querySelectorAll('[data-kt-action="view_detail_feedstoks"]').forEach(function (element) {
+document.querySelectorAll('[data-kt-action="view_detail_supplystocks"]').forEach(function (element) {
     element.addEventListener('click', function (e) {
         e.preventDefault();
         // destroyDetailsTable();
 
-        var modal = document.getElementById('kt_modal_feedstock_details');
+        var modal = document.getElementById('kt_modal_supplystock_details');
 
         // Select parent row
         const parent = e.target.closest('tr');
 
         // Get transaksi ID
-        const livestockId = event.currentTarget.getAttribute('data-livestock-id');
-        const feedId = event.currentTarget.getAttribute('data-feed-id');
+        const farmId = event.currentTarget.getAttribute('data-farm-id');
+        const supplyId = event.currentTarget.getAttribute('data-supply-id');
+
+        console.log('farmId '+ farmId);
+        
 
         // Get suppliers name
         const transaksiSupplier = parent.querySelectorAll('td')[1].innerText;
@@ -129,47 +132,47 @@ document.querySelectorAll('[data-kt-action="view_detail_feedstoks"]').forEach(fu
                 }
     
                 // Reinitialize the DataTable with new parameters
-                getDetailStoksGrouped(livestockId, feedId, startDate, endDate);
+                getDetailStoksGrouped(farmId, supplyId, startDate, endDate);
             });
 
-            $('#kt_modal_feedstock_details').modal('show');
+            $('#kt_modal_supplystock_details').modal('show');
         });
         
     });
 });
 
-function getDetailStoksGrouped(livestockId, feedId, startDate, endDate) {
+function getDetailStoksGrouped(farmId, supplyId, startDate, endDate) {
     // destroyDetailsTable();
 
     $.ajax({
-        url: "/api/v2/feed/usages/details",
+        url: "/api/v2/supply/usages/details",
         type: 'POST',
         data: {
-            livestock_id: livestockId,
-            feed_id: feedId,
+            farm_id: farmId,
+            supply_id: supplyId,
             start_date: startDate,
             end_date: endDate
         },
         success: function(response) {
             if (response.status === 'success') {
-                renderFeedstockDetails(response.data);
+                rendersupplystockDetails(response.data);
             } else {
-                $('#feedstockDetailsContainer').html('<p class="text-danger">Gagal memuat data.</p>');
+                $('#supplystockDetailsContainer').html('<p class="text-danger">Gagal memuat data.</p>');
             }
         },
         error: function(xhr) {
             console.error(xhr);
-            $('#feedstockDetailsContainer').html('<p class="text-danger">Terjadi kesalahan server.</p>');
+            $('#supplystockDetailsContainer').html('<p class="text-danger">Terjadi kesalahan server.</p>');
         }
     });
 }
 
-function renderFeedstockDetails(data) {
-    const container = $('#feedstockDetailsContainer');
+function rendersupplystockDetails(data) {
+    const container = $('#supplystockDetailsContainer');
     container.empty();
 
     data.forEach((group, index) => {
-        const feed = group.feed_purchase_info;
+        const supply = group.supply_purchase_info;
         const histories = group.histories;
 
         const batchId = `batch_${index}`;
@@ -179,10 +182,10 @@ function renderFeedstockDetails(data) {
                 <h2 class="accordion-header">
                     <button class="accordion-button fw-bold collapsed" type="button" data-bs-toggle="collapse"
                         data-bs-target="#${batchId}" aria-expanded="false" aria-controls="${batchId}">
-                        ${feed.feed_name} - Batch ${feed.no_batch} | Tanggal: ${feed.tanggal} | Harga: Rp ${parseFloat(feed.harga).toLocaleString('id-ID')}
+                        ${supply.supply_name} - Batch ${supply.no_batch} | Tanggal: ${supply.tanggal} | Harga: Rp ${parseFloat(supply.harga).toLocaleString('id-ID')}
                     </button>
                 </h2>
-                <div id="${batchId}" class="accordion-collapse collapse" data-bs-parent="#feedstockDetailsContainer">
+                <div id="${batchId}" class="accordion-collapse collapse" data-bs-parent="#supplystockDetailsContainer">
                     <div class="accordion-body p-0">
                         <div class="d-flex justify-content-end gap-2 px-3 py-2">
                             <button class="btn btn-sm btn-outline-success" onclick="exportTableToExcel('${batchId}')">
@@ -240,7 +243,7 @@ function renderFeedstockDetails(data) {
 }
 
 
-// function getDetailStoks(livestockId, feedId, startDate, endDate) {
+// function getDetailStoks(farmId, supplyId, startDate, endDate) {
 
 //     //Destroy old data
 //     destroyDetailsTable();
@@ -258,11 +261,11 @@ function renderFeedstockDetails(data) {
 //             'excel', 'pdf', 'print'
 //         ],
 //         ajax: {
-//             url: "/api/v2/feed/usages/details",
+//             url: "/api/v2/supply/usages/details",
 //             type: 'POST',
 //             data: function (d) {
-//                 d.livestock_id = livestockId;
-//                 d.feed_id = feedId;
+//                 d.livestock_id = farmId;
+//                 d.supply_id = supplyId;
 //                 d.start_date = startDate;
 //                 d.end_date = endDate;
 //             }
@@ -291,7 +294,7 @@ function renderFeedstockDetails(data) {
 //             },
 //             { data: 'farm_name', autoWidth: true },
 //             { data: 'kandang_name', autoWidth: true },
-//             { data: 'feed_name', autoWidth: true },
+//             { data: 'supply_name', autoWidth: true },
 //             { data: 'jumlah', autoWidth: true },
 //         ]
 //     });
@@ -409,6 +412,54 @@ document.querySelectorAll('[data-kt-action="view_detail_stok"]').forEach(functio
 });
 
 // Add click event to transfer stock
+document.querySelectorAll('[data-kt-action="supply_transfer_row"]').forEach(function (element) {
+    element.addEventListener('click', function (e) {
+        e.preventDefault();
+        // destroyDetailsTable();
+
+        console.log('klik');
+        
+
+        var modal = document.getElementById('modalsupplystockTransfer');
+
+        // Select parent row
+        const parent = e.target.closest('tr');
+
+        // Get transaksi ID
+        const transaksiId = event.currentTarget.getAttribute('data-kt-transaction-id');
+
+        // Get suppliers name
+        // const transaksiSupplier = parent.querySelectorAll('td')[1].innerText;
+        // const transaksiFaktur = parent.querySelectorAll('td')[0].innerText;
+
+        // Simulate delete request -- for demo purpose only
+        Swal.fire({
+            html: `Membuka Data Feed <b>${transaksiId}</b>`,
+            icon: "info",
+            buttonsStyling: false,
+            showConfirmButton: false,
+            timer: 2000
+        }).then(function () {
+
+            $('#modalsupplystockTransfer').modal('show');
+
+            modal.addEventListener('show.bs.modal', function (event) {
+                
+                // Button that triggered the modal
+                // var button = event.relatedTarget;
+                // Extract info from data-* attributes
+                // var title = `${transaksiFaktur} - ${transaksiSupplier} Detail Data`;
+                // Update the modal's title
+                // var modalTitle = modal.querySelector('.modal-title');
+                // modalTitle.textContent = title;
+                console.log('modal open');
+                
+            });
+        });
+        
+    });
+});
+
 document.querySelectorAll('[data-kt-action="transfer_row"]').forEach(function (element) {
     element.addEventListener('click', function (e) {
         e.preventDefault();

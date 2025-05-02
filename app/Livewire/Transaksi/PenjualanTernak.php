@@ -79,7 +79,7 @@ class PenjualanTernak extends Component
         // 'harga' => 'required|numeric',
         // 'status' => 'required|string',
         'rekanan_id' => 'required|exists:master_rekanan,id',
-        'farm_id' => 'required|exists:master_farms,id',
+        'farm_id' => 'required|exists:farms,id',
         'kandang_id' => 'required|exists:master_kandangs,id',
         // 'harga_beli' => 'required|numeric',
         'harga_jual' => 'required|numeric',

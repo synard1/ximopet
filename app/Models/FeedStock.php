@@ -37,7 +37,7 @@ class FeedStock extends BaseModel
     // FeedStock.php
     public function feed()
     {
-        return $this->belongsTo(Item::class,'feed_id','id');
+        return $this->belongsTo(Feed::class,'feed_id','id');
     }
 
     public function livestock()

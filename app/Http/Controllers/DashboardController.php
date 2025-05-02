@@ -35,11 +35,11 @@ class DashboardController extends Controller
         // dd($currentStocks);
 
         if (auth()->user()->hasRole('Manager')) {
-            $totalSalesCount = TransaksiJual::select('master_farms.nama as farm_nama', DB::raw('SUM(transaksi_jual_details.qty) as total_sales'))
+            $totalSalesCount = TransaksiJual::select('farms.name as farm_nama', DB::raw('SUM(transaksi_jual_details.qty) as total_sales'))
                 ->join('transaksi_jual_details', 'transaksi_jual.id', '=', 'transaksi_jual_details.transaksi_jual_id')
-                ->join('master_farms', 'transaksi_jual_details.farm_id', '=', 'master_farms.id')
+                ->join('farms', 'transaksi_jual_details.farm_id', '=', 'farms.id')
                 ->where('transaksi_jual.status', 'OK')
-                ->groupBy('transaksi_jual_details.farm_id', 'master_farms.nama')
+                ->groupBy('transaksi_jual_details.farm_id', 'farms.name')
                 ->get();
     
             // Transform the data to match the desired format
@@ -128,10 +128,10 @@ class DashboardController extends Controller
             ->get();
 
         // $lastTransactions = \App\Models\TransaksiDetail::join('transaksis', 'transaksi_details.transaksi_id', '=', 'transaksis.id')
-        //     ->join('master_farms', 'transaksis.farm_id', '=', 'master_farms.id')
+        //     ->join('farms', 'transaksis.farm_id', '=', 'farms.id')
         //     ->where('transaksis.jenis', 'Pembelian')
         //     ->whereNull('transaksis.deleted_at')
-        //     ->select('transaksi_details.*', 'master_farms.nama as farm_name', 'transaksis.created_at');
+        //     ->select('transaksi_details.*', 'farms.name as farm_name', 'transaksis.created_at');
 
         // if (auth()->user()->hasRole('Operator')) {
         //     $farmOperator = auth()->user()->farmOperators;

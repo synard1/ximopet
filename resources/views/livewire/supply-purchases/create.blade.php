@@ -57,7 +57,7 @@
 
                 <x-input.group col="6" label="Ekspedisi">
 
-                    <select wire:model="expedition_id" class="form-select">
+                    <select wire:model="master_expedition_id" class="form-select">
 
                         <option value="">-- Pilih Ekspedisi --</option>
 
@@ -69,23 +69,21 @@
                     </select>
 
 
-                    <x-input.error for="expedition_id" />
+                    <x-input.error for="master_expedition_id" />
 
 
                 </x-input.group>
 
 
 
-                <x-input.group col="6" label="Farm">
+                <x-input.group col="6" label="Batch Ayam">
 
                     <select wire:model="farm_id" class="form-select">
 
-                        <option value="">-- Pilih Farm --</option>
-
-                        {{ print_r($farms); }}
+                        <option value="">-- Pilih Batch Ayam --</option>
 
                         @foreach ($farms as $farm)
-                            <option value="{{ $farm->id }}" @if($farmId == $farm->id) selected @endif>{{ $farm->name }}</option>
+                            <option value="{{ $farm->id }}" @if($farm_id == $farm->id) selected @endif>{{ $farm->name }}</option>
                         @endforeach
 
                     </select>
@@ -122,67 +120,57 @@
 
 
             @foreach ($items as $index => $item)
-                <div class="row g-3 mb-3 p-3 border rounded bg-light position-relative">
+            <div class="row g-3 mb-3 p-3 border rounded bg-light position-relative">
+                @if (!empty($errorItems[$index]))
+                    <div class="alert alert-danger py-1 px-2 mb-2">{{ $errorItems[$index] }}</div>
+                @endif
 
-                    <x-input.group col="4" label="Jenis Pakan">
+                <x-input.group col="4" label="Jenis Supply">
+                    <select
+                        class="form-select"
+                        wire:model="items.{{ $index }}.supply_id"
+                        wire:change="updateUnitConversion({{ $index }})">
 
-                        <select wire:model="items.{{ $index }}.item_id" class="form-select">
+                        <option value="">-- Pilih --</option>
+                        @foreach ($supplyItems as $supply)
+                            <option value="{{ $supply->id }}">{{ $supply->name }}</option>
+                        @endforeach
 
-                            <option value="">-- Pilih --</option>
+                    </select>
 
-                            @foreach ($supplyItems as $feed)
-                                <option value="{{ $feed->id }}">{{ $feed->name }} ( {{ $feed->unit }})</option>
+                    <x-input.error for="items.{{ $index }}.supply_id" />
+                </x-input.group>
+
+                <x-input.group col="4" label="Jumlah">
+                    <div class="input-group">
+                        <input type="number" step="0.01" wire:model="items.{{ $index }}.quantity" class="form-control" wire:change="updateUnitConversion({{ $index }})" />
+
+                        <select wire:model="items.{{ $index }}.unit_id" class="form-select" wire:change="updateUnitConversion({{ $index }})">
+                            <option value="">-- Satuan --</option>
+                            @foreach ($items[$index]['available_units'] ?? [] as $unitOption)
+                                <option value="{{ $unitOption['unit_id'] }}">{{ $unitOption['label'] }}</option>
                             @endforeach
-
                         </select>
-
-
-                        <x-input.error for="items.{{ $index }}.item_id" />
-
-
-                    </x-input.group>
-
-
-
-                    <x-input.group col="4" label="Jumlah">
-
-                        <input type="number" step="0.01" wire:model="items.{{ $index }}.quantity"
-                            class="form-control">
-
-
-                        <x-input.error for="items.{{ $index }}.quantity" />
-
-
-                    </x-input.group>
-
-
-
-                    <x-input.group col="3" label="Harga Per Unit">
-
-                        <input type="number" step="0.01" wire:model="items.{{ $index }}.price_per_unit"
-                            class="form-control">
-
-
-                        <x-input.error for="items.{{ $index }}.price_per_unit" />
-
-
-                    </x-input.group>
-
-
-
-                    <div class="col-md-1 d-flex align-items-end justify-content-end">
-
-                        <button type="button" wire:click="removeItem({{ $index }})"
-                            class="btn btn-outline-danger btn-sm">
-
-                            <i class="bi bi-x-circle"></i>
-
-                        </button>
-
                     </div>
 
+                    <x-input.error for="items.{{ $index }}.quantity" />
+                    <x-input.error for="items.{{ $index }}.unit_id" />
+                </x-input.group>
+
+                <x-input.group col="3" label="Harga per Unit">
+                    <input type="number" step="0.01" wire:model="items.{{ $index }}.price_per_unit" class="form-control" />
+                    <x-input.error for="items.{{ $index }}.price_per_unit" />
+                </x-input.group>
+
+                <div class="col-md-1 d-flex align-items-end justify-content-end">
+                    <button type="button" wire:click="removeItem({{ $index }})" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
                 </div>
-            @endforeach
+
+            </div>
+        @endforeach
+
 
 
 
@@ -190,7 +178,7 @@
 
                 <button type="button" wire:click="addItem" class="btn btn-success">
 
-                    <i class="bi bi-plus-circle me-1"></i> Tambah Pakan
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Supply
 
                 </button>
 

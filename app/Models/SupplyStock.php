@@ -27,6 +27,16 @@ class SupplyStock extends BaseModel
     protected $casts = [
     ];
 
+    public function farm()
+    {
+        return $this->belongsTo(Farm::class,'farm_id','id');
+    }
+
+    public function supply()
+    {
+        return $this->belongsTo(Supply::class,'supply_id','id');
+    }
+
     // FeedStock.php
     public function feed()
     {
@@ -38,24 +48,24 @@ class SupplyStock extends BaseModel
         return $this->belongsTo(Livestock::class,'livestock_id','id');
     }
 
-    public function feedPurchase()
+    public function supplyPurchase()
     {
-        return $this->belongsTo(FeedPurchase::class, 'feed_purchase_id', 'id');
+        return $this->belongsTo(SupplyPurchase::class, 'supply_purchase_id', 'id');
     }
     
-    public function feedUsageDetails()
+    public function supplyUsageDetails()
     {
-        return $this->hasMany(FeedUsageDetail::class);
+        return $this->hasMany(SupplyUsageDetail::class);
     }
 
     public function mutationDetails()
     {
-        return $this->hasMany(FeedMutationItem::class);
+        return $this->hasMany(SupplyMutationItem::class);
     }
 
     public function incomingMutation()
     {
-        return $this->hasOne(FeedMutationItem::class, 'feed_stock_id')->with('mutation.fromLivestock');
+        return $this->hasOne(SupplyMutationItem::class, 'supply_stock_id')->with('mutation.fromLivestock');
     }
 
 }

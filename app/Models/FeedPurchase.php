@@ -17,8 +17,9 @@ class FeedPurchase extends BaseModel
         'livestock_id',
         'feed_purchase_batch_id',
         'feed_id',
+        'original_unit',
         'quantity',
-        'price_per_kg',
+        'price_per_unit',
         'created_by',
         'updated_by',
     ];
@@ -34,7 +35,7 @@ class FeedPurchase extends BaseModel
 
     public function feedItem()
     {
-        return $this->belongsTo(Item::class, 'feed_id');
+        return $this->belongsTo(Feed::class, 'feed_id');
     }
 
     public function batch()

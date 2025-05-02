@@ -21,6 +21,7 @@ use App\Models\TransaksiBeli;
 use App\Models\TransaksiBeliDetail;
 use App\Models\KelompokTernak;
 use App\Models\CurrentTernak;
+use App\Models\Feed;
 use App\Models\Ternak;
 use App\Models\TransaksiTernak;
 use App\Models\StandarBobot;
@@ -29,6 +30,8 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 use App\Models\Partner;
+use App\Models\Unit;
+use App\Models\UnitConversion;
 
 class DemoSeeder extends Seeder
 {
@@ -40,8 +43,10 @@ class DemoSeeder extends Seeder
         // Run OVK Seeder
         $this->call([
             SupplyCategorySeeder::class,
+            UnitSeeder::class,
             OVKSeeder::class,
             BreedSeeder::class,
+            
         ]);
 
         // Add this line to create doc items
@@ -141,42 +146,57 @@ class DemoSeeder extends Seeder
     private function createPakan()
     {
         $pakanTypes = [
-            ['name' => 'S 10', 'code' => 'S10'],
             ['name' => 'SP 10', 'code' => 'SP10'],
-            ['name' => 'SP 11', 'code' => 'SP11'],
-            ['name' => 'SP 12', 'code' => 'SP12'],
-            ['name' => 'TS 11', 'code' => 'TS11'],
-            ['name' => 'OS 11', 'code' => 'OS11'],
-            ['name' => 'KSS 12', 'code' => 'KSS12'],
-            ['name' => 'OSP 12', 'code' => 'OSP12'],
-            ['name' => 'GONI', 'code' => 'GONI'],
+            ['name' => 'S 11', 'code' => 'S11'],
+            ['name' => 'S 12', 'code' => 'S12'],
         ];
 
         $supervisor = User::where('email', 'supervisor@demo.com')->first();
-        $pakanCategory = ItemCategory::where('name', 'Pakan')->first();
+        $unit = Unit::where('name','KG')->first();
+        $unitSak = Unit::where('name','SAK')->first();
 
-        if (!$pakanCategory) {
-            $pakanCategory = ItemCategory::create([
-                'name' => 'Pakan',
-                'code' => 'PKN',
-                'description' => 'Feed Category',
-                'status' => 'Aktif',
-                'created_by' => $supervisor->id
-            ]);
-        }
+        foreach ($pakanTypes as $type){
+            $feed=Feed::create([
+                    'code' => $type['code'],
+                    'name' => $type['name'],
+                    'payload' => [
+                            'unit_id' => $unit->id,
+                            'unit_details' => [
+                                'id' => $unit->id, // Sesuaikan jika ada ID lain yang relevan
+                                'name' => $unit->name, // Atau $unitKg->name jika yakin ada
+                                'description' => $unit->description, // Deskripsi sesuai kebutuhan
+                            ],
+                            'conversion_units' => [
+                                [
+                                    'unit_id' => $unit->id,
+                                    'unit_name' => $unit->name,
+                                    'value' => 1,
+                                    'is_default_purchase' => true,
+                                    'is_default_mutation' => true,
+                                    'is_default_sale' => true,
+                                    'is_smallest' => true,
+                                ],   
+                            ],
+                    ],
+                    'created_by' => $supervisor->id,
+                ]);
 
-        foreach ($pakanTypes as $type) {
-            Item::create([
-                'category_id' => $pakanCategory->id,
-                'kode' => $pakanCategory->code . $type['code'],
-                'name' => $type['name'],
-                'satuan_besar' => 'Kg',
-                'satuan_kecil' => 'Kg',
-                'konversi' => 1,
-                'status' => 'Aktif',
-                'is_feed' => true,
-                'created_by' => $supervisor->id,
-            ]);
+                UnitConversion::updateOrCreate(
+                    [
+                        'type' => 'Feed',
+                        'item_id' => $feed->id,
+                        'unit_id' => $unit->id,
+                        'conversion_unit_id' => $unit->id,
+                    ],
+                    [
+                        'conversion_value' => 1,
+                        'default_purchase' => true,
+                        'default_mutation' => true,
+                        'default_sale' => true,
+                        'smallest' => true,
+                        'created_by' => $supervisor->id,
+                    ]
+                );
         }
     }
 

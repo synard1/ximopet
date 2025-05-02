@@ -12,11 +12,16 @@ use App\Services\TernakService;
 use App\Models\Item;
 use App\Models\Farm;
 use App\Models\Kandang;
+use App\Models\Livestock;
 use App\Models\Rekanan;
 use App\Models\StockHistory;
+use App\Models\Supply;
 use App\Models\TransaksiBeli;
 use App\Models\TransaksiBeliDetail;
 use App\Models\TransaksiHarianDetail;
+use App\DataTables\FeedStockDataTable;
+use App\DataTables\SupplyStockDataTable;
+use App\Models\Feed;
 use Illuminate\Support\Facades\Log;
 
 class StockController extends Controller
@@ -241,23 +246,25 @@ class StockController extends Controller
     public function transferStock(Request $request)
     {
         $validatedData = $request->validate([
-            'source_kelompok_ternak_id' => 'required|uuid',
-            'destination_kelompok_ternak_id' => 'required|uuid',
+            'source_farm_id' => 'required|uuid',
+            'destination_farm_id' => 'required|uuid',
             'item_id' => 'required|uuid',
             'quantity' => 'required|numeric|min:0.01',
             'tanggal' => 'required|date',
             'notes' => 'nullable|string|max:255',
         ]);
 
+        // dd($validatedData);
+
         try {
             DB::beginTransaction();
 
             // Get source and destination kelompokTernak
-            $sourceKelompokTernak = \App\Models\KelompokTernak::findOrFail($validatedData['source_kelompok_ternak_id']);
-            $destinationKelompokTernak = \App\Models\KelompokTernak::findOrFail($validatedData['destination_kelompok_ternak_id']);
+            $sourceKelompokTernak = Livestock::findOrFail($validatedData['source_farm_id']);
+            $destinationKelompokTernak = Livestock::findOrFail($validatedData['destination_farm_id']);
             
             // Get the item
-            $item = Item::findOrFail($validatedData['item_id']);
+            $item = Supply::findOrFail($validatedData['item_id']);
             
             // Check if source has enough stock
             $sourceStock = \App\Models\CurrentStock::where('item_id', $item->id)
@@ -412,6 +419,42 @@ class StockController extends Controller
                 'message' => 'Failed to check available stock'
             ], 500);
         }
+    }
+
+    public function stockPakan(FeedStockDataTable $dataTable)
+    {
+        addVendors(['datatables']);
+        addJavascriptFile('assets/js/custom/fetch-data.js');
+                                
+        $livestocks = Livestock::all();
+        $feeds = Feed::orderBy('name', 'DESC')
+        ->get();
+        // $items = Item::with(['itemCategory'])
+        // ->whereHas('itemCategory', function ($q) {
+        //     $q->where('name', '!=', 'DOC');
+        // })
+        // ->orderBy('name', 'DESC')
+        // ->get();
+
+        return $dataTable->render('pages/masterdata.stock.index_pakan', compact(['livestocks','feeds']));
+    }
+
+    public function stockSupply(SupplyStockDataTable $dataTable)
+    {
+        addVendors(['datatables']);
+        addJavascriptFile('assets/js/custom/fetch-data.js');
+                                
+        $livestocks = Livestock::all();
+        $supplies = Supply::orderBy('name', 'DESC')
+        ->get();
+        // $items = Item::with(['itemCategory'])
+        // ->whereHas('itemCategory', function ($q) {
+        //     $q->where('name', '!=', 'DOC');
+        // })
+        // ->orderBy('name', 'DESC')
+        // ->get();
+
+        return $dataTable->render('pages/masterdata.stock.index_supply', compact(['livestocks','supplies']));
     }
 
     // original backup

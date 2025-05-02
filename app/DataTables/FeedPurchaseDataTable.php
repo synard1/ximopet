@@ -35,12 +35,12 @@ class FeedPurchaseDataTable extends DataTable
             ->editColumn('date', function (FeedPurchaseBatch $transaction) {
                 return $transaction->date->format('d-m-Y');
             })
-            ->editColumn('master_rekanan_id', function (FeedPurchaseBatch $transaction) {
-                return $transaction->vendor->nama;
+            ->editColumn('supplier_id', function (FeedPurchaseBatch $transaction) {
+                return $transaction->supplier->name;
             })
             ->editColumn('farm_id', function (FeedPurchaseBatch $transaction) {
                 $firstPurchase = $transaction->feedPurchases->first();
-                return $firstPurchase?->livestok?->farm?->nama ?? '-';
+                return $firstPurchase?->livestok?->farm?->name ?? '-';
                 // return $transaction->feedPurchases->livestok ?? '';
             })
             ->editColumn('kandang_id', function (FeedPurchaseBatch $transaction) {
@@ -49,7 +49,7 @@ class FeedPurchaseDataTable extends DataTable
             })
             ->editColumn('total', function (FeedPurchaseBatch $transaction) {
                 $total = $transaction->feedPurchases->sum(function ($purchase) {
-                    return $purchase->quantity * $purchase->price_per_kg;
+                    return $purchase->quantity * $purchase->price_per_unit;
                 });
             
                 return $this->formatRupiah($total);
@@ -132,7 +132,7 @@ class FeedPurchaseDataTable extends DataTable
             Column::make('date')->title('Tanggal Pembelian')->searchable(true),
             // Column::make('no_sj')->title('No. SJ')->searchable(false),
             Column::make('invoice_number')->title('Invoice')->searchable(true),
-            Column::make('master_rekanan_id')->title('Vendor')->searchable(true),
+            Column::make('supplier_id')->title('Supplier')->searchable(true),
             Column::computed('farm_id')->title('Farm')->searchable(true),
             Column::computed('kandang_id')->title('Kandang')->searchable(true),
             // Column::make('rekanan_id')->title('Nama Supplier')->searchable(true),

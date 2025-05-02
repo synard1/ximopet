@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Supply extends BaseModel
 {
@@ -16,9 +17,6 @@ class Supply extends BaseModel
         'supply_category_id',
         'code',
         'name',
-        'unit',
-        'unit_conversion',
-        'conversion',
         'payload',
         'created_by',
         'updated_by',
@@ -27,6 +25,19 @@ class Supply extends BaseModel
     protected $casts = [
         'payload' => 'array',
     ];
+
+    protected function status(): Attribute
+    {
+        return Attribute::make(
+            get: fn (string $value) => ucfirst($value),
+            set: fn (string $value) => strtolower($value),
+        );
+    }
+
+    public function conversionUnits()
+    {
+        return $this->hasMany(UnitConversion::class,'item_id');
+    }
 
     public function category()
     {

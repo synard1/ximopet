@@ -73,11 +73,13 @@ Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
         Route::get('/supply/purchase/details/{id}', function ($id) {
             return app(SupplyController::class)->getFeedPurchaseBatchDetail($id);
         });
-        Route::post('/supply/usages/details', [FeedController::class, 'getFeedCardByLivestock']);
+        Route::post('/supply/usages/details', [SupplyController::class, 'getSupplyByFarm']);
         Route::post('/supply/reports/purchase', [FeedController::class, 'exportPembelian']);
         Route::post('/supply/purchase/edit', function (Request $request) {
             return app(SupplyController::class)->stockEdit($request);
         });
+        Route::post('/supply/transfer', [StockController::class, 'transferStock'])->name('transfer');
+
 
     });
 

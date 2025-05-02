@@ -17,7 +17,7 @@ class FarmModal extends Component
 
 
     protected $rules = [
-        'kode_farm' => 'required|unique:master_farms,kode',
+        'kode_farm' => 'required|unique:farms,kode',
         'nama' => 'required|string',
         'alamat' => 'string',
         'telp' => 'numeric',

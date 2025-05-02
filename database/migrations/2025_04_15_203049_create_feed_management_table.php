@@ -13,12 +13,28 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
+         // Supply
+         Schema::create('feeds', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->string('code');
+            $table->string('name');
+            $table->json('payload')->nullable();
+            $table->string('status')->default('active')->index();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+
+            $table->foreign('created_by')->references('id')->on('users');
+            $table->foreign('updated_by')->references('id')->on('users');
+        });
+
         // Tabel feed_purchase_batches (1 nota bisa beberapa jenis pakan)
         Schema::create('feed_purchase_batches', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('invoice_number');
             $table->string('do_number')->nullable(); // delivery order number / surat jalan
-            $table->foreignUuid('master_rekanan_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('supplier_id')->constrained('partners')->onDelete('cascade');
             $table->foreignUuid('expedition_id')->nullable()->constrained('expeditions')->onDelete('set null');
             $table->date('date');
             $table->decimal('expedition_fee', 12, 2)->default(0); // tarif ekspedisi
@@ -39,9 +55,10 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('feed_purchase_batch_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('feed_id')->constrained('items')->onDelete('cascade');
+            $table->foreignUuid('feed_id')->constrained('feeds')->onDelete('cascade');
+            $table->uuid('original_unit')->nullable();
             $table->decimal('quantity', 12, 2);
-            $table->decimal('price_per_kg', 12, 2);
+            $table->decimal('price_per_unit', 12, 2);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -56,7 +73,7 @@ return new class extends Migration
         Schema::create('feed_stocks', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('feed_id')->constrained('items')->onDelete('cascade');
+            $table->foreignUuid('feed_id')->constrained('feeds')->onDelete('cascade');
             $table->foreignUuid('feed_purchase_id')->nullable()->constrained()->onDelete('set null');
             $table->date('date');
             $table->uuid('source_id'); // purchase_id / mutation_id
@@ -97,7 +114,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('feed_usage_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('feed_stock_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('feed_id')->constrained('items')->onDelete('cascade');
+            $table->foreignUuid('feed_id')->constrained('feeds')->onDelete('cascade');
             $table->decimal('quantity_taken', 10, 2); // jumlah awal
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -130,7 +147,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('feed_mutation_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('feed_stock_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('feed_id')->constrained('items')->onDelete('cascade');
+            $table->foreignUuid('feed_id')->constrained('feeds')->onDelete('cascade');
             $table->decimal('quantity', 12, 2);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -196,6 +213,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        Schema::dropIfExists('feeds');
         Schema::dropIfExists('feed_rollback_logs');
         Schema::dropIfExists('feed_rollback_items');
         Schema::dropIfExists('feed_rollbacks');
@@ -204,8 +222,5 @@ return new class extends Migration
         Schema::dropIfExists('feed_stocks');
         Schema::dropIfExists('feed_purchases');
         Schema::dropIfExists('feed_purchase_batches');
-        // Schema::dropIfExists('feeds');
-        // Schema::dropIfExists('vendors');
-        // Schema::dropIfExists('pens');
     }
 };

@@ -339,27 +339,28 @@ class DataController extends Controller
 
     public function getActiveFarms()
     {
-        $activeItems = Farm::where('status', 'Aktif')->get(['id', 'nama']);
+        $activeItems = Farm::where('status', 'Aktif')->get(['id', 'name']);
 
         return $activeItems->map(function ($item) {
             return [
                 'farm_id' => $item->id,
-                'farm_name' => $item->nama,
+                'farm_name' => $item->name,
             ];
         });
     }
 
     public function getActiveTernaks()
     {
+        dd('aa');
         $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
-        $farms = Farm::whereIn('id', $farmIds)->get(['id', 'nama']);
+        $farms = Farm::whereIn('id', $farmIds)->get(['id', 'name']);
         
         $activeTernaks = KelompokTernak::where('status', 'Aktif')->orWhere('status','Locked')->get(['id', 'name','populasi_awal']);
 
         return $activeItems->map(function ($item) {
             return [
                 'farm_id' => $item->id,
-                'farm_name' => $item->nama,
+                'farm_name' => $item->name,
             ];
         });
     }
@@ -515,7 +516,7 @@ class DataController extends Controller
         $request->validate([
             'item_select' => 'required|array',
             'item_select.*' => 'exists:items,id',            
-            'farm_select' => 'required|exists:master_farms,id',
+            'farm_select' => 'required|exists:farms,id',
             'location_select' => 'required|exists:inventory_locations,id',
         ]);
 

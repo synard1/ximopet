@@ -68,7 +68,7 @@
                         data: 'name'
                     },
                     {
-                        data: 'qty',
+                        data: 'quantity',
                         className: 'editable text-center', // Add text-end class for right alignment
                         // render: $.fn.dataTable.render.number(',', '.', 2)
                     },
@@ -83,10 +83,10 @@
                         // render: $.fn.dataTable.render.number(',', '.', 0)
                     },
                     {
-                        data: 'satuan_besar'
+                        data: 'unit'
                     },
                     {
-                        data: 'price_per_kg',
+                        data: 'price_per_unit',
                         className: 'editable text-end',
                         render: $.fn.dataTable.render.number(',', '.', 0, 'Rp')
                     },
@@ -139,8 +139,8 @@
 
 
                     if (!isNaN(newValue) && newValue !== originalValue) {
-                        // Check if we're editing the 'qty' column
-                        if (columnData.data === 'qty') {
+                        // Check if we're editing the 'quantity' column
+                        if (columnData.data === 'quantity') {
                             // Get the 'terpakai' value from the row data
                             var terpakai = parseFloat(rowData.terpakai);
 

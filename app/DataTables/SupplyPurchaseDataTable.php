@@ -49,7 +49,7 @@ class SupplyPurchaseDataTable extends DataTable
             })
             ->editColumn('total', function (SupplyPurchaseBatch $transaction) {
                 $total = $transaction->supplyPurchases->sum(function ($purchase) {
-                    return $purchase->quantity * $purchase->price_per_kg;
+                    return $purchase->quantity * $purchase->price_per_unit;
                 });
             
                 return $this->formatRupiah($total);

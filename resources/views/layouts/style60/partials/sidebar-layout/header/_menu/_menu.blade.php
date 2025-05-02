@@ -11,7 +11,10 @@ $menuItems = [
         ]],
     ],
     'Master Data' => [
-        ['route' => '/master-data/expeditions', 'label' => 'Ekspedisi', 'icon' => 'ki-purchase', 'active' => request()->is('master-data/expeditions'), 'roles' => ['Supervisor','Manager']],
+        ['route' => '/master-data/expeditions', 'label' => 'Ekspedisi', 'icon' => 'ki-purchase', 'active' => request()->is('master-data/expeditions'), 'roles' => ['Administrator']],
+        ['route' => '/master-data/units', 'label' => 'Unit Satuan', 'icon' => 'ki-purchase', 'active' => request()->is('master-data/units'), 'roles' => ['Administrator']],
+        ['route' => '/master-data/feeds', 'label' => 'Pakan', 'icon' => 'ki-purchase', 'active' => request()->is('master-data/feeds'), 'roles' => ['Administrator']],
+        ['route' => '/master-data/supplies', 'label' => 'Supply', 'icon' => 'ki-purchase', 'active' => request()->is('master-data/supplies'), 'roles' => ['Administrator']],
     ],
     'Rekanan' => [
         ['route' => '/rekanan/suppliers', 'label' => 'Supplier', 'icon' => 'ki-add-user', 'can' => 'read supplier management'],

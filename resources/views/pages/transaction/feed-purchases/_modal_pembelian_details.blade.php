@@ -86,7 +86,7 @@
                         data: 'satuan_besar'
                     },
                     {
-                        data: 'price_per_kg',
+                        data: 'price_per_unit',
                         className: 'editable text-end',
                         render: $.fn.dataTable.render.number(',', '.', 0, 'Rp')
                     },

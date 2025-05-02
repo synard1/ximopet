@@ -69,7 +69,7 @@
                     <th>Nama Feed</th>
                     <th>Kandang</th>
                     <th>Jumlah (kg)</th>
-                    <th>Harga per kg</th>
+                    <th>Harga per Unit</th>
                     <th>Total Harga</th>
                 </tr>
             </thead>
@@ -80,8 +80,8 @@
                         <td>{{ $purchase->feedItem->name ?? '-' }}</td>
                         <td>{{ $purchase->livestok->name ?? '-' }}</td>
                         <td>{{ $purchase->quantity }}</td>
-                        <td>Rp {{ number_format($purchase->price_per_kg, 0, ',', '.') }}</td>
-                        <td>Rp {{ number_format($purchase->quantity * $purchase->price_per_kg, 0, ',', '.') }}</td>
+                        <td>Rp {{ number_format($purchase->price_per_unit, 0, ',', '.') }}</td>
+                        <td>Rp {{ number_format($purchase->quantity * $purchase->price_per_unit, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
             </tbody>

@@ -36,7 +36,7 @@ class LivestockCostService
 
         foreach ($feedUsageDetails as $detail) {
             $namaPakan = $detail->feedStock?->feed?->name ?? 'Unknown Feed';
-            $harga = $detail->feedStock?->feedPurchase?->price_per_kg ?? 0;
+            $harga = $detail->feedStock?->feedPurchase?->price_per_unit ?? 0;
             $qtyKg = $detail->quantity_taken ?? 0;
             $subtotal = $qtyKg * $harga;
 

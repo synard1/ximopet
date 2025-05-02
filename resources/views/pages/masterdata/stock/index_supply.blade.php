@@ -17,17 +17,18 @@
     
     <div class="tab-content" id="myTabContent">
         <div class="tab-pane fade show active" id="kt_tab_pane_4" role="tabpanel">
-            @include('pages.masterdata.stok._table')
+            @include('pages.masterdata.stock._table')
         </div>
 
         @if(auth()->user()->hasRole(['Supervisor']))
             <div class="tab-pane fade" id="kt_tab_pane_5" role="tabpanel">
-                @include('pages.masterdata.stok._pemetaan_lokasi_table')
+                @include('pages.masterdata.stock._pemetaan_lokasi_table')
             </div>
         @endif
     </div>
 
-    @include('pages.masterdata.stok._modal_stok_details')
+    @include('pages.masterdata.stock._modal_stok_transfer')
+    @include('pages.masterdata.stock._modal_supplystock_details')
 
 
     @push('scripts')
