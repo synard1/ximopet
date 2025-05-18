@@ -33,6 +33,8 @@ use App\Models\Partner;
 use App\Models\Unit;
 use App\Models\UnitConversion;
 
+use Faker\Factory as Faker;
+
 class DemoSeeder extends Seeder
 {
     public function run(Generator $faker)
@@ -46,7 +48,7 @@ class DemoSeeder extends Seeder
             UnitSeeder::class,
             OVKSeeder::class,
             BreedSeeder::class,
-            
+            WorkerSeeder::class,
         ]);
 
         // Add this line to create doc items
@@ -152,53 +154,138 @@ class DemoSeeder extends Seeder
         ];
 
         $supervisor = User::where('email', 'supervisor@demo.com')->first();
-        $unit = Unit::where('name','KG')->first();
-        $unitSak = Unit::where('name','SAK')->first();
+        $unitKg = Unit::where('name', 'KG')->first();
+        $unitSak = Unit::where('name', 'SAK')->first();
 
-        foreach ($pakanTypes as $type){
-            $feed=Feed::create([
-                    'code' => $type['code'],
-                    'name' => $type['name'],
-                    'payload' => [
-                            'unit_id' => $unit->id,
-                            'unit_details' => [
-                                'id' => $unit->id, // Sesuaikan jika ada ID lain yang relevan
-                                'name' => $unit->name, // Atau $unitKg->name jika yakin ada
-                                'description' => $unit->description, // Deskripsi sesuai kebutuhan
-                            ],
-                            'conversion_units' => [
-                                [
-                                    'unit_id' => $unit->id,
-                                    'unit_name' => $unit->name,
-                                    'value' => 1,
-                                    'is_default_purchase' => true,
-                                    'is_default_mutation' => true,
-                                    'is_default_sale' => true,
-                                    'is_smallest' => true,
-                                ],   
-                            ],
+        foreach ($pakanTypes as $type) {
+            $feed = Feed::create([
+                'code' => $type['code'],
+                'name' => $type['name'],
+                'payload' => [
+                    'unit_id' => $unitKg->id,
+                    'unit_details' => [
+                        'id' => $unitKg->id,
+                        'name' => $unitKg->name,
+                        'description' => $unitKg->description,
                     ],
+                    'conversion_units' => [
+                        [
+                            'unit_id' => $unitKg->id,
+                            'unit_name' => $unitKg->name,
+                            'value' => 1,
+                            'is_default_purchase' => true,
+                            'is_default_mutation' => true,
+                            'is_default_sale' => true,
+                            'is_smallest' => true,
+                        ],
+                        [
+                            'unit_id' => $unitSak->id,
+                            'unit_name' => $unitSak->name,
+                            'value' => 50, // 1 SAK = 50 KG
+                            'is_default_purchase' => false,
+                            'is_default_mutation' => false,
+                            'is_default_sale' => false,
+                            'is_smallest' => false,
+                        ]
+                    ],
+                ],
+                'created_by' => $supervisor->id,
+            ]);
+
+            // KG -> KG
+            UnitConversion::updateOrCreate(
+                [
+                    'type' => 'Feed',
+                    'item_id' => $feed->id,
+                    'unit_id' => $unitKg->id,
+                    'conversion_unit_id' => $unitKg->id,
+                ],
+                [
+                    'conversion_value' => 1,
+                    'default_purchase' => true,
+                    'default_mutation' => true,
+                    'default_sale' => true,
+                    'smallest' => true,
                     'created_by' => $supervisor->id,
-                ]);
+                ]
+            );
 
-                UnitConversion::updateOrCreate(
-                    [
-                        'type' => 'Feed',
-                        'item_id' => $feed->id,
-                        'unit_id' => $unit->id,
-                        'conversion_unit_id' => $unit->id,
-                    ],
-                    [
-                        'conversion_value' => 1,
-                        'default_purchase' => true,
-                        'default_mutation' => true,
-                        'default_sale' => true,
-                        'smallest' => true,
-                        'created_by' => $supervisor->id,
-                    ]
-                );
+            // SAK -> KG
+            UnitConversion::updateOrCreate(
+                [
+                    'type' => 'Feed',
+                    'item_id' => $feed->id,
+                    'unit_id' => $unitKg->id,
+                    'conversion_unit_id' => $unitSak->id,
+                ],
+                [
+                    'conversion_value' => 50, // 1 SAK = 50 KG
+                    'default_purchase' => false,
+                    'default_mutation' => false,
+                    'default_sale' => false,
+                    'smallest' => false,
+                    'created_by' => $supervisor->id,
+                ]
+            );
         }
     }
+
+    // private function createPakan()
+    // {
+    //     $pakanTypes = [
+    //         ['name' => 'SP 10', 'code' => 'SP10'],
+    //         ['name' => 'S 11', 'code' => 'S11'],
+    //         ['name' => 'S 12', 'code' => 'S12'],
+    //     ];
+
+    //     $supervisor = User::where('email', 'supervisor@demo.com')->first();
+    //     $unit = Unit::where('name','KG')->first();
+    //     $unitSak = Unit::where('name','SAK')->first();
+
+    //     foreach ($pakanTypes as $type){
+    //         $feed=Feed::create([
+    //                 'code' => $type['code'],
+    //                 'name' => $type['name'],
+    //                 'payload' => [
+    //                         'unit_id' => $unit->id,
+    //                         'unit_details' => [
+    //                             'id' => $unit->id, // Sesuaikan jika ada ID lain yang relevan
+    //                             'name' => $unit->name, // Atau $unitKg->name jika yakin ada
+    //                             'description' => $unit->description, // Deskripsi sesuai kebutuhan
+    //                         ],
+    //                         'conversion_units' => [
+    //                             [
+    //                                 'unit_id' => $unit->id,
+    //                                 'unit_name' => $unit->name,
+    //                                 'value' => 1,
+    //                                 'is_default_purchase' => true,
+    //                                 'is_default_mutation' => true,
+    //                                 'is_default_sale' => true,
+    //                                 'is_smallest' => true,
+    //                             ],   
+    //                         ],
+    //                 ],
+    //                 'created_by' => $supervisor->id,
+    //             ]);
+
+    //             UnitConversion::updateOrCreate(
+    //                 [
+    //                     'type' => 'Feed',
+    //                     'item_id' => $feed->id,
+    //                     'unit_id' => $unit->id,
+    //                     'conversion_unit_id' => $unit->id,
+    //                 ],
+    //                 [
+    //                     'conversion_value' => 1,
+    //                     'default_purchase' => true,
+    //                     'default_mutation' => true,
+    //                     'default_sale' => true,
+    //                     'smallest' => true,
+    //                     'created_by' => $supervisor->id,
+    //                 ]
+    //             );
+    //     }
+    // }
 
     private function createFarms(Generator $faker)
     {
@@ -397,6 +484,8 @@ class DemoSeeder extends Seeder
     private function createRekanan(Generator $faker)
     {
         $rekananTypes = ['Supplier', 'Customer', 'Both'];
+        $faker = Faker::create('id_ID'); // Sesuaikan dengan locale yang Anda inginkan
+
         foreach ($rekananTypes as $type) {
             for ($i = 0; $i < 5; $i++) {
                 Partner::create([
@@ -408,7 +497,7 @@ class DemoSeeder extends Seeder
                     'contact_person' => $faker->name,
                     'phone_number' => $faker->phoneNumber,
                     'email' => $faker->companyEmail,
-                    'status' => 'Aktif',
+                    'status' => 'active',
                     'created_by' => 3,
                 ]);
             }

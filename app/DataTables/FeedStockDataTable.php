@@ -5,6 +5,7 @@ namespace App\DataTables;
 use App\Models\FeedStock;
 use App\Models\Item;
 use App\Models\StockHistory;
+use App\Models\Unit;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
@@ -34,7 +35,8 @@ class FeedStockDataTable extends DataTable
             })
 
             ->editColumn('unit', function (FeedStock $stock) {
-                return $stock->feed->unit_conversion;
+                $unit = Unit::findOrFail($stock->feed->payload['unit_id']);
+                return $unit->name;
             })
 
             ->editColumn('quantity', function (FeedStock $stock) {
@@ -42,14 +44,11 @@ class FeedStockDataTable extends DataTable
                 return $quantity;
             })
             ->addColumn('action', function (FeedStock $transaction) {
-                // dd($transaction);
                 return view('pages.masterdata.stock._feedstock_actions', compact('transaction'));
             })
-
             // ->editColumn('created_at', function (FeedStock $stok) {
             //     return $stok->created_at->format('d M Y, h:i a');
             // })
-
             ->setRowId('id')
             ->rawColumns(['livestock_id']);
     }
@@ -69,7 +68,7 @@ class FeedStockDataTable extends DataTable
                 SUM(quantity_mutated) as total_mutated
             ')
             ->with('feed')
-            ->groupBy('livestock_id','feed_id');
+            ->groupBy('livestock_id', 'feed_id');
     }
 
 

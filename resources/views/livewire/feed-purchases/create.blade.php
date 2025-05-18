@@ -67,15 +67,15 @@
                 <x-input.group col="4" label="Jenis Pakan">
                     <select
                         class="form-select"
-                        wire:model="items.{{ $index }}.supply_id"
+                        wire:model="items.{{ $index }}.feed_id"
                         wire:change="updateUnitConversion({{ $index }})">
 
                         <option value="">-- Pilih --</option>
-                        @foreach ($supplyItems as $supply)
-                            <option value="{{ $supply->id }}">{{ $supply->name }}</option>
+                        @foreach ($feedItems as $feed)
+                            <option value="{{ $feed->id }}">{{ $feed->name }}</option>
                         @endforeach
                     </select>
-                    <x-input.error for="items.{{ $index }}.supply_id" />
+                    <x-input.error for="items.{{ $index }}.feed_id" />
                 </x-input.group>
 
                 <x-input.group col="4" label="Jumlah">

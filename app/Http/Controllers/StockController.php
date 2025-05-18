@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\DataTables\FeedMutationDataTable;
 use Illuminate\Http\Request;
 use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
@@ -526,6 +527,16 @@ class StockController extends Controller
     //         return response()->json(['error' => $e->getMessage()], 400);
     //     }
     // }
+
+    public function stockMutasi(FeedMutationDataTable $dataTable)
+    {
+        //
+        // return view('pages.pakan.mutasi');
+        addVendors(['datatables']);
+
+        return $dataTable->render('pages.stock.mutasi');
+
+    }
 
     
 }

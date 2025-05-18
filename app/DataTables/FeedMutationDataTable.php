@@ -5,6 +5,7 @@ namespace App\DataTables;
 use App\Models\FeedStock;
 use App\Models\FeedMutation;
 use App\Models\FeedMutationItem;
+use App\Models\Mutation;
 use App\Models\Item;
 use App\Models\StockHistory;
 use Yajra\DataTables\Html\Column;
@@ -15,6 +16,15 @@ use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 
 class FeedMutationDataTable extends DataTable
 {
+    private function formatNumber($amount)
+    {
+        // Convert the number to a string with two decimal places
+        $formattedAmount = number_format($amount, 0, ',', '.');
+
+        // Add the currency symbol and return the formatted number
+        return $formattedAmount;
+    }
+
     /**
      * Build the DataTable class.
      *
@@ -23,23 +33,32 @@ class FeedMutationDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
-            ->editColumn('from_livestock_id', function (FeedMutation $stok) {
+            ->editColumn('from_livestock_id', function (Mutation $stok) {
                 return $stok->fromLivestock->name;
             })
-            ->editColumn('to_livestock_id', function (FeedMutation $stok) {
+            ->editColumn('to_livestock_id', function (Mutation $stok) {
                 return $stok->toLivestock->name;
             })
-            ->editColumn('quantity', function (FeedMutation $stok) {
-                return $stok->feedMutationDetails->sum('quantity');
-            })
+            ->editColumn('quantity', function (Mutation $transaction) {
+                $total = $transaction->mutationItems->sum(function ($mutation) {
+                    return $mutation->quantity;
+                });
 
-            ->editColumn('date', function (FeedMutation $stok) {
+                return $this->formatNumber($total);
+            })
+            // ->editColumn('quantity', function (Mutation $stok) {
+            //     return $stok->feedMutationDetails->sum('quantity');
+            // })
+
+            ->editColumn('date', function (Mutation $stok) {
                 return $stok->date->format('d M Y, h:i a');
             })
-            ->editColumn('created_at', function (FeedMutation $stok) {
+            ->editColumn('created_at', function (Mutation $stok) {
                 return $stok->created_at->format('d M Y, h:i a');
             })
-
+            ->addColumn('action', function (Mutation $transaction) {
+                return view('pages.masterdata.feed._mutation_actions', compact('transaction'));
+            })
             ->setRowId('id')
             ->rawColumns(['']);
     }
@@ -48,45 +67,10 @@ class FeedMutationDataTable extends DataTable
     /**
      * Get the query source of dataTable.
      */
-    public function query(FeedMutation $model): QueryBuilder
+    public function query(Mutation $model): QueryBuilder
     {
-        $query = $model->newQuery();
-
-        
-
-        // return $model->newQuery();
-        // if (auth()->user()->hasRole('Operator')) {
-        //     // Get farm IDs for current user from farmOperators
-        //     $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
-
-        //     // dd($farmIds);
-            
-        //     // Add a condition to filter items based on farm IDs
-        //     $query->whereHas('stockHistory.kelompokTernak.farm', function ($q) use ($farmIds) {
-        //         $q->whereIn('id', $farmIds);
-        //     })->with(['itemCategory'])
-        //     ->whereHas('itemCategory', function ($q) {
-        //         $q->where('name', 'Pakan');
-        //     });
-        //     // $query = $model::with(['stokHistory', 'transaksiDetail'])
-        //     //     ->where('jenis', '!=', 'DOC')
-        //     //     // ->whereHas('farmOperator', function ($q) {
-        //     //     //     $q->where('user_id', auth()->id());
-        //     //     // })
-        //     //     ->orderBy('name', 'DESC')
-        //     //     ->newQuery();
-        // } else {
-        //     // $query = $model::with(['stockHistory','itemCategory'])
-        //     $query = $model::with(['itemCategory'])
-        //         ->whereHas('itemCategory', function ($q) {
-        //             $q->where('name', 'Pakan');
-        //         })
-        //         ->orderBy('name', 'DESC')
-        //         ->newQuery();
-        // }
-
+        $query = $model->where('type', 'feed')->newQuery();
         return $query;
-
     }
 
     /**
@@ -107,29 +91,14 @@ class FeedMutationDataTable extends DataTable
                     [10, 25, 50, -1],
                     ['10 rows', '25 rows', '50 rows', 'Show all']
                 ],
-                // 'buttons'      => [
-                //     [
-                //         'text' => '<i class="fa fa-plus"></i> Add New',
-                //         'className' => 'btn btn-primary',
-                //         'attr' => [
-                //             'data-kt-action' => 'new_kternak'
-                //         ]
-                //     ],
-                //     // ['extend' => 'excel', 'className' => 'btn btn-success', 'text' => '<i class="fa fa-file-excel"></i> Excel'],
-                //     ['extend' => 'print', 'className' => 'btn btn-info', 'text' => '<i class="fa fa-print"></i> Print'],
-                //     ['extend' => 'colvis', 'className' => 'btn btn-warning', 'text' => '<i class="fa fa-columns"></i> Columns']
-                // ],
                 'language' => [
                     'search' => 'Search:',
                     'searchPlaceholder' => 'Enter search term...'
                 ],
             ])
-            // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
-            // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
-            // ->orderBy(1)
-            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/pakan/_mutasi-draw-scripts.js')) . "}");
+            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/feed/_mutation_draw-scripts.js')) . "}");
     }
 
     /**
@@ -145,11 +114,11 @@ class FeedMutationDataTable extends DataTable
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')
                 ->searchable(false)
                 ->visible(false),
-            // Column::computed('action')
-            //     // ->addClass('text-end text-nowrap')
-            //     ->exportable(false)
-            //     ->printable(false)
-            //     // ->width(60)
+            Column::computed('action')
+                // ->addClass('text-end text-nowrap')
+                ->exportable(false)
+                ->printable(false)
+            // ->width(60)
         ];
     }
 

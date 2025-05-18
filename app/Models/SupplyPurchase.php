@@ -17,22 +17,29 @@ class SupplyPurchase extends BaseModel
         'farm_id',
         'supply_purchase_batch_id',
         'supply_id',
-        'original_unit',
+        'unit_id',
         'quantity',
+        'converted_unit',
+        'converted_quantity',
         'price_per_unit',
+        'price_per_converted_unit',
         'created_by',
         'updated_by',
     ];
 
-    protected $casts = [
-    ];
+    protected $casts = [];
 
     public function farm()
     {
-        return $this->belongsTo(Farm::class,'farm_id','id');
+        return $this->belongsTo(Farm::class, 'farm_id', 'id');
     }
 
     public function supplyItem()
+    {
+        return $this->belongsTo(Supply::class, 'supply_id');
+    }
+
+    public function supply()
     {
         return $this->belongsTo(Supply::class, 'supply_id');
     }
@@ -51,5 +58,15 @@ class SupplyPurchase extends BaseModel
     public function supplyStocks()
     {
         return $this->hasMany(SupplyStock::class, 'supply_purchase_id');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_id', 'id');
+    }
+
+    public function convertedUnit()
+    {
+        return $this->belongsTo(Unit::class, 'converted_unit', 'id');
     }
 }

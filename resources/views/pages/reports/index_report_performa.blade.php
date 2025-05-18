@@ -16,7 +16,7 @@
                         <select class="form-select" id="farm" name="farm">
                             <option value="">Pilih Farm</option>
                             @foreach($farms as $farm)
-                            <option value="{{ $farm->id }}">{{ $farm->nama }}</option>
+                            <option value="{{ $farm->id }}">{{ $farm->name }}</option>
                             @endforeach
                             <!-- Add farm options dynamically -->
                         </select>

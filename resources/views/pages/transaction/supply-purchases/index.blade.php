@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-        Data Pembelian Stok
+    Data Pembelian Stok
     @endsection
 
     @section('breadcrumbs')
@@ -29,9 +29,9 @@
                 <!--end::Toolbar-->
             </div>
             <!--end::Card toolbar-->
-                
+
             @endcan
-            
+
         </div>
         <!--end::Card header-->
 
@@ -46,18 +46,19 @@
             </div>
             <livewire:supply-purchases.create />
 
-                
+
         </div>
         <!--end::Card body-->
     </div>
 
-    {{-- <livewire:transaksi.pembelian-list /> --}}
-    @include('pages.transaksi.pembelian-stok._modal_pembelian_details')
+    {{--
+    <livewire:transaksi.pembelian-list /> --}}
+    @include('pages.transaction.supply-purchases._modal_pembelian_details')
 
     @push('scripts')
-        {{ $dataTable->scripts() }}
-        <script>
-            document.querySelectorAll('[data-kt-button="create_new"]').forEach(function (element) {
+    {{ $dataTable->scripts() }}
+    <script>
+        document.querySelectorAll('[data-kt-button="create_new"]').forEach(function (element) {
 			element.addEventListener('click', function () {
 				// Simulate delete request -- for demo purpose only
 				Swal.fire({
@@ -292,6 +293,6 @@
             //         });
             //     });
             // });
-        </script>
+    </script>
     @endpush
 </x-default-layout>

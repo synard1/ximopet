@@ -26,8 +26,11 @@
 
     <!--begin::Menu item-->
     <div class="menu-item px-3">
-        <a href="#" class="menu-link px-3" data-kt-transaction-id="{{ $transaction->id }}" data-kt-action="transfer_row">
+        {{-- <a href="#" class="menu-link px-3" data-kt-transaction-id="{{ $transaction->id }}" data-kt-action="transfer_row">
             Transfer
+        </a> --}}
+        <a href="#" class="menu-link px-3" onclick="Livewire.dispatch('showEditForm', [@js($supply->id)])">
+            Edit
         </a>
     </div>
     <!--end::Menu item-->

@@ -22,7 +22,7 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
-        
+
 
         // Supply
         Schema::create('supplies', function (Blueprint $table) {
@@ -58,19 +58,20 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-
         });
-        
+
 
         Schema::create('supply_purchases', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('farm_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('supply_purchase_batch_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('supply_id')->constrained()->onDelete('cascade');
-            $table->uuid('original_unit')->nullable();
+            $table->uuid('unit_id')->nullable();
             $table->decimal('quantity', 12, 2);
+            $table->uuid('converted_unit')->nullable();
+            $table->decimal('converted_quantity', 12, 2);
             $table->decimal('price_per_unit', 12, 2);
-
+            $table->decimal('price_per_converted_unit', 12, 2);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -79,13 +80,17 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
-        
+
 
         Schema::create('supply_stocks', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('farm_id');
+            $table->uuid('livestock_id')->nullable();
+            $table->uuid('farm_id')->nullable();
+            $table->uuid('kandang_id')->nullable();
             $table->uuid('supply_id');
             $table->uuid('supply_purchase_id');
+            $table->dateTime('date');
+            $table->string('source_type');
             $table->uuid('source_id');
             $table->decimal('quantity_in', 12, 2)->default(0);
             $table->decimal('quantity_used', 12, 2)->default(0);
@@ -98,7 +103,7 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
-        
+
 
         Schema::create('supply_usages', function (Blueprint $table) {
             $table->uuid('id')->primary();
@@ -112,7 +117,7 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
-        
+
 
         Schema::create('supply_usage_details', function (Blueprint $table) {
             $table->uuid('id')->primary();
@@ -129,7 +134,7 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
-        
+
 
         Schema::create('supply_mutations', function (Blueprint $table) {
             $table->uuid('id')->primary();
@@ -144,7 +149,7 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
-        
+
 
         Schema::create('supply_mutation_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
@@ -162,8 +167,29 @@ return new class extends Migration
             $table->foreign('updated_by')->references('id')->on('users');
         });
 
-        Schema::enableForeignKeyConstraints();
+        Schema::create('current_supplies', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('livestock_id')->nullable();
+            $table->uuid('farm_id')->constrained()->onDelete('cascade');
+            $table->uuid('kandang_id')->nullable();
+            $table->uuid('item_id');
+            $table->uuid('unit_id');
+            $table->string('type');
+            $table->decimal('quantity', 12, 2);
+            $table->string('status')->default('active')->index();
 
+            $table->unsignedBigInteger('created_by');
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+
+            $table->foreign('farm_id')->references('id')->on('farms');
+            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('created_by')->references('id')->on('users');
+            $table->foreign('updated_by')->references('id')->on('users');
+        });
+
+        Schema::enableForeignKeyConstraints();
     }
 
     public function down(): void
@@ -177,5 +203,6 @@ return new class extends Migration
         Schema::dropIfExists('supply_usage_details');
         Schema::dropIfExists('supply_mutations');
         Schema::dropIfExists('supply_mutation_items');
+        Schema::dropIfExists('current_supplies');
     }
 };

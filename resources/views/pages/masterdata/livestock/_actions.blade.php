@@ -31,6 +31,14 @@
     <!--end::Menu item-->
         
     @endcan
+
+    <!--begin::Menu item-->
+    <div class="menu-item px-3">
+        <a href="#" class="menu-link px-3" data-livestock-id="{{ $livestock->id }}" data-kt-action="assign_worker">
+            Penugasan
+        </a>
+    </div>
+    <!--end::Menu item-->
     
 
     @if($livestock->isLocked())

@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-         // Supply
-         Schema::create('feeds', function (Blueprint $table) {
+        // Supply
+        Schema::create('feeds', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('code');
             $table->string('name');
@@ -47,7 +47,6 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-
         });
 
         // Tabel feed_purchases (detail per jenis pakan)
@@ -56,9 +55,12 @@ return new class extends Migration
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('feed_purchase_batch_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('feed_id')->constrained('feeds')->onDelete('cascade');
-            $table->uuid('original_unit')->nullable();
+            $table->uuid('unit_id')->nullable();
             $table->decimal('quantity', 12, 2);
+            $table->uuid('converted_unit')->nullable();
+            $table->decimal('converted_quantity', 12, 2);
             $table->decimal('price_per_unit', 12, 2);
+            $table->decimal('price_per_converted_unit', 12, 2);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -66,7 +68,6 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-
         });
 
         // Tabel feed_stocks
@@ -76,10 +77,8 @@ return new class extends Migration
             $table->foreignUuid('feed_id')->constrained('feeds')->onDelete('cascade');
             $table->foreignUuid('feed_purchase_id')->nullable()->constrained()->onDelete('set null');
             $table->date('date');
+            $table->string('source_type');
             $table->uuid('source_id'); // purchase_id / mutation_id
-            $table->decimal('amount', 10, 2); // jumlah awal
-            $table->decimal('used', 10, 2)->default(0); // jumlah yang sudah dipakai
-            $table->decimal('available', 10, 2); // amount - used
             $table->decimal('quantity_in', 12, 2)->default(0);
             $table->decimal('quantity_used', 12, 2)->default(0);
             $table->decimal('quantity_mutated', 12, 2)->default(0);
@@ -90,13 +89,13 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-
         });
 
         // Tabel feed_usages 
         Schema::create('feed_usages', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('recording_id')->constrained()->onDelete('cascade');
             $table->date('usage_date');
             $table->decimal('total_quantity', 10, 2); // jumlah awal
             $table->unsignedBigInteger('created_by')->nullable();
@@ -106,7 +105,6 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-
         });
 
         // Tabel feed_usage_details 
@@ -123,7 +121,6 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-
         });
 
         // Tabel feed_mutations
@@ -139,7 +136,6 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-
         });
 
         // Tabel feed_mutation_livestocks
@@ -156,7 +152,6 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-
         });
 
         // Tabel feed_rollbacks (info rollback secara umum)
@@ -172,7 +167,6 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-
         });
 
         // Tabel feed_rollback_items (detail data yang di-rollback)
@@ -188,7 +182,6 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-
         });
 
         // Log rollback
@@ -204,11 +197,30 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+        });
 
+        Schema::create('current_feeds', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('livestock_id')->nullable();
+            $table->uuid('farm_id')->constrained()->onDelete('cascade');
+            $table->uuid('kandang_id')->nullable();
+            $table->uuid('feed_id');
+            $table->uuid('unit_id');
+            $table->decimal('quantity', 12, 2);
+            $table->string('status')->default('active')->index();
+
+            $table->unsignedBigInteger('created_by');
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+
+            $table->foreign('farm_id')->references('id')->on('farms');
+            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('created_by')->references('id')->on('users');
+            $table->foreign('updated_by')->references('id')->on('users');
         });
 
         Schema::enableForeignKeyConstraints();
-
     }
 
     public function down(): void
@@ -222,5 +234,6 @@ return new class extends Migration
         Schema::dropIfExists('feed_stocks');
         Schema::dropIfExists('feed_purchases');
         Schema::dropIfExists('feed_purchase_batches');
+        Schema::dropIfExists('current_feeds');
     }
 };

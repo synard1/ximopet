@@ -15,6 +15,7 @@ class LivestockSalesItem extends BaseModel
         'id',
         'livestock_sales_id',
         'livestock_id',
+        'tanggal',
         'jumlah',
         'berat_total',
         'harga_satuan',
@@ -23,7 +24,7 @@ class LivestockSalesItem extends BaseModel
     ];
 
     protected $casts = [
-        // 'tanggal' => 'datetime',
+        'tanggal' => 'datetime',
     ];
 
     public function livestockSale()

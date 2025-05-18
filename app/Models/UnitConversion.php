@@ -34,4 +34,9 @@ class UnitConversion extends BaseModel
     {
         return $this->belongsTo(Unit::class, 'unit_id');
     }
+
+    public function conversionUnit()
+    {
+        return $this->belongsTo(Unit::class, 'conversion_unit_id', 'id');
+    }
 }

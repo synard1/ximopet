@@ -3,30 +3,38 @@
     @section('title')
         Master Data Pakan
     @endsection
-
-    <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x mb-5 fs-6">
-        <li class="nav-item">
-            <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_pane_4">Data Pakan</a>
-        </li>
-        @if(auth()->user()->hasRole(['Supervisor']))
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_5">Pemetaan Lokasi</a>
-            </li>
-        @endif
-    </ul>
-    
-    <div class="tab-content" id="myTabContent">
-        <div class="tab-pane fade show active" id="kt_tab_pane_4" role="tabpanel">
-            @include('pages.masterdata.stok._table')
-        </div>
-
-        @if(auth()->user()->hasRole(['Supervisor']))
-            <div class="tab-pane fade" id="kt_tab_pane_5" role="tabpanel">
-                @include('pages.masterdata.stok._pemetaan_lokasi_table')
+    <div class="card">
+        <!--begin::Card body-->
+        <div class="card-body py-4">
+            <div id="datatable-container">
+                <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x mb-5 fs-6">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_pane_4">Data Pakan</a>
+                    </li>
+                    @if(auth()->user()->hasRole(['Supervisor']))
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_5">Pemetaan Lokasi</a>
+                        </li>
+                    @endif
+                </ul>
+                
+                <div class="tab-content" id="myTabContent">
+                    <div class="tab-pane fade show active" id="kt_tab_pane_4" role="tabpanel">
+                        @include('pages.masterdata.stok._table')
+                    </div>
+        
+                    @if(auth()->user()->hasRole(['Supervisor']))
+                        <div class="tab-pane fade" id="kt_tab_pane_5" role="tabpanel">
+                            @include('pages.masterdata.stok._pemetaan_lokasi_table')
+                        </div>
+                    @endif
+                </div>
             </div>
-        @endif
+            <livewire:master-data.feed.mutation />
+        </div>
+        <!--end::Card body-->
+        
     </div>
-
     {{-- @include('pages.masterdata.stok._modal_stok_details') --}}
     @include('pages.masterdata.stock._modal_feedstock_details')
     @include('pages.masterdata.stock._modal_feedstock_transfer')
@@ -112,6 +120,16 @@
                     $('#kt_modal_add_user').modal('hide');
                     window.LaravelDataTables['stoks-table'].ajax.reload();
                 });
+
+                window.addEventListener('hide-datatable', () => {
+                    $('#datatable-container').hide();
+                    $('#cardToolbar').hide();
+                });
+
+                window.addEventListener('show-datatable', () => {
+                    $('#datatable-container').show();
+                    $('#cardToolbar').show();
+                });
             });
 
             function editItemLocation(id) {
@@ -186,6 +204,16 @@
                             toastr.error(errorMessage);
                         }
                     });
+                }
+            }
+
+            function resetFarmSelect() {
+                const farmSelect = document.getElementById('farmSelect');
+                if (farmSelect) {
+                    farmSelect.selectedIndex = 0;
+                    // console.log('Farm select reset to default');
+                } else {
+                    console.log('Farm select element not found');
                 }
             }
         </script>

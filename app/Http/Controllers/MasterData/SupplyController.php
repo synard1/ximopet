@@ -10,7 +10,7 @@ use App\Models\SupplyPurchase;
 use App\Models\SupplyPurchaseBatch;
 use App\Models\SupplyStock;
 use App\DataTables\SupplyDataTable;
-
+use App\DataTables\SupplyMutationDataTable;
 
 class SupplyController extends Controller
 {
@@ -20,6 +20,16 @@ class SupplyController extends Controller
         addVendors(['datatables']);
 
         return $dataTable->render('pages/masterdata.supply.index');
+    }
+
+    public function mutasi(SupplyMutationDataTable $dataTable)
+    {
+        //
+        // return view('pages.pakan.mutasi');
+        addVendors(['datatables']);
+
+        return $dataTable->render('pages.masterdata.supply.mutasi');
+
     }
 
     public function getFeedPurchaseBatchDetail($batchId)

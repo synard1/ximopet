@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Str;
+
 if (!function_exists('theme')) {
     function theme()
     {
@@ -413,7 +415,7 @@ if (!function_exists('image')) {
      */
     function image($path)
     {
-        return asset('assets/media/'.$path);
+        return asset('assets/media/' . $path);
     }
 }
 
@@ -429,5 +431,66 @@ if (!function_exists('getIcon')) {
     function getIcon($name, $class = '', $type = '', $tag = 'span')
     {
         return theme()->getIcon($name, $class, $type, $tag);
+    }
+}
+
+if (!function_exists('formatRupiah')) {
+    function formatRupiah($amount, $decimal)
+    {
+        // Convert the number to a string with two decimal places
+        $formattedAmount = number_format($amount, $decimal, ',', '.');
+        return "Rp " . $formattedAmount;
+        return theme()->formatRupiah($name, $class, $type, $tag);
+    }
+}
+
+if (!function_exists('formatNumber')) {
+    function formatNumber($amount, $decimal)
+    {
+        // Convert the number to a string with two decimal places
+        $formattedAmount = number_format($amount, $decimal, ',', '.');
+        return $formattedAmount;
+    }
+}
+
+// Helper function untuk mengecek roles
+if (!function_exists('hasRequiredRoles')) {
+    function hasRequiredRoles($user, $roles)
+    {
+        if (!isset($roles)) {
+            return true;
+        }
+        $userRoles = $user->getRoleNames()->toArray();
+        return count(array_intersect($userRoles, (array) $roles)) > 0;
+    }
+}
+
+// Helper function untuk mengecek permissions
+if (!function_exists('hasRequiredPermission')) {
+    function hasRequiredPermission($user, $permission)
+    {
+        if (!isset($permission)) {
+            return true;
+        }
+        return $user->can($permission);
+    }
+}
+
+if (!function_exists('generateInvoiceNumber')) {
+    /**
+     * Generate unique invoice number.
+     *
+     * Format default: INV-20240514-ABCDE123
+     *
+     * @param string $prefix
+     * @param int $randomLength
+     * @return string
+     */
+    function generateInvoiceNumber(string $prefix = 'INV', int $randomLength = 8): string
+    {
+        $datePart = date('Ymd'); // Format: 20240514
+        $randomPart = strtoupper(Str::random($randomLength)); // Format: ABCDE123
+
+        return "{$prefix}-{$datePart}-{$randomPart}";
     }
 }

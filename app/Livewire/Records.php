@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use App\Models\Recording; // Assuming this is the model for the recordings
 use App\Models\CurrentStock;
 use App\Models\CurrentLivestock;
+use App\Models\Feed;
 use App\Models\LivestockDepletion;
 use App\Models\LivestockSales;
 use App\Models\TransaksiBeliDetail;
@@ -33,6 +34,7 @@ use App\Models\FeedUsage;
 use App\Models\FeedUsageDetail;
 use App\Models\Livestock;
 use App\Models\LivestockSalesItem;
+use App\Models\CurrentSupply;
 
 class Records extends Component
 {
@@ -66,7 +68,7 @@ class Records extends Component
 
 
     protected $listeners = [
-        'setTernakId' => 'setTernak'
+        'setRecords' => 'setRecords'
     ];
 
     protected $rules = [
@@ -87,12 +89,10 @@ class Records extends Component
         $this->fifoService = $fifoService;
         $this->initializeItemQuantities();
         $this->loadRecordingData();
-
-
     }
 
-     // Fix the method signature to receive the ID directly
-    public function setTernak($livestockId)
+    // Fix the method signature to receive the ID directly
+    public function setRecords($livestockId)
     {
         $this->livestockId = $livestockId;
         if ($this->livestockId) {
@@ -100,545 +100,10 @@ class Records extends Component
             $this->initializeItemQuantities();
             $this->checkCurrentLivestockStock();
             $this->loadRecordingData();
-
-
         }
         // $this->dispatch('success', $livestockId);
     }
 
-    public function save()
-    {
-        $this->validate();
-
-        $validatedData = $this->all();
-
-        try {
-            DB::beginTransaction(); // Start a database transaction
-
-            $this->usages = collect($this->itemQuantities)
-                ->filter(fn ($qty) => $qty > 0)
-                ->map(function ($qty, $itemId) {
-                    return [
-                        'feed_id' => $itemId,
-                        'quantity' => (float) $qty,
-                    ];
-                })
-                ->values()
-                ->toArray();
-
-            // --- Prepare data for Recording ---
-            $ternak = CurrentLivestock::with('livestock')->where('livestock_id', $this->livestockId)->first();
-            $populasiAwal = $ternak->livestock->populasi_awal;
-
-            $existingRecord = Recording::where('livestock_id', $this->livestockId)
-                ->whereDate('tanggal', $this->date)
-                ->first();
-
-            $previousOut = 0;
-            if ($existingRecord) {
-                $prevPayload = $existingRecord->payload ?? [];
-                $previousOut = ($prevPayload['mortality'] ?? 0)
-                    + ($prevPayload['culling'] ?? 0)
-                    + ($prevPayload['sales_quantity'] ?? 0);
-            }
-
-            $newOut = (int) $this->mortality + (int) $this->culling + (int) $this->sales_quantity;
-
-            $totalOutExceptToday = Recording::where('livestock_id', $this->livestockId)
-                ->where('tanggal', '!=', $this->date)
-                ->get()
-                ->sum(function ($record) {
-                    $payload = $record->payload ?? [];
-                    return ($payload['mortality'] ?? 0)
-                        + ($payload['culling'] ?? 0)
-                        + ($payload['sales_quantity'] ?? 0);
-                });
-
-            $totalOut = $totalOutExceptToday + $newOut;
-
-            if ($totalOut > $populasiAwal) {
-                $this->dispatch('error', 'Total pengeluaran melebihi populasi awal!');
-                DB::rollBack(); // Rollback if total out exceeds initial population
-                return;
-            }
-
-
-            $deplesi = LivestockDepletion::where('livestock_id', $this->livestockId)
-                ->whereDate('tanggal', $this->date)
-                ->get();
-
-            $startDate = Carbon::parse($ternak->livestock->start_date);
-            $selectedDate = Carbon::parse($this->date);
-            $age = $startDate->diffInDays($selectedDate);
-            // Calculate stock_awal for the selected date
-            $previousDate = $selectedDate->copy()->subDay()->format('Y-m-d');
-            $previousRecording = Recording::where('livestock_id', $this->livestockId)
-                ->whereDate('tanggal', $previousDate)
-                ->first();
-
-            $stockAwalHariIni = $previousRecording ? $previousRecording->stock_akhir : $ternak->livestock->populasi_awal;
-
-            // Calculate stock_akhir for the selected date
-            $totalDeplesiHariIni = (int)($this->mortality ?? 0) + (int)($this->culling ?? 0) + (int)($this->sales_quantity ?? 0);
-            $stockAkhirHariIni = $stockAwalHariIni - $totalDeplesiHariIni;
-
-            $weightYesterday = $previousRecording ? $previousRecording->berat_hari_ini : 0; // Assuming berat_awal exists
-            $weightGain = ($this->weight_today ?? 0) - $weightYesterday;
-
-            $recordingInput = [
-                'livestock_id' => $this->livestockId,
-                'tanggal' => $this->date,
-                'age' => $age,
-                'stock_awal' => $stockAwalHariIni,
-                'stock_akhir' => $stockAkhirHariIni,
-                'berat_hari_ini' => $this->weight_today ?? null,
-                'berat_semalam' => $weightYesterday,
-                'kenaikan_berat' => $weightGain,
-                'pakan_jenis' => $weightGain,
-                'pakan_harian' => $weightGain,
-            ];
-
-            try {
-                $this->saveOrUpdateRecording($recordingInput);
-            } catch (\Exception $e) {
-                DB::rollBack();
-                $this->dispatch('error', $e->getMessage()); // Dispatch the exception message
-                return;
-            }
-
-
-            // Format item quantities for stock reduction
-            $stockData = [];
-            foreach ($this->itemQuantities as $itemId => $quantity) {
-
-                if ($quantity > 0) {
-                    $stockData[] = [
-                        'item_id' => $itemId,
-                        'qty' => $quantity
-                    ];
-                }
-            }
-
-            // Lakukan pengurangan stok dengan struktur FIFO seperti di Feed*
-            if (!empty($stockData)) {
-                $fifoData = [
-                    'tanggal' => $this->date,
-                    'livestock_id' => $this->livestockId,
-                    'stock' => array_map(function ($item) {
-                        return [
-                            'item_id' => $item['item_id'],
-                            'qty' => $item['qty'],
-                        ];
-                    }, $stockData)
-                ];
-
-                $this->saveFeedUsage($this->all()); // This is where the error might occur
-                // app(FIFOService::class)->reduceStockBaru($fifoData);
-
-            }
-
-            //check stocks
-            $stockCheck = $this->checkStockByTernakId($this->livestockId);
-
-            // Store deplesi if any mortality or culling exists
-            if ($this->mortality > 0) {
-                $this->storeDeplesi('Mati', $this->mortality);
-            }
-
-            if ($this->culling > 0) {
-                $this->storeDeplesi('Afkir', $this->culling);
-            }
-
-            // Update current ternak quantity (This calculates total depletion over time)
-            $this->updateCurrentLivestockQuantity();
-
-            // Reload data displayed in the table
-            $this->loadRecordingData();
-            // --- End Recording ---
-
-            app(LivestockCostService::class)->calculateForDate($this->livestockId, $this->date);
-
-            DB::commit(); // Commit the transaction if everything is successful
-            // Optionally reset the input fields
-            $this->reset(['date', 'age', 'stock_start', 'stock_end', 'mortality', 'culling', 'weight_today', 'weight_yesterday', 'weight_gain', 'sales_quantity', 'sales_price', 'total_sales']);
-            $this->initializeItemQuantities(); // Reset item quantities inputs
-            $this->loadStockData(); // Reload stock data for inputs
-            $this->checkCurrentLivestockStock(); // Reload ternak stock info
-
-            $this->dispatch('success', 'Data berhasil disimpan');
-
-        } catch (ValidationException $e) {
-            DB::rollBack(); // Rollback on validation exception
-            $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
-            $this->setErrorBag($e->validator->errors());
-        } catch (\Exception $e) {
-            DB::rollBack(); // Rollback on any other exception
-
-            $class = __CLASS__;
-            $method = __FUNCTION__;
-            $line = $e->getLine();
-            $file = $e->getFile();
-            $message = $e->getMessage();
-
-            // Human-readable error message
-            $errorMessage = 'Terjadi kesalahan saat menyimpan data. Silakan coba lagi.';
-
-            // Dispatch user-friendly error
-            $this->dispatch('error', $errorMessage);
-
-            // Log detailed error for debugging
-            Log::error("[$class::$method] Error: $message | Line: $line | File: $file");
-
-            // Optionally: log stack trace
-            Log::debug("[$class::$method] Stack trace: " . $e->getTraceAsString());
-        } finally {
-            // Optional: Code that runs whether success or failure
-        }
-
-    }
-
-    // public function save()
-    // {
-    //     $this->validate();
-
-    //     $validatedData = $this->all();
-
-    //     // dd($this->all());
-
-    //     try {
-
-    //         $this->usages = collect($this->itemQuantities)
-    //             ->filter(fn ($qty) => $qty > 0)
-    //             ->map(function ($qty, $itemId) {
-    //                 return [
-    //                     'feed_id' => $itemId,
-    //                     'quantity' => (float) $qty,
-    //                 ];
-    //             })
-    //             ->values()
-    //             ->toArray();
-
-    //         // --- Prepare data for Recording ---
-    //         $ternak = CurrentLivestock::with('livestock')->where('livestock_id', $this->livestockId)->first();
-    //         $populasiAwal = $ternak->livestock->populasi_awal;
-
-    //         $existingRecord = Recording::where('livestock_id', $this->livestockId)
-    //                                 ->whereDate('tanggal', $this->date)
-    //                                 ->first();
-
-    //         $previousOut = 0;
-    //         if ($existingRecord) {
-    //             $prevPayload = $existingRecord->payload ?? [];
-    //             $previousOut = ($prevPayload['mortality'] ?? 0)
-    //                          + ($prevPayload['culling'] ?? 0)
-    //                          + ($prevPayload['sales_quantity'] ?? 0);
-    //         }
-
-    //         $newOut = (int) $this->mortality + (int) $this->culling + (int) $this->sales_quantity;
-
-    //         $totalOutExceptToday = Recording::where('livestock_id', $this->livestockId)
-    //             ->where('tanggal', '!=', $this->date)
-    //             ->get()
-    //             ->sum(function ($record) {
-    //                 $payload = $record->payload ?? [];
-    //                 return ($payload['mortality'] ?? 0)
-    //                     + ($payload['culling'] ?? 0)
-    //                     + ($payload['sales_quantity'] ?? 0);
-    //             });
-
-    //         $totalOut = $totalOutExceptToday + $newOut;
-
-    //         if ($totalOut > $populasiAwal) {
-    //             $this->dispatch('error', 'Total pengeluaran melebihi populasi awal!');
-    //             return;
-    //         }
-
-
-    //         $deplesi = LivestockDepletion::where('livestock_id', $this->livestockId)
-    //                                 ->whereDate('tanggal', $this->date)
-    //                                 ->get();
-
-    //         $startDate = Carbon::parse($ternak->livestock->start_date);
-    //         $selectedDate = Carbon::parse($this->date);
-    //         $age = $startDate->diffInDays($selectedDate);
-    //         // Calculate stock_awal for the selected date
-    //         $previousDate = $selectedDate->copy()->subDay()->format('Y-m-d');
-    //         $previousRecording = Recording::where('livestock_id', $this->livestockId)
-    //                                     ->whereDate('tanggal', $previousDate)
-    //                                     ->first();
-
-    //         $stockAwalHariIni = $previousRecording ? $previousRecording->stock_akhir : $ternak->livestock->populasi_awal;
-
-    //         // Calculate stock_akhir for the selected date
-    //         $totalDeplesiHariIni = (int)($this->mortality ?? 0) + (int)($this->culling ?? 0) + (int)($this->sales_quantity ?? 0);
-    //         $stockAkhirHariIni = $stockAwalHariIni - $totalDeplesiHariIni;
-
-    //         $weightYesterday = $previousRecording ? $previousRecording->berat_hari_ini : 0; // Assuming berat_awal exists
-    //         $weightGain = ($this->weight_today ?? 0) - $weightYesterday;
-
-    //         $recordingInput = [
-    //             'livestock_id' => $this->livestockId,
-    //             'tanggal' => $this->date,
-    //             'age' => $age,
-    //             'stock_awal' => $stockAwalHariIni,
-    //             'stock_akhir' => $stockAkhirHariIni,
-    //             'berat_hari_ini' => $this->weight_today ?? null,
-    //             'berat_semalam' => $weightYesterday,
-    //             'kenaikan_berat' => $weightGain,
-    //             'pakan_jenis' => $weightGain,
-    //             'pakan_harian' => $weightGain,
-    //         ];
-
-    //         // Format item quantities for stock reduction
-    //         $stockData = [];
-    //         foreach ($this->itemQuantities as $itemId => $quantity) {
-
-    //             if ($quantity > 0) {
-    //                 $stockData[] = [
-    //                     'item_id' => $itemId,
-    //                     'qty' => $quantity
-    //                 ];
-    //             }
-    //         }
-
-    //         // Wrap database operation in a transaction (if applicable)
-    //         DB::beginTransaction();
-
-    //         $this->saveOrUpdateRecording($recordingInput);
-    //         // $transaksi = $this->saveOrUpdateRecording($recordingInput);
-    //         // dd($transaksi);
-
-    //         // Lakukan pengurangan stok dengan struktur FIFO seperti di Feed*
-    //         if (!empty($stockData)) {
-    //             $fifoData = [
-    //                 'tanggal' => $this->date,
-    //                 'livestock_id' => $this->livestockId,
-    //                 'stock' => array_map(function ($item) {
-    //                     return [
-    //                         'item_id' => $item['item_id'],
-    //                         'qty' => $item['qty'],
-    //                     ];
-    //                 }, $stockData)
-    //             ];
-
-    //             try {
-    //                 // if ($this->date < $ternak->livestock->start_date) {
-    //                 //     $this->dispatch('error', 'Tanggal transaksi tidak boleh lebih awal dari tanggal mulai ternak.');
-    //                 //     return;
-    //                 // }
-
-    //                 $this->saveFeedUsage($this->all());
-
-    //                 // app(FIFOService::class)->reduceStockBaru($fifoData);
-    //             } catch (\Throwable $fifoError) {
-    //                 Log::error('[FIFO Error] ' . $fifoError->getMessage() . ' | File: ' . $fifoError->getFile() . ' | Line: ' . $fifoError->getLine());
-    //                 throw $fifoError; // penting: biar DB rollback jalan
-    //                 DB::rollBack();
-    //                 return;
-    //             }
-    //         }
-
-            
-    //         //check stocks
-    //         $stockCheck = $this->checkStockByTernakId($this->livestockId);
-
-    //         // Store deplesi if any mortality or culling exists
-    //         if ($this->mortality > 0) {
-    //             $this->storeDeplesi('Mati', $this->mortality);
-    //         }
-
-    //         if ($this->culling > 0) {
-    //             $this->storeDeplesi('Afkir', $this->culling);
-    //         }
-            
-    //         // Update current ternak quantity (This calculates total depletion over time)
-    //         $this->updateCurrentLivestockQuantity();
-            
-    //         // Reload data displayed in the table
-    //         $this->loadRecordingData(); 
-    //         // --- End Recording ---
-
-    //         app(LivestockCostService::class)->calculateForDate($this->livestockId, $this->date);
-
-
-    //         // app(LivestockCostService::class)->calculateAndSave([
-    //         //     'livestock_id' => $this->livestockId,
-    //         //     'tanggal' => $this->date,
-    //         //     'stock_akhir' => $stockAkhirHariIni,
-    //         //     'mortality' => $this->mortality,
-    //         //     'culling' => $this->culling,
-    //         //     'sales_quantity' => $this->sales_quantity,
-    //         //     'stock' => $stockData, // dari itemQuantities
-    //         // ]);
-
-
-    //         DB::commit();
-
-
-    //         // Optionally reset the input fields
-    //         $this->reset(['date', 'age', 'stock_start', 'stock_end', 'mortality', 'culling', 'weight_today', 'weight_yesterday', 'weight_gain', 'sales_quantity', 'sales_price', 'total_sales']);
-    //         $this->initializeItemQuantities(); // Reset item quantities inputs
-    //         $this->loadStockData(); // Reload stock data for inputs
-    //         $this->checkCurrentLivestockStock(); // Reload ternak stock info
-
-    //         $this->dispatch('success', 'Data berhasil disimpan 11');
-
-    //     } catch (ValidationException $e) {
-    //         DB::rollBack(); // Rollback on validation exception too
-    //         $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
-    //         $this->setErrorBag($e->validator->errors());
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-        
-    //         $class = __CLASS__;
-    //         $method = __FUNCTION__;
-    //         $line = $e->getLine();
-    //         $file = $e->getFile();
-    //         $message = $e->getMessage();
-        
-    //         // Human-readable error message
-    //         $errorMessage = 'Terjadi kesalahan saat menyimpan data. Silakan coba lagi.';
-        
-    //         // Dispatch user-friendly error
-    //         $this->dispatch('error', $errorMessage);
-        
-    //         // Log detailed error for debugging
-    //         Log::error("[$class::$method] Error: $message | Line: $line | File: $file");
-        
-    //         // Optionally: log stack trace
-    //         Log::debug("[$class::$method] Stack trace: " . $e->getTraceAsString());
-    //     } finally {
-    //         // Optional: Code that runs whether success or failure
-    //     }
-        
-    // }
-
-    private function saveFeedUsage($data){
-        if ($this->feedUsageId) {
-            // UPDATE
-            $usage = FeedUsage::findOrFail($this->feedUsageId);
-            $hasChanged = $this->hasUsageChanged($usage, $this->usages);
-
-            // dd($hasChanged);
-
-            if (!$hasChanged) {
-                // DB::rollBack(); // ga perlu simpan apa pun
-                // $this->dispatch('info', 'Tidak ada perubahan data untuk disimpan.');
-                return;
-            }
-
-            // VALIDATION: Ensure usage_date is after the latest stock entry date for the livestock
-            $latestStockDate = FeedStock::where('livestock_id', $this->livestockId)->max('date');
-
-            if ($latestStockDate && $this->date < $latestStockDate) {
-                // throw new \Exception("Tanggal Pemakaian Stock harus setelah tanggal stock masuk ($latestStockDate) untuk livestock ini.");
-                // or
-                $this->dispatch('error', "Tanggal Pemakaian Stock harus setelah tanggal stock masuk ($latestStockDate) untuk livestock ini.");
-                // return response()->json(['error' => 'Tanggal Pemakaian Stock harus setelah tanggal stock masuk'], 422);
-                return;
-            }
-
-            $usage->update([
-                'usage_date' => $this->date,
-                'livestock_id' => $this->livestockId,
-                'updated_by' => auth()->id(),
-            ]);
-
-            // Kembalikan stok dari detail lama
-            $oldDetails = FeedUsageDetail::where('feed_usage_id', $usage->id)->get();
-
-            foreach ($oldDetails as $detail) {
-                $stock = FeedStock::find($detail->feed_stock_id);
-                if ($stock) {
-                    $stock->quantity_used = max(0, $stock->quantity_used - $detail->quantity_taken);
-                    $stock->used = max(0, $stock->used - $detail->quantity_taken); // backward compat
-                    $stock->save();
-                }
-
-                $detail->updated_by = auth()->id();
-                $detail->save();
-                $detail->delete();
-            }
-        } else {
-            // CREATE
-
-            // VALIDATION: Ensure usage_date is after the latest stock entry date for the livestock
-            $latestStockDate = FeedStock::where('livestock_id', $this->livestockId)->max('date');
-            if ($latestStockDate && $this->date < $latestStockDate) {
-                $this->dispatch('error', "Tanggal Pemakaian Stock harus setelah tanggal stock masuk ($latestStockDate) untuk livestock ini.");
-                return;
-
-                // throw new \Exception("Tanggal Pemakaian Stock harus setelah tanggal stock masuk ($latestStockDate) untuk livestock ini.");
-                // or
-                // return response()->json(['error' => 'Tanggal Pemakaian Stock harus setelah tanggal stock masuk'], 422);
-            }
-
-            $usage = FeedUsage::create([
-                // 'id' => Str::uuid(),
-                'usage_date' => $this->date,
-                'livestock_id' => $this->livestockId,
-                'total_quantity' => 0,
-                'created_by' => auth()->id(),
-            ]);
-        }
-
-        // Jalankan FIFO baru jika ada perubahan
-        app(\App\Services\FeedUsageService::class)->process($usage, $this->usages);
-    }
-
-    // private function saveFeedUsage($data){
-    //     // dd($data[0]['feedUsageId']);
-    //     // dd($this->feedUsageId);
-    //     // dd($data);
-
-    //     if ($this->feedUsageId) {
-    //         // UPDATE
-    //         $usage = FeedUsage::findOrFail($this->feedUsageId);
-    //         $hasChanged = $this->hasUsageChanged($usage, $this->usages);
-
-    //         // dd($hasChanged);
-
-    //         if (!$hasChanged) {
-    //             // DB::rollBack(); // ga perlu simpan apa pun
-    //             // $this->dispatch('info', 'Tidak ada perubahan data untuk disimpan.');
-    //             return;
-    //         }
-
-    //         $usage->update([
-    //             'usage_date' => $this->date,
-    //             'livestock_id' => $this->livestockId,
-    //             'updated_by' => auth()->id(),
-    //         ]);
-
-    //         // Kembalikan stok dari detail lama
-    //         $oldDetails = FeedUsageDetail::where('feed_usage_id', $usage->id)->get();
-
-    //         foreach ($oldDetails as $detail) {
-    //             $stock = FeedStock::find($detail->feed_stock_id);
-    //             if ($stock) {
-    //                 $stock->quantity_used = max(0, $stock->quantity_used - $detail->quantity_taken);
-    //                 $stock->used = max(0, $stock->used - $detail->quantity_taken); // backward compat
-    //                 $stock->save();
-    //             }
-
-    //             $detail->updated_by = auth()->id();
-    //             $detail->save();
-    //             $detail->delete();
-    //         }
-    //     } else {
-    //         // CREATE
-    //         $usage = FeedUsage::create([
-    //             // 'id' => Str::uuid(),
-    //             'usage_date' => $this->date,
-    //             'livestock_id' => $this->livestockId,
-    //             'total_quantity' => 0,
-    //             'created_by' => auth()->id(),
-    //         ]);
-    //     }
-
-    //     // Jalankan FIFO baru jika ada perubahan
-    //     app(\App\Services\FeedUsageService::class)->process($usage, $this->usages);
-    // }
 
     protected function hasUsageChanged(FeedUsage $usage, array $newUsages): bool
     {
@@ -659,475 +124,17 @@ class Records extends Component
 
         // Cek apakah ada item yang dihapus dari data baru
         if (count($existingDetails) !== count($newUsages)) {
+            // dd('true');
             return true;
         }
+        // dd('false');
 
         return false;
     }
 
-    private function saveOrUpdateRecording($data)
-    {
-        // Get the livestock masuk date
-        $livestock = Livestock::find($data['livestock_id']);
-        if (!$livestock) {
-            throw new \Exception("Livestock not found!"); // Or handle this error as appropriate for your app
-        }
-        $livestockMasukDate = \Carbon\Carbon::parse($livestock->start_date); // Assuming start_date is the correct field
-
-        // Validate the recording date
-        $recordingDate = \Carbon\Carbon::parse($data['tanggal']);
-        if ($recordingDate->lt($livestockMasukDate)) {
-            throw new \Exception("Tanggal Recording tidak boleh lebih kecil dari Tanggal Ayam Masuk!"); 
-            // Or, you might want to return false, or redirect with an error message, 
-            // depending on how you want to handle this validation
-        }
-
-        $payloadData = [
-            'mortality' => $this->mortality ?? 0,
-            'culling' => $this->culling ?? 0,
-            'sales_quantity' => $this->sales_quantity ?? 0,
-            'sales_price' => $this->sales_price ?? 0,
-            'sales_weight' => $this->sales_weight ?? 0,
-            'total_sales' => $this->total_sales ?? 0,
-        ];
-
-        $transaksi = Recording::updateOrCreate(
-            [
-                'livestock_id' => $data['livestock_id'],
-                'tanggal' => $data['tanggal']
-            ],
-            [
-                'age' => $data['age'],
-                'stock_awal' => $data['stock_awal'],
-                'stock_akhir' => $data['stock_akhir'],
-                'berat_hari_ini' => $data['berat_hari_ini'] ?? null,
-                'berat_semalam' => $data['berat_semalam'] ?? null,
-                'kenaikan_berat' => $data['kenaikan_berat'] ?? null,
-                'pakan_jenis' => $data['pakan_jenis'] ?? null,
-                'pakan_harian' => $data['pakan_harian'] ?? 0,
-                'payload' => $payloadData ?? [],
-                'created_by' => auth()->id(),
-                'updated_by' => auth()->id(),
-            ]
-        );
-
-        // Paksa update `updated_by` jika tidak ada perubahan di data lain
-        if (!$transaksi->wasRecentlyCreated && !$transaksi->wasChanged()) {
-            $transaksi->updated_by = auth()->id();
-            $transaksi->touch(); // update updated_at
-        }
-
-        logger('Changed: ', $transaksi->getChanges());
-
-        return $transaksi;
-    }
-
-    // public function save()
-    // {
-    //     $this->validate();
-
-    //     $validatedData = $this->all();
-
-
-
-    //     // dd($validatedData);
-    //     // $validatedData['rekanan_id'] = $this->supplierSelect;
-    //     // $validatedData['kandang_id'] = $this->selectedKandang;
-
-    //     // Validate that final stock matches the calculation
-    //     // $calculatedFinalStock = $this->stock_end - $this->mortality - $this->culling - $this->sales_quantity;
-    //     // if ($calculatedFinalStock > $this->stock_end || $calculatedFinalStock < 0) {
-    //     //     $this->addError('final_stock', 'Final stock tidak sesuai dengan perhitungan');
-    //     //     $this->dispatch('error', 'Final stock tidak sesuai dengan perhitungan');
-    //     //     return;
-    //     // }
-
-    //     // dd($calculatedFinalStock);
-
-    //     // dd($this->all());
-    //     try {
-
-    //         // --- Prepare data for Recording ---
-    //         $ternak = CurrentLivestock::with('livestock')->where('livestock_id', $this->livestockId)->first();
-    //         $populasiAwal = $ternak->livestock->populasi_awal;
-
-    //         $existingRecord = Recording::where('livestock_id', $this->livestockId)
-    //                                 ->whereDate('tanggal', $this->date)
-    //                                 ->first();
-
-    //         $previousOut = 0;
-    //         if ($existingRecord) {
-    //             $prevPayload = $existingRecord->payload ?? [];
-    //             $previousOut = ($prevPayload['mortality'] ?? 0)
-    //                          + ($prevPayload['culling'] ?? 0)
-    //                          + ($prevPayload['sales_quantity'] ?? 0);
-    //         }
-
-    //         $newOut = (int) $this->mortality + (int) $this->culling + (int) $this->sales_quantity;
-
-    //         $totalOutExceptToday = Recording::where('livestock_id', $this->livestockId)
-    //             ->where('tanggal', '!=', $this->date)
-    //             ->get()
-    //             ->sum(function ($record) {
-    //                 $payload = $record->payload ?? [];
-    //                 return ($payload['mortality'] ?? 0)
-    //                     + ($payload['culling'] ?? 0)
-    //                     + ($payload['sales_quantity'] ?? 0);
-    //             });
-
-    //         $totalOut = $totalOutExceptToday + $newOut;
-
-    //         if ($totalOut > $populasiAwal) {
-    //             $this->dispatch('error', 'Total pengeluaran melebihi populasi awal!');
-    //             return;
-    //         }
-
-
-    //         // dd($totalOut);
-
-    //         $deplesi = LivestockDepletion::where('livestock_id', $this->livestockId)
-    //                                 ->whereDate('tanggal', $this->date)
-    //                                 ->get();
-
-    //         $startDate = Carbon::parse($ternak->livestock->start_date);
-    //         $selectedDate = Carbon::parse($this->date);
-    //         $age = $startDate->diffInDays($selectedDate);
-    //         // Calculate stock_awal for the selected date
-    //         $previousDate = $selectedDate->copy()->subDay()->format('Y-m-d');
-    //         $previousRecording = Recording::where('livestock_id', $this->livestockId)
-    //                                     ->whereDate('tanggal', $previousDate)
-    //                                     ->first();
-
-    //         $stockAwalHariIni = $previousRecording ? $previousRecording->stock_akhir : $ternak->livestock->populasi_awal;
-
-    //         // Calculate stock_akhir for the selected date
-    //         $totalDeplesiHariIni = (int)($this->mortality ?? 0) + (int)($this->culling ?? 0) + (int)($this->sales_quantity ?? 0);
-    //         $stockAkhirHariIni = $stockAwalHariIni - $totalDeplesiHariIni;
-
-    //         $weightYesterday = $previousRecording ? $previousRecording->berat_hari_ini : 0; // Assuming berat_awal exists
-    //         $weightGain = ($this->weight_today ?? 0) - $weightYesterday;
-
-    //         $recordingInput = [
-    //             'livestock_id' => $this->livestockId,
-    //             'tanggal' => $this->date,
-    //             'age' => $age,
-    //             'stock_awal' => $stockAwalHariIni,
-    //             'stock_akhir' => $stockAkhirHariIni,
-    //             'berat_hari_ini' => $this->weight_today ?? null,
-    //             'berat_semalam' => $weightYesterday,
-    //             'kenaikan_berat' => $weightGain,
-    //             'pakan_jenis' => $weightGain,
-    //             'pakan_harian' => $weightGain,
-    //         ];
-
-    //         // Format item quantities for stock reduction
-    //         $stockData = [];
-    //         foreach ($this->itemQuantities as $itemId => $quantity) {
-    //             // $originalQuantity = $this->originalItemQuantities[$itemId] ?? 0;
-
-    //             if ($quantity > 0) {
-    //                 $stockData[] = [
-    //                     'item_id' => $itemId,
-    //                     'qty' => $quantity
-    //                 ];
-    //             }
-    //         }
-
-    //         // Save or Update Recording data
-
-    //         // $sales = TernakJual::where('livestock_id', $this->livestockId)
-    //         //                         ->where('transaksi_id', $transaksi->id)
-    //         //                         ->whereDate('tanggal', $this->date)
-    //         //                         ->get();
-    //         //  if (!$ternak) {
-    //         //      throw new \Exception("Data Ternak tidak ditemukan.");
-    //         //  }
-
-    //         // if($this->isEditing){
-    //         //     if($this->mortality > 0 || $this->culling > 0 || $this->sales_quantity > 0){
-    //         //         // Get existing deplesi records for this date
-    //         //         $existingMati = $deplesi->where('jenis', 'Mati')->first();
-    //         //         $existingAfkir = $deplesi->where('jenis', 'Afkir')->first();
-    //         //         $existingSales = $sales->first();
-                    
-    //         //         // Update or create Mati deplesi
-    //         //         if($this->mortality > 0){
-    //         //             if($existingMati) {
-    //         //                 // Update existing record
-    //         //                 $existingMati->jumlah = $this->mortality;
-    //         //                 $existingMati->updated_by = auth()->id();
-    //         //                 $existingMati->save();
-    //         //             } else {
-    //         //                 // Create new record
-    //         //                 $this->storeDeplesi('Mati', $this->mortality);
-    //         //             }
-    //         //         } else if($existingMati) {
-    //         //             // If mortality is 0 but record exists, delete it
-    //         //             $existingMati->delete();
-    //         //         }
-                    
-    //         //         // Update or create Afkir deplesi
-    //         //         if($this->culling > 0){
-    //         //             if($existingAfkir) {
-    //         //                 // Update existing record
-    //         //                 $existingAfkir->jumlah = $this->culling;
-    //         //                 $existingAfkir->updated_by = auth()->id();
-    //         //                 $existingAfkir->save();
-    //         //             } else {
-    //         //                 // Create new record
-    //         //                 $this->storeDeplesi('Afkir', $this->culling);
-    //         //             }
-    //         //         } else if($existingAfkir) {
-    //         //             // If culling is 0 but record exists, delete it
-    //         //             $existingAfkir->delete();
-    //         //         }
-
-    //         //         // Update or create Mati deplesi
-    //         //         if($this->sales_quantity > 0){
-    //         //             if($existingSales) {
-    //         //                 // Update existing record
-    //         //                 $existingSales->quantity = $this->sales_quantity;
-    //         //                 $existingSales->updated_by = auth()->id();
-    //         //                 $existingSales->save();
-    //         //             } else {
-    //         //                 // Create new record
-    //         //                 $this->storeDeplesi('Mati', $this->sales_quantity);
-    //         //             }
-    //         //         } else if($existingSales) {
-    //         //             // If sales_quantity is 0 but record exists, delete it
-    //         //             $existingSales->delete();
-    //         //         }
-    //         //     }
-    //         // }
-
-            
-
-    //         // Wrap database operation in a transaction (if applicable)
-    //         DB::beginTransaction();
-
-    //         $transaksi = $this->saveOrUpdateRecording($recordingInput);
-
-    //         // Perform stock reduction using FIFO service if data exists
-    //         if (!empty($stockData)) {
-    //             $fifoData = [
-    //                 'tanggal' => $this->date,
-    //                 'livestock_id' => $this->livestockId,
-    //                 'weight' => $this->weight_today, // Assuming weight_today is relevant here
-    //                 'stock' => $stockData
-    //             ];
-    //             app(FIFOService::class)->reduceStockBaru($fifoData);
-    //         }
-
-            
-    //         //check stocks
-    //         $stockCheck = $this->checkStockByTernakId($this->livestockId);
-
-    //         // Store deplesi if any mortality or culling exists
-    //         if ($this->mortality > 0) {
-    //             $this->storeDeplesi('Mati', $this->mortality);
-    //         }
-
-    //         if ($this->culling > 0) {
-    //             $this->storeDeplesi('Afkir', $this->culling);
-    //         }
-            
-    //         // Update current ternak quantity (This calculates total depletion over time)
-    //         $this->updateCurrentLivestockQuantity();
-
-
-    //         // Format item quantities for stock reduction
-    //         // $stockData = [];
-    //         // foreach ($this->itemQuantities as $itemId => $quantity) {
-    //         //     // $originalQuantity = $this->originalItemQuantities[$itemId] ?? 0;
-
-    //         //     if ($quantity > 0) {
-    //         //         $stockData[] = [
-    //         //             'item_id' => $itemId,
-    //         //             'qty' => $quantity
-    //         //         ];
-    //         //     }
-    //         // }
-
-    //         // If editing previous data, revert the original stock reduction
-    //         // if ($this->isEditing && !empty($this->originalItemQuantities)) {
-    //         //     $revertData = [
-    //         //         'livestock_id' => $this->livestockId,
-    //         //         'tanggal' => $this->date,
-    //         //         'stock' => []
-    //         //     ];
-                
-    //         //     foreach ($this->originalItemQuantities as $itemId => $quantity) {
-    //         //         if ($quantity > 0) {
-    //         //             $revertData['stock'][] = [
-    //         //                 'item_id' => $itemId,
-    //         //                 'qty' => $quantity
-    //         //             ];
-    //         //         }
-    //         //     }
-                
-    //         //     app(FIFOService::class)->revertStockReduction($revertData);
-    //         // }
-
-    //         // Perform stock reduction using FIFO service if data exists
-    //         // if (!empty($stockData)) {
-    //         //     $fifoData = [
-    //         //         'tanggal' => $this->date,
-    //         //         'livestock_id' => $this->livestockId,
-    //         //         'weight' => $this->weight_today, // Assuming weight_today is relevant here
-    //         //         'stock' => $stockData
-    //         //     ];
-    //         //     app(FIFOService::class)->reduceStockBaru($fifoData);
-    //         // }
-
-    //         // --- Prepare data for Recording ---
-    //         // $ternak = CurrentLivestock::with('livestock')->where('livestock_id', $this->livestockId)->first();
-    //         // if (!$ternak) {
-    //         //     throw new \Exception("Data Ternak tidak ditemukan.");
-    //         // }
-    //         // $startDate = Carbon::parse($ternak->livestock->start_date);
-    //         // $selectedDate = Carbon::parse($this->date);
-    //         // $age = $startDate->diffInDays($selectedDate);
-
-    //         // // Calculate stock_awal for the selected date
-    //         // $previousDate = $selectedDate->copy()->subDay()->format('Y-m-d');
-    //         // $previousRecording = Recording::where('livestock_id', $this->livestockId)
-    //         //                             ->whereDate('tanggal', $previousDate)
-    //         //                             ->first();
-
-    //         // $stockAwalHariIni = $previousRecording ? $previousRecording->stock_akhir : $ternak->livestock->populasi_awal;
-
-    //         // // Calculate stock_akhir for the selected date
-    //         // $totalDeplesiHariIni = (int)($this->mortality ?? 0) + (int)($this->culling ?? 0);
-    //         // $stockAkhirHariIni = $stockAwalHariIni - $totalDeplesiHariIni;
-
-    //         // // Calculate weight gain
-    //         // // $weightYesterday = $previousRecording ? $previousRecording->berat_hari_ini : ($ternak->livestock->berat_awal ?? 0); // Assuming berat_awal exists
-    //         // $weightYesterday = $previousRecording ? $previousRecording->berat_hari_ini : 0; // Assuming berat_awal exists
-    //         // $weightGain = ($this->weight_today ?? 0) - $weightYesterday;
-
-    //         // // dd($weightGain);
-
-
-    //         // $recordingInput = [
-    //         //     'livestock_id' => $this->livestockId,
-    //         //     'tanggal' => $this->date,
-    //         //     'age' => $age,
-    //         //     'stock_awal' => $stockAwalHariIni,
-    //         //     'stock_akhir' => $stockAkhirHariIni,
-    //         //     'berat_hari_ini' => $this->weight_today ?? null,
-    //         //     'berat_semalam' => $weightYesterday,
-    //         //     'kenaikan_berat' => $weightGain,
-    //         //     'pakan_jenis' => $weightGain,
-    //         //     'pakan_harian' => $weightGain,
-    //         // ];
-
-    //         // // Save or Update Recording data
-    //         // $transaksi = $this->saveOrUpdateRecording($recordingInput);
-
-    //         // // Store sales data if any sales exist
-    //         // if ($this->sales_quantity > 0) {
-    //         //     // $this->storePenjualan(
-    //         //     //     $this->livestockId, 
-    //         //     //     $this->date, 
-    //         //     //     $this->sales_quantity, 
-    //         //     //     $this->sales_price, 
-    //         //     //     $this->total_sales
-    //         //     // );
-    //         //     app(TernakService::class)->ternakJualBaru($validatedData, $transaksi);
-    //         // }
-            
-    //         // Reload data displayed in the table
-    //         $this->loadRecordingData(); 
-    //         // --- End Recording ---
-
-
-    //         DB::commit();
-
-
-    //         // Optionally reset the input fields
-    //         $this->reset(['date', 'age', 'stock_start', 'stock_end', 'mortality', 'culling', 'weight_today', 'weight_yesterday', 'weight_gain', 'sales_quantity', 'sales_price', 'total_sales']);
-    //         $this->initializeItemQuantities(); // Reset item quantities inputs
-    //         $this->loadStockData(); // Reload stock data for inputs
-    //         $this->checkCurrentLivestockStock(); // Reload ternak stock info
-
-    //         $this->dispatch('success', 'Data berhasil disimpan');
-
-    //     } catch (ValidationException $e) {
-    //         DB::rollBack(); // Rollback on validation exception too
-    //         $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
-    //         $this->setErrorBag($e->validator->errors());
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-        
-    //         // Human-readable error message
-    //         $errorMessage = 'Terjadi kesalahan saat menyimpan data. Silakan coba lagi.';
-        
-    //         // Detailed error message for logging (optional)
-    //         $detailedErrorMessage = 'Terjadi kesalahan saat menyimpan data. ' . $e->getMessage() . ' (Line: ' . $e->getLine() . ', File: ' . $e->getFile() . ')';
-        
-    //         // Dispatch a user-friendly error event
-    //         $this->dispatch('error', $errorMessage);
-        
-    //         // Log the detailed error for debugging
-    //         Log::error($detailedErrorMessage);
-    //         // DB::rollBack();
-    //         // Log::error('Error saving record: ' . $e->getMessage() . ' Stack: ' . $e->getTraceAsString()); // Log detailed error
-    //         // $this->dispatch('error', 'Terjadi kesalahan saat memperbarui data. Silakan cek log.'); // More generic user message
-    //     } finally {
-    //         // Optional: Code that runs whether success or failure
-    //     }
-        
-    // }
-
-    // Add the new private method here
-    // private function saveOrUpdateRecording($data)
-    // {
-    //     // dd($data['berat_hari_ini']);
-    //     $payloadData = [
-    //         'mortality' => $this->mortality ?? 0,
-    //         'culling' => $this->culling ?? 0,
-    //         'sales_quantity' => $this->sales_quantity ?? 0,
-    //         'sales_price' => $this->sales_price ?? 0,
-    //         'sales_weight' => $this->sales_weight ?? 0,
-    //         'total_sales' => $this->total_sales ?? 0,
-
-    //     ];
-
-    //     $transaksi = Recording::updateOrCreate(
-    //         [
-    //             'livestock_id' => $data['livestock_id'],
-    //             'tanggal' => $data['tanggal']
-    //         ],
-    //         [
-    //             'age' => $data['age'],
-    //             'stock_awal' => $data['stock_awal'],
-    //             'stock_akhir' => $data['stock_akhir'],
-    //             'berat_hari_ini' => $data['berat_hari_ini'] ?? null, // Use null if not provided
-    //             'berat_semalam' => $data['berat_semalam'] ?? null, // Use null if not provided
-    //             'kenaikan_berat' => $data['kenaikan_berat'] ?? null, // Use null if not provided
-    //             'pakan_jenis' => $data['pakan_jenis'] ?? null, // Use null if not provided
-    //             'pakan_harian' => $data['pakan_harian'] ?? 0, // Use null if not provided
-    //             'payload' => $payloadData ?? [], // Use null if not provided
-    //             'created_by' => auth()->id(), // Assuming you want to track creator
-    //             'updated_by' => auth()->id(), // Assuming you want to track updater
-    //         ]
-    //     );
-
-    //      // Paksa update `updated_by` jika tidak ada perubahan di data lain
-    //     if (!$transaksi->wasRecentlyCreated && !$transaksi->wasChanged()) {
-    //         $transaksi->updated_by = auth()->id();
-    //         $transaksi->touch(); // update updated_at
-    //     }
-
-    //     logger('Changed: ', $transaksi->getChanges());
-
-
-    //     return $transaksi;
-    // }
-
     /**
      * Store sales data for a recording
-     * 
+     *
      * @param int $livestockId The ID of the ternak
      * @param string $date The date of the recording
      * @param int $salesQuantity The quantity of sales
@@ -1142,7 +149,7 @@ class Records extends Component
     //         $recording = Recording::where('livestock_id', $livestockId)
     //                             ->whereDate('tanggal', $date)
     //                             ->first();
-            
+
     //         if (!$recording) {
     //             // If no recording exists, create a new one with just the sales data
     //             $recording = new Recording();
@@ -1150,29 +157,29 @@ class Records extends Component
     //             $recording->tanggal = $date;
     //             $recording->created_by = auth()->id();
     //         }
-            
+
     //         // Update the sales-related fields
     //         $recording->sales_quantity = $salesQuantity;
     //         $recording->sales_price = $salesPrice;
     //         $recording->total_sales = $totalSales;
     //         $recording->updated_by = auth()->id();
-            
+
     //         // Save the recording
     //         $recording->save();
-            
+
     //         // Update the current ternak quantity to reflect the sales
     //         $this->updateCurrentLivestockQuantityAfterSales($livestockId, $salesQuantity);
-            
+
     //         return true;
     //     } catch (\Exception $e) {
     //         Log::error('Error storing sales data: ' . $e->getMessage());
     //         return false;
     //     }
     // }
-    
+
     /**
      * Update the current ternak quantity after sales
-     * 
+     *
      * @param int $livestockId The ID of the ternak
      * @param int $salesQuantity The quantity of sales
      * @return void
@@ -1180,7 +187,7 @@ class Records extends Component
     // private function updateCurrentLivestockQuantityAfterSales($livestockId, $salesQuantity)
     // {
     //     $currentLivestock = CurrentLivestock::where('livestock_id', $livestockId)->first();
-        
+
     //     if ($currentLivestock) {
     //         $currentLivestock->quantity -= $salesQuantity;
     //         $currentLivestock->save();
@@ -1226,7 +233,7 @@ class Records extends Component
         }
     }
 
-    public function checkStockByTernakId($livestockId) 
+    public function checkStockByTernakId($livestockId)
     {
         $stocks = FeedStock::with('feed')
             ->where('livestock_id', $livestockId)
@@ -1341,7 +348,7 @@ class Records extends Component
 
     //         return;
     //     }
-        
+
     //     if (empty($stockCheck)) {
     //         $this->items = [];
     //         $this->itemQuantities = [];
@@ -1372,7 +379,7 @@ class Records extends Component
             if ($item['item_id'] == $itemId) {
                 // Calculate available stock by subtracting previous entries
                 $availableStock = $item['stock'] - ($this->previousItemQuantities[$itemId] ?? 0);
-                
+
                 if ($value > $availableStock) {
                     $this->itemQuantities[$itemId] = $availableStock;
                 } elseif ($value < 0) {
@@ -1397,18 +404,18 @@ class Records extends Component
         //     ->first();
 
         $currentLivestock = CurrentLivestock::where('livestock_id', $this->livestockId)
-        ->select('quantity as stock_akhir', 'livestock_id')
-        ->with([
-            'livestock' => function ($query) {
-                $query->select('id', 'name', 'start_date', 'populasi_awal')
-                    ->with(['livestockDepletion' => function($q) {
-                        $q->where('tanggal', '<=', now())
-                            ->select('livestock_id', 'jenis', 'jumlah', 'tanggal');
-                    }]);
-            }
-        ])
-        ->first();
-        
+            ->select('quantity as stock_akhir', 'livestock_id')
+            ->with([
+                'livestock' => function ($query) {
+                    $query->select('id', 'name', 'start_date', 'populasi_awal')
+                        ->with(['livestockDepletion' => function ($q) {
+                            $q->where('tanggal', '<=', now())
+                                ->select('livestock_id', 'jenis', 'jumlah', 'tanggal');
+                        }]);
+                }
+            ])
+            ->first();
+
 
         if ($currentLivestock) {
             // Calculate deplesi using the relationship
@@ -1450,26 +457,6 @@ class Records extends Component
         }
     }
 
-    private function storeDeplesi($jenis, $jumlah)
-    {
-        if ($jumlah <= 0) {
-            return;
-        }
-
-        return LivestockDepletion::updateOrCreate(
-            [
-                'livestock_id' => $this->livestockId,
-                'tanggal' => $this->date,
-                'jenis' => $jenis,
-            ],
-            [
-                'jumlah' => $jumlah,
-                // 'keterangan' => $this->keterangan ?? null,
-                'created_by' => auth()->id(),
-                'updated_by' => auth()->id()
-            ]
-        );
-    }
 
     // Add this method to handle date changes
     public function updatedDate($value)
@@ -1492,7 +479,7 @@ class Records extends Component
         $recordingData = Recording::where('livestock_id', $this->livestockId)
             ->whereDate('tanggal', $value)
             ->first();
-        
+
         // --- Fetch Deplesi Data for the selected date ---
         $deplesi = LivestockDepletion::where('livestock_id', $this->livestockId)
             ->whereDate('tanggal', $value)
@@ -1508,9 +495,9 @@ class Records extends Component
         //     ->pluck('quantity', 'item_id'); // Create an associative array [item_id => quantity]
 
         $itemUsage = FeedUsageDetail::whereHas('feedUsage', function ($query) use ($value) {
-                $query->where('livestock_id', $this->livestockId)
-                      ->whereDate('usage_date', $value);
-            })
+            $query->where('livestock_id', $this->livestockId)
+                ->whereDate('usage_date', $value);
+        })
             ->select('feed_id as item_id', DB::raw('SUM(quantity_taken) as quantity'))
             ->groupBy('feed_id')
             ->get()
@@ -1530,13 +517,13 @@ class Records extends Component
         // Then, populate with usage data for the selected date
         foreach ($itemUsage as $itemId => $quantity) {
             // if (isset($this->itemQuantities[$itemId])) { // Ensure the item exists in the current list
-                $this->itemQuantities[$itemId] = $quantity;
+            $this->itemQuantities[$itemId] = $quantity;
             // }
         }
 
         // dd($this->itemQuantities);
 
-        
+
 
         // Update Deplesi fields
         if ($deplesi->isNotEmpty()) {
@@ -1569,7 +556,7 @@ class Records extends Component
             $this->weight_yesterday = $recordingData->berat_semalam ?? 0;
             $this->weight_today = $recordingData->berat_hari_ini ?? 0;
             $this->weight_gain = $recordingData->kenaikan_berat ?? 0;
-            
+
             // Update Sales fields
             $this->sales_quantity = $recordingData->payload['sales_quantity'] ?? 0;
             $this->sales_weight = $recordingData->payload['sales_weight'] ?? 0;
@@ -1577,22 +564,21 @@ class Records extends Component
             $this->total_sales = $recordingData->payload['total_sales'] ?? 0;
             $this->isEditing = true;
         } else {
-             // Fetch previous day's recording to get weight_yesterday if no recording for selected date
+            // Fetch previous day's recording to get weight_yesterday if no recording for selected date
             $previousDate = Carbon::parse($value)->subDay()->format('Y-m-d');
             $previousRecording = Recording::where('livestock_id', $this->livestockId)
-                                        ->whereDate('tanggal', $previousDate)
-                                        ->first();
+                ->whereDate('tanggal', $previousDate)
+                ->first();
             $this->weight_yesterday = $previousRecording ? $previousRecording->berat_hari_ini : 0;
             $this->weight_today = null; // Reset today's weight
             $this->weight_gain = 0;     // Reset gain
-            
+
             // Reset Sales fields
             $this->sales_quantity = 0;
             $this->sales_price = 0;
             $this->total_sales = 0;
 
             $this->isEditing = false;
-
         }
 
         // Calculate age
@@ -1602,104 +588,6 @@ class Records extends Component
             $this->age = $startDate->diffInDays($selectedDate);
         }
     }
-
-    private function updateCurrentLivestockQuantity()
-    {
-        if (!$this->livestockId) {
-            return;
-        }
-
-        // $currentLivestock = CurrentLivestock::where('livestock_id', $this->livestockId)->first();
-        $currentLivestock = CurrentLivestock::where('livestock_id', $this->livestockId)->first();
-
-        // Get deplesi data for the selected date
-        $deplesi = LivestockDepletion::where('livestock_id', $this->livestockId)
-            ->get();
-
-        $sales = LivestockSalesItem::where('livestock_id', $this->livestockId)
-            ->get();
-        
-        if ($currentLivestock) {
-            DB::transaction(function () use ($currentLivestock, $deplesi, $sales) {
-                // Calculate total deplesi for the day
-                $totalDeplesi = $deplesi->sum('jumlah');
-                $totalSales = $sales->sum('quantity');
-
-                // dd($currentLivestock->livestock->populasi_awal);
-                
-                // Update current quantity
-                $currentLivestock->quantity = $currentLivestock->livestock->populasi_awal - $totalDeplesi - $totalSales;
-                $currentLivestock->save();
-
-                // dd($currentLivestock->quantity);
-                
-
-                // Update parent ternak record
-                // $ternak = $currentLivestock->livestock;
-                // if ($ternak) {
-                //     $ternak->current_quantity = $currentLivestock->quantity;
-                //     $ternak->death_quantity += $this->mortality;
-                //     $ternak->slaughter_quantity += $this->culling;
-                //     $ternak->save();
-                // }
-            });
-        }
-    }
-
-    // private function reduceItemStock($itemId, $quantityToReduce)
-    // {
-    //     if ($quantityToReduce <= 0) {
-    //         return;
-    //     }
-
-    //     DB::transaction(function () use ($itemId, $quantityToReduce) {
-    //         // Get available stock from TransaksiBeliDetail ordered by date (FIFO)
-    //         $availableStocks = TransaksiBeliDetail::where('item_id', $itemId)
-    //                 ->where('jenis', 'Pembelian')
-    //                 ->where('sisa', '>', 0)
-    //                 ->whereNotIn('jenis_barang', ['DOC'])
-    //                 ->orderBy('tanggal', 'asc')
-    //                 ->lockForUpdate() // Prevent race conditions
-    //                 ->get();
-
-    //         $remainingQty = $quantityToReduce;
-
-    //         foreach ($availableStocks as $stock) {
-    //             if ($remainingQty <= 0) break;
-
-    //             $qtyToReduce = min($remainingQty, $stock->sisa);
-                
-    //             // Update the stock
-    //             $stock->terpakai += $qtyToReduce;
-    //             $stock->sisa -= $qtyToReduce;
-    //             $stock->save();
-
-    //             // Create stock history
-    //             StockHistory::create([
-    //                 'transaksi_id' => $stock->transaksi_id,
-    //                 'item_id' => $itemId,
-    //                 'qty_masuk' => 0,
-    //                 'qty_keluar' => $qtyToReduce,
-    //                 'qty_sisa' => $stock->sisa,
-    //                 'keterangan' => 'Penggunaan Harian',
-    //                 'created_by' => auth()->id()
-    //             ]);
-
-    //             $remainingQty -= $qtyToReduce;
-    //         }
-
-    //         // Update current stock
-    //         $currentStock = CurrentStock::where('livestock_id', $this->livestockId)
-    //             ->where('item_id', $itemId)
-    //             ->first();
-
-    //         if ($currentStock) {
-    //             $currentStock->quantity -= $quantityToReduce;
-    //             $currentStock->save();
-    //         }
-    //     });
-    // }
-
 
     private function loadRecordingData()
     {
@@ -1746,11 +634,11 @@ class Records extends Component
             $pakanUsageDetails = FeedUsageDetail::whereHas('feedUsage', function ($query) use ($dateStr) {
                 $query->whereDate('usage_date', $dateStr);
             })
-            ->whereHas('feedStock', function ($query) {
-                $query->where('livestock_id', $this->livestockId);
-            })
-            ->with('feedStock.feed') // get feed name
-            ->get();
+                ->whereHas('feedStock', function ($query) {
+                    $query->where('livestock_id', $this->livestockId);
+                })
+                ->with('feedStock.feed') // get feed name
+                ->get();
 
             $pakanHarian = $pakanUsageDetails->sum('quantity');
             $totalPakanUsage += $pakanHarian;
@@ -1778,112 +666,6 @@ class Records extends Component
         $this->recordings = $records;
     }
 
-
-    // private function loadRecordingData()
-    // {
-    //     if (!$this->livestockId) {
-    //         return;
-    //     }
-
-    //     $ternak = CurrentLivestock::where('livestock_id', $this->livestockId)->first();
-    //     $recordingData = Recording::where('livestock_id', $this->livestockId);
-        
-    //     if (!$ternak) {
-    //         return;
-    //     }
-
-    //     // dd($ternak->livestock->data);
-
-    //     // Get start date from kelompok ternak
-    //     $startDate = Carbon::parse($ternak->livestock->start_date);
-    //     $today = Carbon::today();
-
-    //     // Generate daily records
-    //     $records = collect();
-    //     $currentDate = $startDate->copy();
-    //     $stockAwal = $ternak->livestock->populasi_awal;
-    //     $totalPakanUsage = 0; // Initialize cumulative pakan usage
-    //     $standarData = $ternak->livestock->data ? $ternak->livestock->data[0]['livestock_breed_standard'] : [];
-
-    //     // dd($standarData['data'][0]);
-
-
-
-    //     while ($currentDate <= $today) {
-    //         $dateStr = $currentDate->format('Y-m-d');
-            
-    //         // Get deplesi for this date
-    //         $deplesi = LivestockDepletion::where('livestock_id', $this->livestockId)
-    //             ->whereDate('tanggal', $dateStr)
-    //             ->get();
-                
-    //         $mortality = $deplesi->where('jenis', 'Mati')->sum('jumlah');
-    //         $culling = $deplesi->where('jenis', 'Afkir')->sum('jumlah');
-    //         $totalDeplesi = $mortality + $culling;
-            
-    //         // Calculate age
-    //         $age = $startDate->diffInDays($currentDate);
-            
-    //         // // Get pakan usage for this date
-    //         // $pakanUsage = TransaksiHarianDetail::whereHas('transaksiHarian', function($query) use ($dateStr) {
-    //         //         $query->where('livestock_id', $this->livestockId)
-    //         //             ->whereDate('tanggal', $dateStr);
-    //         //     })->get();
-
-    //         // Get pakan usage for this date
-    //         $pakanUsage = TransaksiHarianDetail::whereHas('transaksiHarian', function($query) use ($dateStr) {
-    //             $query->where('livestock_id', $this->livestockId)
-    //                 ->whereDate('tanggal', $dateStr);
-    //         })
-    //         ->whereHas('item.category', function($query) {
-    //             $query->where('name', 'Pakan');
-    //         })
-    //         ->get();
-
-    //         $pakanHarian = $pakanUsage->sum('quantity');
-    //         $totalPakanUsage += $pakanHarian; // Add today's usage to cumulative total
-
-    //         $record = [
-    //             'tanggal' => $dateStr,
-    //             'age' => $age,
-    //             'fcr_target' => isset($standarData['data'][$age]) ? $standarData['data'][$age]['fcr']['target'] : 0,
-    //             'stock_awal' => $stockAwal,
-    //             'mati' => $mortality,
-    //             'afkir' => $culling,
-    //             'total_deplesi' => $totalDeplesi,
-    //             'deplesi_percentage' => $stockAwal > 0 ? round(($totalDeplesi / $stockAwal) * 100, 2) : 0,
-    //             'stock_akhir' => $stockAwal - $totalDeplesi,
-    //             'pakan_jenis' => $pakanUsage->pluck('item.name')->first() ?? '-',
-    //             'pakan_harian' => $pakanHarian,
-    //             'pakan_total' => $totalPakanUsage, // Use cumulative total
-    //         ];
-
-    //         // $record = [
-    //         //     'tanggal' => $dateStr,
-    //         //     'age' => $age,
-    //         //     'stock_awal' => $stockAwal,
-    //         //     'mati' => $mortality,
-    //         //     'afkir' => $culling,
-    //         //     'total_deplesi' => $totalDeplesi,
-    //         //     'deplesi_percentage' => $stockAwal > 0 ? round(($totalDeplesi / $stockAwal) * 100, 2) : 0,
-    //         //     'stock_akhir' => $stockAwal - $totalDeplesi,
-    //         //     'pakan_jenis' => $pakanUsage->pluck('item.name')->first(),
-    //         //     'pakan_harian' => $pakanUsage->sum('quantity'),
-    //         //     'pakan_total' => $pakanUsage->sum('total_berat'),
-    //         // ];
-
-    //         $records->push($record);
-            
-    //         // Update stock for next iteration
-    //         $stockAwal = $record['stock_akhir'];
-    //         $currentDate->addDay();
-    //     }
-
-    //     $this->recordings = $records;
-
-    //     // dd($records);
-    // }
-
     public function updatedSalesQuantity()
     {
         $this->calculateTotalSales();
@@ -1896,7 +678,7 @@ class Records extends Component
 
     /**
      * Calculate the total sales based on quantity and price
-     * 
+     *
      * @return void
      */
     private function calculateTotalSales()
@@ -1914,24 +696,1644 @@ class Records extends Component
         $currentStock = CurrentStock::where('livestock_id', $this->livestockId)
             ->where('item_id', $itemId)
             ->first();
-            
+
         if ($currentStock) {
             // Add back the quantity
             $currentStock->quantity += $quantity;
             $currentStock->save();
-            
-            // Create a stock history entry
-            // StockHistory::create([
-            //     'transaksi_id' => null, // Or generate a unique ID
-            //     'item_id' => $itemId,
-            //     'qty_masuk' => $quantity,
-            //     'qty_keluar' => 0,
-            //     'qty_sisa' => $currentStock->quantity,
-            //     'keterangan' => 'Koreksi Penggunaan Harian',
-            //     'created_by' => auth()->id()
-            // ]);
         }
     }
 
+    // public function save()
+    // {
+    //     $this->validate();
 
+    //     $validatedData = $this->all();
+
+    //     try {
+    //         DB::beginTransaction(); // Start a database transaction for data integrity
+
+    //         // Prepare feed usage data from item quantities
+    //         $this->usages = collect($this->itemQuantities)
+    //             ->filter(fn($qty) => $qty > 0)
+    //             ->map(function ($qty, $itemId) {
+    //                 $feed = Feed::find($itemId);
+
+    //                 // Get the smallest unit for this feed
+    //                 $smallestUnit = null;
+    //                 $conversionFactor = 1;
+
+    //                 if ($feed && isset($feed->payload['conversion_units'])) {
+    //                     $conversionUnits = collect($feed->payload['conversion_units']);
+    //                     $smallestUnit = $conversionUnits->firstWhere('is_smallest', true);
+
+    //                     if ($smallestUnit) {
+    //                         // Ensure we're storing the quantity in the smallest unit
+    //                         $conversionFactor = $smallestUnit['value'];
+    //                     }
+    //                 }
+
+    //                 return [
+    //                     'feed_id' => $itemId,
+    //                     'quantity' => (float) $qty,
+    //                     'feed_name' => $feed ? $feed->name : 'Unknown Feed',
+    //                     'unit_id' => $smallestUnit ? $smallestUnit['unit_id'] : null,
+    //                     'conversion_factor' => $conversionFactor
+    //                 ];
+    //             })
+    //             ->values()
+    //             ->toArray();
+
+    //         // --- Validate livestock and data structure ---
+    //         $ternak = CurrentLivestock::with('livestock')->where('livestock_id', $this->livestockId)->first();
+    //         if (!$ternak || !$ternak->livestock) {
+    //             throw new \Exception("Livestock record not found or invalid");
+    //         }
+
+    //         $populasiAwal = $ternak->livestock->populasi_awal;
+    //         $livestockStartDate = Carbon::parse($ternak->livestock->start_date);
+    //         $recordDate = Carbon::parse($this->date);
+
+    //         if ($recordDate->lt($livestockStartDate)) {
+    //             throw new \Exception("Recording date cannot be earlier than livestock start date ({$livestockStartDate->format('Y-m-d')})");
+    //         }
+
+    //         // --- Validate total outflows don't exceed initial population ---
+    //         $existingRecord = Recording::where('livestock_id', $this->livestockId)
+    //             ->whereDate('tanggal', $this->date)
+    //             ->first();
+
+    //         $newOut = (int) $this->mortality + (int) $this->culling + (int) $this->sales_quantity;
+
+    //         $totalOutExceptToday = Recording::where('livestock_id', $this->livestockId)
+    //             ->where('tanggal', '!=', $this->date)
+    //             ->get()
+    //             ->sum(function ($record) {
+    //                 $payload = $record->payload ?? [];
+    //                 return ($payload['mortality'] ?? 0) + ($payload['culling'] ?? 0) + ($payload['sales_quantity'] ?? 0);
+    //             });
+
+    //         $totalOut = $totalOutExceptToday + $newOut;
+
+    //         if ($totalOut > $populasiAwal) {
+    //             $this->dispatch('error', "Total outflow ({$totalOut}) exceeds initial population ({$populasiAwal})");
+    //             DB::rollBack();
+    //             return;
+    //         }
+
+    //         // --- Calculate age and stock values ---
+    //         $age = $livestockStartDate->diffInDays($recordDate);
+
+    //         // Calculate stock_awal based on previous day's record
+    //         $previousDate = $recordDate->copy()->subDay()->format('Y-m-d');
+    //         $previousRecording = Recording::where('livestock_id', $this->livestockId)
+    //             ->whereDate('tanggal', $previousDate)
+    //             ->first();
+
+    //         $stockAwalHariIni = $previousRecording ? $previousRecording->stock_akhir : $ternak->livestock->populasi_awal;
+
+    //         // Calculate stock_akhir and depletion totals
+    //         $totalDeplesiHariIni = (int)($this->mortality ?? 0) + (int)($this->culling ?? 0) + (int)($this->sales_quantity ?? 0);
+    //         $stockAkhirHariIni = $stockAwalHariIni - $totalDeplesiHariIni;
+
+    //         // Get previous weight and calculate weight gain
+    //         $weightYesterday = $previousRecording ? $previousRecording->berat_hari_ini : 0;
+    //         $weightToday = $this->weight_today ?? 0;
+    //         $weightGain = $weightToday - $weightYesterday;
+
+    //         // --- Record daily data ---
+    //         $recordingInput = [
+    //             'livestock_id' => $this->livestockId,
+    //             'tanggal' => $this->date,
+    //             'age' => $age,
+    //             'stock_awal' => $stockAwalHariIni,
+    //             'stock_akhir' => $stockAkhirHariIni,
+    //             'berat_hari_ini' => $weightToday,
+    //             'berat_semalam' => $weightYesterday,
+    //             'kenaikan_berat' => $weightGain,
+    //             'pakan_jenis' => implode(', ', array_column($this->usages, 'feed_name')),
+    //             'pakan_harian' => array_sum(array_column($this->usages, 'quantity')),
+    //             'payload' => [
+    //                 'mortality' => (int)($this->mortality ?? 0),
+    //                 'culling' => (int)($this->culling ?? 0),
+    //                 'sales_quantity' => (int)($this->sales_quantity ?? 0),
+    //                 'sales_price' => (float)($this->sales_price ?? 0),
+    //                 'sales_weight' => (float)($this->sales_weight ?? 0),
+    //                 'total_sales' => (float)($this->total_sales ?? 0),
+    //                 'feed_usage' => $this->usages,
+    //                 'recorded_at' => now()->toIso8601String(),
+    //                 'recorded_by' => auth()->id(),
+    //             ],
+    //         ];
+
+    //         // Save recording data
+    //         try {
+    //             $recording = $this->saveOrUpdateRecording($recordingInput);
+    //         } catch (\Exception $e) {
+    //             DB::rollBack();
+    //             $this->dispatch('error', $e->getMessage());
+    //             return;
+    //         }
+
+    //         // --- Process feed usage with proper unit conversion ---
+    //         if (!empty($this->usages)) {
+    //             try {
+    //                 // First validate the usage date against stock entry dates
+    //                 $latestStockDate = FeedStock::where('livestock_id', $this->livestockId)->min('date');
+
+    //                 if ($latestStockDate && $this->date < $latestStockDate) {
+    //                     throw new \Exception("Feed usage date must be after the earliest stock entry date ({$latestStockDate}) for this livestock");
+    //                 }
+
+    //                 // Then save the feed usage with proper unit conversions
+    //                 $this->saveFeedUsage($validatedData);
+
+    //                 // Also check that stock is available
+    //                 $stockCheck = $this->checkStockByTernakId($this->livestockId);
+    //                 if (empty($stockCheck)) {
+    //                     throw new \Exception("No available feed stock for this livestock");
+    //                 }
+    //             } catch (\Exception $e) {
+    //                 DB::rollBack();
+    //                 $this->dispatch('error', $e->getMessage());
+    //                 return;
+    //             }
+    //         }
+
+    //         // --- Record depletion data ---
+    //         if ($this->mortality > 0) {
+    //             $this->storeDeplesi('Mati', $this->mortality);
+    //         }
+
+    //         if ($this->culling > 0) {
+    //             $this->storeDeplesi('Afkir', $this->culling);
+    //         }
+
+    //         // --- Update current livestock quantity ---
+    //         $this->updateCurrentLivestockQuantity();
+
+    //         // --- Calculate and save cost data ---
+    //         app(LivestockCostService::class)->calculateForDate($this->livestockId, $this->date);
+
+    //         // --- Recalculate historical data if needed ---
+    //         // This ensures that any changes propagate to future days
+    //         $futureRecords = Recording::where('livestock_id', $this->livestockId)
+    //             ->where('tanggal', '>', $this->date)
+    //             ->orderBy('tanggal')
+    //             ->get();
+
+    //         if ($futureRecords->isNotEmpty()) {
+    //             foreach ($futureRecords as $futureRecord) {
+    //                 app(LivestockCostService::class)->calculateForDate($this->livestockId, $futureRecord->tanggal);
+    //             }
+    //         }
+
+    //         DB::commit(); // Commit all database changes
+
+    //         // --- Reset form and reload data ---
+    //         $this->reset([
+    //             'date',
+    //             'age',
+    //             'stock_start',
+    //             'stock_end',
+    //             'mortality',
+    //             'culling',
+    //             'weight_today',
+    //             'weight_yesterday',
+    //             'weight_gain',
+    //             'sales_quantity',
+    //             'sales_price',
+    //             'total_sales'
+    //         ]);
+    //         $this->initializeItemQuantities();
+    //         $this->loadStockData();
+    //         $this->checkCurrentLivestockStock();
+    //         $this->loadRecordingData();
+
+    //         $this->dispatch('success', 'Data berhasil disimpan');
+    //     } catch (ValidationException $e) {
+    //         DB::rollBack();
+    //         $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
+    //         $this->setErrorBag($e->validator->errors());
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+
+    //         $class = __CLASS__;
+    //         $method = __FUNCTION__;
+    //         $line = $e->getLine();
+    //         $file = $e->getFile();
+    //         $message = $e->getMessage();
+
+    //         // Log detailed error for debugging
+    //         Log::error("[$class::$method] Error: $message | Line: $line | File: $file");
+    //         Log::debug("[$class::$method] Stack trace: " . $e->getTraceAsString());
+
+    //         // User-friendly error message
+    //         $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ' . $message);
+    //     }
+    // }
+
+    private function saveFeedUsage($data)
+    {
+        if ($this->feedUsageId) {
+            // UPDATE - Handle existing feed usage
+            $usage = FeedUsage::findOrFail($this->feedUsageId);
+            $hasChanged = $this->hasUsageChanged($usage, $this->usages);
+
+            if (!$hasChanged) {
+                return; // No changes, no need to update
+            }
+
+            // Ensure valid usage date
+            $latestStockDate = FeedStock::where('livestock_id', $this->livestockId)->min('date');
+            if ($latestStockDate && $this->date < $latestStockDate) {
+                throw new \Exception("Feed usage date must be after the earliest stock entry date ({$latestStockDate})");
+            }
+
+            // Update usage record
+            $usage->update([
+                'usage_date' => $this->date,
+                'livestock_id' => $this->livestockId,
+                'updated_by' => auth()->id(),
+            ]);
+
+            // Revert old details
+            $oldDetails = FeedUsageDetail::where('feed_usage_id', $usage->id)->get();
+            foreach ($oldDetails as $detail) {
+                $stock = FeedStock::find($detail->feed_stock_id);
+                if ($stock) {
+                    // Revert the used quantity
+                    $stock->quantity_used = max(0, $stock->quantity_used - $detail->quantity_taken);
+
+                    // Update available amount - needs to consider unit conversions
+                    // $stock->available = max(0, $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated);
+                    $stock->save();
+                }
+
+                // Mark for deletion
+                $detail->updated_by = auth()->id();
+                $detail->save();
+                $detail->delete();
+            }
+        } else {
+            // CREATE - Create new feed usage
+            $latestStockDate = FeedStock::where('livestock_id', $this->livestockId)->min('date');
+            if ($latestStockDate && $this->date < $latestStockDate) {
+                throw new \Exception("Feed usage date must be after the earliest stock entry date ({$latestStockDate})");
+            }
+
+            // Create new usage record
+            $usage = FeedUsage::create([
+                'usage_date' => $this->date,
+                'livestock_id' => $this->livestockId,
+                'total_quantity' => array_sum(array_column($this->usages, 'quantity')),
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        // Process the feed usage using FIFO
+        app(\App\Services\FeedUsageService::class)->process($usage, $this->usages);
+
+        // Return the usage record for further processing
+        return $usage;
+    }
+
+    // private function saveOrUpdateRecording($data)
+    // {
+    //     // Validate livestock exists
+    //     $livestock = Livestock::find($data['livestock_id']);
+    //     if (!$livestock) {
+    //         throw new \Exception("Livestock not found");
+    //     }
+
+    //     // Validate recording date
+    //     $livestockMasukDate = Carbon::parse($livestock->start_date);
+    //     $recordingDate = Carbon::parse($data['tanggal']);
+
+    //     if ($recordingDate->lt($livestockMasukDate)) {
+    //         throw new \Exception("Recording date ({$recordingDate->format('Y-m-d')}) cannot be earlier than livestock entry date ({$livestockMasukDate->format('Y-m-d')})");
+    //     }
+
+    //     // Prepare payload data
+    //     $payloadData = [
+    //         'mortality' => (int)($this->mortality ?? 0),
+    //         'culling' => (int)($this->culling ?? 0),
+    //         'sales_quantity' => (int)($this->sales_quantity ?? 0),
+    //         'sales_price' => (float)($this->sales_price ?? 0),
+    //         'sales_weight' => (float)($this->sales_weight ?? 0),
+    //         'total_sales' => (float)($this->total_sales ?? 0),
+    //         'feed_usage' => $this->usages,
+    //         'recorded_at' => now()->toIso8601String(),
+    //         'recorded_by' => auth()->id(),
+    //     ];
+
+    //     // Create or update the recording
+    //     $recording = Recording::updateOrCreate(
+    //         [
+    //             'livestock_id' => $data['livestock_id'],
+    //             'tanggal' => $data['tanggal']
+    //         ],
+    //         [
+    //             'age' => $data['age'],
+    //             'stock_awal' => $data['stock_awal'],
+    //             'stock_akhir' => $data['stock_akhir'],
+    //             'berat_hari_ini' => $data['berat_hari_ini'],
+    //             'berat_semalam' => $data['berat_semalam'],
+    //             'kenaikan_berat' => $data['kenaikan_berat'],
+    //             'pakan_jenis' => $data['pakan_jenis'],
+    //             'pakan_harian' => $data['pakan_harian'],
+    //             'payload' => $payloadData,
+    //             'created_by' => auth()->id(),
+    //             'updated_by' => auth()->id(),
+    //         ]
+    //     );
+
+    //     // Force update of updated_by/updated_at even if no changes
+    //     if (!$recording->wasRecentlyCreated && !$recording->wasChanged()) {
+    //         $recording->updated_by = auth()->id();
+    //         $recording->touch();
+    //     }
+
+    //     // Log changes for debugging
+    //     Log::info('Recording saved', [
+    //         'id' => $recording->id,
+    //         'livestock_id' => $recording->livestock_id,
+    //         'tanggal' => $recording->tanggal,
+    //         'changes' => $recording->getChanges()
+    //     ]);
+
+    //     return $recording;
+    // }
+
+    private function storeDeplesi($jenis, $jumlah)
+    {
+        if ($jumlah <= 0) {
+            return null;
+        }
+
+        // Create or update depletion record
+        $deplesi = LivestockDepletion::updateOrCreate(
+            [
+                'livestock_id' => $this->livestockId,
+                'tanggal' => $this->date,
+                'jenis' => $jenis,
+            ],
+            [
+                'jumlah' => $jumlah,
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id()
+            ]
+        );
+
+        Log::info("Recorded livestock depletion", [
+            'livestock_id' => $this->livestockId,
+            'date' => $this->date,
+            'type' => $jenis,
+            'quantity' => $jumlah
+        ]);
+
+        return $deplesi;
+    }
+
+    private function updateCurrentLivestockQuantity()
+    {
+        if (!$this->livestockId) {
+            return;
+        }
+
+        $currentLivestock = CurrentLivestock::where('livestock_id', $this->livestockId)->first();
+        if (!$currentLivestock) {
+            return;
+        }
+
+        DB::transaction(function () use ($currentLivestock) {
+            // Get all depletion records for this livestock
+            $allDeplesi = LivestockDepletion::where('livestock_id', $this->livestockId)->get();
+
+            // Get all sales records
+            $allSales = LivestockSalesItem::where('livestock_id', $this->livestockId)->get();
+
+            // Calculate total depletion and sales
+            $totalDeplesi = $allDeplesi->sum('jumlah');
+            $totalSales = $allSales->sum('quantity');
+
+            // Update current quantity
+            $currentLivestock->quantity = $currentLivestock->livestock->populasi_awal - $totalDeplesi - $totalSales;
+
+            // Ensure quantity doesn't go negative
+            $currentLivestock->quantity = max(0, $currentLivestock->quantity);
+            $currentLivestock->save();
+
+            Log::info("Updated current livestock quantity", [
+                'livestock_id' => $this->livestockId,
+                'initial_population' => $currentLivestock->livestock->populasi_awal,
+                'total_depletion' => $totalDeplesi,
+                'total_sales' => $totalSales,
+                'new_quantity' => $currentLivestock->quantity
+            ]);
+        });
+    }
+
+    public function save()
+    {
+        $this->validate();
+
+        $validatedData = $this->all();
+
+        try {
+            DB::beginTransaction(); // Start a database transaction for data integrity
+
+            // --- Prepare feed usage data with comprehensive details ---
+            $this->usages = collect($this->itemQuantities)
+                ->filter(fn($qty) => $qty > 0)
+                ->map(function ($qty, $itemId) {
+                    $feed = Feed::with('unit')->find($itemId);
+
+                    // Get detailed unit conversion information
+                    $unitInfo = $this->getDetailedUnitInfo($feed, $qty);
+
+                    // Get stock details for traceability
+                    $stockInfo = $this->getStockDetails($itemId, $this->livestockId);
+
+                    return [
+                        'feed_id' => $itemId,
+                        'quantity' => (float) $qty,
+                        'feed_name' => $feed ? $feed->name : 'Unknown Feed',
+                        'feed_code' => $feed ? $feed->code : 'Unknown Code',
+
+                        // Unit information
+                        'unit_id' => $unitInfo['smallest_unit_id'],
+                        'unit_name' => $unitInfo['smallest_unit_name'],
+                        'original_unit_id' => $unitInfo['original_unit_id'],
+                        'original_unit_name' => $unitInfo['original_unit_name'],
+                        'consumption_unit_id' => $unitInfo['consumption_unit_id'],
+                        'consumption_unit_name' => $unitInfo['consumption_unit_name'],
+
+                        // Conversion factors
+                        'conversion_factor' => $unitInfo['conversion_factor'],
+                        'converted_quantity' => $unitInfo['converted_quantity'],
+
+                        // Stock information for audit trail
+                        'available_stocks' => $stockInfo['available_stocks'],
+                        'stock_origins' => $stockInfo['stock_origins'],
+                        'stock_purchase_dates' => $stockInfo['stock_purchase_dates'],
+                        'stock_prices' => $stockInfo['stock_prices'],
+
+                        // Metadata
+                        'category' => $feed ? $feed->category->name ?? 'Uncategorized' : 'Unknown',
+                        'timestamp' => now()->toIso8601String(),
+                    ];
+                })
+                ->values()
+                ->toArray();
+
+            // --- Validate livestock and data structure with enhanced checks ---
+            $ternak = CurrentLivestock::with(['livestock.kandang', 'livestock.farm'])->where('livestock_id', $this->livestockId)->first();
+            if (!$ternak || !$ternak->livestock) {
+                throw new \Exception("Livestock record not found or invalid");
+            }
+
+            $populasiAwal = $ternak->livestock->populasi_awal;
+            $livestockStartDate = Carbon::parse($ternak->livestock->start_date);
+            $recordDate = Carbon::parse($this->date);
+
+            // Enhanced date validation
+            if ($recordDate->lt($livestockStartDate)) {
+                throw new \Exception("Recording date cannot be earlier than livestock start date ({$livestockStartDate->format('Y-m-d')})");
+            }
+
+            // Additional validations for extreme future dates
+            if ($recordDate->gt(Carbon::now()->addDays(1))) {
+                throw new \Exception("Recording date cannot be in the future");
+            }
+
+            // --- Get detailed population history for the livestock ---
+            $populationHistory = $this->getPopulationHistory($this->livestockId, $recordDate);
+
+            // --- Validate total outflows don't exceed initial population with detailed breakdown ---
+            $existingRecord = Recording::where('livestock_id', $this->livestockId)
+                ->whereDate('tanggal', $this->date)
+                ->first();
+
+            $newOut = (int) $this->mortality + (int) $this->culling + (int) $this->sales_quantity;
+
+            $outflowHistory = $this->getDetailedOutflowHistory($this->livestockId, $this->date);
+            $totalOutExceptToday = $outflowHistory['total'];
+            $totalOut = $totalOutExceptToday + $newOut;
+
+            if ($totalOut > $populasiAwal) {
+                $this->dispatch('error', "Total outflow ({$totalOut}) exceeds initial population ({$populasiAwal}). Breakdown: Mortality: {$outflowHistory['mortality']}, Culling: {$outflowHistory['culling']}, Sales: {$outflowHistory['sales']}");
+                DB::rollBack();
+                return;
+            }
+
+            // --- Calculate age and stock values with enriched metadata ---
+            $age = $livestockStartDate->diffInDays($recordDate);
+
+            // Calculate stock_awal based on previous day's record
+            $previousDate = $recordDate->copy()->subDay()->format('Y-m-d');
+            $previousRecording = Recording::with(['deplesiData', 'feedUsages'])
+                ->where('livestock_id', $this->livestockId)
+                ->whereDate('tanggal', $previousDate)
+                ->first();
+
+            $stockAwalHariIni = $previousRecording ? $previousRecording->stock_akhir : $ternak->livestock->populasi_awal;
+
+            // Calculate stock_akhir and depletion totals
+            $totalDeplesiHariIni = (int)($this->mortality ?? 0) + (int)($this->culling ?? 0) + (int)($this->sales_quantity ?? 0);
+            $stockAkhirHariIni = $stockAwalHariIni - $totalDeplesiHariIni;
+
+            // Get previous weight data with full history
+            $weightHistory = $this->getWeightHistory($this->livestockId, $recordDate);
+            $weightYesterday = $previousRecording ? $previousRecording->berat_hari_ini : 0;
+            $weightToday = $this->weight_today ?? 0;
+            $weightGain = $weightToday - $weightYesterday;
+
+            // --- Get feed consumption history for advanced metrics ---
+            $feedHistory = $this->getFeedConsumptionHistory($this->livestockId, $recordDate);
+
+            // --- Calculate FCR, IP, and other performance metrics ---
+            $performanceMetrics = $this->calculatePerformanceMetrics(
+                $age,
+                $stockAkhirHariIni,
+                $populasiAwal,
+                $weightToday,
+                $feedHistory['cumulative_feed_consumption'],
+                $totalOut
+            );
+
+            // --- Prepare detailed payload with enhanced data structure ---
+            $detailedPayload = [
+                // Depletion data
+                'mortality' => (int)($this->mortality ?? 0),
+                'culling' => (int)($this->culling ?? 0),
+                'sales_quantity' => (int)($this->sales_quantity ?? 0),
+
+                // Sales data
+                'sales_price' => (float)($this->sales_price ?? 0),
+                'sales_weight' => (float)($this->sales_weight ?? 0),
+                'total_sales' => (float)($this->total_sales ?? 0),
+                'sales_per_unit' => $this->sales_quantity > 0 ? $this->total_sales / $this->sales_quantity : 0,
+
+                // Feed usage with detailed information
+                'feed_usage' => $this->usages,
+                'total_feed_usage' => array_sum(array_column($this->usages, 'quantity')),
+                'feed_cost' => array_sum(array_map(function ($usage) {
+                    $qty = $usage['quantity'] ?? 0;
+                    $price = $usage['stock_prices']['average_price'] ?? 0;
+                    return $qty * $price;
+                }, $this->usages)),
+
+                // Performance metrics
+                'performance' => $performanceMetrics,
+
+                // Historical data
+                'weight_history' => $weightHistory,
+                'feed_history' => $feedHistory,
+                'population_history' => $populationHistory,
+                'outflow_history' => $outflowHistory,
+
+                // Environmental data (if available)
+                'environment' => [
+                    'temperature' => null, // Could be extended with actual temperature data
+                    'humidity' => null,    // Could be extended with actual humidity data
+                    'lighting' => null,    // Could be extended with lighting data
+                ],
+
+                // Farm and kandang information
+                'farm_id' => $ternak->livestock->farm_id,
+                'farm_name' => $ternak->livestock->farm->name ?? 'Unknown Farm',
+                'kandang_id' => $ternak->livestock->kandang_id,
+                'kandang_name' => $ternak->livestock->kandang->name ?? 'Unknown Kandang',
+
+                // Metadata
+                'recorded_at' => now()->toIso8601String(),
+                'recorded_by' => auth()->id(),
+                'recorder_name' => auth()->user()->name ?? 'Unknown User',
+            ];
+
+            // --- Record daily data with comprehensive payload ---
+            $recordingInput = [
+                'livestock_id' => $this->livestockId,
+                'tanggal' => $this->date,
+                'age' => $age,
+                'stock_awal' => $stockAwalHariIni,
+                'stock_akhir' => $stockAkhirHariIni,
+                'berat_hari_ini' => $weightToday,
+                'berat_semalam' => $weightYesterday,
+                'kenaikan_berat' => $weightGain,
+                'pakan_jenis' => implode(', ', array_column($this->usages, 'feed_name')),
+                'pakan_harian' => array_sum(array_column($this->usages, 'quantity')),
+                'payload' => $detailedPayload,
+            ];
+
+            // Save recording data
+            try {
+                $recording = $this->saveOrUpdateRecording($recordingInput);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                $this->dispatch('error', $e->getMessage());
+                return;
+            }
+
+            // dd($this->feedUsageId);
+
+            if ($this->feedUsageId) {
+                $usage = FeedUsage::findOrFail($this->feedUsageId);
+                $hasChanged = $this->hasUsageChanged($usage, $this->usages);
+            }
+
+
+            // dd($hasChanged);
+
+            // --- Process feed usage with enhanced traceability ---
+            if (!empty($this->usages) || $hasChanged === true) {
+                try {
+                    // Validate the usage date against stock entry dates
+                    $earliestStockDate = FeedStock::where('livestock_id', $this->livestockId)->min('date');
+
+                    if ($earliestStockDate && $this->date < $earliestStockDate) {
+                        throw new \Exception("Feed usage date must be after the earliest stock entry date ({$earliestStockDate}) for this livestock");
+                    }
+                    // dd('ada');
+
+                    // Save feed usage with enhanced tracking
+                    $feedUsage = $this->saveFeedUsageWithTracking($validatedData, $recording->id);
+
+                    // Verify stock availability
+                    $stockCheck = $this->checkStockByTernakId($this->livestockId);
+                    if (empty($stockCheck)) {
+                        throw new \Exception("No available feed stock for this livestock");
+                    }
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    $this->dispatch('error', $e->getMessage());
+                    return;
+                }
+            } else {
+
+                dd('kosong');
+            }
+
+            // --- Record depletion data with cause tracking ---
+            if ($this->mortality > 0) {
+                $this->storeDeplesiWithDetails('Mati', $this->mortality, $recording->id);
+            }
+
+            if ($this->culling > 0) {
+                $this->storeDeplesiWithDetails('Afkir', $this->culling, $recording->id);
+            }
+
+            // --- Update current livestock quantity with detailed tracking ---
+            $this->updateCurrentLivestockQuantityWithHistory();
+
+            // --- Calculate and save cost data with comprehensive breakdown ---
+            $costService = app(LivestockCostService::class);
+            $livestockCost = $costService->calculateForDate($this->livestockId, $this->date);
+
+            // --- Recalculate historical data if needed ---
+            // This ensures that any changes propagate to future days
+            $futureRecords = Recording::where('livestock_id', $this->livestockId)
+                ->where('tanggal', '>', $this->date)
+                ->orderBy('tanggal')
+                ->get();
+
+            if ($futureRecords->isNotEmpty()) {
+                foreach ($futureRecords as $futureRecord) {
+                    $costService->calculateForDate($this->livestockId, $futureRecord->tanggal);
+                }
+            }
+
+            DB::commit(); // Commit all database changes
+
+            // --- Reset form and reload data ---
+            $this->reset([
+                'date',
+                'age',
+                'stock_start',
+                'stock_end',
+                'mortality',
+                'culling',
+                'weight_today',
+                'weight_yesterday',
+                'weight_gain',
+                'sales_quantity',
+                'sales_price',
+                'total_sales'
+            ]);
+            $this->initializeItemQuantities();
+            $this->loadStockData();
+            $this->checkCurrentLivestockStock();
+            $this->loadRecordingData();
+
+            $this->dispatch('success', 'Data berhasil disimpan dengan ' . count($this->usages) . ' jenis pakan');
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
+            $this->setErrorBag($e->validator->errors());
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            $class = __CLASS__;
+            $method = __FUNCTION__;
+            $line = $e->getLine();
+            $file = $e->getFile();
+            $message = $e->getMessage();
+
+            // Log detailed error for debugging
+            Log::error("[$class::$method] Error: $message | Line: $line | File: $file");
+            Log::debug("[$class::$method] Stack trace: " . $e->getTraceAsString());
+
+            // User-friendly error message
+            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ' . $message);
+        }
+    }
+
+    /**
+     * Get detailed unit information for a feed item
+     * 
+     * @param Feed $feed The feed item
+     * @param float $quantity The quantity to convert
+     * @return array Detailed unit information
+     */
+    private function getDetailedUnitInfo($feed, $quantity)
+    {
+        $result = [
+            'smallest_unit_id' => null,
+            'smallest_unit_name' => 'Unknown',
+            'original_unit_id' => null,
+            'original_unit_name' => 'Unknown',
+            'consumption_unit_id' => null,
+            'consumption_unit_name' => 'Unknown',
+            'conversion_factor' => 1,
+            'converted_quantity' => $quantity,
+        ];
+
+        if (!$feed) {
+            return $result;
+        }
+
+        // Get unit information from feed payload
+        if (isset($feed->payload['conversion_units']) && is_array($feed->payload['conversion_units'])) {
+            $conversionUnits = collect($feed->payload['conversion_units']);
+
+            // Get smallest unit (for storage)
+            $smallestUnit = $conversionUnits->firstWhere('is_smallest', true);
+            if ($smallestUnit) {
+                $result['smallest_unit_id'] = $smallestUnit['unit_id'];
+
+                // Get unit name from the database
+                $unit = \App\Models\Unit::find($smallestUnit['unit_id']);
+                $result['smallest_unit_name'] = $unit ? $unit->name : 'Unknown';
+
+                // Set conversion factor
+                $result['conversion_factor'] = floatval($smallestUnit['value'] ?? 1);
+            }
+
+            // Get original unit (for purchase)
+            $originalUnit = $conversionUnits->firstWhere('is_default_purchase', true);
+            if ($originalUnit) {
+                $result['original_unit_id'] = $originalUnit['unit_id'];
+
+                // Get unit name from the database
+                $unit = \App\Models\Unit::find($originalUnit['unit_id']);
+                $result['original_unit_name'] = $unit ? $unit->name : 'Unknown';
+            }
+
+            // Get consumption unit (for usage)
+            $consumptionUnit = $conversionUnits->firstWhere('is_default_mutation', true) ??
+                $conversionUnits->firstWhere('is_smallest', true);
+            if ($consumptionUnit) {
+                $result['consumption_unit_id'] = $consumptionUnit['unit_id'];
+
+                // Get unit name from the database
+                $unit = \App\Models\Unit::find($consumptionUnit['unit_id']);
+                $result['consumption_unit_name'] = $unit ? $unit->name : 'Unknown';
+
+                // Calculate converted quantity
+                if ($smallestUnit && $consumptionUnit) {
+                    $smallestValue = floatval($smallestUnit['value'] ?? 1);
+                    $consumptionValue = floatval($consumptionUnit['value'] ?? 1);
+
+                    if ($smallestValue > 0 && $consumptionValue > 0) {
+                        $result['converted_quantity'] = ($quantity * $consumptionValue) / $smallestValue;
+                    }
+                }
+            }
+        } else if ($feed->unit) {
+            // Fallback to basic unit information if conversion_units not available
+            $result['smallest_unit_id'] = $feed->unit->id;
+            $result['smallest_unit_name'] = $feed->unit->name;
+            $result['original_unit_id'] = $feed->unit->id;
+            $result['original_unit_name'] = $feed->unit->name;
+            $result['consumption_unit_id'] = $feed->unit->id;
+            $result['consumption_unit_name'] = $feed->unit->name;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get detailed stock information for a feed item
+     * 
+     * @param string $feedId The feed ID
+     * @param string $livestockId The livestock ID
+     * @return array Detailed stock information
+     */
+    private function getStockDetails($feedId, $livestockId)
+    {
+        $result = [
+            'available_stocks' => [],
+            'stock_origins' => [],
+            'stock_purchase_dates' => [],
+            'stock_prices' => [
+                'min_price' => 0,
+                'max_price' => 0,
+                'average_price' => 0,
+            ],
+        ];
+
+        // Get available stocks for the feed and livestock
+        $stocks = FeedStock::with(['feedPurchase', 'feed'])
+            ->where('feed_id', $feedId)
+            ->where('livestock_id', $livestockId)
+            ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
+            ->orderBy('date')
+            ->get();
+
+        if ($stocks->isEmpty()) {
+            return $result;
+        }
+
+        // Prepare stock details
+        $stockDetails = [];
+        $prices = [];
+        $origins = [];
+        $purchaseDates = [];
+
+        foreach ($stocks as $stock) {
+            $available = $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated;
+
+            if ($available <= 0) {
+                continue;
+            }
+
+            // Get price information
+            $price = 0;
+            if ($stock->feedPurchase) {
+                $price = $stock->feedPurchase->price_per_converted_unit ??
+                    ($stock->feedPurchase->price_per_unit ?? 0);
+
+                $prices[] = $price;
+            }
+
+            // Get origin information
+            $origin = 'Unknown';
+            if ($stock->feedPurchase && $stock->feedPurchase->batch && $stock->feedPurchase->batch->supplier) {
+                $origin = $stock->feedPurchase->batch->supplier->name ?? 'Unknown';
+                $origins[$origin] = ($origins[$origin] ?? 0) + $available;
+            }
+
+            // Get purchase date
+            $purchaseDate = $stock->date ?? ($stock->feedPurchase->batch->date ?? null);
+            if ($purchaseDate) {
+                $formattedDate = Carbon::parse($purchaseDate)->format('Y-m-d');
+                $purchaseDates[$formattedDate] = ($purchaseDates[$formattedDate] ?? 0) + $available;
+            }
+
+            // Add stock detail
+            $stockDetails[] = [
+                'stock_id' => $stock->id,
+                'available' => $available,
+                'price' => $price,
+                'origin' => $origin,
+                'purchase_date' => $purchaseDate ? Carbon::parse($purchaseDate)->format('Y-m-d') : null,
+                'batch_id' => $stock->feedPurchase->batch->id ?? null,
+                'batch_number' => $stock->feedPurchase->batch->invoice_number ?? null,
+            ];
+        }
+
+        // Calculate price statistics
+        if (!empty($prices)) {
+            $result['stock_prices'] = [
+                'min_price' => min($prices),
+                'max_price' => max($prices),
+                'average_price' => array_sum($prices) / count($prices),
+            ];
+        }
+
+        // Format stock origins and purchase dates
+        foreach ($origins as $origin => $quantity) {
+            $result['stock_origins'][] = [
+                'origin' => $origin,
+                'quantity' => $quantity,
+            ];
+        }
+
+        foreach ($purchaseDates as $date => $quantity) {
+            $result['stock_purchase_dates'][] = [
+                'date' => $date,
+                'quantity' => $quantity,
+            ];
+        }
+
+        $result['available_stocks'] = $stockDetails;
+
+        return $result;
+    }
+
+    /**
+     * Get detailed population history for a livestock
+     * 
+     * @param string $livestockId The livestock ID
+     * @param Carbon $currentDate The current date
+     * @return array Population history details
+     */
+    private function getPopulationHistory($livestockId, $currentDate)
+    {
+        $livestock = Livestock::findOrFail($livestockId);
+        $initialPopulation = $livestock->populasi_awal;
+        $startDate = Carbon::parse($livestock->start_date);
+
+        // Get all recordings up to the current date
+        $recordings = Recording::where('livestock_id', $livestockId)
+            ->where('tanggal', '<', $currentDate->format('Y-m-d'))
+            ->orderBy('tanggal')
+            ->get();
+
+        // Get all depletion records up to the current date
+        $depletions = LivestockDepletion::where('livestock_id', $livestockId)
+            ->where('tanggal', '<', $currentDate->format('Y-m-d'))
+            ->orderBy('tanggal')
+            ->get();
+
+        // Get all sales records up to the current date
+        $sales = LivestockSalesItem::where('livestock_id', $livestockId)
+            ->where('tanggal', '<', $currentDate->format('Y-m-d'))
+            ->orderBy('tanggal')
+            ->get();
+
+        // Calculate daily population changes
+        $populationByDate = [];
+        $currentPopulation = $initialPopulation;
+        $totalMortality = 0;
+        $totalCulling = 0;
+        $totalSales = 0;
+
+        // Process recordings with their depletion data
+        foreach ($recordings as $recording) {
+            $recordDate = $recording->tanggal->format('Y-m-d');
+            $payload = $recording->payload ?? [];
+
+            $dayMortality = $payload['mortality'] ?? 0;
+            $dayCulling = $payload['culling'] ?? 0;
+            $daySales = $payload['sales_quantity'] ?? 0;
+
+            $totalMortality += $dayMortality;
+            $totalCulling += $dayCulling;
+            $totalSales += $daySales;
+
+            $currentPopulation = $recording->stock_akhir;
+
+            $populationByDate[$recordDate] = [
+                'date' => $recordDate,
+                'population' => $currentPopulation,
+                'mortality' => $dayMortality,
+                'culling' => $dayCulling,
+                'sales' => $daySales,
+                'age' => $recording->age,
+            ];
+        }
+
+        return [
+            'initial_population' => $initialPopulation,
+            'current_population' => $currentPopulation,
+            'total_mortality' => $totalMortality,
+            'total_culling' => $totalCulling,
+            'total_sales' => $totalSales,
+            'mortality_rate' => $initialPopulation > 0 ? ($totalMortality / $initialPopulation) * 100 : 0,
+            'culling_rate' => $initialPopulation > 0 ? ($totalCulling / $initialPopulation) * 100 : 0,
+            'sales_rate' => $initialPopulation > 0 ? ($totalSales / $initialPopulation) * 100 : 0,
+            'survival_rate' => $initialPopulation > 0 ? ($currentPopulation / $initialPopulation) * 100 : 0,
+            'daily_changes' => array_values($populationByDate),
+            'age_days' => $startDate->diffInDays($currentDate),
+        ];
+    }
+
+    /**
+     * Get detailed outflow history for a livestock
+     * 
+     * @param string $livestockId The livestock ID
+     * @param string $date The current date
+     * @return array Outflow history details
+     */
+    private function getDetailedOutflowHistory($livestockId, $date)
+    {
+        // Get all recordings except for the current date
+        $recordings = Recording::where('livestock_id', $livestockId)
+            ->where('tanggal', '!=', $date)
+            ->get();
+
+        $totalMortality = 0;
+        $totalCulling = 0;
+        $totalSales = 0;
+
+        foreach ($recordings as $recording) {
+            $payload = $recording->payload ?? [];
+            $totalMortality += $payload['mortality'] ?? 0;
+            $totalCulling += $payload['culling'] ?? 0;
+            $totalSales += $payload['sales_quantity'] ?? 0;
+        }
+
+        $total = $totalMortality + $totalCulling + $totalSales;
+
+        return [
+            'mortality' => $totalMortality,
+            'culling' => $totalCulling,
+            'sales' => $totalSales,
+            'total' => $total,
+            'by_date' => $recordings->map(function ($recording) {
+                $payload = $recording->payload ?? [];
+                return [
+                    'date' => $recording->tanggal,
+                    'mortality' => $payload['mortality'] ?? 0,
+                    'culling' => $payload['culling'] ?? 0,
+                    'sales' => $payload['sales_quantity'] ?? 0,
+                ];
+            })->toArray(),
+        ];
+    }
+
+    /**
+     * Get weight history for a livestock
+     * 
+     * @param string $livestockId The livestock ID
+     * @param Carbon $currentDate The current date
+     * @return array Weight history details
+     */
+    private function getWeightHistory($livestockId, $currentDate)
+    {
+        // Get all recordings up to the current date with weight data
+        $recordings = Recording::where('livestock_id', $livestockId)
+            ->where('tanggal', '<', $currentDate->format('Y-m-d'))
+            ->whereNotNull('berat_hari_ini')
+            ->orderBy('tanggal')
+            ->get();
+
+        $weightByDay = [];
+        $weightGainByDay = [];
+        $lastWeight = 0;
+        $totalGain = 0;
+
+        foreach ($recordings as $recording) {
+            $date = $recording->tanggal;
+            $weight = $recording->berat_hari_ini;
+            $age = $recording->age;
+
+            $gain = $weight - $lastWeight;
+            if ($lastWeight > 0) {
+                $totalGain += $gain;
+                $weightGainByDay[] = [
+                    'date' => $date,
+                    'gain' => $gain,
+                    'age' => $age,
+                ];
+            }
+
+            $weightByDay[] = [
+                'date' => $date,
+                'weight' => $weight,
+                'age' => $age,
+            ];
+
+            $lastWeight = $weight;
+        }
+
+        return [
+            'initial_weight' => $recordings->first() ? $recordings->first()->berat_hari_ini : 0,
+            'latest_weight' => $lastWeight,
+            'total_gain' => $totalGain,
+            'average_daily_gain' => count($weightGainByDay) > 0 ? $totalGain / count($weightGainByDay) : 0,
+            'weights' => $weightByDay,
+            'gains' => $weightGainByDay,
+        ];
+    }
+
+    /**
+     * Get feed consumption history for a livestock
+     * 
+     * @param string $livestockId The livestock ID
+     * @param Carbon $currentDate The current date
+     * @return array Feed consumption history
+     */
+    private function getFeedConsumptionHistory($livestockId, $currentDate)
+    {
+        // Get all feed usages up to the current date
+        $feedUsages = FeedUsage::with('details')
+            ->where('livestock_id', $livestockId)
+            ->where('usage_date', '<', $currentDate->format('Y-m-d'))
+            ->orderBy('usage_date')
+            ->get();
+
+        $feedByDay = [];
+        $feedByType = [];
+        $totalConsumption = 0;
+
+        foreach ($feedUsages as $usage) {
+            $date = $usage->usage_date->format('Y-m-d');
+            $dailyConsumption = $usage->details->sum('quantity_taken');
+            $totalConsumption += $dailyConsumption;
+
+            // Group by day
+            if (!isset($feedByDay[$date])) {
+                $feedByDay[$date] = 0;
+            }
+            $feedByDay[$date] += $dailyConsumption;
+
+            // Group by feed type
+            foreach ($usage->details as $detail) {
+                $feedId = $detail->feedStock->feed_id ?? null;
+                if (!$feedId) continue;
+
+                $feedName = $detail->feedStock->feed->name ?? 'Unknown';
+
+                if (!isset($feedByType[$feedName])) {
+                    $feedByType[$feedName] = 0;
+                }
+                $feedByType[$feedName] += $detail->quantity_taken;
+            }
+        }
+
+        // Format for output
+        $formattedFeedByDay = [];
+        foreach ($feedByDay as $date => $amount) {
+            $formattedFeedByDay[] = [
+                'date' => $date,
+                'amount' => $amount,
+            ];
+        }
+
+        $formattedFeedByType = [];
+        foreach ($feedByType as $type => $amount) {
+            $formattedFeedByType[] = [
+                'type' => $type,
+                'amount' => $amount,
+            ];
+        }
+
+        return [
+            'cumulative_feed_consumption' => $totalConsumption,
+            'feed_by_day' => $formattedFeedByDay,
+            'feed_by_type' => $formattedFeedByType,
+            'average_daily_consumption' => count($formattedFeedByDay) > 0 ? $totalConsumption / count($formattedFeedByDay) : 0,
+        ];
+    }
+
+    /**
+     * Calculate performance metrics for the livestock
+     * 
+     * @param int $age Current age in days
+     * @param int $currentPopulation Current population
+     * @param int $initialPopulation Initial population
+     * @param float $currentWeight Current weight
+     * @param float $totalFeedConsumption Total feed consumption
+     * @param int $totalDepleted Total depleted birds
+     * @return array Performance metrics
+     */
+    private function calculatePerformanceMetrics($age, $currentPopulation, $initialPopulation, $currentWeight, $totalFeedConsumption, $totalDepleted)
+    {
+        // Calculate liveability
+        $liveability = $initialPopulation > 0 ? ($currentPopulation / $initialPopulation) * 100 : 0;
+
+        // Calculate mortality rate
+        $mortalityRate = $initialPopulation > 0 ? (($initialPopulation - $currentPopulation) / $initialPopulation) * 100 : 0;
+
+        // Calculate FCR (Feed Conversion Ratio)
+        $fcr = 0;
+        if ($currentWeight > 0 && $currentPopulation > 0) {
+            $totalWeight = $currentWeight * $currentPopulation;
+            $fcr = $totalFeedConsumption > 0 ? $totalFeedConsumption / $totalWeight : 0;
+        }
+
+        // Calculate Feed Intake
+        $feedIntake = $currentPopulation > 0 ? $totalFeedConsumption / $currentPopulation : 0;
+
+        // Calculate ADG (Average Daily Gain)
+        $adg = $age > 0 ? $currentWeight / $age : 0;
+
+        // Calculate IP (Performance Index)
+        $ip = 0;
+        if ($age > 0 && $fcr > 0) {
+            $ip = ($liveability * $currentWeight * 100) / ($age * $fcr);
+        }
+
+        return [
+            'liveability' => round($liveability, 2),
+            'mortality_rate' => round($mortalityRate, 2),
+            'fcr' => round($fcr, 3),
+            'feed_intake' => round($feedIntake, 2),
+            'adg' => round($adg, 3),
+            'ip' => round($ip, 2),
+            'weight_per_age' => $age > 0 ? round($currentWeight / $age, 3) : 0,
+            'feed_per_day' => $age > 0 ? round($totalFeedConsumption / $age, 2) : 0,
+            'depletion_per_day' => $age > 0 ? round($totalDepleted / $age, 2) : 0,
+        ];
+    }
+
+    /**
+     * Save feed usage with enhanced tracking
+     * 
+     * @param array $data The validated data
+     * @param string $recordingId The recording ID for relation
+     * @return \App\Models\FeedUsage The feed usage record
+     */
+    private function saveFeedUsageWithTracking($data, $recordingId)
+    {
+        if ($this->feedUsageId) {
+            // UPDATE - Handle existing feed usage
+            $usage = FeedUsage::findOrFail($this->feedUsageId);
+            $hasChanged = $this->hasUsageChanged($usage, $this->usages);
+
+            if (!$hasChanged) {
+                return $usage; // No changes, no need to update
+            }
+
+            // Ensure valid usage date
+            $earliestStockDate = FeedStock::where('livestock_id', $this->livestockId)->min('date');
+            if ($earliestStockDate && $this->date < $earliestStockDate) {
+                throw new \Exception("Feed usage date must be after the earliest stock entry date ({$earliestStockDate})");
+            }
+
+            // Update usage record with enhanced tracking
+            $usage->update([
+                'usage_date' => $this->date,
+                'livestock_id' => $this->livestockId,
+                'recording_id' => $recordingId, // Link to recording for traceability
+                'total_quantity' => array_sum(array_column($this->usages, 'quantity')),
+                'metadata' => [
+                    'feed_types' => array_column($this->usages, 'feed_name'),
+                    'feed_codes' => array_column($this->usages, 'feed_code'),
+                    'unit_details' => array_map(function ($item) {
+                        return [
+                            'unit_id' => $item['unit_id'],
+                            'unit_name' => $item['unit_name'],
+                            'original_unit_id' => $item['original_unit_id'],
+                            'original_unit_name' => $item['original_unit_name'],
+                        ];
+                    }, $this->usages),
+                    'updated_at' => now()->toIso8601String(),
+                    'updated_by' => auth()->id(),
+                    'updated_by_name' => auth()->user()->name ?? 'Unknown User',
+                ],
+                'updated_by' => auth()->id(),
+            ]);
+
+            // Revert old details with detailed tracking
+            $oldDetails = FeedUsageDetail::where('feed_usage_id', $usage->id)->get();
+
+            Log::info("Reverting {$oldDetails->count()} feed usage details for usage ID {$usage->id}");
+
+            // Track changes for CurrentSupply update
+            $currentSupplyChanges = [];
+
+            foreach ($oldDetails as $detail) {
+                $stock = FeedStock::find($detail->feed_stock_id);
+                if ($stock) {
+                    // Store reversion details for audit trail
+                    Log::info("Reverting feed stock usage", [
+                        'stock_id' => $stock->id,
+                        'feed_id' => $stock->feed_id,
+                        'old_quantity_used' => $stock->quantity_used,
+                        'quantity_to_revert' => $detail->quantity_taken,
+                        'new_quantity_used' => max(0, $stock->quantity_used - $detail->quantity_taken),
+                        'detail_id' => $detail->id,
+                    ]);
+
+                    // Revert the used quantity
+                    $stock->quantity_used = max(0, $stock->quantity_used - $detail->quantity_taken);
+                    $stock->save();
+
+                    // Track changes for CurrentSupply
+                    if (!isset($currentSupplyChanges[$stock->feed_id])) {
+                        $currentSupplyChanges[$stock->feed_id] = 0;
+                    }
+                    $currentSupplyChanges[$stock->feed_id] += $detail->quantity_taken;
+                }
+
+                // Archive the detail instead of hard deleting
+                $detail->update([
+                    'status' => 'reverted',
+                    'metadata' => [
+                        'reverted_at' => now()->toIso8601String(),
+                        'reverted_by' => auth()->id(),
+                        'reverted_by_name' => auth()->user()->name ?? 'Unknown User',
+                        'reason' => 'Updated feed usage',
+                    ],
+                    'updated_by' => auth()->id(),
+                ]);
+
+                // Then delete
+                $detail->delete();
+            }
+
+            // Update CurrentSupply for reverted quantities
+            foreach ($currentSupplyChanges as $feedId => $quantity) {
+                $currentSupply = CurrentSupply::where('livestock_id', $this->livestockId)
+                    ->where('item_id', $feedId)
+                    ->first();
+
+                if ($currentSupply) {
+                    $oldQuantity = $currentSupply->quantity;
+                    $currentSupply->quantity += $quantity;
+                    $currentSupply->save();
+
+                    Log::info("Updated CurrentSupply after reversion", [
+                        'livestock_id' => $this->livestockId,
+                        'feed_id' => $feedId,
+                        'old_quantity' => $oldQuantity,
+                        'added_quantity' => $quantity,
+                        'new_quantity' => $currentSupply->quantity
+                    ]);
+                }
+            }
+        } else {
+            // CREATE - Create new feed usage with enhanced tracking
+            $earliestStockDate = FeedStock::where('livestock_id', $this->livestockId)->min('date');
+            if ($earliestStockDate && $this->date < $earliestStockDate) {
+                throw new \Exception("Feed usage date must be after the earliest stock entry date ({$earliestStockDate})");
+            }
+
+            // Create new usage record with enhanced metadata
+            $usage = FeedUsage::create([
+                'usage_date' => $this->date,
+                'livestock_id' => $this->livestockId,
+                'recording_id' => $recordingId, // Link to recording for traceability
+                'total_quantity' => array_sum(array_column($this->usages, 'quantity')),
+                'metadata' => [
+                    'feed_types' => array_column($this->usages, 'feed_name'),
+                    'feed_codes' => array_column($this->usages, 'feed_code'),
+                    'unit_details' => array_map(function ($item) {
+                        return [
+                            'unit_id' => $item['unit_id'],
+                            'unit_name' => $item['unit_name'],
+                            'original_unit_id' => $item['original_unit_id'],
+                            'original_unit_name' => $item['original_unit_name'],
+                        ];
+                    }, $this->usages),
+                    'created_at' => now()->toIso8601String(),
+                    'created_by' => auth()->id(),
+                    'created_by_name' => auth()->user()->name ?? 'Unknown User',
+                ],
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        // Process the feed usage using FIFO with enhanced metadata
+        $processResult = app(\App\Services\FeedUsageService::class)->processWithMetadata($usage, $this->usages);
+
+        // Update CurrentSupply for new usage
+        foreach ($this->usages as $usageData) {
+            $currentSupply = CurrentSupply::where('livestock_id', $this->livestockId)
+                ->where('item_id', $usageData['feed_id'])
+                ->first();
+
+            if ($currentSupply) {
+                $oldQuantity = $currentSupply->quantity;
+                $currentSupply->quantity -= $usageData['quantity'];
+                $currentSupply->save();
+
+                Log::info("Updated CurrentSupply for new usage", [
+                    'livestock_id' => $this->livestockId,
+                    'feed_id' => $usageData['feed_id'],
+                    'old_quantity' => $oldQuantity,
+                    'used_quantity' => $usageData['quantity'],
+                    'new_quantity' => $currentSupply->quantity
+                ]);
+            }
+        }
+
+        Log::info("Feed usage processed", [
+            'usage_id' => $usage->id,
+            'livestock_id' => $usage->livestock_id,
+            'date' => $usage->usage_date,
+            'total_quantity' => $usage->total_quantity,
+            'details_count' => $processResult['details_count'] ?? 0,
+            'feeds_processed' => $processResult['feeds_processed'] ?? [],
+        ]);
+
+        // Return the usage record for further processing
+        return $usage;
+    }
+
+    /**
+     * Store depletion with detailed tracking
+     * 
+     * @param string $jenis Type of depletion ('Mati' or 'Afkir')
+     * @param int $jumlah Quantity
+     * @param string $recordingId Recording ID for relation
+     * @return \App\Models\LivestockDepletion
+     */
+    private function storeDeplesiWithDetails($jenis, $jumlah, $recordingId)
+    {
+        if ($jumlah <= 0) {
+            return null;
+        }
+
+        $livestock = Livestock::find($this->livestockId);
+        $currentDate = Carbon::parse($this->date);
+        $age = $livestock ? $currentDate->diffInDays(Carbon::parse($livestock->start_date)) : null;
+
+        // Create or update depletion record with enhanced metadata
+        $deplesi = LivestockDepletion::updateOrCreate(
+            [
+                'livestock_id' => $this->livestockId,
+                'tanggal' => $this->date,
+                'jenis' => $jenis,
+            ],
+            [
+                'jumlah' => $jumlah,
+                'recording_id' => $recordingId, // Link to recording for traceability
+                'metadata' => [
+                    'livestock_name' => $livestock->name ?? 'Unknown',
+                    'farm_id' => $livestock->farm_id ?? null,
+                    'farm_name' => $livestock->farm->name ?? 'Unknown',
+                    'kandang_id' => $livestock->kandang_id ?? null,
+                    'kandang_name' => $livestock->kandang->name ?? 'Unknown',
+                    'age_days' => $age,
+                    'updated_at' => now()->toIso8601String(),
+                    'updated_by' => auth()->id(),
+                    'updated_by_name' => auth()->user()->name ?? 'Unknown User',
+                ],
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id()
+            ]
+        );
+
+        Log::info("Recorded livestock depletion", [
+            'livestock_id' => $this->livestockId,
+            'date' => $this->date,
+            'type' => $jenis,
+            'quantity' => $jumlah,
+            'recording_id' => $recordingId,
+        ]);
+
+        return $deplesi;
+    }
+
+    /**
+     * Update current livestock quantity with historical tracking
+     * 
+     * @return void
+     */
+    private function updateCurrentLivestockQuantityWithHistory()
+    {
+        if (!$this->livestockId) {
+            return;
+        }
+
+        $currentLivestock = CurrentLivestock::where('livestock_id', $this->livestockId)->first();
+        if (!$currentLivestock) {
+            return;
+        }
+
+        DB::transaction(function () use ($currentLivestock) {
+            // Get all depletion records for this livestock
+            $allDeplesi = LivestockDepletion::where('livestock_id', $this->livestockId)->get();
+
+            // Get all sales records
+            $allSales = LivestockSalesItem::where('livestock_id', $this->livestockId)->get();
+
+            // Calculate total depletion and sales
+            $totalDeplesi = $allDeplesi->sum('jumlah');
+            $totalSales = $allSales->sum('quantity');
+
+            // Store the old quantity for history
+            $oldQuantity = $currentLivestock->quantity;
+
+            // Update current quantity
+            $currentLivestock->quantity = $currentLivestock->livestock->populasi_awal - $totalDeplesi - $totalSales;
+
+            // Ensure quantity doesn't go negative
+            $currentLivestock->quantity = max(0, $currentLivestock->quantity);
+
+            // Add historical metadata
+            $currentLivestock->metadata = [
+                'last_updated' => now()->toIso8601String(),
+                'updated_by' => auth()->id(),
+                'updated_by_name' => auth()->user()->name ?? 'Unknown User',
+                'previous_quantity' => $oldQuantity,
+                'change' => $currentLivestock->quantity - $oldQuantity,
+                'initial_population' => $currentLivestock->livestock->populasi_awal,
+                'total_depletion' => $totalDeplesi,
+                'total_sales' => $totalSales,
+                'mortality_percentage' => $currentLivestock->livestock->populasi_awal > 0
+                    ? ($allDeplesi->where('jenis', 'Mati')->sum('jumlah') / $currentLivestock->livestock->populasi_awal) * 100
+                    : 0,
+                'culling_percentage' => $currentLivestock->livestock->populasi_awal > 0
+                    ? ($allDeplesi->where('jenis', 'Afkir')->sum('jumlah') / $currentLivestock->livestock->populasi_awal) * 100
+                    : 0,
+                'sales_percentage' => $currentLivestock->livestock->populasi_awal > 0
+                    ? ($totalSales / $currentLivestock->livestock->populasi_awal) * 100
+                    : 0,
+            ];
+
+            $currentLivestock->save();
+
+            Log::info("Updated current livestock quantity", [
+                'livestock_id' => $this->livestockId,
+                'old_quantity' => $oldQuantity,
+                'new_quantity' => $currentLivestock->quantity,
+                'change' => $currentLivestock->quantity - $oldQuantity,
+                'initial_population' => $currentLivestock->livestock->populasi_awal,
+                'total_depletion' => $totalDeplesi,
+                'total_sales' => $totalSales,
+            ]);
+        });
+    }
+
+    /**
+     * Save or update recording with enhanced metadata
+     * 
+     * @param array $data Recording data
+     * @return \App\Models\Recording
+     */
+    private function saveOrUpdateRecording($data)
+    {
+        // Validate livestock exists
+        $livestock = Livestock::find($data['livestock_id']);
+        if (!$livestock) {
+            throw new \Exception("Livestock not found");
+        }
+
+        // Validate recording date
+        $livestockMasukDate = Carbon::parse($livestock->start_date);
+        $recordingDate = Carbon::parse($data['tanggal']);
+
+        if ($recordingDate->lt($livestockMasukDate)) {
+            throw new \Exception("Recording date ({$recordingDate->format('Y-m-d')}) cannot be earlier than livestock entry date ({$livestockMasukDate->format('Y-m-d')})");
+        }
+
+        // Prepare enhanced metadata
+        $enhancedMetadata = [
+            'version' => '2.0',
+            'recorded_at' => now()->toIso8601String(),
+            'recorded_by' => [
+                'id' => auth()->id(),
+                'name' => auth()->user()->name ?? 'Unknown User',
+                'role' => auth()->user()->roles->first()->name ?? 'Unknown Role',
+            ],
+            'livestock_details' => [
+                'id' => $livestock->id,
+                'name' => $livestock->name,
+                'farm_id' => $livestock->farm_id,
+                'farm_name' => $livestock->farm->name ?? 'Unknown Farm',
+                'kandang_id' => $livestock->kandang_id,
+                'kandang_name' => $livestock->kandang->name ?? 'Unknown Kandang',
+                'strain' => $livestock->strain ?? 'Unknown Strain',
+                'start_date' => $livestock->start_date,
+                'initial_population' => $livestock->populasi_awal,
+            ],
+        ];
+
+        // Merge with payload data
+        $fullPayload = array_merge($data['payload'] ?? [], $enhancedMetadata);
+
+        // Create or update the recording with enhanced data
+        $recording = Recording::updateOrCreate(
+            [
+                'livestock_id' => $data['livestock_id'],
+                'tanggal' => $data['tanggal']
+            ],
+            [
+                'age' => $data['age'],
+                'stock_awal' => $data['stock_awal'],
+                'stock_akhir' => $data['stock_akhir'],
+                'berat_hari_ini' => $data['berat_hari_ini'],
+                'berat_semalam' => $data['berat_semalam'],
+                'kenaikan_berat' => $data['kenaikan_berat'],
+                'pakan_jenis' => $data['pakan_jenis'],
+                'pakan_harian' => $data['pakan_harian'],
+                'payload' => $fullPayload,
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+            ]
+        );
+
+        // Force update of updated_by/updated_at even if no changes
+        if (!$recording->wasRecentlyCreated && !$recording->wasChanged()) {
+            $recording->updated_by = auth()->id();
+            $recording->touch();
+        }
+
+        // Log changes for debugging and audit trail
+        Log::info('Recording saved', [
+            'id' => $recording->id,
+            'livestock_id' => $recording->livestock_id,
+            'tanggal' => $recording->tanggal,
+            'changes' => $recording->getChanges(),
+            'is_new' => $recording->wasRecentlyCreated,
+        ]);
+
+        return $recording;
+    }
 }

@@ -6,7 +6,7 @@ use App\Http\Controllers\Apps\UserManagementController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\FeedController;
+// use App\Http\Controllers\FeedController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\LivestockController;
@@ -16,6 +16,8 @@ use App\Http\Controllers\MasterData\RekananController;
 use App\Http\Controllers\MasterData\FarmController;
 use App\Http\Controllers\MasterData\KandangController;
 use App\Http\Controllers\MasterData\StokController;
+use App\Http\Controllers\MasterData\SupplyController;
+use App\Http\Controllers\MasterData\FeedController;
 use App\Http\Controllers\MasterData\UnitController;
 
 use App\Http\Controllers\ReportsController;
@@ -30,6 +32,8 @@ use App\Http\Controllers\StandarBobotController;
 use App\Http\Controllers\TernakController;
 use App\Models\TransaksiJual;
 use Illuminate\Http\Request;
+
+use App\Http\Controllers\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -63,7 +67,7 @@ Route::get('/test', function () {
 
 Route::get('/tokens/create', function (Request $request) {
     $token = $request->user()->createToken($request->token_name);
- 
+
     return ['token' => $token->plainTextToken];
 });
 
@@ -78,6 +82,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::name('administrator.')->group(function () {
+        Route::get('/administrator/qa', [AdminController::class, 'qaIndex'])->name('qa');
+
         Route::get('/administrator', function () {
             return view('test3');
         });
@@ -105,6 +111,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('/master-data/ternaks', TernakController::class);
         Route::resource('/master-data/feeds', App\Http\Controllers\MasterData\FeedController::class);
         Route::resource('/master-data/supplies', App\Http\Controllers\MasterData\SupplyController::class);
+        Route::resource('/master-data/workers', App\Http\Controllers\MasterData\WorkerController::class);
         Route::resource('/master-data/livestocks', LivestockController::class);
         Route::resource('/master-data/units', UnitController::class);
         Route::get('/master-data/customers', [RekananController::class, 'customerIndex'])->name('customers.index');
@@ -129,8 +136,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('/rekanan/suppliers', RekananController::class);
         Route::get('/rekanan/customers', [RekananController::class, 'customerIndex'])->name('rekanan.customers');
         Route::get('/rekanan/ekspedisis', [RekananController::class, 'ekspedisiIndex'])->name('rekanan.ekspedisi');
-
-
     });
 
     Route::name('transaksi.')->group(function () {
@@ -143,13 +148,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/reduce-stock', [StockController::class, 'reduceStock']);
         Route::get('/transaksi/kematian-ternak', [TernakController::class, 'kematianTernakIndex'])->name('kematian-ternak.index');
         Route::post('/transaksi-harian/filter', [TransaksiHarianController::class, 'filter'])->name('harian.filter');
-
     });
 
     Route::name('transaction.')->group(function () {
         Route::get('/transaction/feed', [TransactionController::class, 'feedIndex'])->name('feed');
         Route::get('/transaction/supply', [TransactionController::class, 'supplyIndex'])->name('supply');
-
+        Route::get('/transaction/sales', [TransactionController::class, 'salesIndex'])->name('sales');
     });
 
     Route::name('inventory.')->group(function () {
@@ -162,16 +166,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::name('stocks.')->group(function () {
         Route::get('/inventory/docs', [TransaksiController::class, 'docIndex'])->name('docs.index');
         Route::get('/inventory/stocks', [TransaksiController::class, 'stokIndex'])->name('stoks.index');
-        Route::get('/stocks/mutasi', [StokController::class, 'stockMutasi'])->name('mutasi.index');
+        // Route::get('/stocks/mutasi', [StokController::class, 'stockMutasi'])->name('mutasi.index');
         // Route::get('/stocks/pakan', [StokController::class, 'stockPakan'])->name('pakan.index');
         Route::get('/stocks/ovk', [StokController::class, 'stockOvk'])->name('ovk.index');
         Route::post('/stocks/transfer', [StokController::class, 'transferStock'])->name('transfer');
         Route::get('/stocks/check-available', [StockController::class, 'checkAvailableStock'])->name('check-available');
 
         Route::get('/stocks/supply', [StockController::class, 'stockSupply'])->name('supply');
-        Route::get('/stocks/pakan', [StockController::class, 'stockPakan'])->name('pakan');
-
-
+        Route::get('/stocks/feed', [StockController::class, 'stockPakan'])->name('pakan');
+        Route::get('/feeds/mutation', [FeedController::class, 'mutasi'])->name('mutasiFeed');
+        Route::get('/supplies/mutation', [SupplyController::class, 'mutasi'])->name('mutasiSupply');
     });
 
     Route::name('pembelian.')->group(function () {
@@ -193,15 +197,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Route::get('/livestock/{id}/detail', [TernakController::class, 'showDetail'])->name('detail');
         Route::resource('/livestock', TernakController::class);
         Route::delete('/recording/delete/{id}', [TernakController::class, 'destroyRecording']);
-
     });
 
-    
+
 
 
     Route::name('farm.')->group(function () {
         Route::get('/farm/{farm}/kandangs', [FarmController::class, 'getKandangs'])->name('kandangs');
-
     });
 
     Route::name('reports.')->group(function () {
@@ -212,11 +214,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/reports/performa-mitra', [ReportsController::class, 'indexPerformaMitra']);
         Route::get('/reports/performa', [ReportsController::class, 'indexPerforma']);
         Route::get('/reports/inventory', [ReportsController::class, 'indexInventory']);
-
     });
-
-    
-
 });
 
 Route::get('/error', function () {

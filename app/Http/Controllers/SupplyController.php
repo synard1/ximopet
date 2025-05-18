@@ -13,52 +13,341 @@ use Illuminate\Support\Facades\Log;
 
 class SupplyController extends Controller
 {
-    public function getFeedPurchaseBatchDetail($batchId)
-    {
 
+    public function getSupplyPurchaseBatchDetail($batchId)
+    {
         $supplyPurchases = SupplyPurchase::with([
-            'supplyItem:id,code,name,unit,unit_conversion,conversion',
-            'supplyStocks' // <- relasi baru nanti ditambahkan
+            'supplyItem:id,code,name,payload',
+            'supplyStocks',
+            'unit'
         ])
-        ->where('supply_purchase_batch_id', $batchId)
-        ->get(['id', 'supply_purchase_batch_id', 'supply_id', 'quantity', 'price_per_unit']);
+            ->where('supply_purchase_batch_id', $batchId)
+            ->get(['id', 'supply_purchase_batch_id', 'supply_id', 'quantity', 'price_per_unit', 'unit_id', 'converted_unit', 'price_per_converted_unit', 'converted_quantity']);
+
+        // dd($supplyPurchases);
 
         $formatted = $supplyPurchases->map(function ($item) {
             $supplyItem = optional($item->supplyItem);
-            $conversion = floatval($supplyItem->conversion) ?: 1;
 
+            // Get proper conversion units from supply payload
+            $conversionUnits = collect($supplyItem->payload['conversion_units'] ?? []);
+
+            // Get the purchase unit and converted (smallest) unit information
+            $purchaseUnitId = $item->unit_id;
+            $convertedUnitId = $item->converted_unit;
+
+            $purchaseUnit = $conversionUnits->firstWhere('unit_id', $purchaseUnitId);
+            $smallestUnit = $conversionUnits->firstWhere('unit_id', $convertedUnitId) ??
+                $conversionUnits->firstWhere('is_smallest', true);
+
+            // Original quantity in purchase units
             $quantity = floatval($item->quantity);
-            $converted_quantity = $quantity / $conversion;
 
-            // Summary dari semua FeedStock berdasarkan purchase
-            $used = $item->supplyStocks->sum('quantity_used');
-            $mutated = $item->supplyStocks->sum('quantity_mutated');
-            $available = $item->supplyStocks->sum('available');
+            // Separate stocks into direct and mutation-derived
+            $directStocks = $item->supplyStocks->filter(function ($stock) {
+                return $stock->supply_purchase_id != null && $stock->source_type != 'mutation';
+            });
 
-            return [
-                'id' => $item->id,
-                'code' => $supplyItem->code,
-                'name' => $supplyItem->name,
-                'quantity' => $quantity,
-                'converted_quantity' => $converted_quantity,
-                'qty' => $converted_quantity,
-                'sisa' => $quantity - $used,
-                'unit' => $supplyItem->unit,
-                'conversion' => $conversion,
-                'price_per_unit' => floatval($item->price_per_unit),
-                'total' => config('xolution.ALLOW_ROUNDUP_PRICE')
-                    ? floatval($quantity * $item->price_per_unit)
-                    : intval($quantity * $item->price_per_unit),
+            $mutationDerivedStocks = $item->supplyStocks->filter(function ($stock) {
+                return $stock->source_type == 'mutation';
+            });
 
-                // Tambahan penggunaan dan mutasi
-                'terpakai' => $used / $conversion,
-                'mutated' => $mutated / $conversion,
-                'available' => $available / $conversion,
-            ];
+            // Calculate usage from direct stocks (for sisa calculation)
+            $directUsedSmallestUnits = $directStocks->sum('quantity_used');
+            $directMutatedSmallestUnits = $directStocks->sum('quantity_mutated');
+            $directAvailableSmallestUnits = $directStocks->sum('available');
+
+            // Calculate usage from mutation-derived stocks (for total usage reporting)
+            $mutationUsedSmallestUnits = $mutationDerivedStocks->sum('quantity_used');
+            $mutationMutatedSmallestUnits = $mutationDerivedStocks->sum('quantity_mutated');
+
+            // Total usage (from both direct and mutation-derived)
+            $totalUsedSmallestUnits = $directUsedSmallestUnits + $mutationUsedSmallestUnits;
+            $totalMutatedSmallestUnits = $directMutatedSmallestUnits + $mutationMutatedSmallestUnits;
+
+            // If we have proper conversion units in payload, use them
+            if ($purchaseUnit && $smallestUnit) {
+                // Get conversion values
+                $purchaseUnitValue = floatval($purchaseUnit['value']);
+                $smallestUnitValue = floatval($smallestUnit['value']);
+
+                // Converted quantity in smallest units
+                $convertedQuantity = ($quantity * $purchaseUnitValue) / $smallestUnitValue;
+
+                // Convert direct usage to purchase units (for sisa calculation)
+                $directUsedPurchaseUnits = ($directUsedSmallestUnits * $smallestUnitValue) / $purchaseUnitValue;
+                $directMutatedPurchaseUnits = ($directMutatedSmallestUnits * $smallestUnitValue) / $purchaseUnitValue;
+                $directAvailablePurchaseUnits = ($directAvailableSmallestUnits * $smallestUnitValue) / $purchaseUnitValue;
+
+                // Convert total usage to purchase units (for display)
+                $totalUsedPurchaseUnits = ($totalUsedSmallestUnits * $smallestUnitValue) / $purchaseUnitValue;
+                $totalMutatedPurchaseUnits = ($totalMutatedSmallestUnits * $smallestUnitValue) / $purchaseUnitValue;
+
+                // Calculate remaining based on direct usage only (to avoid double counting)
+                $sisaPurchaseUnits = max(0, $quantity - $directUsedPurchaseUnits - $directMutatedPurchaseUnits);
+
+                return [
+                    'id' => $item->id,
+                    'kode' => $supplyItem->code,
+                    'name' => $supplyItem->name,
+                    'quantity' => $quantity,
+                    'converted_quantity' => $convertedQuantity,
+                    'sisa' => round($sisaPurchaseUnits, 2),
+                    'unit' => $item->unit->name ?? '-',
+                    'unit_conversion' => $smallestUnit['label'] ?? ($supplyItem->payload['unit_details']['name'] ?? '-'),
+                    'conversion' => $purchaseUnitValue / $smallestUnitValue,
+                    'price_per_unit' => floatval($item->price_per_unit),
+                    'total' => config('xolution.ALLOW_ROUNDUP_PRICE')
+                        ? floatval($quantity * $item->price_per_unit)
+                        : intval($quantity * $item->price_per_unit),
+                    'terpakai' => round($directUsedPurchaseUnits, 2),             // Direct usage only (for calculations)
+                    'mutated' => round($directMutatedPurchaseUnits, 2),           // Direct mutations only (for calculations)
+                    'available' => round($directAvailablePurchaseUnits, 2),       // Direct available only (for calculations)
+                    'total_terpakai' => round($totalUsedPurchaseUnits, 2),        // Total usage including from mutations (for reporting)
+                    'total_mutated' => round($totalMutatedPurchaseUnits, 2),      // Total mutations including from mutations (for reporting)
+                    // A breakdown to help troubleshoot the calculations
+                    'debug' => [
+                        'direct_used_smallest' => $directUsedSmallestUnits,
+                        'direct_mutated_smallest' => $directMutatedSmallestUnits,
+                        'mutation_used_smallest' => $mutationUsedSmallestUnits,
+                        'mutation_mutated_smallest' => $mutationMutatedSmallestUnits,
+                        'purchase_unit_value' => $purchaseUnitValue,
+                        'smallest_unit_value' => $smallestUnitValue,
+                    ]
+                ];
+            } else {
+                // Legacy fallback - simple conversion based on the old 'conversion' field
+                $conversionFactor = floatval($supplyItem->conversion) ?: 1;
+
+                $convertedQuantity = $quantity * $conversionFactor;
+
+                // Convert direct usage to purchase units (for sisa calculation)
+                $directUsedPurchaseUnits = $directUsedSmallestUnits / $conversionFactor;
+                $directMutatedPurchaseUnits = $directMutatedSmallestUnits / $conversionFactor;
+                $directAvailablePurchaseUnits = $directAvailableSmallestUnits / $conversionFactor;
+
+                // Convert total usage to purchase units (for display)
+                $totalUsedPurchaseUnits = $totalUsedSmallestUnits / $conversionFactor;
+                $totalMutatedPurchaseUnits = $totalMutatedSmallestUnits / $conversionFactor;
+
+                // Calculate remaining based on direct usage only (to avoid double counting)
+                $sisaPurchaseUnits = max(0, $quantity - $directUsedPurchaseUnits - $directMutatedPurchaseUnits);
+
+                return [
+                    'id' => $item->id,
+                    'kode' => $supplyItem->code,
+                    'name' => $supplyItem->name,
+                    'quantity' => $quantity,
+                    'converted_quantity' => $convertedQuantity,
+                    'sisa' => round($sisaPurchaseUnits, 2),
+                    'unit' => $item->unit->name ?? '-',
+                    'unit_conversion' => $supplyItem->payload['unit_details']['name'] ?? '-',
+                    'conversion' => $conversionFactor,
+                    'price_per_unit' => floatval($item->price_per_unit),
+                    'total' => config('xolution.ALLOW_ROUNDUP_PRICE')
+                        ? floatval($quantity * $item->price_per_unit)
+                        : intval($quantity * $item->price_per_unit),
+                    'terpakai' => round($directUsedPurchaseUnits, 2),             // Direct usage only (for calculations)
+                    'mutated' => round($directMutatedPurchaseUnits, 2),           // Direct mutations only (for calculations)
+                    'available' => round($directAvailablePurchaseUnits, 2),       // Direct available only (for calculations)
+                    'total_terpakai' => round($totalUsedPurchaseUnits, 2),        // Total usage including from mutations (for reporting)
+                    'total_mutated' => round($totalMutatedPurchaseUnits, 2),      // Total mutations including from mutations (for reporting)
+                    // A breakdown to help troubleshoot the calculations
+                    'debug' => [
+                        'direct_used_smallest' => $directUsedSmallestUnits,
+                        'direct_mutated_smallest' => $directMutatedSmallestUnits,
+                        'mutation_used_smallest' => $mutationUsedSmallestUnits,
+                        'mutation_mutated_smallest' => $mutationMutatedSmallestUnits,
+                        'conversion_factor' => $conversionFactor,
+                    ]
+                ];
+            }
         });
 
         return response()->json(['data' => $formatted]);
     }
+
+    // public function getSupplyPurchaseBatchDetail($batchId)
+    // {
+    //     $supplyPurchases = SupplyPurchase::with([
+    //         'supplyItem:id,code,name,payload',
+    //         'supplyStocks',
+    //         'unit'
+    //     ])
+    //         ->where('supply_purchase_batch_id', $batchId)
+    //         ->get(['id', 'supply_purchase_batch_id', 'supply_id', 'quantity', 'price_per_unit', 'unit_id', 'converted_unit', 'price_per_converted_unit', 'converted_quantity']);
+
+    //     $formatted = $supplyPurchases->map(function ($item) {
+    //         $supplyItem = optional($item->supplyItem);
+
+    //         // Get proper conversion units from supply payload
+    //         $conversionUnits = collect($supplyItem->payload['conversion_units'] ?? []);
+
+    //         // Get the purchase unit and converted (smallest) unit information
+    //         $purchaseUnitId = $item->unit_id;
+    //         $convertedUnitId = $item->converted_unit;
+
+    //         $purchaseUnit = $conversionUnits->firstWhere('unit_id', $purchaseUnitId);
+    //         $smallestUnit = $conversionUnits->firstWhere('unit_id', $convertedUnitId) ??
+    //             $conversionUnits->firstWhere('is_smallest', true);
+
+    //         // Original quantity in purchase units
+    //         $quantity = floatval($item->quantity);
+
+    //         // Separate stocks into direct and mutation-derived
+    //         $directStocks = $item->supplyStocks->filter(function ($stock) {
+    //             return $stock->supply_purchase_id != null && $stock->source_type != 'mutation';
+    //         });
+
+    //         $mutationDerivedStocks = $item->supplyStocks->filter(function ($stock) {
+    //             return $stock->source_type == 'mutation';
+    //         });
+
+    //         // Calculate usage from direct stocks (for sisa calculation)
+    //         $directUsedSmallestUnits = $directStocks->sum('quantity_used');
+    //         $directMutatedSmallestUnits = $directStocks->sum('quantity_mutated');
+    //         $directAvailableSmallestUnits = $directStocks->sum('available');
+
+    //         // Calculate usage from mutation-derived stocks (for total usage reporting)
+    //         $mutationUsedSmallestUnits = $mutationDerivedStocks->sum('quantity_used');
+    //         $mutationMutatedSmallestUnits = $mutationDerivedStocks->sum('quantity_mutated');
+
+    //         // Total usage (from both direct and mutation-derived)
+    //         $totalUsedSmallestUnits = $directUsedSmallestUnits + $mutationUsedSmallestUnits;
+    //         $totalMutatedSmallestUnits = $directMutatedSmallestUnits + $mutationMutatedSmallestUnits;
+
+    //         // If we have proper conversion units in payload, use them
+    //         if ($purchaseUnit && $smallestUnit) {
+    //             // Get conversion values
+    //             $purchaseUnitValue = floatval($purchaseUnit['value']);
+    //             $smallestUnitValue = floatval($smallestUnit['value']);
+
+    //             // Converted quantity in smallest units
+    //             $convertedQuantity = ($quantity * $purchaseUnitValue) / $smallestUnitValue;
+
+    //             // Convert direct usage to purchase units (for sisa calculation)
+    //             $directUsedPurchaseUnits = ($directUsedSmallestUnits * $smallestUnitValue) / $purchaseUnitValue;
+    //             $directMutatedPurchaseUnits = ($directMutatedSmallestUnits * $smallestUnitValue) / $purchaseUnitValue;
+    //             $directAvailablePurchaseUnits = ($directAvailableSmallestUnits * $smallestUnitValue) / $purchaseUnitValue;
+
+    //             // Convert total usage to purchase units (for display)
+    //             $totalUsedPurchaseUnits = ($totalUsedSmallestUnits * $smallestUnitValue) / $purchaseUnitValue;
+    //             $totalMutatedPurchaseUnits = ($totalMutatedSmallestUnits * $smallestUnitValue) / $purchaseUnitValue;
+
+    //             // Calculate remaining based on direct usage only (to avoid double counting)
+    //             $sisaPurchaseUnits = max(0, $quantity - $directUsedPurchaseUnits - $directMutatedPurchaseUnits);
+
+    //             return [
+    //                 'id' => $item->id,
+    //                 'code' => $supplyItem->code,
+    //                 'name' => $supplyItem->name,
+    //                 'quantity' => $quantity,
+    //                 'converted_quantity' => $convertedQuantity,
+    //                 'sisa' => round($sisaPurchaseUnits, 2),
+    //                 'unit' => $item->unit->name ?? '-',
+    //                 'unit_conversion' => $smallestUnit['label'] ?? ($supplyItem->payload['unit_details']['name'] ?? '-'),
+    //                 'conversion' => $purchaseUnitValue / $smallestUnitValue,
+    //                 'price_per_unit' => floatval($item->price_per_unit),
+    //                 'total' => config('xolution.ALLOW_ROUNDUP_PRICE')
+    //                     ? floatval($quantity * $item->price_per_unit)
+    //                     : intval($quantity * $item->price_per_unit),
+    //                 'terpakai' => round($directUsedPurchaseUnits, 2),         // Direct usage only (for calculations)
+    //                 'mutated' => round($directMutatedPurchaseUnits, 2),       // Direct mutations only (for calculations)
+    //                 'available' => round($directAvailablePurchaseUnits, 2),   // Direct available only (for calculations)
+    //                 'total_terpakai' => round($totalUsedPurchaseUnits, 2),    // Total usage including from mutations (for reporting)
+    //                 'total_mutated' => round($totalMutatedPurchaseUnits, 2),  // Total mutations including from mutations (for reporting)
+    //             ];
+    //         } else {
+    //             // Legacy fallback - simple conversion based on the old 'conversion' field
+    //             $conversionFactor = floatval($supplyItem->conversion) ?: 1;
+
+    //             $convertedQuantity = $quantity * $conversionFactor;
+
+    //             // Convert direct usage to purchase units (for sisa calculation)
+    //             $directUsedPurchaseUnits = $directUsedSmallestUnits / $conversionFactor;
+    //             $directMutatedPurchaseUnits = $directMutatedSmallestUnits / $conversionFactor;
+    //             $directAvailablePurchaseUnits = $directAvailableSmallestUnits / $conversionFactor;
+
+    //             // Convert total usage to purchase units (for display)
+    //             $totalUsedPurchaseUnits = $totalUsedSmallestUnits / $conversionFactor;
+    //             $totalMutatedPurchaseUnits = $totalMutatedSmallestUnits / $conversionFactor;
+
+    //             // Calculate remaining based on direct usage only (to avoid double counting)
+    //             $sisaPurchaseUnits = max(0, $quantity - $directUsedPurchaseUnits - $directMutatedPurchaseUnits);
+
+    //             return [
+    //                 'id' => $item->id,
+    //                 'code' => $supplyItem->code,
+    //                 'name' => $supplyItem->name,
+    //                 'quantity' => $quantity,
+    //                 'converted_quantity' => $convertedQuantity,
+    //                 'sisa' => round($sisaPurchaseUnits, 2),
+    //                 'unit' => $item->unit->name ?? '-',
+    //                 'unit_conversion' => $supplyItem->payload['unit_details']['name'] ?? '-',
+    //                 'conversion' => $conversionFactor,
+    //                 'price_per_unit' => floatval($item->price_per_unit),
+    //                 'total' => config('xolution.ALLOW_ROUNDUP_PRICE')
+    //                     ? floatval($quantity * $item->price_per_unit)
+    //                     : intval($quantity * $item->price_per_unit),
+    //                 'terpakai' => round($directUsedPurchaseUnits, 2),         // Direct usage only (for calculations)
+    //                 'mutated' => round($directMutatedPurchaseUnits, 2),       // Direct mutations only (for calculations)
+    //                 'available' => round($directAvailablePurchaseUnits, 2),   // Direct available only (for calculations)
+    //                 'total_terpakai' => round($totalUsedPurchaseUnits, 2),    // Total usage including from mutations (for reporting)
+    //                 'total_mutated' => round($totalMutatedPurchaseUnits, 2),  // Total mutations including from mutations (for reporting)
+    //             ];
+    //         }
+    //     });
+
+    //     return response()->json(['data' => $formatted]);
+    // }
+
+    // public function getSupplyPurchaseBatchDetail($batchId)
+    // {
+
+    //     $supplyPurchases = SupplyPurchase::with([
+    //         'supplyItem:id,code,name,payload',
+    //         'supplyStocks' // <- relasi baru nanti ditambahkan
+    //     ])
+    //         ->where('supply_purchase_batch_id', $batchId)
+    //         ->get(['id', 'supply_purchase_batch_id', 'supply_id', 'quantity', 'price_per_unit']);
+
+    //     $formatted = $supplyPurchases->map(function ($item) {
+    //         $supplyItem = optional($item->supplyItem);
+    //         $conversion = floatval($supplyItem->conversion) ?: 1;
+
+    //         $quantity = floatval($item->quantity);
+    //         $converted_quantity = $quantity / $conversion;
+
+    //         // Summary dari semua SupplyStock berdasarkan purchase
+    //         $used = $item->supplyStocks->sum('quantity_used');
+    //         $mutated = $item->supplyStocks->sum('quantity_mutated');
+    //         $available = $item->supplyStocks->sum('available');
+
+    //         // dd($supplyItem->payload);
+    //         return [
+    //             'id' => $item->id,
+    //             'code' => $supplyItem->code,
+    //             'name' => $supplyItem->name,
+    //             'quantity' => $quantity,
+    //             'converted_quantity' => $converted_quantity,
+    //             'qty' => $converted_quantity,
+    //             'sisa' => $quantity - $used,
+    //             'unit' => $supplyItem->payload['unit_details']['name'] ?? '-',
+    //             'conversion' => $conversion,
+    //             'price_per_unit' => floatval($item->price_per_unit),
+    //             'total' => config('xolution.ALLOW_ROUNDUP_PRICE')
+    //                 ? floatval($quantity * $item->price_per_unit)
+    //                 : intval($quantity * $item->price_per_unit),
+
+    //             // Tambahan penggunaan dan mutasi
+    //             'terpakai' => $used / $conversion,
+    //             'mutated' => $mutated / $conversion,
+    //             'available' => $available / $conversion,
+    //         ];
+    //     });
+
+    //     return response()->json(['data' => $formatted]);
+    // }
 
     public function stockEdit(Request $request)
     {
@@ -67,91 +356,223 @@ class SupplyController extends Controller
         $column = $request->input('column');
         $user_id = auth()->id();
 
-        // dd($request->all());
-
         try {
             DB::beginTransaction();
 
-            $supplyPurchase = SupplyPurchase::with('supplyItem')->findOrFail($id);
+            // Get supply purchase with all necessary relations
+            $supplyPurchase = SupplyPurchase::with([
+                'supplyItem',
+                'supplyStocks'
+            ])->findOrFail($id);
+
             $supplyItem = $supplyPurchase->supplyItem;
             $conversion = floatval($supplyItem->conversion) ?: 1;
 
-            $supplyStock = SupplyStock::where('supply_purchase_id', $supplyPurchase->id)->first();
+            // Get the associated supply stock
+            $supplyStock = SupplyStock::where('source_id', $supplyPurchase->id)->first();
+
+            if (!$supplyStock) {
+                return response()->json([
+                    'message' => 'Stock record not found for this purchase',
+                    'status' => 'error'
+                ], 404);
+            }
+
+            // Calculate used and mutated quantities
+            $usedQty = $supplyStock->quantity_used ?? 0;
+            $mutatedQty = $supplyStock->quantity_mutated ?? 0;
+            $totalUsed = $usedQty + $mutatedQty;
 
             if ($column === 'qty') {
-                $usedQty = $supplyStock->quantity_used ?? 0;
-                $mutatedQty = $supplyStock->quantity_mutated ?? 0;
-                $sisa = $usedQty + $mutatedQty;
-            
-                if (($value * $conversion) < $sisa) {
+                // Convert the new quantity value using the conversion factor
+                $convertedQuantity = $value * $conversion;
+
+                // Check if new quantity is less than what's already used/mutated
+                if ($convertedQuantity < $totalUsed) {
                     return response()->json([
                         'message' => 'Jumlah baru lebih kecil dari jumlah yang sudah terpakai atau dimutasi',
                         'status' => 'error'
                     ], 422);
                 }
-            
-                // Update FeedStock
+
+                // Calculate the available quantity after usage and mutation
+                $available = $convertedQuantity - $totalUsed;
+
+                // Update SupplyStock
                 $supplyStock->update([
-                    'quantity_in' => $value * $conversion,
-                    'available' => ($value * $conversion) - $sisa,
-                    'updated_by' => $user_id,
-                ]);
-            
-                // Update FeedPurchase
-                $supplyPurchase->update([
-                    'quantity' => $value,
-                    'updated_by' => $user_id,
-                ]);
-            } else {
-                // Update price
-                $supplyPurchase->update([
-                    'price_per_unit' => $value,
+                    'quantity_in' => $convertedQuantity,
+                    'available' => $available,
                     'updated_by' => $user_id,
                 ]);
 
+                // Update SupplyPurchase with all necessary fields
+                $supplyPurchase->update([
+                    'quantity' => $value,
+                    'converted_quantity' => $convertedQuantity,
+                    'price_per_converted_unit' => $supplyPurchase->price_per_unit / $conversion,
+                    'updated_by' => $user_id,
+                ]);
+            } else if ($column === 'harga') {
+                // Update price_per_unit and calculate price_per_converted_unit
+                $pricePerUnit = floatval($value);
+                $pricePerConvertedUnit = $pricePerUnit / $conversion;
+
+                // Update SupplyPurchase with both price fields
+                $supplyPurchase->update([
+                    'price_per_unit' => $pricePerUnit,
+                    'price_per_converted_unit' => $pricePerConvertedUnit,
+                    'updated_by' => $user_id,
+                ]);
+
+                // Update the amount in SupplyStock
+                $amount = $supplyPurchase->quantity * $pricePerUnit;
                 $supplyStock->update([
-                    'amount' => $supplyPurchase->quantity * $value,
+                    'amount' => $amount,
                     'updated_by' => $user_id,
                 ]);
             }
 
-            // Update sub_total dan sisa berdasarkan usage
-            $subTotal = $supplyPurchase->quantity * $supplyPurchase->price_per_unit;
-            $usedQty = $supplyStock->quantity_used ?? 0;
-            $mutatedQty = $supplyStock->quantity_mutated ?? 0;
-            $available = ($supplyPurchase->quantity * $conversion) - $usedQty - $mutatedQty;
-
-            $supplyStock->update([
-                'available' => $available,
-                'amount' => $subTotal,
-            ]);
-
-            // Update Batch total summary
-            $batch = SupplyPurchaseBatch::with('supplyPurchases.supplyItem')->findOrFail($supplyPurchase->supply_purchase_batch_id);
+            // Recalculate totals for the batch
+            $batch = SupplyPurchaseBatch::with('supplyPurchases.supplyItem')
+                ->findOrFail($supplyPurchase->supply_purchase_batch_id);
 
             $totalQty = $batch->supplyPurchases->sum(function ($purchase) {
-                $conversion = floatval(optional($purchase->supplyItem)->conversion) ?: 1;
                 return $purchase->quantity;
             });
 
-            $totalHarga = $batch->supplyPurchases->sum(function ($purchase) {
+            $totalAmount = $batch->supplyPurchases->sum(function ($purchase) {
                 return $purchase->price_per_unit * $purchase->quantity;
             });
 
+            // Update the batch with new totals
             $batch->update([
-                'expedition_fee' => $batch->expedition_fee,
+                'total_qty' => $totalQty,
+                'total_amount' => $totalAmount,
                 'updated_by' => $user_id,
             ]);
 
             DB::commit();
 
-            return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success']);
-
+            return response()->json([
+                'message' => 'Berhasil Update Data',
+                'status' => 'success'
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 400);
+            Log::error("Error in stockEdit: " . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'message' => 'Gagal melakukan update: ' . $e->getMessage(),
+                'status' => 'error'
+            ], 400);
         }
     }
+
+    // public function stockEdit(Request $request)
+    // {
+    //     $id = $request->input('id');
+    //     $value = $request->input('value');
+    //     $column = $request->input('column');
+    //     $user_id = auth()->id();
+
+    //     // dd($request->all());
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $supplyPurchase = SupplyPurchase::with('supplyItem')->findOrFail($id);
+    //         $supplyItem = $supplyPurchase->supplyItem;
+    //         $conversion = floatval($supplyItem->conversion) ?: 1;
+
+    //         // dd($supplyPurchase->id);
+
+    //         $supplyStock = SupplyStock::where('source_id', $supplyPurchase->id)->first();
+
+    //         // dd($supplyStock);
+
+    //         if ($column === 'qty') {
+    //             $usedQty = $supplyStock->quantity_used ?? 0;
+    //             $mutatedQty = $supplyStock->quantity_mutated ?? 0;
+    //             $sisa = $usedQty + $mutatedQty;
+
+    //             // dd([
+    //             //     'usedQty' => $usedQty,
+    //             //     'mutatedQty' => $mutatedQty,
+    //             //     'sisa' => $sisa
+    //             // ]);
+
+    //             if (($value * $conversion) < $sisa) {
+    //                 return response()->json([
+    //                     'message' => 'Jumlah baru lebih kecil dari jumlah yang sudah terpakai atau dimutasi',
+    //                     'status' => 'error'
+    //                 ], 422);
+    //             }
+
+    //             // Update SupplyStock
+    //             $supplyStock->update([
+    //                 'quantity_in' => $value * $conversion,
+    //                 'available' => ($value * $conversion) - $sisa,
+    //                 'updated_by' => $user_id,
+    //             ]);
+
+    //             // Update SupplyPurchase
+    //             $supplyPurchase->update([
+    //                 'quantity' => $value,
+    //                 'updated_by' => $user_id,
+    //             ]);
+    //         } else {
+    //             // Update price
+    //             $supplyPurchase->update([
+    //                 'price_per_unit' => $value,
+    //                 'updated_by' => $user_id,
+    //             ]);
+
+    //             $supplyStock->update([
+    //                 'amount' => $supplyPurchase->quantity * $value,
+    //                 'updated_by' => $user_id,
+    //             ]);
+    //         }
+
+    //         // Update sub_total dan sisa berdasarkan usage
+    //         $subTotal = $supplyPurchase->quantity * $supplyPurchase->price_per_unit;
+    //         $usedQty = $supplyStock->quantity_used ?? 0;
+    //         $mutatedQty = $supplyStock->quantity_mutated ?? 0;
+    //         $available = ($supplyPurchase->quantity * $conversion) - $usedQty - $mutatedQty;
+
+    //         $supplyStock->update([
+    //             'available' => $available,
+    //             'amount' => $subTotal,
+    //         ]);
+
+    //         // Update Batch total summary
+    //         $batch = SupplyPurchaseBatch::with('supplyPurchases.supplyItem')->findOrFail($supplyPurchase->supply_purchase_batch_id);
+
+    //         $totalQty = $batch->supplyPurchases->sum(function ($purchase) {
+    //             $conversion = floatval(optional($purchase->supplyItem)->conversion) ?: 1;
+    //             return $purchase->quantity;
+    //         });
+
+    //         $totalHarga = $batch->supplyPurchases->sum(function ($purchase) {
+    //             return $purchase->price_per_unit * $purchase->quantity;
+    //         });
+
+    //         $batch->update([
+    //             'expedition_fee' => $batch->expedition_fee,
+    //             'updated_by' => $user_id,
+    //         ]);
+
+    //         DB::commit();
+
+    //         return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success']);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return response()->json(['error' => $e->getMessage()], 400);
+    //     }
+    // }
 
     public function getSupplyByFarm(Request $request)
     {
@@ -247,8 +668,8 @@ class SupplyController extends Controller
                     }
 
                     $result[] = [
-                        'feed_purchase_info' => [
-                            'feed_name' => $first->feed->name ?? '-',
+                        'supply_purchase_info' => [
+                            'supply_name' => $first->supply->name ?? '-',
                             'no_batch' => '-',
                             'tanggal' => $mutation->date->format('Y-m-d'),
                             'harga' => 0,
@@ -260,7 +681,7 @@ class SupplyController extends Controller
             }
 
             // Proses transaksi mutasi masuk berdasarkan incomingMutation (jika source_id tidak ada)
-            $mutationInByRelationStocks = $stocks->whereNull('source_id')->whereNotNull('incomingMutation')->groupBy('incomingMutation.feed_mutation_id');
+            $mutationInByRelationStocks = $stocks->whereNull('source_id')->whereNotNull('incomingMutation')->groupBy('incomingMutation.supply_mutation_id');
             foreach ($mutationInByRelationStocks as $mutationId => $items) {
                 $first = $items->first();
                 $mutation = $first->incomingMutation->mutation;
@@ -286,8 +707,8 @@ class SupplyController extends Controller
                     }
 
                     $result[] = [
-                        'feed_purchase_info' => [
-                            'feed_name' => $first->feed->name ?? '-',
+                        'supply_purchase_info' => [
+                            'supply_name' => $first->supply->name ?? '-',
                             'no_batch' => '-',
                             'tanggal' => $mutation->date->format('Y-m-d'),
                             'harga' => 0,
@@ -321,7 +742,7 @@ class SupplyController extends Controller
                 'status' => 'error',
                 'message' => $e->getMessage(),
             ], 500);
-        } 
+        }
         // } catch (\Exception $e) {
         //     return response()->json([
         //         'status' => 'error',

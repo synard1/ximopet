@@ -42,7 +42,7 @@ class ReportsController extends Controller
             return [
                 'id' => $item->id,
                 'farm_id' => $item->farm_id,
-                'farm_name' => $item->farm->nama,
+                'farm_name' => $item->farm->name,
                 'kandang_id' => $item->kandang_id,
                 'kandang_name' => $item->kandang->nama,
                 'name' => $item->name,
@@ -139,7 +139,7 @@ class ReportsController extends Controller
             return [
                 'id' => $item->id,
                 'farm_id' => $item->farm_id,
-                'farm_name' => $item->farm->nama,
+                'farm_name' => $item->farm->name,
                 'kandang_id' => $item->kandang_id,
                 'kandang_name' => $item->kandang->nama,
                 'name' => $item->name,
@@ -365,7 +365,7 @@ class ReportsController extends Controller
                 'berat_semalam' => $berat_semalam,
                 'berat_hari_ini' => $berat_hari_ini,
                 'kenaikan_berat' => $kenaikan_berat,
-                'pakan_jenis' => $pakanJenis,
+                'pakan_jenis' => $pakanJenis ?? '-',
                 'pakan_jenis' => implode('<br>', array_keys($pakanHarianPerJenis)) ?: '-', // Untuk total row
                 'pakan_harian' => $pakanHarianPerJenis, // Array nilai pakan per jenis
                 

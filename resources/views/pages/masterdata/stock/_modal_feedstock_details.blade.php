@@ -5,7 +5,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h1 class="modal-title fs-4">Detail Histori Stok Pakan</h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup" onclick="closeDetails()"></button>
             </div>
             <div class="d-flex justify-content-between mb-3">
                 <h5 class="fw-bold">Riwayat Stok per Batch</h5>
@@ -37,22 +37,33 @@
 </div>
 @push('scripts')
     <script>
+        $(document).ready(function() {
+            $('#kt_modal_feedstock_details').on('hidden.bs.modal', function () {
+                $('#feedstockDetailsContainer').empty();
+                destroyDetailsTable();
+            });
+        });
+
         function closeDetails() {
             try {
+                // Hapus isi kontainer
+                document.getElementById('feedstockDetailsContainer').innerHTML = '';
+
+                // Destroy DataTable jika ada
                 destroyDetailsTable();
-                
+
+                // Reload tabel utama jika tersedia
                 if (window.LaravelDataTables && window.LaravelDataTables['stoks-table']) {
                     window.LaravelDataTables['stoks-table'].ajax.reload();
-                    // console.log('Stoks table successfully reloaded');
-                } else {
-                    // console.log('Stoks table not found or not initialized');
                 }
             } catch (error) {
                 console.error('Error in closeDetails function:', error);
             }
         }
 
+
         function destroyDetailsTable() {
+            document.getElementById('feedstockDetailsContainer').innerHTML = '';
             if ($.fn.DataTable.isDataTable('#detailsStokTable')) {
                 $('#detailsStokTable').DataTable().destroy();
                 // console.log('Details table successfully destroyed');

@@ -17,6 +17,7 @@ use App\Http\Controllers\DataController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\SupplyController;
+use App\Http\Controllers\MutationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,12 +54,14 @@ Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
     Route::post('/save-bonus', [TernakController::class, 'addBonus']);
     Route::post('/save-administrasi', [TernakController::class, 'addAdministrasi']);
 
-    
+
     Route::name('feed.')->group(function () {
         Route::get('/feed/purchase/details/{id}', function ($id) {
             return app(FeedController::class)->getFeedPurchaseBatchDetail($id);
         });
+        // Route::post('/feed/usages/details', [FeedController::class, 'getFeedByFarm']);
         Route::post('/feed/usages/details', [FeedController::class, 'getFeedCardByLivestock']);
+        Route::post('/feed/mutation/details/{id}', [MutationController::class, 'getMutationDetails']);
         // Route::post('/feed/usages/details', function ($id) {
         //     return app(FeedController::class)->getFeedUsageByLivestock($id);
         // });
@@ -66,25 +69,20 @@ Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
         Route::post('/feed/purchase/edit', function (Request $request) {
             return app(FeedController::class)->stockEdit($request);
         });
-
     });
 
     Route::name('supply.')->group(function () {
         Route::get('/supply/purchase/details/{id}', function ($id) {
-            return app(SupplyController::class)->getFeedPurchaseBatchDetail($id);
+            return app(SupplyController::class)->getSupplyPurchaseBatchDetail($id);
         });
         Route::post('/supply/usages/details', [SupplyController::class, 'getSupplyByFarm']);
         Route::post('/supply/reports/purchase', [FeedController::class, 'exportPembelian']);
+        Route::post('/supply/mutation/details/{id}', [MutationController::class, 'getMutationDetails']);
         Route::post('/supply/purchase/edit', function (Request $request) {
             return app(SupplyController::class)->stockEdit($request);
         });
         Route::post('/supply/transfer', [StockController::class, 'transferStock'])->name('transfer');
-
-
     });
-
-    
-
 });
 
 Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
@@ -208,7 +206,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::post('/ternaks', function (Request $request) {
         return app(TernakController::class)->getDataAjax($request);
     });
-    
+
     // Route::post('/kandangs', function (Request $request) {
     //     return app(KandangController::class)->getKandangs($request);
     // });
@@ -273,7 +271,4 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     // });
 
     Route::get('/resetDemo', [AppApi::class, 'resetDemo']);
-
-    
-
 });

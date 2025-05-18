@@ -18,10 +18,8 @@ class FeedStock extends BaseModel
         'feed_id',
         'feed_purchase_id',
         'date',
+        'source_type',
         'source_id',
-        'amount',
-        'used',
-        'available',
         'quantity_in',
         'quantity_used',
         'quantity_mutated',
@@ -37,32 +35,51 @@ class FeedStock extends BaseModel
     // FeedStock.php
     public function feed()
     {
-        return $this->belongsTo(Feed::class,'feed_id','id');
+        return $this->belongsTo(Feed::class, 'feed_id', 'id');
     }
 
     public function livestock()
     {
-        return $this->belongsTo(Livestock::class,'livestock_id','id');
+        return $this->belongsTo(Livestock::class, 'livestock_id', 'id');
     }
 
     public function feedPurchase()
     {
         return $this->belongsTo(FeedPurchase::class, 'feed_purchase_id', 'id');
     }
-    
+
     public function feedUsageDetails()
     {
         return $this->hasMany(FeedUsageDetail::class);
     }
 
+    // Relasi untuk detail mutasi keluar (stok ini digunakan sebagai sumber mutasi)
     public function mutationDetails()
     {
-        return $this->hasMany(FeedMutationItem::class);
+        return $this->hasMany(MutationItem::class, 'stock_id', 'id')
+            ->whereHas('mutation', function ($q) {
+                $q->where('type', 'feed');
+            });
     }
 
+    // Relasi untuk mutasi masuk (stok ini adalah hasil dari mutasi masuk)
     public function incomingMutation()
     {
-        return $this->hasOne(FeedMutationItem::class, 'feed_stock_id')->with('mutation.fromLivestock');
+        return $this->hasOne(MutationItem::class, 'stock_id')
+            ->whereHas('mutation', function ($q) {
+                $q->where('type', 'feed');
+            })
+            ->with('mutation.fromLivestock');
     }
+
+    // public function mutationDetails()
+    // {
+    //     return $this->hasMany(FeedMutationItem::class);
+    // }
+
+    // public function incomingMutation()
+    // {
+    //     return $this->hasOne(FeedMutationItem::class, 'feed_stock_id')->with('mutation.fromLivestock');
+    // }
 
 }

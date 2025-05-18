@@ -13,9 +13,12 @@ class SupplyStock extends BaseModel
 
     protected $fillable = [
         'id',
+        'livestock_id',
         'farm_id',
         'supply_id',
         'supply_purchase_id',
+        'date',
+        'source_type',
         'source_id',
         'quantity_in',
         'quantity_used',
@@ -25,34 +28,35 @@ class SupplyStock extends BaseModel
     ];
 
     protected $casts = [
+        'date' => 'date',
     ];
 
     public function farm()
     {
-        return $this->belongsTo(Farm::class,'farm_id','id');
+        return $this->belongsTo(Farm::class, 'farm_id', 'id');
     }
 
     public function supply()
     {
-        return $this->belongsTo(Supply::class,'supply_id','id');
+        return $this->belongsTo(Supply::class, 'supply_id', 'id');
     }
 
     // FeedStock.php
     public function feed()
     {
-        return $this->belongsTo(Item::class,'feed_id','id');
+        return $this->belongsTo(Item::class, 'feed_id', 'id');
     }
 
     public function livestock()
     {
-        return $this->belongsTo(Livestock::class,'livestock_id','id');
+        return $this->belongsTo(Livestock::class, 'livestock_id', 'id');
     }
 
     public function supplyPurchase()
     {
         return $this->belongsTo(SupplyPurchase::class, 'supply_purchase_id', 'id');
     }
-    
+
     public function supplyUsageDetails()
     {
         return $this->hasMany(SupplyUsageDetail::class);
@@ -67,5 +71,4 @@ class SupplyStock extends BaseModel
     {
         return $this->hasOne(SupplyMutationItem::class, 'supply_stock_id')->with('mutation.fromLivestock');
     }
-
 }

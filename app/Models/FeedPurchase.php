@@ -17,9 +17,12 @@ class FeedPurchase extends BaseModel
         'livestock_id',
         'feed_purchase_batch_id',
         'feed_id',
-        'original_unit',
+        'unit_id',
         'quantity',
+        'converted_unit',
+        'converted_quantity',
         'price_per_unit',
+        'price_per_converted_unit',
         'created_by',
         'updated_by',
     ];
@@ -30,7 +33,7 @@ class FeedPurchase extends BaseModel
 
     public function livestok()
     {
-        return $this->belongsTo(Livestock::class,'livestock_id','id');
+        return $this->belongsTo(Livestock::class, 'livestock_id', 'id');
     }
 
     public function feedItem()
@@ -38,9 +41,24 @@ class FeedPurchase extends BaseModel
         return $this->belongsTo(Feed::class, 'feed_id');
     }
 
+    public function feed()
+    {
+        return $this->belongsTo(Feed::class, 'feed_id');
+    }
+
     public function batch()
     {
         return $this->belongsTo(FeedPurchaseBatch::class, 'feed_purchase_batch_id');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_id', 'id');
+    }
+
+    public function convertedUnit()
+    {
+        return $this->belongsTo(Unit::class, 'converted_unit', 'id');
     }
 
     // FeedPurchase.php

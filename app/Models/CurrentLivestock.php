@@ -20,9 +20,14 @@ class CurrentLivestock extends BaseModel
         'berat_total',
         'avg_berat',
         'age',
+        'metadata',
         'status',
         'created_by',
         'updated_by',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
     ];
 
     public function livestock()

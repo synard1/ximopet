@@ -14,7 +14,7 @@
                         <select class="form-select" id="farm" name="farm" required>
                             <option value="">Pilih Farm</option>
                             @foreach($farms as $farm)
-                                <option value="{{ $farm->id }}">{{ $farm->nama }}</option>
+                                <option value="{{ $farm->id }}">{{ $farm->name }}</option>
                             @endforeach
                         </select>
                     </div>

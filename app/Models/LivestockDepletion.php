@@ -13,6 +13,7 @@ class LivestockDepletion extends BaseModel
 
     protected $fillable = [
         'livestock_id',
+        'recording_id',
         'tanggal',
         'jumlah',
         'jenis',
@@ -36,5 +37,10 @@ class LivestockDepletion extends BaseModel
     public function kandang()
     {
         return $this->belongsTo(Kandang::class, 'kandang_id', 'id');
+    }
+
+    public function recording()
+    {
+        return $this->belongsTo(Recording::class, 'recording_id', 'id');
     }
 }

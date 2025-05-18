@@ -17,6 +17,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('type')->nullable();
             $table->string('code', 64)->unique();
+            $table->string('symbol');
             $table->string('name');
             $table->text('description')->nullable();
             $table->string('status')->default('active')->index();

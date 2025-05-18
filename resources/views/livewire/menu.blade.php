@@ -1,27 +1,17 @@
 @php
-    $currentUrl = request()->url();
+$currentUrl = request()->url();
 @endphp
 
 <div>
-		<!--begin::sidebar menu-->
-		<div class="menu-sidebar menu menu-fit menu-column menu-rounded menu-title-gray-700 menu-icon-gray-700 menu-arrow-gray-700 fw-semibold fs-6 align-items-stretch flex-grow-1"
-		id="#kt_app_sidebar_menu" data-kt-menu="true" data-kt-menu-expand="true">
-			@if(auth()->user()->hasRole(['SuperAdmin']))
-				@include('livewire.menu_superadmin')
-			@elseif(auth()->user()->hasRole(['Administrator']))
-				@include('livewire.menu_admin')
-			@elseif(auth()->user()->hasRole(['Manager']))
-				@include('livewire.menu_manager')
-			@elseif(auth()->user()->hasRole(['Supervisor']))
-				@include('livewire.menu_supervisor')
-			@elseif(auth()->user()->hasRole(['Operator']))
-				@include('livewire.menu_operator')
-			@endif
-		</div>
+    <!--begin::sidebar menu-->
+    <div class="menu-sidebar menu menu-fit menu-column menu-rounded menu-title-gray-700 menu-icon-gray-700 menu-arrow-gray-700 fw-semibold fs-6 align-items-stretch flex-grow-1"
+        id="#kt_app_sidebar_menu" data-kt-menu="true" data-kt-menu-expand="true">
+        @include('layouts.style60.partials.sidebar-layout.menu._menu')
+    </div>
 
-	@push('scripts')
-	<script>
-		document.addEventListener('livewire:init', function () {
+    @push('scripts')
+    <script>
+        document.addEventListener('livewire:init', function () {
                 Livewire.on('openModal', function () {
                     $('#exampleModal').modal('show');
                 });
@@ -36,7 +26,7 @@
 		var fetchFarm = function (e) {
 			// Replace this URL with your actual API endpoint
 			const apiUrl = '/api/v1/farms-list';
-	
+
 			fetch(apiUrl, {
 				headers: {
                                 'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
@@ -52,15 +42,15 @@
 				.then(data => {
 					if (data.length > 0) { // Check if data array is not empty
 						const farmSelect = $('#farmSelect');
-						farmSelect.empty(); 
+						farmSelect.empty();
 
 						// Add static "Select Farm" option
-						const defaultOption = new Option("=== Pilih Farm ===", "", true, true); 
+						const defaultOption = new Option("=== Pilih Farm ===", "", true, true);
 						farmSelect.append(defaultOption);
 
 						data.forEach(farm => {
 							const option = new Option(farm.nama, farm.id);
-							option.setAttribute('data-farm-id', farm.id); 
+							option.setAttribute('data-farm-id', farm.id);
 							farmSelect.append(option);
 						});
 
@@ -115,7 +105,7 @@
 
 
 		});
-	</script>
+    </script>
 
-	@endpush
+    @endpush
 </div>

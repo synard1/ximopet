@@ -59,18 +59,28 @@ class Recording extends BaseModel
         return $this->hasMany(RecordingItem::class);
     }
 
+    public function deplesiData()
+    {
+        return $this->hasMany(LivestockDepletion::class);
+    }
+
     public function ternak(): BelongsTo
     {
-        return $this->belongsTo(Ternak::class,'ternak_id','id');
+        return $this->belongsTo(Ternak::class, 'ternak_id', 'id');
     }
 
     public function livestock(): BelongsTo
     {
-        return $this->belongsTo(Livestock::class,'livestock_id');
+        return $this->belongsTo(Livestock::class, 'livestock_id');
     }
 
     public function livestockCost()
     {
         return $this->hasOne(LivestockCost::class);
+    }
+
+    public function feedUsages()
+    {
+        return $this->hasMany(FeedUsage::class);
     }
 }

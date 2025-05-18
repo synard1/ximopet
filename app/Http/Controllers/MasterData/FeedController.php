@@ -18,6 +18,10 @@ use App\Models\FeedUsageDetail;
 use App\Models\Livestock;
 use App\Models\Farm;
 use App\Models\Kandang;
+use App\DataTables\FeedMutationDataTable;
+
+use App\Models\Mutation;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class FeedController extends Controller
 {
@@ -26,6 +30,53 @@ class FeedController extends Controller
         addVendors(['datatables']);
 
         return $dataTable->render('pages/masterdata.feed.index');
+    }
+
+    public function mutasi(FeedMutationDataTable $dataTable)
+    {
+        //
+        // return view('pages.pakan.mutasi');
+        addVendors(['datatables']);
+
+        return $dataTable->render('pages.masterdata.feed.mutasi');
+
+    }
+
+    public function getMutationDetails($mutationId)
+    {
+        try {
+            $mutation = Mutation::with([
+                'mutationItem',               // relasi ke semua item
+                'mutationItem.item',          // relasi dinamis berdasarkan item_type
+                'fromLivestock',
+                'toLivestock',
+            ])->findOrFail($mutationId);
+
+            return [
+                'id' => $mutation->id,
+                'type' => $mutation->type,
+                'scope' => $mutation->mutation_scope,
+                'date' => $mutation->date->format('Y-m-d'),
+                'from' => $mutation->fromLivestock->name ?? '—',
+                'to' => $mutation->toLivestock->name ?? '—',
+                'notes' => $mutation->notes,
+                'items' => $mutation->mutationItem->map(function ($item) {
+                    return [
+                        'type' => $item->item_type,
+                        'item_name' => $item->item->name ?? '-',
+                        'quantity' => $item->quantity,
+                        'amount' => $item->amount,
+                    ];
+                }),
+            ];
+
+        } catch (ModelNotFoundException $e) {
+            Log::warning("Mutation not found: $mutationId");
+            return null;
+        } catch (\Exception $e) {
+            Log::error("Error fetching mutation details: " . $e->getMessage());
+            return null;
+        }
     }
 
     public function getFeedPurchaseBatchDetail($batchId)
@@ -167,6 +218,182 @@ class FeedController extends Controller
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }
+
+    // public function transferStock(Request $request)
+    // {
+    //     $validatedData = $request->validate([
+    //         'source_livestock_id' => 'required|uuid',
+    //         'destination_livestock_id' => 'required|uuid',
+    //         'feed_id' => 'required|uuid',
+    //         'quantity' => 'required|numeric|min:0.01',
+    //         'date' => 'required|date',
+    //         'notes' => 'nullable|string|max:255',
+    //     ]);
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $itemId = $validatedData['item_id'];
+    //         $quantityUsed = $validatedData['quantity'];
+
+    //         // Get source and destination kelompokTernak
+    //         $sourceLivestock = Livestock::findOrFail($validatedData['source_livestock_id']);
+    //         $destinationLivestock = Livestock::findOrFail($validatedData['destination_kelompok_ternak_id']);
+
+    //         // Fetch stock entries ordered by oldest first (FIFO)
+    //         $stockEntries = TransaksiBeliDetail::whereHas('transaksiBeli', function ($query) use ($validatedData) {
+    //                             $query->where('kelompok_ternak_id', $validatedData['source_kelompok_ternak_id']);
+    //                         })
+    //                         ->where('item_id', $itemId)
+    //                         ->where('jenis', 'Pembelian')
+    //                         ->where('sisa', '>', 0)
+    //                         ->whereNotIn('jenis_barang', ['DOC'])
+    //                         ->orderBy('tanggal', 'asc')
+    //                         ->lockForUpdate() // Prevent race conditions
+    //                         ->first();
+
+    //         $stockMovement = \App\Models\StockMovement::where('kelompok_ternak_id',$sourceLivestock->id)->where('transaksi_id',$stockEntries->transaksi_id)->first();
+            
+    //         // Get the item
+    //         $item = Item::findOrFail($validatedData['item_id']);
+            
+    //         // Check if source has enough stock
+    //         // $sourceStock = \App\Models\CurrentStock::where('item_id', $item->id)
+    //         //     ->where('kelompok_ternak_id', $sourceLivestock->id)
+    //         //     ->first();
+                
+    //         if (!$stockEntries || $stockEntries->sisa < $validatedData['quantity']) {
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'message' => 'Insufficient stock in source kelompokTernak'
+    //             ], 400);
+    //         }
+            
+    //         // Create stock movement record for source (reduction)
+    //         $sourceMovement = \App\Models\StockMovement::create([
+    //             'kelompok_ternak_id' => $sourceLivestock->id,
+    //             'transaksi_id' => $stockEntries->transaksi_id,
+    //             'parent_id' => $stockMovement->id,
+    //             'item_id' => $item->id,
+    //             'source_location_id' => $sourceLivestock->id,
+    //             'destination_location_id' => $destinationLivestock->id,
+    //             'quantity' => $validatedData['quantity'],
+    //             'satuan' => $item->satuan_besar,
+    //             'harga' => $stockEntries->harga,
+    //             'movement_type' => 'transfer_out',
+    //             'tanggal' => $validatedData['tanggal'],
+    //             'notes' => $validatedData['notes'] ?? 'Stock transfer to ' . $destinationLivestock->nama,
+    //             'created_by' => auth()->id(),
+    //             'status' => 'out',
+    //         ]);
+            
+    //         // Create stock movement record for destination (addition)
+    //         $destinationMovement = \App\Models\StockMovement::create([
+    //             'kelompok_ternak_id' => $destinationLivestock->id,
+    //             'transaksi_id' => $stockEntries->transaksi_id,
+    //             'parent_id' => $stockMovement->id,
+    //             'item_id' => $item->id,
+    //             'source_location_id' => $sourceLivestock->id,
+    //             'destination_location_id' => $destinationLivestock->id,
+    //             'quantity' => $validatedData['quantity'],
+    //             'satuan' => $item->satuan_besar,
+    //             'harga' => $stockEntries->harga,
+    //             'movement_type' => 'transfer_in',
+    //             'tanggal' => $validatedData['tanggal'],
+    //             'notes' => $validatedData['notes'] ?? 'Stock transfer from ' . $sourceLivestock->nama,
+    //             'created_by' => auth()->id(),
+    //             'status' => 'in',
+    //         ]);
+            
+    //         // Update source stock
+    //         $stockEntries->update([
+    //             // 'sisa' => $stockEntries->sisa - $validatedData['quantity'],
+    //             // 'terpakai' => $validatedData['quantity'],
+    //             'updated_by' => auth()->id(),
+    //         ]);
+            
+    //         // Update or create destination stock
+    //         $destinationStock = \App\Models\CurrentStock::where('item_id', $item->id)
+    //             ->where('kelompok_ternak_id', $destinationLivestock->id)
+    //             ->first();
+                
+    //         if ($destinationStock) {
+    //             $destinationStock->update([
+    //                 'quantity' => $destinationStock->quantity + $validatedData['quantity'],
+    //                 'updated_by' => auth()->id(),
+    //             ]);
+    //         } else {
+    //             $sourcesStock = \App\Models\CurrentStock::where('item_id', $item->id)
+    //             ->where('kelompok_ternak_id', $sourceLivestock->id)
+    //             ->first();
+
+    //             $sourcesStock->update([
+    //                 'quantity' => $sourcesStock->quantity - $validatedData['quantity'],
+    //                 'updated_by' => auth()->id(),
+    //             ]);
+
+    //             $destinationStock = \App\Models\CurrentStock::create([
+    //                                 'item_id' => $item->id,
+    //                                 'kelompok_ternak_id' => $destinationLivestock->id,
+    //                                 'quantity' => $validatedData['quantity'],
+    //                                 'created_by' => auth()->id(),
+    //                                 'status' => 'Aktif',
+    //                             ]);
+    //         }
+            
+    //         // Create stock history records
+    //         \App\Models\StockHistory::create([
+    //             'transaksi_id' => $stockEntries->transaksi_id,
+    //             'stock_id' => $destinationStock->id,
+    //             'item_id' => $item->id,
+    //             'kelompok_ternak_id' => $sourceLivestock->id,
+    //             'quantity' => -$validatedData['quantity'],
+    //             'available_quantity' => $stockEntries->quantity - $validatedData['quantity'],
+    //             'harga' => $stockEntries->harga ?? 0,
+    //             'jenis' => 'Transfer Keluar',
+    //             'status' => 'Out',
+    //             'tanggal' => $validatedData['tanggal'],
+    //             'parent_id' => $sourceMovement->id,
+    //             'created_by' => auth()->id(),
+    //             'updated_by' => auth()->id(),
+    //         ]);
+            
+    //         \App\Models\StockHistory::create([
+    //             'transaksi_id' => $stockEntries->transaksi_id,
+    //             'stock_id' => $destinationStock->id,
+    //             'item_id' => $item->id,
+    //             'kelompok_ternak_id' => $destinationLivestock->id,
+    //             'quantity' => $validatedData['quantity'],
+    //             'available_quantity' => ($destinationStock ? $destinationStock->quantity : 0) + $validatedData['quantity'],
+    //             'harga' => $stockEntries->harga ?? 0,
+    //             'jenis' => 'Transfer Masuk',
+    //             'status' => 'In',
+    //             'tanggal' => $validatedData['tanggal'],
+    //             'parent_id' => $destinationMovement->id,
+    //             'created_by' => auth()->id(),
+    //             'updated_by' => auth()->id(),
+    //         ]);
+            
+    //         DB::commit();
+            
+    //         return response()->json([
+    //             'status' => 'success',
+    //             'message' => 'Stock transferred successfully',
+    //             'data' => [
+    //                 'source_movement' => $sourceMovement,
+    //                 'destination_movement' => $destinationMovement,
+    //             ]
+    //         ], 200);
+            
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('Stock transfer error: ' . $e->getMessage());
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => 'Failed to transfer stock: ' . $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
 
     public function getFeedCardByLivestock(Request $request)
     {

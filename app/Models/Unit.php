@@ -15,12 +15,12 @@ class Unit extends BaseModel
         'id',
         'type',
         'code',
+        'symbol',
         'name',
         'status',
         'created_by',
         'updated_by',
     ];
 
-    protected $casts = [
-    ];
+    protected $casts = [];
 }

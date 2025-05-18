@@ -91,6 +91,9 @@ class LivestockPurchaseSeeder extends Seeder
                         'livestock_breed_standard_id' => $livestockBreedStandardId, // Tambahkan ini
                         'start_date' => Carbon::parse($item['tanggal']),
                         'populasi_awal' => $item['jumlah'],
+                        'quantity_depletion' => 0,
+                        'quantity_sales' => 0,
+                        'quantity_mutated' => 0,
                         'berat_awal' => 40,
                         'harga' => $hargaPerEkor,
                         'status' => 'active',
@@ -141,7 +144,7 @@ class LivestockPurchaseSeeder extends Seeder
                         'berat_total' => $item['jumlah'] * 40,
                         'avg_berat' => 40,
                         'age' => 0,
-                        'status' => 'Aktif',
+                        'status' => 'active',
                         'created_by' => $userId,
                         'updated_by' => $userId,
                     ]);

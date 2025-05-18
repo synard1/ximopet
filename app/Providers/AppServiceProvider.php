@@ -7,6 +7,7 @@ use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\ServiceProvider;
 // use App\Livewire\MasterData\SupplierModal;
 use Livewire\Livewire; // Import the facade
+use App\Livewire\QaChecklistForm;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -33,9 +34,15 @@ class AppServiceProvider extends ServiceProvider
 
         KTBootstrap::init();
 
+        $this->app->singleton('app.menu', function ($app) {
+            $menuService = new \App\Services\MenuService();
+            return $menuService->processMenu(config('xolution.menu'));
+        });
+
         // Livewire::component('master-data.supplier-modal', SupplierModal::class);
         // Livewire::component('master-data.supplier', App\Livewire\MasterData\Supplier::class);
 
-
+        // Register Livewire components
+        Livewire::component('qa-checklist-form', QaChecklistForm::class);
     }
 }

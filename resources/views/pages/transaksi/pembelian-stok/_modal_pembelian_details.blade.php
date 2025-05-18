@@ -15,6 +15,7 @@
                             <th>Nama</th>
                             <th>Jumlah</th>
                             <th>Terpakai</th>
+                            <th>Mutasi</th>
                             <th>Sisa</th>
                             <th>Satuan</th>
                             <th>Harga</th>
@@ -36,12 +37,12 @@
     </div>
 </div>
 @push('styles')
-    <link href="https://cdn.datatables.net/2.1.2/css/dataTables.dataTables.css" rel="stylesheet" type="text/css" />
+<link href="https://cdn.datatables.net/2.1.2/css/dataTables.dataTables.css" rel="stylesheet" type="text/css" />
 @endpush
 
 @push('scripts')
-    <script>
-        function getDetails(param) {
+<script>
+    function getDetails(param) {
             // console.log(param);
             // Get the Sanctum token from the session
             const token = '{{ Session::get('auth_token') }}';
@@ -73,7 +74,12 @@
                         // render: $.fn.dataTable.render.number(',', '.', 2)
                     },
                     {
-                        data: 'terpakai',
+                        data: 'total_terpakai',
+                        className: 'text-center', // Add text-end class for right alignment
+                        // render: $.fn.dataTable.render.number(',', '.', 0)
+                    },
+                    {
+                        data: 'mutated',
                         className: 'text-center', // Add text-end class for right alignment
                         // render: $.fn.dataTable.render.number(',', '.', 0)
                     },
@@ -249,5 +255,5 @@
             table.destroy();
             window.LaravelDataTables['pembelianStoks-table'].ajax.reload();
         }
-    </script>
+</script>
 @endpush

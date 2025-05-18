@@ -5,6 +5,7 @@ namespace App\DataTables;
 use App\Models\SupplyStock;
 use App\Models\Item;
 use App\Models\StockHistory;
+use App\Models\Unit;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
@@ -30,11 +31,12 @@ class SupplyStockDataTable extends DataTable
             ->editColumn('farm_id', function (SupplyStock $supply) {
                 return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_supplystocks" data-supply-id="' . $supply->supply_id . '" data-farm-id="' . $supply->farm_id . '"><span class="menu-icon">
 							<i class="ki-outline ki-package fs-4 text-success"></i>
-						</span>' . $supply->supply->name . '</a>';
+						</span>' . $supply->farm->name . '</a>';
             })
 
-            ->editColumn('unit', function (SupplyStock $stock) {
-                return $stock->supply->unit_conversion;
+            ->editColumn('unit', function (SupplyStock $supply) {
+                $unit = Unit::findOrFail($supply->supply->payload['unit_id']);
+                return $unit->name;
             })
 
             ->editColumn('quantity', function (SupplyStock $stock) {

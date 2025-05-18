@@ -20,12 +20,12 @@ class FarmsDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
-            ->rawColumns(['farm','nama'])
-            ->editColumn('nama', function (Farm $farm) {
-                return '<a href="#" class="farm-detail" data-farm-id="'.$farm->id.'">'.$farm->nama.'</a>';
+            ->rawColumns(['farm', 'name'])
+            ->editColumn('name', function (Farm $farm) {
+                return '<a href="#" class="farm-detail" data-farm-id="' . $farm->id . '">' . $farm->name . '</a>';
             })
             ->addColumn('kapasitas', function (Farm $farm) {
-                $jumlah = Kandang::where('farm_id',$farm->id)->sum('kapasitas');
+                $jumlah = Kandang::where('farm_id', $farm->id)->sum('kapasitas');
                 return $jumlah;
             })
             ->editColumn('created_at', function (Farm $farm) {
@@ -79,13 +79,12 @@ class FarmsDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('kode')->searchable(false),
-            Column::make('nama'),
-            Column::make('alamat')->visible(false),
-            Column::make('telp')->visible(false),
-            Column::make('pic')->visible(false),
-            Column::make('telp_pic')->visible(false),
-            Column::computed('kapasitas'),
+            Column::make('code')->searchable(false),
+            Column::make('name'),
+            Column::make('address')->visible(false),
+            Column::make('phone_number')->visible(false),
+            Column::make('contact_person')->visible(false),
+            Column::computed('capacity'),
             Column::make('status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
             Column::computed('action')

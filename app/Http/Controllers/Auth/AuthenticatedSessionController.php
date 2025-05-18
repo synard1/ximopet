@@ -8,6 +8,7 @@ use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use App\Services\LoginLogService;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -32,26 +33,66 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request)
     {
-        $request->authenticate();
+        try {
+            $request->authenticate();
 
-        $request->session()->regenerate();
+            $request->session()->regenerate();
 
-        $user = $request->user();
+            $user = $request->user();
 
-        $user->update([
-            'last_login_at' => Carbon::now()->toDateTimeString(),
-            'last_login_ip' => $request->getClientIp()
-        ]);
+            // Update last login info
+            $user->update([
+                'last_login_at' => Carbon::now()->toDateTimeString(),
+                'last_login_ip' => $request->getClientIp()
+            ]);
 
-        // Create a new Sanctum token for the user
-        $token = $user->createToken('auth_token')->plainTextToken;
+            // Log successful login
+            LoginLogService::log(
+                $user->id,
+                'success',
+                'form',
+                ['email' => $request->email]
+            );
 
-        // You might want to store this token in the session or return it in the response
-        // For this example, we'll store it in the session
-        $request->session()->put('auth_token', $token);
+            // Create Sanctum token
+            $token = $user->createToken('auth_token')->plainTextToken;
+            $request->session()->put('auth_token', $token);
 
-        return redirect()->intended(RouteServiceProvider::HOME);
+            return redirect()->intended(RouteServiceProvider::HOME);
+        } catch (\Exception $e) {
+            // Log failed login attempt
+            LoginLogService::log(
+                null,
+                'failed',
+                'form',
+                ['email' => $request->email, 'error' => $e->getMessage()]
+            );
+
+            throw $e;
+        }
     }
+    // public function store(LoginRequest $request)
+    // {
+    //     $request->authenticate();
+
+    //     $request->session()->regenerate();
+
+    //     $user = $request->user();
+
+    //     $user->update([
+    //         'last_login_at' => Carbon::now()->toDateTimeString(),
+    //         'last_login_ip' => $request->getClientIp()
+    //     ]);
+
+    //     // Create a new Sanctum token for the user
+    //     $token = $user->createToken('auth_token')->plainTextToken;
+
+    //     // You might want to store this token in the session or return it in the response
+    //     // For this example, we'll store it in the session
+    //     $request->session()->put('auth_token', $token);
+
+    //     return redirect()->intended(RouteServiceProvider::HOME);
+    // }
 
     /**
      * Destroy an authenticated session.

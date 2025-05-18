@@ -14,7 +14,7 @@ use App\Models\FarmOperator;
 use App\Models\Kandang;
 use App\Models\KelompokTernak;
 use App\Models\Livestock;
-use App\Models\Rekanan;
+use App\Models\Partner;
 use App\Models\TransaksiHarian;
 use App\Models\TransaksiHarianDetail;
 use App\Models\TernakJual;
@@ -53,13 +53,13 @@ class PenjualanTernak extends Component
     
     // Form fields
     public $tanggal_beli, $faktur, $tanggal, $tanggal_harian, $tipe_transaksi, $ternak_jual, $harga, $status;
-    public $rekanan_id, $farm_id, $kandang_id, $harga_beli, $harga_jual, $qty, $total_berat, $umur, $hpp;
+    public $partner_id, $farm_id, $kandang_id, $harga_beli, $harga_jual, $qty, $total_berat, $umur, $hpp;
 
     // Dynamic data
-    public $rekanans = [];
+    public $partners = [];
     public $farms = [];
     public $kandangs = [];
-    public $ternaks = [];
+    public $livestocks = [];
     public $selectedFarm = null;
     public $selectedKandang = null;
 
@@ -78,7 +78,7 @@ class PenjualanTernak extends Component
         'ternak_jual' => 'required|numeric',
         // 'harga' => 'required|numeric',
         // 'status' => 'required|string',
-        'rekanan_id' => 'required|exists:master_rekanan,id',
+        'partner_id' => 'required|exists:master_rekanan,id',
         'farm_id' => 'required|exists:farms,id',
         'kandang_id' => 'required|exists:master_kandangs,id',
         // 'harga_beli' => 'required|numeric',
@@ -92,7 +92,7 @@ class PenjualanTernak extends Component
     public function mount($data = null)
     {
         $this->data = $data;
-        $this->loadRekanans();
+        $this->loadPartners();
         $this->loadFarms();
         $this->loadKandangs();
 
@@ -154,7 +154,7 @@ class PenjualanTernak extends Component
 
             // TransaksiJualDetail::create([
             //     'transaksi_jual_id' => $transaksiJual->id,
-            //     'rekanan_id' => $this->rekanan_id,
+            //     'partner_id' => $this->partner_id,
             //     'farm_id' => $this->farm_id,
             //     'kandang_id' => $this->kandang_id,
             //     'harga_beli' => $this->harga_beli,
@@ -216,7 +216,7 @@ class PenjualanTernak extends Component
         if ($this->transaksiJualDetail) {
             $this->umur = $this->transaksiJualDetail->umur;
             $this->harga_beli = $this->transaksiJualDetail->harga_beli;
-            $this->rekanan_id = $this->transaksiJualDetail->rekanan_id;
+            $this->partner_id = $this->transaksiJualDetail->partner_id;
             $this->total_berat = $this->transaksiJualDetail->berat;
         } else {
             $this->dispatchBrowserEvent('alert', ['type' => 'warning', 'message' => 'No detail found for this transaction']);
@@ -261,7 +261,7 @@ class PenjualanTernak extends Component
 
             // Update each TransaksiJualDetail
             $this->transaksiJualDetail->update([
-                'rekanan_id' => $this->rekanan_id,
+                'partner_id' => $this->partner_id,
                 'harga_jual' => $this->harga_jual,
                 'berat' => $this->total_berat,
                 'qty' => $this->ternak_jual,
@@ -306,7 +306,7 @@ class PenjualanTernak extends Component
         $this->jumlah = null;
         $this->harga = null;
         $this->status = null;
-        $this->rekanan_id = null;
+        $this->partner_id = null;
         $this->farm_id = null;
         $this->kandang_id = null;
         $this->harga_beli = null;
@@ -317,15 +317,15 @@ class PenjualanTernak extends Component
         $this->hpp = null;
     }
 
-    public function loadRekanans()
+    public function loadPartners()
     {
-        $this->rekanans = Rekanan::where('jenis','Customer')->where('status','Aktif')->get();
+        $this->partners = Partner::where('type','Customer')->where('status','active')->get();
     }
 
     public function loadFarms()
     {
         $farmIds = FarmOperator::where('user_id', auth()->id())->pluck('farm_id')->toArray();
-        $this->farms = Farm::whereIn('id', $farmIds)->get(['id', 'nama']);
+        $this->farms = Farm::whereIn('id', $farmIds)->get(['id', 'name']);
     }
 
     public function loadKandangs()
@@ -333,7 +333,7 @@ class PenjualanTernak extends Component
         $farmIds = FarmOperator::where('user_id', auth()->id())->pluck('farm_id')->toArray();
         $this->kandangs = Kandang::whereIn('farm_id', $farmIds)->where('status', 'Digunakan')->get(['id', 'farm_id','kode','nama','jumlah','kapasitas','livestock_id','status']);
 
-        $this->ternaks  = Livestock::whereIn('farm_id', $farmIds)->get(['id','farm_id','kandang_id','name','start_date','populasi_awal','harga','status']);
+        $this->livestocks  = Livestock::whereIn('farm_id', $farmIds)->get(['id','farm_id','kandang_id','name','start_date','populasi_awal','harga','status']);
     }
 
     public function updatedKandangId($value)
@@ -342,7 +342,7 @@ class PenjualanTernak extends Component
             return;
         }
 
-        $selectedTernak = $this->ternaks->firstWhere('kandang_id', $value);
+        $selectedTernak = $this->livestocks->firstWhere('kandang_id', $value);
 
         if ($selectedTernak) {
             $this->tanggal_beli = $selectedTernak->start_date->format('Y-m-d');
@@ -353,17 +353,6 @@ class PenjualanTernak extends Component
             $this->umur = $startDate->diffInDays(Carbon::now());
         }
     }
-
-    // public function updatedFarmId($farmId)
-    // {
-    //     $this->loadKandangs($farmId);
-    // }
-
-    // public function loadKandangs($farmId)
-    // {
-    //     $this->kandangs = Kandang::where('farm_id', $farmId)->get(['id', 'nama']);
-    //     $this->kandang_id = null; // Reset the selected kandang
-    // }
 
     public function openPenjualanModal($data)
     {
@@ -388,7 +377,7 @@ class PenjualanTernak extends Component
         $this->jumlah = $transaksi->jumlah;
         $this->harga = $transaksi->harga;
         $this->status = $transaksi->status;
-        $this->rekanan_id = $transaksi->rekanan_id;
+        $this->partner_id = $transaksi->partner_id;
         $this->farm_id = $transaksi->farm_id;
         $this->kandang_id = $transaksi->kandang_id;
         $this->harga_beli = $transaksi->harga_beli;
@@ -406,7 +395,7 @@ class PenjualanTernak extends Component
             'jumlah' => $this->jumlah,
             'harga' => $this->harga,
             'status' => $this->status,
-            'rekanan_id' => $this->rekanan_id,
+            'partner_id' => $this->partner_id,
             'farm_id' => $this->farm_id,
             'kandang_id' => $this->kandang_id,
             'harga_beli' => $this->harga_beli,
@@ -420,7 +409,7 @@ class PenjualanTernak extends Component
     public function resetForm()
     {
         $this->reset([
-            'tanggal', 'tanggal_harian', 'rekanan_id', 'faktur', 'ternak_jual', 'harga_jual', 'total_berat',
+            'tanggal', 'tanggal_harian', 'partner_id', 'faktur', 'ternak_jual', 'harga_jual', 'total_berat',
             'farm_id', 'kandang_id', 'tanggal_beli', 'harga_beli', 'umur'
         ]);
         $this->resetErrorBag();

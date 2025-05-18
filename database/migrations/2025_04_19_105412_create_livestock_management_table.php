@@ -21,6 +21,9 @@ return new class extends Migration {
             $table->dateTime('start_date'); //tanggal mulai
             $table->dateTime('end_date')->nullable();
             $table->integer('populasi_awal'); //jumlah awal
+            $table->integer('quantity_depletion')->nullable();
+            $table->integer('quantity_sales')->nullable();
+            $table->integer('quantity_mutated')->nullable();
             $table->decimal('berat_awal', 10, 2)->default(0); //berat beli rata - rata
             $table->decimal('harga', 10, 2);        // Harga per unit saat beli
             $table->string('pic')->nullable();
@@ -42,7 +45,6 @@ return new class extends Migration {
 
 
             $table->index(['id', 'start_date']);
-
         });
 
         // Livestock Purchase
@@ -75,7 +77,6 @@ return new class extends Migration {
             $table->foreign('updated_by')->references('id')->on('users');
 
             $table->index(['livestock_id']);
-
         });
 
         // Livestock Mutation
@@ -129,6 +130,7 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->foreignUuid('livestock_sales_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
+            $table->date('tanggal');
             $table->integer('jumlah');
             $table->decimal('berat_total', 10, 2)->nullable();
             $table->decimal('harga_satuan', 12, 2);
@@ -172,6 +174,7 @@ return new class extends Migration {
         Schema::create('livestock_depletions', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('recording_id')->constrained()->onDelete('cascade');
             $table->date('tanggal');
             $table->string('jenis'); // Mati / Afkir
             $table->integer('jumlah');
@@ -212,13 +215,14 @@ return new class extends Migration {
             $table->decimal('berat_total', 10, 2); // Estimasi berat total
             $table->decimal('avg_berat', 10, 2);   // Rata-rata berat per ekor
             $table->integer('age');
+            $table->json('metadata')->nullable();
             $table->string('status');              // active, sold, dead, culled
 
             $table->unsignedBigInteger('created_by');
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
             $table->foreign('created_by')->references('id')->on('users');
@@ -226,7 +230,6 @@ return new class extends Migration {
         });
 
         Schema::enableForeignKeyConstraints();
-
     }
 
     public function down(): void

@@ -147,7 +147,7 @@
         <table id='tableHeader' style="width: 100%; margin-bottom: 20px; font-size: 14px; border-collapse: collapse;">
             <tr>
                 <td><strong>FARM</strong></td>
-                <td>: {{ $currentLivestock->livestock->farm->nama }}</td>
+                <td>: {{ $currentLivestock->livestock->farm->name }}</td>
                 <td><strong>DOC MASUK</strong></td>
                 <td>: {{ $currentLivestock->livestock->populasi_awal }} Ekor</td>
             </tr>
