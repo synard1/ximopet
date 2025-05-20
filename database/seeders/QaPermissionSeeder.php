@@ -12,7 +12,7 @@ class QaPermissionSeeder extends Seeder
     {
         // Create QA-specific permissions
         $abilities = ['access', 'create', 'read', 'update', 'delete', 'export'];
-        $modules = ['qa-checklist'];
+        $modules = ['qa checklist'];
 
         foreach ($modules as $module) {
             foreach ($abilities as $ability) {
@@ -25,12 +25,12 @@ class QaPermissionSeeder extends Seeder
 
         // Assign QA permissions to QA role
         $permissions = Permission::whereIn('name', [
-            'access qa-checklist',
-            'create qa-checklist',
-            'read qa-checklist',
-            'update qa-checklist',
-            'delete qa-checklist',
-            'export qa-checklist'
+            'access qa checklist',
+            'create qa checklist',
+            'read qa checklist',
+            'update qa checklist',
+            'delete qa checklist',
+            'export qa checklist'
         ])->get();
 
         $qaRole->syncPermissions($permissions);

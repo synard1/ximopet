@@ -36,7 +36,8 @@ class RolesPermissionsSeeder extends Seeder
                 'ekspedisi',
                 'roles',
                 'permissions',
-                'route manager'
+                'route manager',
+                'qa checklist'
             ],
             'Administrator' => [
                 'user management',

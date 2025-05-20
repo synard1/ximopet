@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-    Data Penjualan Ayam
+    Data Pemakaian Supply
     @endsection
 
     @section('breadcrumbs')

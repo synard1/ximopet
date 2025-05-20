@@ -84,7 +84,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::name('administrator.')->group(function () {
         Route::get('/administrator/qa', [AdminController::class, 'qaIndex'])
-            ->middleware(['auth', 'permission:access qa-checklist'])
+            ->middleware(['auth', 'permission:access qa checklist'])
             ->name('qa');
         Route::get('/administrator/routes', [AdminController::class, 'routeIndex'])
             ->middleware(['auth', 'permission:access route manager'])

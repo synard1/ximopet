@@ -38,7 +38,7 @@
                         <label class="form-label required">Feature Category</label>
                         <select class="form-select" wire:model.live="feature_category">
                             <option value="">Select Category</option>
-                            @foreach($featureCategories as $category => $subcategories)
+                            @foreach($categories as $category)
                             <option value="{{ $category }}">{{ $category }}</option>
                             @endforeach
                         </select>
@@ -49,11 +49,11 @@
                 <div class="row mb-5">
                     <div class="col-md-6">
                         <label class="form-label">Feature Subcategory</label>
-                        <select class="form-select" wire:model="feature_subcategory" @if(!$feature_category) disabled
-                            @endif>
+                        <select class="form-select" wire:model.live="feature_subcategory" @if(!$feature_category)
+                            disabled @endif>
                             <option value="">Select Subcategory</option>
-                            @if($feature_category && isset($featureCategories[$feature_category]))
-                            @foreach($featureCategories[$feature_category] as $subcategory)
+                            @if($feature_category && !empty($subcategories))
+                            @foreach($subcategories as $subcategory)
                             <option value="{{ $subcategory }}">{{ $subcategory }}</option>
                             @endforeach
                             @endif

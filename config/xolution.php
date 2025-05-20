@@ -287,6 +287,14 @@ return [
                     'show' => true,
                 ],
                 [
+                    'route' => '/livestock/supply-recording',
+                    'label' => 'Pemakaian Supply', // Removed the function call
+                    'icon' => 'fa-solid fa-tags',
+                    'active' => '/livestock/supply-recording', // Using route string instead of function
+                    'order' => 5,
+                    'show' => true,
+                ],
+                [
                     'route' => '/feeds/mutation',
                     'label' => 'Mutasi Feed',
                     'icon' => 'fa-solid fa-arrows-rotate',
@@ -359,6 +367,31 @@ return [
                     'icon' => 'fa-solid fa-chart-line',
                     'active' => 'reports/performa-mitra', // Using route string instead of function
                     'order' => 6,
+                    'show' => true,
+                ],
+            ],
+        ],
+        'Administrator' => [
+            'order' => 9,
+            'show' => true,
+            'roles' => ['SuperAdmin', 'QA Tester'],
+            'items' => [
+                [
+                    'route' => '/administrator/qa',
+                    'label' => 'QA',
+                    'icon' => 'fa-solid fa-chart-line',
+                    'active' => '/administrator/qa', // Using route string instead of function
+                    'order' => 1,
+                    'roles' => ['SuperAdmin', 'QA Tester'],
+                    'show' => true,
+                ],
+                [
+                    'route' => '/administrator/routes',
+                    'label' => 'Routes',
+                    'icon' => 'fa-solid fa-chart-line',
+                    'active' => '/administrator/routes', // Using route string instead of function
+                    'order' => 2,
+                    'roles' => ['SuperAdmin', 'QA Tester'],
                     'show' => true,
                 ],
             ],

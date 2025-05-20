@@ -33,7 +33,7 @@ class QaChecklist extends Component
 
     public function render()
     {
-        return view('livewire.qa-checklist', [
+        return view('livewire.qa checklist', [
             'checklists' => QaChecklist::latest()->paginate(10)
         ]);
     }

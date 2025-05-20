@@ -51,7 +51,7 @@ class QaChecklistForm extends Component
     public function mount()
     {
         // Check if user has permission to access QA checklist
-        if (!Auth::user()->can('access qa-checklist')) {
+        if (!Auth::user()->can('access qa checklist')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -65,22 +65,46 @@ class QaChecklistForm extends Component
 
     public function render()
     {
+        $subcategories = [];
+        if ($this->feature_category) {
+            $subcategories = QaChecklist::getSubcategories($this->feature_category);
+        }
+
         return view('livewire.qa-checklist-form', [
             'checklists' => QaChecklist::latest()->paginate(10),
-            'featureCategories' => QaChecklist::getFeatureCategories()
+            'categories' => QaChecklist::getFeatureCategories(),
+            'subcategories' => $subcategories
         ]);
     }
 
     public function updatedFeatureCategory($value)
     {
         $this->feature_subcategory = null;
-        $this->dispatch('feature-category-updated', $value);
+        $subcategories = QaChecklist::getSubcategories($value);
+
+        $this->dispatch('feature-category-updated', [
+            'category' => $value,
+            'subcategories' => $subcategories
+        ]);
+    }
+
+    public function updatedFeatureSubcategory($value)
+    {
+        if ($this->feature_category && $value) {
+            $features = QaChecklist::getFeatures($this->feature_category, $value);
+
+            $this->dispatch('feature-subcategory-updated', [
+                'category' => $this->feature_category,
+                'subcategory' => $value,
+                'features' => $features
+            ]);
+        }
     }
 
     public function save()
     {
         // Check if user has permission to create/update QA checklist
-        if (!Auth::user()->can('create qa-checklist') && !Auth::user()->can('update qa-checklist')) {
+        if (!Auth::user()->can('create qa checklist') && !Auth::user()->can('update qa checklist')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -125,7 +149,7 @@ class QaChecklistForm extends Component
     public function edit($id)
     {
         // Check if user has permission to read QA checklist
-        if (!Auth::user()->can('read qa-checklist')) {
+        if (!Auth::user()->can('read qa checklist')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -152,7 +176,7 @@ class QaChecklistForm extends Component
     public function delete($id)
     {
         // Check if user has permission to delete QA checklist
-        if (!Auth::user()->can('delete qa-checklist')) {
+        if (!Auth::user()->can('delete qa checklist')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -163,7 +187,7 @@ class QaChecklistForm extends Component
     public function exportToJson()
     {
         // Check if user has permission to export QA checklist
-        if (!Auth::user()->can('export qa-checklist')) {
+        if (!Auth::user()->can('export qa checklist')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -178,7 +202,7 @@ class QaChecklistForm extends Component
     public function exportToTxt()
     {
         // Check if user has permission to export QA checklist
-        if (!Auth::user()->can('export qa-checklist')) {
+        if (!Auth::user()->can('export qa checklist')) {
             abort(403, 'Unauthorized action.');
         }
 
