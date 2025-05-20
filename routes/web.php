@@ -35,7 +35,6 @@ use Illuminate\Http\Request;
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\OVKRecordController;
-use App\Http\Controllers\AIFileChangeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -238,10 +237,5 @@ Route::get('/auth/redirect/{provider}', [SocialiteController::class, 'redirect']
 // Route::middleware(['auth', 'permission:access route manager'])->group(function () {
 //     Route::get('/administrator/routes', App\Livewire\RouteManager::class)->name('route.manager');
 // });
-
-Route::prefix('ai-changes')->group(function () {
-    Route::get('/', [AIFileChangeController::class, 'index'])->name('ai-changes.index');
-    Route::get('/by-date', [AIFileChangeController::class, 'showByDate'])->name('ai-changes.by-date');
-});
 
 require __DIR__ . '/auth.php';
