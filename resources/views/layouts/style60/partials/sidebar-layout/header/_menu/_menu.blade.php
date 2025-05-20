@@ -3,92 +3,78 @@ $currentUrl = request()->url();
 $isDashboard = $currentUrl === url('/') || $currentUrl === url('/dashboard');
 
 $menuItems = [
-'General' => [
-['route' => '/', 'label' => 'Dashboard', 'icon' => 'ki-home', 'active' => $isDashboard],
-['route' => '#', 'label' => 'User Profile', 'icon' => 'ki-user', 'items' => [
-['route' => '#', 'label' => 'Overview'],
-['route' => '#', 'label' => 'Activity'],
-]],
-],
-'Master Data' => [
-['route' => '/master-data/expeditions', 'label' => 'Ekspedisi', 'icon' => 'ki-purchase', 'active' =>
-request()->is('master-data/expeditions'), 'roles' => ['SuperAdmin','Administrator','QA Tester']],
-['route' => '/master-data/units', 'label' => 'Unit Satuan', 'icon' => 'ki-purchase', 'active' =>
-request()->is('master-data/units'), 'roles' => ['SuperAdmin','Administrator','QA Tester']],
-['route' => '/master-data/feeds', 'label' => 'Pakan', 'icon' => 'ki-purchase', 'active' =>
-request()->is('master-data/feeds'), 'roles' => ['SuperAdmin','Administrator','QA Tester']],
-['route' => '/master-data/supplies', 'label' => 'Supply', 'icon' => 'ki-purchase', 'active' =>
-request()->is('master-data/supplies'), 'roles' => ['SuperAdmin','Administrator','QA Tester']],
-['route' => '/master-data/workers', 'label' => 'Pekerja', 'icon' => 'ki-purchase', 'active' =>
-request()->is('master-data/workers'), 'roles' => ['SuperAdmin','Administrator','QA Tester']],
-],
-'Rekanan' => [
-['route' => '/rekanan/suppliers', 'label' => 'Supplier', 'icon' => 'ki-add-user', 'can' => 'read supplier management'],
-['route' => '/rekanan/customers', 'label' => 'Pembeli', 'icon' => 'ki-add-user', 'can' => 'read customer management'],
-['route' => '/rekanan/ekspedisis', 'label' => 'Ekspedisi', 'icon' => 'ki-truck', 'can' => 'read ekspedisi'],
-],
-'Inventory' => [
-['route' => '/inventory/docs', 'label' => 'DOC', 'icon' => 'ki-folder'],
-['route' => '/inventory/stocks', 'label' => 'Stock', 'icon' => 'ki-package'],
-// ['route' => '#', 'label' => 'Storage', 'icon' => 'ki-box'],
-],
-'User Management' => [
-['route' => '/users', 'label' => 'User List', 'icon' => 'ki-user-circle', 'can' => 'read user management'],
-['route' => '/user/roles', 'label' => 'User Role', 'icon' => 'ki-shield', 'can' => 'read user management'],
-['route' => '/user/permissions', 'label' => 'User Permission', 'icon' => 'ki-lock-2', 'can' => 'SuperAdmin'],
-],
-'Peternakan' => [
-['route' => '/data/farms', 'label' => 'Data Farm', 'icon' => 'ki-farm', 'active' => request()->is('data/farms') ||
-request()->is('master-data/farms')],
-['route' => '/data/kandangs', 'label' => 'Data Kandang', 'icon' => 'ki-barn', 'active' => request()->is('data/kandangs')
-|| request()->is('master-data/kandangs')],
-['route' => '/data/livestocks', 'label' => 'Data ' . trans('content.livestocks',[],'id'), 'icon' => 'ki-cow', 'active'
-=> request()->is('data/livestocks') || request()->is('master-data/livestocks')],
-// ['route' => '/data/stoks', 'label' => 'Data Stoks', 'icon' => 'ki-chart-line-up', 'active' =>
-request()->is('data/stoks') || request()->is('master-data/stoks')],
-['route' => '/data/standar-bobot', 'label' => 'Data Standar Bobot', 'icon' => 'ki-weight', 'active' =>
-request()->is('data/standar-bobot')],
-['route' => '/livestock/afkir', 'label' => trans('content.ternak',[],'id') . ' Afkir', 'icon' => 'ki-remove'],
-['route' => '/livestock/jual', 'label' => trans('content.ternak',[],'id') . ' Jual', 'icon' => 'ki-sale'],
-['route' => '/livestock/mati', 'label' => trans('content.ternak',[],'id') . ' Mati', 'icon' => 'ki-skull'],
-
-],
-'Transaksi' => [
-['route' => '/pembelian/doc', 'label' => 'Pembelian DOC', 'icon' => 'ki-purchase', 'active' =>
-request()->is('pembelian/doc'), 'roles' => ['Supervisor','Manager']],
-['route' => '/pembelian/pakan', 'label' => 'Pembelian Pakan', 'icon' => 'ki-purchase', 'active' =>
-request()->is('pembelian/pakan'), 'roles' => ['Admin']],
-['route' => '/pembelian/ovk', 'label' => 'Pembelian OVK', 'icon' => 'ki-purchase', 'active' =>
-request()->is('pembelian/ovk'), 'roles' => ['Admin']],
-['route' => '/pembelian/stock', 'label' => 'Pembelian Stock', 'icon' => 'ki-purchase', 'active' =>
-request()->is('pembelian/stock') || request()->is('transaksi/stoks'), 'roles' => ['Operator']],
-['route' => '/transaction/sales', 'label' => 'Penjualan ' . trans('content.ternak',[],'id') . ' ', 'icon' => 'ki-sale',
-'active' => request()->is('/transaction/sales')],
-// ['route' => '/stocks/mutasi', 'label' => 'Mutasi Pakan', 'icon' => 'ki-transfer'],
-['route' => '/feeds/mutation', 'label' => 'Mutasi Feed', 'icon' => 'ki-transfer'],
-['route' => '/supplies/mutation', 'label' => 'Mutasi Supply', 'icon' => 'ki-transfer'],
-['route' => '/livestock/mutasi', 'label' => 'Mutasi Ayam', 'icon' => 'ki-transfer', 'alt_label' => ''],
-//['route' => '/transaksi/harian', 'label' => 'Harian', 'icon' => 'ki-calendar', 'active' =>
-request()->is('transaksi/harian')],
-],
-'Reports' => [
-['route' => '/reports/harian', 'label' => 'Harian', 'icon' => 'ki-chart-line-up', 'active' =>
-request()->is('reports/harian')],
-['route' => '/reports/daily-cost', 'label' => 'Harian Biaya', 'icon' => 'ki-chart-line-up', 'active' =>
-request()->is('reports/daily-cost')],
-['route' => '/reports/performa', 'label' => 'Performa', 'icon' => 'ki-chart-line-up', 'active' =>
-request()->is('reports/performa')],
-['route' => '/reports/penjualan', 'label' => 'Penjualan', 'icon' => 'ki-chart-line-up', 'active' =>
-request()->is('reports/penjualan')],
-['route' => '/reports/feed/purchase', 'label' => 'Pembelian Pakan', 'icon' => 'ki-chart-line-up', 'active' =>
-request()->is('reports/feed/purchase')],
-['route' => '/reports/performa-mitra', 'label' => 'Performa Kemitraan', 'icon' => 'ki-chart-line-up', 'active' =>
-request()->is('reports/performa-mitra')],
-],
+    'General' => [
+        ['route' => '/', 'label' => 'Dashboard', 'icon' => 'ki-home', 'active' => $isDashboard],
+        ['route' => '#', 'label' => 'User Profile', 'icon' => 'ki-user', 'items' => [
+            ['route' => '#', 'label' => 'Overview'],
+            ['route' => '#', 'label' => 'Activity'],
+        ]],
+    ],
+    'Master Data' => [
+        ['route' => '/master-data/expeditions', 'label' => 'Ekspedisi', 'icon' => 'ki-purchase', 'active' => request()->is('master-data/expeditions'), 'roles' => ['SuperAdmin','Administrator','QA Tester']],
+        ['route' => '/master-data/units', 'label' => 'Unit Satuan', 'icon' => 'ki-purchase', 'active' => request()->is('master-data/units'), 'roles' => ['SuperAdmin','Administrator','QA Tester']],
+        ['route' => '/master-data/feeds', 'label' => 'Pakan', 'icon' => 'ki-purchase', 'active' => request()->is('master-data/feeds'), 'roles' => ['SuperAdmin','Administrator','QA Tester']],
+        ['route' => '/master-data/supplies', 'label' => 'Supply', 'icon' => 'ki-purchase', 'active' => request()->is('master-data/supplies'), 'roles' => ['SuperAdmin','Administrator','QA Tester']],
+        ['route' => '/master-data/workers', 'label' => 'Pekerja', 'icon' => 'ki-purchase', 'active' => request()->is('master-data/workers'), 'roles' => ['SuperAdmin','Administrator','QA Tester']],
+    ],
+    'Rekanan' => [
+        ['route' => '/rekanan/suppliers', 'label' => 'Supplier', 'icon' => 'ki-add-user', 'can' => 'read supplier management'],
+        ['route' => '/rekanan/customers', 'label' => 'Pembeli', 'icon' => 'ki-add-user', 'can' => 'read customer management'],
+        ['route' => '/rekanan/ekspedisis', 'label' => 'Ekspedisi', 'icon' => 'ki-truck', 'can' => 'read ekspedisi'],
+    ],
+    'Inventory' => [
+        ['route' => '/inventory/docs', 'label' => 'DOC', 'icon' => 'ki-folder'],
+        ['route' => '/inventory/stocks', 'label' => 'Stock', 'icon' => 'ki-package'],
+        // ['route' => '#', 'label' => 'Storage', 'icon' => 'ki-box'],
+    ],
+    'User Management' => [
+        ['route' => '/users', 'label' => 'User List', 'icon' => 'ki-user-circle', 'can' => 'read user management'],
+        ['route' => '/user/roles', 'label' => 'User Role', 'icon' => 'ki-shield', 'can' => 'read user management'],
+        ['route' => '/user/permissions', 'label' => 'User Permission', 'icon' => 'ki-lock-2', 'can' => 'SuperAdmin'],
+    ],
+    'Peternakan' => [
+        ['route' => '/data/farms', 'label' => 'Data Farm', 'icon' => 'ki-farm', 'active' => request()->is('data/farms') || request()->is('master-data/farms')],
+        ['route' => '/data/kandangs', 'label' => 'Data Kandang', 'icon' => 'ki-barn', 'active' => request()->is('data/kandangs') || request()->is('master-data/kandangs')],
+        ['route' => '/data/livestocks', 'label' => 'Data ' . trans('content.livestocks',[],'id'), 'icon' => 'ki-cow', 'active' => request()->is('data/livestocks') || request()->is('master-data/livestocks')],
+        // ['route' => '/data/stoks', 'label' => 'Data Stoks', 'icon' => 'ki-chart-line-up', 'active' => request()->is('data/stoks') || request()->is('master-data/stoks')],
+        ['route' => '/data/standar-bobot', 'label' => 'Data Standar Bobot', 'icon' => 'ki-weight', 'active' => request()->is('data/standar-bobot')],
+        ['route' => '/livestock/afkir', 'label' => trans('content.ternak',[],'id') . ' Afkir', 'icon' => 'ki-remove'],
+        ['route' => '/livestock/jual', 'label' => trans('content.ternak',[],'id') . ' Jual', 'icon' => 'ki-sale'],
+        ['route' => '/livestock/mati', 'label' => trans('content.ternak',[],'id') . ' Mati', 'icon' => 'ki-skull'],
+        
+    ],
+    'Transaksi' => [
+        ['route' => '/pembelian/doc', 'label' => 'Pembelian DOC', 'icon' => 'ki-purchase', 'active' => request()->is('pembelian/doc'), 'roles' => ['Supervisor','Manager']],
+        ['route' => '/pembelian/pakan', 'label' => 'Pembelian Pakan', 'icon' => 'ki-purchase', 'active' => request()->is('pembelian/pakan'), 'roles' => ['Admin']],
+        ['route' => '/pembelian/ovk', 'label' => 'Pembelian OVK', 'icon' => 'ki-purchase', 'active' => request()->is('pembelian/ovk'), 'roles' => ['Admin']],
+        ['route' => '/pembelian/stock', 'label' => 'Pembelian Stock', 'icon' => 'ki-purchase', 'active' => request()->is('pembelian/stock') || request()->is('transaksi/stoks'), 'roles' => ['Operator']],
+        ['route' => '/transaction/sales', 'label' => 'Penjualan ' . trans('content.ternak',[],'id') . ' ', 'icon' => 'ki-sale', 'active' => request()->is('/transaction/sales')],
+		// ['route' => '/stocks/mutasi', 'label' => 'Mutasi Pakan', 'icon' => 'ki-transfer'],
+		['route' => '/feeds/mutation', 'label' => 'Mutasi Feed', 'icon' => 'ki-transfer'],
+		['route' => '/supplies/mutation', 'label' => 'Mutasi Supply', 'icon' => 'ki-transfer'],
+        ['route' => '/livestock/mutasi', 'label' => 'Mutasi Ayam', 'icon' => 'ki-transfer', 'alt_label' => ''],
+        //['route' => '/transaksi/harian', 'label' => 'Harian', 'icon' => 'ki-calendar', 'active' => request()->is('transaksi/harian')],
+    ],
+    'Reports' => [
+        ['route' => '/reports/harian', 'label' => 'Harian', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/harian')],
+        ['route' => '/reports/daily-cost', 'label' => 'Harian Biaya', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/daily-cost')],
+        ['route' => '/reports/performa', 'label' => 'Performa', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/performa')],
+        ['route' => '/reports/penjualan', 'label' => 'Penjualan', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/penjualan')],
+        ['route' => '/reports/feed/purchase', 'label' => 'Pembelian Pakan', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/feed/purchase')],
+        ['route' => '/reports/performa-mitra', 'label' => 'Performa Kemitraan', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/performa-mitra')],
+    ],
 ];
 
+$user = auth()->user();
+$isSuperAdmin = $user->hasRole('SuperAdmin');
+
 // Filter out categories the user can't access
-$menuItems = array_filter($menuItems, function ($items) {
+$menuItems = array_filter($menuItems, function ($items) use ($isSuperAdmin) {
+// If user is SuperAdmin, show all categories
+if ($isSuperAdmin) {
+return true;
+}
+
 foreach ($items as $item) {
 $canAccess = !isset($item['can']) || auth()->user()->can($item['can']);
 $hasRole = !isset($item['roles']) || (isset($item['roles']) &&
@@ -130,9 +116,10 @@ return false; // User has no access to any item in this category
             <div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-lg-2 py-lg-4 w-lg-200px">
                 @foreach ($items as $item)
                 @php
-                $canAccess = !isset($item['can']) || auth()->user()->can($item['can']);
-                $hasRole = !isset($item['roles']) || (isset($item['roles']) &&
-                count(array_intersect(auth()->user()->getRoleNames()->toArray(), $item['roles'])) > 0);
+                // For SuperAdmin, bypass all role and permission checks
+                $canAccess = $isSuperAdmin ? true : (!isset($item['can']) || auth()->user()->can($item['can']));
+                $hasRole = $isSuperAdmin ? true : (!isset($item['roles']) || (isset($item['roles']) &&
+                count(array_intersect(auth()->user()->getRoleNames()->toArray(), $item['roles'])) > 0));
                 @endphp
 
                 @if ($canAccess && $hasRole)

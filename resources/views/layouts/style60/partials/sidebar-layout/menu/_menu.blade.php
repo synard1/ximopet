@@ -18,21 +18,32 @@ return $a['order'] <=> $b['order'];
     });
 
     $user = auth()->user();
+    $isSuperAdmin = $user->hasRole('SuperAdmin');
     $filteredMenuItems = [];
 
     foreach ($menuItems as $category => $categoryData) {
-    $hasCategoryAccess =
-    hasRequiredPermission($user, $categoryData['can'] ?? null) &&
-    hasRequiredRoles($user, $categoryData['roles'] ?? null);
+    // Skip if category is not shown
+    if (!$categoryData['show']) {
+    continue;
+    }
 
-    if (!$hasCategoryAccess || !$categoryData['show']) {
+    // For SuperAdmin, bypass all role and permission checks
+    $hasCategoryAccess = $isSuperAdmin ? true : (
+    hasRequiredPermission($user, $categoryData['can'] ?? null) &&
+    hasRequiredRoles($user, $categoryData['roles'] ?? null)
+    );
+
+    if (!$hasCategoryAccess) {
     continue;
     }
 
     $filteredItems = [];
     foreach ($categoryData['items'] as $item) {
-    $hasItemAccess =
-    hasRequiredPermission($user, $item['can'] ?? null) && hasRequiredRoles($user, $item['roles'] ?? null);
+    // For SuperAdmin, bypass all role and permission checks for items
+    $hasItemAccess = $isSuperAdmin ? true : (
+    hasRequiredPermission($user, $item['can'] ?? null) &&
+    hasRequiredRoles($user, $item['roles'] ?? null)
+    );
 
     if ($hasItemAccess && $item['show']) {
     $filteredItems[] = $item;

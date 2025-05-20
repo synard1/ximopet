@@ -83,4 +83,13 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(LoginLog::class);
     }
+
+    public function before(User $user, string $ability): ?bool
+    {
+        if ($user->hasRole('Super Admin')) {
+            return true;
+        }
+
+        return null; // see the note above in Gate::before about why null must be returned here.
+    }
 }
