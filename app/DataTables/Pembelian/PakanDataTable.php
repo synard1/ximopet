@@ -17,22 +17,6 @@ class PakanDataTable extends DataTable
      * @param QueryBuilder $query Results from query() method.
      */
 
-    private function formatRupiah($amount) {
-        // Convert the number to a string with two decimal places
-        $formattedAmount = number_format($amount, 2, ',', '.');
-    
-        // Add the currency symbol and return the formatted number
-        return "Rp " . $formattedAmount;
-    }
-
-    private function formatNumber($amount) {
-        // Convert the number to a string with two decimal places
-        $formattedAmount = number_format($amount, 2, ',', '.');
-    
-        // Add the currency symbol and return the formatted number
-        return $formattedAmount;
-    }
-
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
@@ -46,53 +30,51 @@ class PakanDataTable extends DataTable
                 return $transaksi->rekanans->nama ?? '';
             })
             ->editColumn('total_qty', function (Transaksi $transaksi) {
-                return $this->formatNumber($transaksi->transaksiDetails->sum('qty')) ?? '';
+                return formatNumber($transaksi->transaksiDetails->sum('qty'), 0) ?? '';
             })
             ->editColumn('payload.doc.nama', function (Transaksi $transaksi) {
-                if($transaksi->payload){
+                if ($transaksi->payload) {
                     if (isset($transaksi->payload['doc']) && !empty($transaksi->payload['doc'])) {
                         // The array exists and is not empty
-                        return $transaksi->payload['doc']['kode'] .' - '.$transaksi->payload['doc']['nama'] ?? '';
-
+                        return $transaksi->payload['doc']['kode'] . ' - ' . $transaksi->payload['doc']['nama'] ?? '';
                     }
-                }else{
+                } else {
                     return '';
                 }
-                
             })
             ->editColumn('farm_id', function (Transaksi $transaksi) {
                 return $transaksi->farms->nama ?? '';
             })
             ->editColumn('harga', function (Transaksi $transaksi) {
                 $totalHarga = $transaksi->transaksiDetails->sum('harga');
-                return $this->formatRupiah($totalHarga);
+                return formatRupiah($totalHarga, 0);
             })
             ->editColumn('sub_total', function (Transaksi $transaksi) {
                 $subTotal = $transaksi->transaksiDetails->sum('sub_total');
-                return $this->formatRupiah($subTotal);
+                return formatRupiah($subTotal, 0);
             })
             ->addColumn('action', function (Transaksi $transaksi) {
                 return view('pages/pembelian._actions', compact('transaksi'));
             })
             ->setRowId('id')
             ->rawColumns([''])
-            ->filterColumn('rekanan_id', function($query, $keyword) {
-                $query->whereHas('rekanans', function($q) use ($keyword) {
+            ->filterColumn('rekanan_id', function ($query, $keyword) {
+                $query->whereHas('rekanans', function ($q) use ($keyword) {
                     $q->where('nama', 'like', "%{$keyword}%");
                 });
             })
-            ->filterColumn('farm_id', function($query, $keyword) {
-                $query->whereHas('farms', function($q) use ($keyword) {
+            ->filterColumn('farm_id', function ($query, $keyword) {
+                $query->whereHas('farms', function ($q) use ($keyword) {
                     $q->where('nama', 'like', "%{$keyword}%");
                 });
             })
-            ->filterColumn('kandang_id', function($query, $keyword) {
-                $query->whereHas('kandangs', function($q) use ($keyword) {
+            ->filterColumn('kandang_id', function ($query, $keyword) {
+                $query->whereHas('kandangs', function ($q) use ($keyword) {
                     $q->where('nama', 'like', "%{$keyword}%");
                 });
             })
-            ->filterColumn('kelompok_ternak_id', function($query, $keyword) {
-                $query->whereHas('kelompokTernak', function($q) use ($keyword) {
+            ->filterColumn('kelompok_ternak_id', function ($query, $keyword) {
+                $query->whereHas('kelompokTernak', function ($q) use ($keyword) {
                     $q->where('name', 'like', "%{$keyword}%");
                 });
             });
@@ -108,7 +90,7 @@ class PakanDataTable extends DataTable
 
         // return $model->newQuery();
         $query = $model::with('transaksiDetails')
-            ->where('jenis','Stock')
+            ->where('jenis', 'Stock')
             ->whereHas('transaksiDetails', function ($query) {
                 $query->where('jenis_barang', 'Pakan');
             })
@@ -117,7 +99,6 @@ class PakanDataTable extends DataTable
             ->newQuery();
 
         return $query;
-
     }
 
     /**
@@ -140,10 +121,10 @@ class PakanDataTable extends DataTable
                 'searching'       =>  true,
                 // 'responsive'       =>  true,
                 'lengthMenu' => [
-                        [ 10, 25, 50, -1 ],
-                        [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+                    [10, 25, 50, -1],
+                    ['10 rows', '25 rows', '50 rows', 'Show all']
                 ],
-                'buttons'      => ['export', 'print', 'reload','colvis'],
+                'buttons'      => ['export', 'print', 'reload', 'colvis'],
             ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/pembelian/_draw-scripts.js')) . "}");
     }
@@ -180,7 +161,7 @@ class PakanDataTable extends DataTable
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
+            // ->width(60)
         ];
     }
 

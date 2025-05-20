@@ -16,15 +16,6 @@ use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 
 class FeedMutationDataTable extends DataTable
 {
-    private function formatNumber($amount)
-    {
-        // Convert the number to a string with two decimal places
-        $formattedAmount = number_format($amount, 0, ',', '.');
-
-        // Add the currency symbol and return the formatted number
-        return $formattedAmount;
-    }
-
     /**
      * Build the DataTable class.
      *
@@ -44,7 +35,7 @@ class FeedMutationDataTable extends DataTable
                     return $mutation->quantity;
                 });
 
-                return $this->formatNumber($total);
+                return formatNumber($total, 0);
             })
             // ->editColumn('quantity', function (Mutation $stok) {
             //     return $stok->feedMutationDetails->sum('quantity');

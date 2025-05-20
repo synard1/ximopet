@@ -89,7 +89,7 @@ return new class extends Migration
             $table->uuid('kandang_id')->nullable();
             $table->uuid('supply_id');
             $table->uuid('supply_purchase_id');
-            $table->dateTime('date');
+            $table->date('date');
             $table->string('source_type');
             $table->uuid('source_id');
             $table->decimal('quantity_in', 12, 2)->default(0);

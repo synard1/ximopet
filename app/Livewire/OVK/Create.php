@@ -29,6 +29,7 @@ use App\Models\OVKRecord;
 use App\Models\OVKRecordItem;
 use App\Models\SupplyUsage;
 use App\Models\SupplyUsageDetail;
+use Carbon\Carbon;
 
 class Create extends Component
 {
@@ -136,6 +137,7 @@ class Create extends Component
         ]);
 
         // Additional per-item validation (duplicates, stock, and date validation)
+        $inputDate = Carbon::parse($this->date)->startOfDay(); // Convert input date string to Carbon object at start of day
         $uniqueKeys = [];
         foreach ($this->items as $idx => $item) {
             // Validate duplicate combination of supply_id and unit_id
@@ -171,13 +173,14 @@ class Create extends Component
                     ->where('supply_id', $item['supply_id'])
                     ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
                     ->orderBy('date')
-                    ->orderBy('created_at')
+                    // ->orderBy('created_at')
                     ->get();
 
                 // Check if usage date is before earliest available stock date
                 if ($availableStocks->isNotEmpty()) {
-                    $earliestStockDate = $availableStocks->first()->date;
-                    if ($this->date < $earliestStockDate) {
+                    $earliestStockDate = $availableStocks->first()->date->startOfDay(); // Ensure earliestStockDate is also at start of day
+                    // Allow same day usage but prevent usage before earliest stock date
+                    if ($inputDate < $earliestStockDate) { // Compare Carbon objects
                         $this->errorItems[$idx] = "Tanggal penggunaan tidak boleh sebelum tanggal masuk supply terawal (" . $earliestStockDate->format('d/m/Y') . ").";
                         continue;
                     }

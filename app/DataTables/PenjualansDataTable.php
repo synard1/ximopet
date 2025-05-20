@@ -16,21 +16,6 @@ use Illuminate\Http\Request;
 
 class PenjualansDataTable extends DataTable
 {
-    private function formatRupiah($amount) {
-        // Convert the number to a string with two decimal places
-        $formattedAmount = number_format($amount, 0, ',', '.');
-    
-        // Add the currency symbol and return the formatted number
-        return "Rp " . $formattedAmount;
-    }
-
-    private function formatNumber($amount) {
-        // Convert the number to a string with two decimal places
-        $formattedAmount = number_format($amount, 0, ',', '.');
-    
-        // Add the currency symbol and return the formatted number
-        return $formattedAmount;
-    }
     /**
      * Build the DataTable class.
      *
@@ -68,15 +53,15 @@ class PenjualansDataTable extends DataTable
             })
             ->editColumn('abw', function (TransaksiJual $transaksi) {
                 // Add a check to prevent division by zero
-                return $transaksi->detail->berat > 0 
-                    ? number_format($transaksi->detail->berat / $transaksi->jumlah, 2) 
+                return $transaksi->detail->berat > 0
+                    ? number_format($transaksi->detail->berat / $transaksi->jumlah, 2)
                     : 'N/A';
             })
             ->editColumn('harga', function (TransaksiJual $transaksi) {
-                return $this->formatNumber($transaksi->detail->harga_jual);
+                return formatNumber($transaksi->detail->harga_jual, 0);
             })
             ->editColumn('total', function (TransaksiJual $transaksi) {
-                return $this->formatNumber($transaksi->detail->berat * $transaksi->detail->harga_jual);
+                return formatNumber($transaksi->detail->berat * $transaksi->detail->harga_jual, 0);
             })
             ->editColumn('umur', function (TransaksiJual $transaksi) {
                 // return $transaksi->details->umur;
@@ -91,7 +76,7 @@ class PenjualansDataTable extends DataTable
                 return $umur;
             })
             ->editColumn('upxj', function (TransaksiJual $transaksi) {
-                return $this->formatNumber($transaksi->detail->umur * $transaksi->jumlah);
+                return formatNumber($transaksi->detail->umur * $transaksi->jumlah, 0);
             })
             ->addColumn('action', function (TransaksiJual $transaksi) {
                 if (auth()->user()->hasRole('Operator')) {
@@ -102,7 +87,7 @@ class PenjualansDataTable extends DataTable
             ->filter(function ($query) use ($request) {
                 if ($request->has('search') && $request->get('search')['value'] != '') {
                     $searchTerm = $request->get('search')['value'];
-            
+
                     $query->where(function ($q) use ($searchTerm) {
                         // $q->whereHas('detail', function ($subquery) use ($searchTerm) {
                         //     // Handle d-m-Y format
@@ -120,10 +105,10 @@ class PenjualansDataTable extends DataTable
                             $subquery->where('nama', 'like', "%$searchTerm%");
                             // Add more 'orWhere' conditions on 'farms' columns if needed
                         })
-                        ->orWhereHas('detail.kandang', function ($subquery) use ($searchTerm) {
-                            $subquery->where('nama', 'like', "%$searchTerm%");
-                            // Add more 'orWhere' conditions on 'farms' columns if needed
-                        });
+                            ->orWhereHas('detail.kandang', function ($subquery) use ($searchTerm) {
+                                $subquery->where('nama', 'like', "%$searchTerm%");
+                                // Add more 'orWhere' conditions on 'farms' columns if needed
+                            });
                         // Add more 'orWhereHas' conditions for other relationships if needed
                     });
                 }
@@ -140,7 +125,7 @@ class PenjualansDataTable extends DataTable
             // })
             ->setRowId('id')
             ->rawColumns(['kode']);
-            // ->make(true);
+        // ->make(true);
     }
 
 
@@ -152,7 +137,6 @@ class PenjualansDataTable extends DataTable
         $query = $model->newQuery();
 
         return $query;
-
     }
 
     /**
@@ -172,8 +156,8 @@ class PenjualansDataTable extends DataTable
                 'searching'       =>  true,
                 // 'responsive'       =>  true,
                 'lengthMenu' => [
-                        [ 10, 25, 50, -1 ],
-                        [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+                    [10, 25, 50, -1],
+                    ['10 rows', '25 rows', '50 rows', 'Show all']
                 ],
                 'buttons'      => [
                     [
@@ -190,7 +174,7 @@ class PenjualansDataTable extends DataTable
                             $(win.document.body).find("h1").css("text-align", "center");
                         }'
                     ],
-                    'export', 
+                    'export',
                     'reload',
                     'colvis'
                 ],
@@ -257,7 +241,7 @@ class PenjualansDataTable extends DataTable
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
+            // ->width(60)
         ];
     }
 
