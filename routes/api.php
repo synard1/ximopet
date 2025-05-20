@@ -52,6 +52,7 @@ Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
     Route::post('/reports/penjualan', [ReportsController::class, 'exportPenjualan']);
     Route::post('/reports/harian', [ReportsController::class, 'exportHarian']);
     Route::post('/reports/livestock-cost', [ReportsController::class, 'exportCostHarian']);
+    Route::post('/reports/batch-worker', [ReportsController::class, 'exportBatchWorker']);
     Route::post('/save-bonus', [TernakController::class, 'addBonus']);
     Route::post('/save-administrasi', [TernakController::class, 'addAdministrasi']);
 

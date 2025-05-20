@@ -216,6 +216,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::name('reports.')->group(function () {
         Route::get('/reports/harian', [ReportsController::class, 'indexHarian']);
         Route::get('/reports/daily-cost', [ReportsController::class, 'indexDailyCost']);
+        Route::get('/reports/batch-worker', [ReportsController::class, 'indexBatchWorker']);
         Route::get('/reports/penjualan', [ReportsController::class, 'indexPenjualan']);
         Route::get('/reports/feed/purchase', [FeedController::class, 'indexReportFeedPurchase']);
         Route::get('/reports/performa-mitra', [ReportsController::class, 'indexPerformaMitra']);

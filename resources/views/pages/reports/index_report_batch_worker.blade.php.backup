@@ -1,0 +1,10 @@
+<x-default-layout>
+    @section('title')
+    Laporan Harian
+    @endsection
+
+    <livewire:reports.batch-worker-report />
+    @push('scripts')
+
+    @endpush
+</x-default-layout>

@@ -34,7 +34,7 @@ return [
         'Master Data' => [
             'order' => 2,
             'show' => true,
-            'roles' => ['Administrator'],
+            'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
             'can' => 'read master data',
             'items' => [
                 [
@@ -42,7 +42,7 @@ return [
                     'label' => 'Ekspedisi',
                     'icon' => 'fa-solid fa-truck',
                     'active' => 'master-data/expeditions', // Using route string instead of function
-                    'roles' => ['Administrator'],
+                    'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 1,
                     'show' => true,
                 ],
@@ -51,7 +51,7 @@ return [
                     'label' => 'Unit Satuan',
                     'icon' => 'fa-solid fa-ruler',
                     'active' => 'master-data/units', // Using route string instead of function
-                    'roles' => ['Administrator'],
+                    'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 2,
                     'show' => true,
                 ],
@@ -69,7 +69,7 @@ return [
                     'label' => 'Supply',
                     'icon' => 'fa-solid fa-box',
                     'active' => 'master-data/supplies', // Using route string instead of function
-                    'roles' => ['Administrator'],
+                    'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 4,
                     'show' => true,
                 ],
@@ -78,7 +78,7 @@ return [
                     'label' => 'Pekerja',
                     'icon' => 'fa-solid fa-users',
                     'active' => 'master-data/workers', // Using route string instead of function
-                    'roles' => ['Administrator'],
+                    'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 5,
                     'show' => true,
                 ],
@@ -123,7 +123,7 @@ return [
                     'route' => '/inventory/docs',
                     'label' => 'DOC',
                     'icon' => 'fa-solid fa-folder',
-                    'roles' => ['Administrator'],
+                    'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 1,
                     'show' => true,
                 ],
@@ -185,7 +185,7 @@ return [
                     'label' => 'Data Farm',
                     'icon' => 'fa-solid fa-warehouse',
                     'active' => ['data/farms', 'master-data/farms'], // Using array of routes
-                    'roles' => ['Administrator'],
+                    'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 1,
                     'show' => true,
                 ],
@@ -196,7 +196,7 @@ return [
                     'active' => ['data/kandangs', 'master-data/kandangs'], // Using array of routes
                     'order' => 2,
                     'show' => true,
-                    'roles' => ['Administrator'],
+                    'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                 ],
                 [
                     'route' => '/data/livestocks',

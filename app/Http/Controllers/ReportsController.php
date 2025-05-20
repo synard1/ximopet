@@ -25,6 +25,8 @@ use App\Models\LivestockCost;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Models\BatchWorker;
+use App\Models\Worker;
 
 
 class ReportsController extends Controller
@@ -52,6 +54,28 @@ class ReportsController extends Controller
         })->toArray();
 
         return view('pages.reports.index_report_harian', compact(['farms', 'kandangs', 'livestock']));
+    }
+
+    public function indexBatchWorker()
+    {
+        $livestock = Livestock::all();
+        $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->get();
+        $kandangs = Kandang::whereIn('id', $livestock->pluck('kandang_id'))->get();
+
+        $livestock = $livestock->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'farm_id' => $item->farm_id,
+                'farm_name' => $item->farm->name,
+                'kandang_id' => $item->kandang_id,
+                'kandang_name' => $item->kandang->nama,
+                'name' => $item->name,
+                'start_date' => $item->start_date,
+                'year' => $item->start_date->format('Y'),
+            ];
+        })->toArray();
+
+        return view('pages.reports.index_report_batch_worker', compact(['farms', 'kandangs', 'livestock']));
     }
 
     public function indexDailyCost()
@@ -994,5 +1018,81 @@ class ReportsController extends Controller
             'currentLivestock',
             'feedHeaders'
         ]));
+    }
+
+    public function exportBatchWorker(Request $request)
+    {
+        // Validate request
+        // $request->validate([
+        //     // 'start_date' => 'required|date',
+        //     // 'end_date' => 'required|date',
+        //     'farm_id' => 'nullable|exists:farms,id',
+        //     'worker_id' => 'nullable|exists:workers,id',
+        //     'status' => 'nullable|in:active,completed,terminated'
+        // ]);
+
+        // Get data
+        $query = BatchWorker::query()
+            ->with(['livestock', 'worker', 'creator', 'updater'])
+            ->when($request->start_date, function ($query) use ($request) {
+                return $query->where('start_date', '>=', $request->start_date);
+            })
+            ->when($request->end_date, function ($query) use ($request) {
+                return $query->where('start_date', '<=', $request->end_date);
+            })
+            ->when($request->worker_id, function ($query) use ($request) {
+                return $query->where('worker_id', $request->worker_id);
+            })
+            ->when($request->status, function ($query) use ($request) {
+                return $query->where('status', $request->status);
+            });
+
+        $data = $query->get();
+
+        // Get farm name
+        $farm = $request->farm_id ? Farm::find($request->farm_id)->name : 'Semua Farm';
+
+        // Get worker name
+        $worker = $request->worker_id ? Worker::find($request->worker_id)->name : 'Semua Worker';
+
+        // Set locale to Indonesian
+        setlocale(LC_TIME, 'id_ID');
+        Carbon::setLocale('id');
+
+        // Format dates
+        $startDate = Carbon::parse($request->start_date);
+        $endDate = Carbon::parse($request->end_date);
+
+        // Calculate summary
+        $summary = [
+            'total_assignments' => $data->count(),
+            'unique_workers' => $data->unique('worker_id')->count(),
+            'unique_batches' => $data->unique('livestock_id')->count(),
+            'unique_farms' => $data->unique('farm_id')->count()
+        ];
+
+        // Group by status for detailed summary
+        $statusSummary = $data->groupBy('status')
+            ->map(function ($group) {
+                return [
+                    'count' => $group->count(),
+                    'workers' => $group->unique('worker_id')->count(),
+                    'batches' => $group->unique('livestock_id')->count(),
+                    'farms' => $group->unique('farm_id')->count()
+                ];
+            });
+
+        return view('pages.reports.batch-worker-pdf', [
+            'data' => $data,
+            'startDate' => $startDate->format('d F Y'),
+            'endDate' => $endDate->format('d F Y'),
+            'farm' => $farm,
+            'worker' => $worker,
+            'status' => $request->status ? ucfirst($request->status) : 'Semua Status',
+            'summary' => $summary,
+            'statusSummary' => $statusSummary,
+            'diketahui' => 'RIA NARSO',
+            'dibuat' => 'HENDRA'
+        ]);
     }
 }

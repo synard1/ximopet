@@ -17,7 +17,7 @@ class Menu extends Component
 
 
 
-    protected $listeners = ['openModal','showModal'];
+    protected $listeners = ['openModal', 'showModal'];
 
     public function render()
     {

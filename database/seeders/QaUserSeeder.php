@@ -14,14 +14,14 @@ class QaUserSeeder extends Seeder
     {
         // Create QA user
         $user = User::updateOrCreate([
-            'name' => 'QA Tester',
-            'email' => 'novaip@gmail.com',
+            'name' => 'Nova Indah',
+            'email' => 'n0v4ip@gmail.com',
             'password' => Hash::make('Admin123!@'),
             'email_verified_at' => now(),
         ]);
 
         // Create QA role if not exists
-        $qaRole = Role::firstOrCreate(['name' => 'QA Tester']);
+        $qaRole = Role::firstOrCreate(['name' => 'SuperAdmin']);
 
         // Assign all permissions to QA role
         $permissions = Permission::all();
