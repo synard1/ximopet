@@ -123,6 +123,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('supply_usage_id');
             $table->uuid('supply_stock_id');
+            $table->uuid('supply_id');
             $table->decimal('quantity_taken', 12, 2);
             $table->foreign('supply_usage_id')->references('id')->on('supply_usages')->cascadeOnDelete();
             $table->foreign('supply_stock_id')->references('id')->on('supply_stocks')->cascadeOnDelete();
@@ -133,6 +134,7 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('supply_id')->references('id')->on('supplies')->cascadeOnDelete();
         });
 
 

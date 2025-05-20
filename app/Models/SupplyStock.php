@@ -71,4 +71,24 @@ class SupplyStock extends BaseModel
     {
         return $this->hasOne(SupplyMutationItem::class, 'supply_stock_id')->with('mutation.fromLivestock');
     }
+
+    /**
+     * Recalculate the quantity_used based on related SupplyUsageDetail records.
+     */
+    public function recalculateQuantityUsed(): void
+    {
+        // Explicitly query SupplyUsageDetail within the transaction for this stock_id
+        $totalUsed = \App\Models\SupplyUsageDetail::where('supply_stock_id', $this->id)->sum('quantity_taken');
+        $this->update(['quantity_used' => $totalUsed]);
+    }
+
+    /**
+     * Recalculate the quantity_mutated based on related SupplyMutationItem records.
+     */
+    public function recalculateQuantityMutated(): void
+    {
+        // Assuming SupplyMutationItem quantity is stored in the same unit as SupplyStock
+        $totalMutated = $this->mutationDetails()->sum('quantity');
+        $this->update(['quantity_mutated' => $totalMutated]);
+    }
 }

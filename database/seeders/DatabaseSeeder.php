@@ -21,6 +21,9 @@ class DatabaseSeeder extends Seeder
             RolesPermissionsSeeder::class,
             DemoSeeder::class,
             LivestockPurchaseSeeder::class,
+            QaPermissionSeeder::class,
+            QaUserSeeder::class,
+            // RoutePermissionSeeder::class,
         ]);
 
         // \App\Models\User::factory(20)->create();

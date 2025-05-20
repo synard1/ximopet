@@ -14,7 +14,7 @@ class RolesPermissionsSeeder extends Seeder
      */
     public function run(): void
     {
-        $abilities = ['access', 'create', 'read', 'update', 'delete'];
+        $abilities = ['access', 'create', 'read', 'update', 'delete', 'export', 'import', 'print'];
 
         $permissions_by_role = [
             'SuperAdmin' => [
@@ -35,7 +35,8 @@ class RolesPermissionsSeeder extends Seeder
                 'penjualan',
                 'ekspedisi',
                 'roles',
-                'permissions'
+                'permissions',
+                'route manager'
             ],
             'Administrator' => [
                 'user management',
@@ -121,5 +122,4 @@ class RolesPermissionsSeeder extends Seeder
         // Assign SuperAdmin ke user ID 1 (creator utama)
         \App\Models\User::find(1)?->assignRole('SuperAdmin');
     }
-
 }

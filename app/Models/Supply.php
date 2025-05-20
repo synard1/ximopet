@@ -29,18 +29,23 @@ class Supply extends BaseModel
     protected function status(): Attribute
     {
         return Attribute::make(
-            get: fn (string $value) => ucfirst($value),
-            set: fn (string $value) => strtolower($value),
+            get: fn(string $value) => ucfirst($value),
+            set: fn(string $value) => strtolower($value),
         );
     }
 
     public function conversionUnits()
     {
-        return $this->hasMany(UnitConversion::class,'item_id');
+        return $this->hasMany(UnitConversion::class, 'item_id');
     }
 
-    public function category()
+    public function supplyCategory()
     {
         return $this->belongsTo(SupplyCategory::class);
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
     }
 }

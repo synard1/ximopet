@@ -14,7 +14,7 @@ class SupplyUsage extends BaseModel
 
     protected $fillable = [
         'id',
-        'farm_id',
+        'livestock_id',
         'usage_date',
         'total_quantity',
         'created_by',
@@ -31,8 +31,8 @@ class SupplyUsage extends BaseModel
         return $this->hasMany(SupplyUsageDetail::class);
     }
 
-    public function farm()
+    public function livestock()
     {
-        return $this->belongsTo(Farm::class);
+        return $this->belongsTo(Livestock::class);
     }
 }

@@ -34,6 +34,8 @@ use App\Models\TransaksiJual;
 use Illuminate\Http\Request;
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\OVKRecordController;
+use App\Http\Controllers\AIFileChangeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -82,7 +84,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::name('administrator.')->group(function () {
-        Route::get('/administrator/qa', [AdminController::class, 'qaIndex'])->name('qa');
+        Route::get('/administrator/qa', [AdminController::class, 'qaIndex'])
+            ->middleware(['auth', 'permission:access qa-checklist'])
+            ->name('qa');
+        Route::get('/administrator/routes', [AdminController::class, 'routeIndex'])
+            ->middleware(['auth', 'permission:access route manager'])
+            ->name('routes.manager');
 
         Route::get('/administrator', function () {
             return view('test3');
@@ -187,6 +194,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::name('livestock.')->group(function () {
         Route::get('/livestock/recording', [TernakController::class, 'recordingIndex'])->name('recording.index');
+        Route::get('/livestock/supply-recording', [LivestockController::class, 'supplyRecordingIndex'])->name('supplyRecording');
         Route::get('/livestock/mutasi', [LivestockController::class, 'mutationIndex'])->name('mutation');
         Route::get('/livestock/rollback', [TernakController::class, 'rollbackIndex'])->name('rollback.index');
         Route::get('/livestock/afkir', [TernakController::class, 'ternakAfkirIndex'])->name('afkir.index');
@@ -215,6 +223,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/reports/performa', [ReportsController::class, 'indexPerforma']);
         Route::get('/reports/inventory', [ReportsController::class, 'indexInventory']);
     });
+
+    // Route::get('/ovk-records', App\Livewire\OVK\Index::class)->name('ovk-records.index');
+    // Route::get('/ovk-records/create', App\Livewire\OVK\Create::class)->name('ovk-records.create');
+    // Route::get('/ovk-records/{ovkRecord}/edit', App\Livewire\OVK\Edit::class)->name('ovk-records.edit');
 });
 
 Route::get('/error', function () {
@@ -222,5 +234,14 @@ Route::get('/error', function () {
 });
 
 Route::get('/auth/redirect/{provider}', [SocialiteController::class, 'redirect']);
+
+// Route::middleware(['auth', 'permission:access route manager'])->group(function () {
+//     Route::get('/administrator/routes', App\Livewire\RouteManager::class)->name('route.manager');
+// });
+
+Route::prefix('ai-changes')->group(function () {
+    Route::get('/', [AIFileChangeController::class, 'index'])->name('ai-changes.index');
+    Route::get('/by-date', [AIFileChangeController::class, 'showByDate'])->name('ai-changes.by-date');
+});
 
 require __DIR__ . '/auth.php';

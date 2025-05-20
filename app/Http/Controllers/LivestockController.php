@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\DataTables\LivestockDataTable;
 use App\DataTables\LivestockMutationDataTable;
+use App\DataTables\OVKRecordDataTable;
 use Carbon\Carbon;
 
 use App\Models\FeedUsage;
@@ -29,6 +30,14 @@ class LivestockController extends Controller
         addVendors(['datatables']);
 
         return $dataTable->render('pages.livestock.mutation.index');
+    }
+
+    public function supplyRecordingIndex(OVKRecordDataTable $dataTable)
+    {
+        // return view('pages.ovk-records.index');
+        addVendors(['datatables']);
+
+        return $dataTable->render('pages.ovk-records.index');
     }
 
     public function showLivestockDetails($id)
@@ -76,7 +85,7 @@ class LivestockController extends Controller
             // Feed Usage
             $usage = FeedUsageDetail::whereHas('feedUsage', function ($q) use ($livestock, $dateStr) {
                 $q->where('livestock_id', $livestock->id)
-                ->whereDate('usage_date', $dateStr);
+                    ->whereDate('usage_date', $dateStr);
             })->get();
 
 
@@ -138,5 +147,4 @@ class LivestockController extends Controller
 
         return response()->json($result);
     }
-
 }

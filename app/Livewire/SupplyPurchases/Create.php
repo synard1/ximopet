@@ -228,6 +228,7 @@ class Create extends Component
                         'kandang_id' => $farm->kandang_id,
                         'item_id' => $supply->id,
                         'unit_id' => $supply->payload['unit_id'],
+                        'type'  => 'supply',
                     ],
                     [
                         'quantity' => $currentQuantity,

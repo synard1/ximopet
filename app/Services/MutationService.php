@@ -139,17 +139,30 @@ class MutationService
     /**
      * Update CurrentSupply record for a specific item
      */
-    private static function updateCurrentSupply(string $livestockId, string $itemId, string $type = 'feed'): void
+    private static function updateCurrentSupply(string $livestockId, string $itemId, string $type = 'supply'): void
     {
-        $livestock = Livestock::findOrFail($livestockId);
+
+        // dd($livestockId);
+        // $livestock = Livestock::findOrFail($livestockId);
         $model = $type === 'feed' ? FeedStock::class : SupplyStock::class;
         $itemField = $type === 'feed' ? 'feed_id' : 'supply_id';
 
         // Calculate current quantity
-        $totalQuantity = $model::where('livestock_id', $livestockId)
+        $totalQuantity = $model::where('farm_id', $livestockId)
             ->where($itemField, $itemId)
             ->selectRaw('COALESCE(SUM(quantity_in - quantity_used - quantity_mutated), 0) as total')
             ->value('total');
+
+        // dd([
+        //     'model' => $model,
+        //     'itemField' => $itemField,
+        //     'totalQuantity' => $totalQuantity,
+        //     'livestockId' => $livestockId,
+        //     'itemId' => $itemId,
+        //     'type' => $type,
+        //     'farm_id' => $livestockId,
+
+        // ]);
 
         // Get item details
         $item = $type === 'feed' ? Feed::find($itemId) : Supply::find($itemId);
@@ -158,13 +171,13 @@ class MutationService
         // Update or create CurrentSupply record
         CurrentSupply::updateOrCreate(
             [
-                'livestock_id' => $livestockId,
+                // 'livestock_id' => $livestockId,
+                'farm_id' => $livestockId,
+                // 'kandang_id' => $livestock->kandang_id,
                 'item_id' => $itemId,
                 'type' => $type
             ],
             [
-                'farm_id' => $livestock->farm_id,
-                'kandang_id' => $livestock->kandang_id,
                 'unit_id' => $item->payload['unit_id'] ?? null,
                 'quantity' => $totalQuantity,
                 'created_by' => auth()->id(),
@@ -482,12 +495,35 @@ class MutationService
                 }
 
                 if ($remainingRequiredQtySmallest > 0) {
-                    $itemName = match ($type) {
-                        'feed' => Feed::find($itemId)?->name,
-                        default => Supply::find($itemId)?->name,
-                    };
-                    throw new \Exception("Stok tidak cukup untuk {$type}: {$itemName}. Kekurangan: " . ItemConversionService::fromSmallest($type, $itemId, $unitId, $remainingRequiredQtySmallest) . " {$item['unit_name']}");
+                    // Fix: Use supply's conversion units to convert remaining quantity back to input unit
+                    $supply = Supply::findOrFail($itemId);
+                    $conversionUnits = collect($supply->payload['conversion_units'] ?? []);
+                    $inputUnit = $conversionUnits->firstWhere('unit_id', $unitId);
+                    $smallestUnit = $conversionUnits->firstWhere('is_smallest', true);
+
+                    if ($inputUnit && $smallestUnit && $smallestUnit['value'] > 0) {
+                        $remainingInputQty = ($remainingRequiredQtySmallest * $smallestUnit['value']) / $inputUnit['value'];
+                        $unitName = Unit::find($unitId)?->name ?? '';
+
+                        throw new \Exception("Stok tidak cukup untuk {$type}: {$supply->name}. Kekurangan: " . number_format($remainingInputQty, 2) . " {$unitName}");
+                    } else {
+                        // Fallback error if conversion data is missing
+                        throw new \Exception("Stok tidak cukup untuk {$type}: {$supply->name}. Informasi konversi unit tidak lengkap.");
+                    }
                 }
+
+                // Update CurrentSupply for source and target farms after processing the item
+                self::updateCurrentSupply(
+                    livestockId: $sourceFarmId, // Note: updateCurrentSupply uses livestock_id, but supply mutations are farm-based. Need to clarify or adjust.
+                    itemId: $itemId,
+                    type: 'supply'
+                );
+
+                self::updateCurrentSupply(
+                    livestockId: $targetFarmId, // Note: updateCurrentSupply uses livestock_id, but supply mutations are farm-based. Need to clarify or adjust.
+                    itemId: $itemId,
+                    type: 'supply'
+                );
             }
 
             if (!$dryRun) {

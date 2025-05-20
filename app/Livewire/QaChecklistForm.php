@@ -48,6 +48,21 @@ class QaChecklistForm extends Component
         'device' => 'nullable|string|max:255'
     ];
 
+    public function mount()
+    {
+        // Check if user has permission to access QA checklist
+        if (!Auth::user()->can('access qa-checklist')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $this->test_date = now()->format('Y-m-d');
+
+        // Set tester name from logged in user
+        if (Auth::check()) {
+            $this->tester_name = Auth::user()->name;
+        }
+    }
+
     public function render()
     {
         return view('livewire.qa-checklist-form', [
@@ -62,18 +77,13 @@ class QaChecklistForm extends Component
         $this->dispatch('feature-category-updated', $value);
     }
 
-    public function mount()
-    {
-        $this->test_date = now()->format('Y-m-d');
-
-        // Set tester name from logged in user
-        if (Auth::check()) {
-            $this->tester_name = Auth::user()->name;
-        }
-    }
-
     public function save()
     {
+        // Check if user has permission to create/update QA checklist
+        if (!Auth::user()->can('create qa-checklist') && !Auth::user()->can('update qa-checklist')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $this->validate();
 
         $data = [
@@ -114,6 +124,11 @@ class QaChecklistForm extends Component
 
     public function edit($id)
     {
+        // Check if user has permission to read QA checklist
+        if (!Auth::user()->can('read qa-checklist')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $checklist = QaChecklist::find($id);
         $this->editingId = $id;
         $this->feature_name = $checklist->feature_name;
@@ -136,12 +151,22 @@ class QaChecklistForm extends Component
 
     public function delete($id)
     {
+        // Check if user has permission to delete QA checklist
+        if (!Auth::user()->can('delete qa-checklist')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         QaChecklist::find($id)->delete();
         session()->flash('message', 'Checklist deleted successfully.');
     }
 
     public function exportToJson()
     {
+        // Check if user has permission to export QA checklist
+        if (!Auth::user()->can('export qa-checklist')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $checklists = QaChecklist::all();
         $json = json_encode($checklists, JSON_PRETTY_PRINT);
 
@@ -152,6 +177,11 @@ class QaChecklistForm extends Component
 
     public function exportToTxt()
     {
+        // Check if user has permission to export QA checklist
+        if (!Auth::user()->can('export qa-checklist')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $checklists = QaChecklist::all();
         $content = '';
 

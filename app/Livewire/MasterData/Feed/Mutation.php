@@ -386,6 +386,9 @@ class Mutation extends Component
 
     public function save()
     {
+
+
+
         try {
             // Validate the form data
             $this->validate([
@@ -781,7 +784,7 @@ class Mutation extends Component
                 'fromLivestock',
                 'toLivestock'
             ])->findOrFail($id);
-            
+
 
             // Validate if mutation can be deleted
             foreach ($mutation->mutationItems as $item) {

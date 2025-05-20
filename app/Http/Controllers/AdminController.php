@@ -23,6 +23,14 @@ class AdminController extends Controller
         // return $dataTable->render('pages.livestock.mutation.index');
     }
 
+    public function routeIndex()
+    {
+        return view('pages.admin.routes.index');
+        // addVendors(['datatables']);
+
+        // return $dataTable->render('pages.livestock.mutation.index');
+    }
+
     /**
      * Show the form for creating a new resource.
      */
