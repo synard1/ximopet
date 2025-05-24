@@ -13,36 +13,23 @@
         <div class="card-header border-0 pt-6">
             <!--begin::Card title-->
             <div class="card-title">
-                {{--
-                <!--begin::Search-->
-                <div class="d-flex align-items-center position-relative my-1">
-                    {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
-                    <input type="text" data-kt-user-table-filter="search"
-                        class="form-control form-control-solid w-250px ps-13" placeholder="Cari Kandang"
-                        id="mySearchInput" />
-                </div>
-                <!--end::Search--> --}}
             </div>
             <!--begin::Card title-->
 
             <!--begin::Card toolbar-->
-            <div class="card-toolbar">
-                {{--
+            <div class="card-toolbar" id="cardToolbar">
                 <!--begin::Toolbar-->
                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
+                    @if (auth()->user()->can('create kandang management'))
                     <!--begin::Add user-->
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
-                        data-bs-target="#kt_modal_add_user">
+                    <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('createKandang')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}
-                        Add User
+                        Tambah Data
                     </button>
                     <!--end::Add user-->
+                    @endif
                 </div>
-                <!--end::Toolbar--> --}}
-
-                <!--begin::Modal-->
-                <livewire:master-data.kandang-list />
-                <!--end::Modal-->
+                <!--end::Toolbar-->
             </div>
             <!--end::Card toolbar-->
         </div>
@@ -59,21 +46,17 @@
         <!--end::Card body-->
     </div>
 
+    <!-- Include the Kandang Form Component -->
+    <livewire:master-data.kandang-form />
+
     @push('scripts')
     {{ $dataTable->scripts() }}
     <script>
-        document.getElementById('mySearchInput').addEventListener('keyup', function () {
-                window.LaravelDataTables['kandangs-table'].search(this.value).draw();
+        document.addEventListener('livewire:init', function () {
+            Livewire.on('success', function () {
+                window.LaravelDataTables['kandangs-table'].ajax.reload();
             });
-            document.addEventListener('livewire:init', function () {
-                Livewire.on('success', function () {
-                    $('#kt_modal_add_user').modal('hide');
-                    window.LaravelDataTables['kandangs-table'].ajax.reload();
-                });
-            });
-            $('#kt_modal_add_user').on('hidden.bs.modal', function () {
-                Livewire.dispatch('new_user');
-            });
+        });
     </script>
     @endpush
     @else
