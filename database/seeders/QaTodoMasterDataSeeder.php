@@ -29,7 +29,9 @@ class QaTodoMasterDataSeeder extends Seeder
             'Supplier',
             'Pembeli',
             'Ekspedisi',
+            'Unit Satuan',
             'Pakan',
+            'Supply',
             'Pekerja',
         ];
 

@@ -4,7 +4,7 @@
             <h3 class="card-title">Create New Menu</h3>
         </div>
         <div class="card-body">
-            <form action="{{ route('menu.store') }}" method="POST">
+            <form action="{{ route('administrator.menu.store') }}" method="POST">
                 @csrf
                 <div class="mb-3">
                     <label for="name" class="form-label">Name</label>
@@ -116,7 +116,7 @@
                 </div>
 
                 <div class="text-end">
-                    <a href="{{ route('menu.index') }}" class="btn btn-secondary">Cancel</a>
+                    <a href="{{ route('administrator.menu.index') }}" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">Create Menu</button>
                 </div>
             </form>
