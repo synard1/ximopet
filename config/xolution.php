@@ -34,50 +34,85 @@ return [
         'Master Data' => [
             'order' => 2,
             'show' => true,
-            'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
-            'can' => 'read master data',
+            // 'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
+            'can' => ['access master data'],
             'items' => [
                 [
-                    'route' => '/master-data/expeditions',
-                    'label' => 'Ekspedisi',
+                    'route' => '/master/farms',
+                    'label' => 'Farm',
+                    'icon' => 'fa-solid fa-farm',
+                    'active' => 'master/farms', // Using route string instead of function
+                    // 'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
+                    'order' => 1,
+                    'show' => true,
+                    'can' => ['access farm management'],
+                ],
+                [
+                    'route' => '/master/kandangs',
+                    'label' => 'Kandang',
                     'icon' => 'fa-solid fa-truck',
-                    'active' => 'master-data/expeditions', // Using route string instead of function
+                    'active' => 'master/kandangs', // Using route string instead of function
                     'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 1,
                     'show' => true,
                 ],
                 [
-                    'route' => '/master-data/units',
+                    'route' => '/master/suppliers',
+                    'label' => 'Supplier',
+                    'icon' => 'fa-solid fa-user-plus',
+                    'can' => 'read supplier management',
+                    'order' => 1,
+                    'show' => true,
+                ],
+                [
+                    'route' => '/master/customers',
+                    'label' => 'Pembeli',
+                    'icon' => 'fa-solid fa-user-plus',
+                    'can' => 'read customer management',
+                    'order' => 2,
+                    'show' => true,
+                ],
+                [
+                    'route' => '/master/expeditions',
+                    'label' => 'Ekspedisi',
+                    'icon' => 'fa-solid fa-truck',
+                    'active' => 'master/expeditions', // Using route string instead of function
+                    'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
+                    'order' => 1,
+                    'show' => true,
+                ],
+                [
+                    'route' => '/master/units',
                     'label' => 'Unit Satuan',
                     'icon' => 'fa-solid fa-ruler',
-                    'active' => 'master-data/units', // Using route string instead of function
+                    'active' => 'master/units', // Using route string instead of function
                     'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 2,
                     'show' => true,
                 ],
                 [
-                    'route' => '/master-data/feeds',
+                    'route' => '/master/feeds',
                     'label' => 'Pakan',
                     'icon' => 'fa-solid fa-wheat-awn',
-                    'active' => 'master-data/feeds', // Using route string instead of function
+                    'active' => 'master/feeds', // Using route string instead of function
                     'roles' => ['Administrator', 'Operator'],
                     'order' => 3,
                     'show' => true,
                 ],
                 [
-                    'route' => '/master-data/supplies',
+                    'route' => '/master/supplies',
                     'label' => 'Supply',
                     'icon' => 'fa-solid fa-box',
-                    'active' => 'master-data/supplies', // Using route string instead of function
+                    'active' => 'master/supplies', // Using route string instead of function
                     'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 4,
                     'show' => true,
                 ],
                 [
-                    'route' => '/master-data/workers',
+                    'route' => '/master/workers',
                     'label' => 'Pekerja',
                     'icon' => 'fa-solid fa-users',
-                    'active' => 'master-data/workers', // Using route string instead of function
+                    'active' => 'master/workers', // Using route string instead of function
                     'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 5,
                     'show' => true,
@@ -86,7 +121,7 @@ return [
         ],
         'Rekanan' => [
             'order' => 3,
-            'show' => true,
+            'show' => false,
             'items' => [
                 [
                     'route' => '/rekanan/suppliers',
@@ -184,7 +219,7 @@ return [
                     'route' => '/data/farms',
                     'label' => 'Data Farm',
                     'icon' => 'fa-solid fa-warehouse',
-                    'active' => ['data/farms', 'master-data/farms'], // Using array of routes
+                    'active' => ['data/farms', 'master/farms'], // Using array of routes
                     'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 1,
                     'show' => true,
@@ -193,7 +228,7 @@ return [
                     'route' => '/data/kandangs',
                     'label' => 'Data Kandang',
                     'icon' => 'fa-solid fa-house',
-                    'active' => ['data/kandangs', 'master-data/kandangs'], // Using array of routes
+                    'active' => ['data/kandangs', 'master/kandangs'], // Using array of routes
                     'order' => 2,
                     'show' => true,
                     'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
@@ -202,7 +237,7 @@ return [
                     'route' => '/data/livestocks',
                     'label' => 'Data Ternak', // Removed the function call
                     'icon' => '/assets/media/icons/custom/chicken.png',
-                    'active' => ['data/livestocks', 'master-data/livestocks'], // Using array of routes
+                    'active' => ['data/livestocks', 'master/livestocks'], // Using array of routes
                     'order' => 3,
                     'show' => true,
                 ],

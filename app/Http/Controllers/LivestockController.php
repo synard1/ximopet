@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\DataTables\LivestockDataTable;
 use App\DataTables\LivestockMutationDataTable;
 use App\DataTables\OVKRecordDataTable;
+use App\DataTables\LivestockPurchaseDataTable;
 use Carbon\Carbon;
 
 use App\Models\FeedUsage;
@@ -22,6 +23,13 @@ class LivestockController extends Controller
         addVendors(['datatables']);
 
         return $dataTable->render('pages.masterdata.livestock.list');
+    }
+
+    public function purchaseIndex(LivestockPurchaseDataTable $dataTable)
+    {
+        addVendors(['datatables']);
+
+        return $dataTable->render('pages.livestock.mutation.index');
     }
 
     public function mutationIndex(LivestockMutationDataTable $dataTable)

@@ -29,11 +29,39 @@ class Kandang extends BaseModel
 
     public function farm()
     {
-        return $this->belongsTo(Farm::class,'farm_id');
+        return $this->belongsTo(Farm::class, 'farm_id');
     }
 
     public function livestock()
     {
-        return $this->belongsTo(Livestock::class,'livestock_id');
+        return $this->belongsTo(Livestock::class, 'livestock_id');
+    }
+
+    public function livestockBatches()
+    {
+        return $this->hasMany(LivestockBatch::class);
+    }
+
+    // Helper method to get current total population
+    public function getCurrentPopulation()
+    {
+        return $this->livestockBatches()
+            ->where('status', 'active')
+            ->sum('populasi_awal');
+    }
+
+    // Helper method to get current total weight
+    public function getCurrentWeight()
+    {
+        return $this->livestockBatches()
+            ->where('status', 'active')
+            ->sum('berat_awal');
+    }
+
+    // Helper method to check if kandang has available capacity
+    public function hasAvailableCapacity($newBatchPopulation)
+    {
+        $currentPopulation = $this->getCurrentPopulation();
+        return ($currentPopulation + $newBatchPopulation) <= $this->kapasitas;
     }
 }

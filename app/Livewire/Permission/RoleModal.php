@@ -8,6 +8,9 @@ use Livewire\Component;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use App\Models\User; // Ensure User model is imported
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Services\RoleBackupService;
 
 class RoleModal extends Component
 {
@@ -17,6 +20,7 @@ class RoleModal extends Component
 
     public Role $role;
     public Collection $permissions;
+    protected $roleBackupService;
 
     protected $rules = [
         'name' => 'required|string',
@@ -25,7 +29,13 @@ class RoleModal extends Component
     protected $listeners = [
         'modal.show.role_name' => 'mountRole',
         'submitRole' => 'submit',
+        'delete_role' => 'delete'
     ];
+
+    public function boot(RoleBackupService $roleBackupService)
+    {
+        $this->roleBackupService = $roleBackupService;
+    }
 
     public function mountRole($role_name = '')
     {
@@ -33,6 +43,7 @@ class RoleModal extends Component
             // Create new
             $this->role = new Role;
             $this->name = '';
+            $this->checked_permissions = [];
             return;
         }
 
@@ -47,21 +58,7 @@ class RoleModal extends Component
 
         // Set the name and checked permissions properties to the role's values.
         $this->name = $this->role->name;
-
-        // Check if the user is an Admin
-        if (auth()->user()->hasRole('Administrator')) {
-            // Get only the permissions that the current user has
-            // $this->checked_permissions = auth()->user()->getAllPermissions()->pluck('name');
-            $this->checked_permissions = $this->role->permissions->pluck('name');
-
-        } else {
-            // For other roles, set checked permissions from the role
-            $this->checked_permissions = $this->role->permissions->pluck('name');
-
-            // dd($this->role->permissions->pluck('name'));
-            // dd($this->permissions);
-
-        }
+        $this->checked_permissions = $this->role->permissions->pluck('name')->toArray();
     }
 
     public function mount()
@@ -77,12 +74,12 @@ class RoleModal extends Component
             //         ->where('name', 'like','%access%');
             // })->get();
 
-           // Get only the access permissions
+            // Get only the access permissions
             $this->permissions = Permission::where('name', 'like', '%access%')->get();
         } else {
             // For other roles (like SuperAdmin), get all permissions
             // $this->permissions = Permission::all();
-            $this->permissions = Permission::where('name', 'like','%access%')->get();
+            $this->permissions = Permission::where('name', 'like', '%access%')->get();
         }
 
 
@@ -100,26 +97,26 @@ class RoleModal extends Component
     public function render()
     {
 
-        
+
         // Create an array of permissions grouped by ability.
         $permissions_by_group = [];
         foreach ($this->permissions ?? [] as $permission) {
             $ability = Str::after($permission->name, ' ');
-        
+
             $query = Permission::where('name', 'like', "%{$ability}%");
-        
+
             if (!auth()->user()->hasRole('SuperAdmin')) {
                 $query->where('name', '!=', $permission->name);
             }
-        
+
             $permissions = $query->get();
-        
+
             // Urutkan permission berdasarkan aturan
             $ordered_permissions = collect(['read', 'create', 'update', 'delete', 'access'])
                 ->map(fn($action) => $permissions->firstWhere('name', "{$action} {$ability}"))
                 ->filter() // Hapus null jika tidak ada permission yang cocok
                 ->values(); // Reset array index agar rapi
-        
+
             if ($ordered_permissions->isNotEmpty()) {
                 $permissions_by_group[$ability] = $ordered_permissions->all();
             }
@@ -136,49 +133,60 @@ class RoleModal extends Component
     {
         $this->validate();
 
-        $this->role->name = $this->name;
-        if ($this->role->isDirty()) {
-            $this->role->save();
-        }
-
-        // dd($this->checked_permissions);
-
-        $new_access = []; // Inisialisasi array untuk permission yang mengandung 'access'
-
-        foreach ($this->checked_permissions as $permission) {
-            if (Str::contains(strtolower($permission), 'access')) { // Case-insensitive check
-                $new_access[] = $permission;
-            }
-        }
-
-        // dd($new_access);
-
-
-        // Sync the role's permissions with the checked permissions property.
         try {
+            DB::beginTransaction();
+
+            $this->role->name = $this->name;
+            if ($this->role->isDirty()) {
+                $this->role->save();
+            }
+
+            $new_access = []; // Initialize array for permissions containing 'access'
+            foreach ($this->checked_permissions as $permission) {
+                if (Str::contains(strtolower($permission), 'access')) {
+                    $new_access[] = $permission;
+                }
+            }
+
+            // Sync the role's permissions
             $this->role->syncPermissions($this->checked_permissions);
 
-            // Ambil role Administrator
+            // Get Administrator role and users
             $administratorRole = Role::findByName('Administrator');
-
-            // Ambil semua user yang memiliki role Administrator
             $administrators = User::role('Administrator')->get();
 
-
-            // Option 1: Give the SAME permission to all Administrators (using a loop)
-            // $permission = Permission::findByName('permission_name'); // Replace with the actual permission name
-
+            // Give permissions to all Administrators
             foreach ($administrators as $user) {
                 $user->givePermissionTo($new_access);
             }
 
-            // $user->givePermissionTo($new_access);
+            DB::commit();
+
+            // Create backup after successful update
+            try {
+                Log::info('Creating backup after role update', [
+                    'role_id' => $this->role->id,
+                    'role_name' => $this->role->name,
+                    'permissions' => $this->checked_permissions
+                ]);
+                $this->roleBackupService->createBackup('role_updated');
+            } catch (\Exception $e) {
+                Log::error('Backup creation failed after role update', [
+                    'role_id' => $this->role->id,
+                    'error' => $e->getMessage()
+                ]);
+                // Don't throw the error, just log it
+            }
 
             $this->dispatch('success', 'Role updated successfully!');
         } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to update role', [
+                'role_id' => $this->role->id ?? null,
+                'error' => $e->getMessage()
+            ]);
             $this->dispatch('error', 'Failed to update role: ' . $e->getMessage());
         }
-        $this->role->syncPermissions($this->checked_permissions);
     }
 
     public function checkAll()
@@ -206,6 +214,47 @@ class RoleModal extends Component
         } else {
             // Otherwise, set the checked permissions property to an empty array.
             $this->checked_permissions = [];
+        }
+    }
+
+    public function delete($name)
+    {
+        try {
+            DB::beginTransaction();
+
+            $role = Role::where('name', $name)->first();
+
+            if (!is_null($role)) {
+                Log::info('Deleting role', [
+                    'role_id' => $role->id,
+                    'role_name' => $role->name
+                ]);
+
+                $role->delete();
+                DB::commit();
+
+                // Create backup after successful deletion
+                try {
+                    $this->roleBackupService->createBackup('role_deleted');
+                } catch (\Exception $e) {
+                    Log::error('Backup creation failed after role deletion', [
+                        'role_id' => $role->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+
+                $this->dispatch('success', 'Role deleted successfully');
+            } else {
+                Log::warning('Attempted to delete non-existent role', ['name' => $name]);
+                $this->dispatch('error', 'Role not found');
+            }
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to delete role', [
+                'error' => $e->getMessage(),
+                'role_name' => $name
+            ]);
+            $this->dispatch('error', 'Failed to delete role. Please try again.');
         }
     }
 

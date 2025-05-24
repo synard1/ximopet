@@ -20,7 +20,7 @@ class KandangsDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addColumn('farm', function (Kandang $kandang) {
-                return $kandang->farms->nama;
+                return $kandang->farm->name;
             })
             ->editColumn('created_at', function (Kandang $kandang) {
                 return $kandang->created_at->format('d M Y, h:i a');
@@ -37,21 +37,21 @@ class KandangsDataTable extends DataTable
                 }
             })
             ->editColumn('tanggal_masuk', function (Kandang $kandang) {
-                return $kandang->kelompokTernak && $kandang->kelompokTernak->start_date
-                    ? $kandang->kelompokTernak->start_date->format('Y-m-d')
+                return $kandang->livestock && $kandang->livestock->start_date
+                    ? $kandang->livestock->start_date->format('Y-m-d')
                     : '';
             })
             ->addColumn('action', function (Kandang $kandang) {
                 return view('pages/masterdata.kandang._actions', compact('kandang'));
             })
-            ->filterColumn('farm', function($query, $keyword) {
-                $query->whereHas('farms', function($query) use ($keyword) { // Assuming you have a 'farm' relationship on your model
+            ->filterColumn('farm', function ($query, $keyword) {
+                $query->whereHas('farms', function ($query) use ($keyword) { // Assuming you have a 'farm' relationship on your model
                     $query->where('nama', 'like', "%{$keyword}%");
                 });
             })
             ->setRowId('id')
             ->rawColumns(['farm']);
-            // ->make(true);
+        // ->make(true);
     }
 
 
@@ -63,18 +63,17 @@ class KandangsDataTable extends DataTable
         $query = $model->newQuery();
 
         if (auth()->user()->hasRole('Operator')) {
-            $query = $model::with('farms')
+            $query = $model::with('farm')
                 ->whereHas('farms.farmOperators', function ($query) {
                     $query->where('user_id', auth()->id());
                 })
                 ->orderBy('nama', 'DESC');
         } else {
-            $query = $model::with('farms')
+            $query = $model::with('farm')
                 ->orderBy('nama', 'DESC');
         }
 
         return $query;
-
     }
 
     /**

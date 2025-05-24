@@ -18,10 +18,13 @@ class RolesPermissionsSeeder extends Seeder
 
         $permissions_by_role = [
             'SuperAdmin' => [
+                'master data',
                 'user management',
                 'supplier management',
                 'customer management',
                 'farm management',
+                'farm operator',
+                'farm storage',
                 'kandang management',
                 'stok management',
                 'inventory management',
@@ -37,7 +40,9 @@ class RolesPermissionsSeeder extends Seeder
                 'roles',
                 'permissions',
                 'route manager',
-                'qa checklist'
+                'qa checklist',
+                'worker assignment',
+                'livestock management'
             ],
             'Administrator' => [
                 'user management',
@@ -59,6 +64,8 @@ class RolesPermissionsSeeder extends Seeder
                 'permissions'
             ],
             'Supervisor' => [
+                'master data',
+                'farm management',
                 'supplier management',
                 'customer management',
                 'transaction'

@@ -14,6 +14,7 @@ class RoleManagementController extends Controller
      */
     public function index()
     {
+        addVendors(['datatables']);
         return view('pages/apps.user-management.roles.list');
     }
 
@@ -39,7 +40,7 @@ class RoleManagementController extends Controller
     public function show(Role $role, UsersAssignedRoleDataTable $dataTable)
     {
         addVendors(['datatables']);
-        
+
 
         return $dataTable->with('role', $role)
             ->render('pages/apps.user-management.roles.show', compact('role'));

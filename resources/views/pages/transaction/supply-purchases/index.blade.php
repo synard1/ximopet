@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-    Data Pembelian Stok
+    Data Pembelian Supply
     @endsection
 
     @section('breadcrumbs')
@@ -22,7 +22,7 @@
                     <!--begin::Add user-->
                     <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('showCreateForm')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}
-                        Tambah Data Pembelian
+                        Tambah Data
                     </button>
                     <!--end::Add user-->
                 </div>

@@ -36,7 +36,8 @@ class Create extends Component
         'cancel' => 'cancel',
         'edit' => 'edit',
         'addConversion' => 'addConversion',
-        
+        'delete_feed' => 'deleteFeed',
+        'confirmDeleteFeed' => 'confirmDeleteFeed',
     ];
 
     public function mount()
@@ -62,7 +63,7 @@ class Create extends Component
             'is_smallest' => false,
         ];
     }
-    
+
 
     public function removeConversion($index)
     {
@@ -275,7 +276,7 @@ class Create extends Component
             $payload = [
                 'unit_id' => $this->unit_id,
                 'unit_details' => Unit::find($this->unit_id)?->only('id', 'name', 'description'),
-                'conversion_units' => collect($this->conversion_units)->map(function ($conv){
+                'conversion_units' => collect($this->conversion_units)->map(function ($conv) {
                     $unit = Unit::find($conv['unit_id'])?->only('id', 'name', 'description');
 
                     // dd($unit);
@@ -290,25 +291,25 @@ class Create extends Component
                     ];
                 })->toArray(),
             ];
-        
+
             // Simpan atau update Feed
             $feed = $this->edit_mode && $this->feedId
                 ? Feed::findOrFail($this->feedId)
                 : new Feed(['created_by' => auth()->id()]);
-        
+
             $feed->fill([
                 'code' => $this->code,
                 'name' => $this->name,
                 'payload' => $payload,
             ])->save();
-        
+
             // Bersihkan semua konversi lama untuk feed ini
             // UnitConversion::where('type', 'Feed')->where('item_id', $feed->id)->delete();
-        
+
             // Simpan ulang konversi, hindari duplikasi
             $uniqueConversions = collect($this->conversion_units)
-                ->unique(fn ($conv) => $this->unit_id . '-' . $conv['unit_id']);
-        
+                ->unique(fn($conv) => $this->unit_id . '-' . $conv['unit_id']);
+
             foreach ($uniqueConversions as $conversion) {
                 UnitConversion::updateOrCreate(
                     [
@@ -354,7 +355,7 @@ class Create extends Component
         //             'name' => $this->name,
         //             'payload' => $payload,
         //         ]);
-    
+
         //         // Hapus semua konversi lama
         //         UnitConversion::where('type', 'Feed')->where('item_id', $feed->id)->delete();
         //     } else {
@@ -366,7 +367,7 @@ class Create extends Component
         //             'created_by' => auth()->id(),
         //         ]);
         //     }
-    
+
         //     // Simpan ulang konversi unit
         //     foreach ($this->conversion_units as $conversion) {
         //         UnitConversion::create([
@@ -383,8 +384,72 @@ class Create extends Component
         //         ]);
         //     }
         // });
-    
+
         $this->dispatch('success', 'Data Pakan berhasil ' . ($this->edit_mode ? 'diperbarui' : 'disimpan'));
         $this->close();
+    }
+
+    public function deleteFeed($feedId)
+    {
+        try {
+            // Check if feed has unit conversions
+            $hasUnitConversions = DB::table('unit_conversions')
+                ->where('type', 'Feed')
+                ->where('item_id', $feedId)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if ($hasUnitConversions) {
+                // Dispatch event to show warning popup
+                $this->dispatch('show-delete-warning', [
+                    'feedId' => $feedId,
+                    'message' => 'Feed ini memiliki konversi satuan. Apakah Anda yakin ingin menghapusnya?'
+                ]);
+                return;
+            }
+
+            // If no unit conversions, proceed with deletion
+            $this->confirmDeleteFeed($feedId);
+        } catch (\Exception $e) {
+            $this->dispatch('error', $e->getMessage());
+        }
+    }
+
+    public function confirmDeleteFeed($feedId)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Check if feed is used in FeedPurchases
+            $usedInPurchases = DB::table('feed_purchases')
+                ->where('feed_id', $feedId)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            // Check if feed is used in FeedMutations
+            $usedInMutations = DB::table('feed_mutation_items')
+                ->where('feed_id', $feedId)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if ($usedInPurchases || $usedInMutations) {
+                throw new \Exception('Feed tidak dapat dihapus karena masih digunakan dalam transaksi pembelian atau mutasi.');
+            }
+
+            // Soft delete related unit conversions
+            DB::table('unit_conversions')
+                ->where('type', 'Feed')
+                ->where('item_id', $feedId)
+                ->update(['deleted_at' => now()]);
+
+            // Soft delete the feed
+            Feed::findOrFail($feedId)->delete();
+
+            DB::commit();
+            $this->dispatch('success', 'Feed berhasil dihapus');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->dispatch('error', $e->getMessage());
+        }
     }
 }

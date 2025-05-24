@@ -17,6 +17,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('name');           // Name of the livestock strain (e.g., "Broiler", "Layer", "Dairy")
             $table->text('description')->nullable(); // Optional: Description of the strain category
+            $table->string('status')->default('active');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();

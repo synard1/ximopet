@@ -12,12 +12,25 @@ class LivestockBreed extends BaseModel
     use HasFactory, SoftDeletes, HasUuids;
 
     protected $fillable = [
-        'id',
-        'breed',
+        'name',
         'description',
         'status',
         'created_by',
         'updated_by'
     ];
 
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function breedStandards()
+    {
+        return $this->hasMany(LivestockBreedStandard::class);
+    }
+
+    public function livestock()
+    {
+        return $this->hasMany(Livestock::class);
+    }
 }

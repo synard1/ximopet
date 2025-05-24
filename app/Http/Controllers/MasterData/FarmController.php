@@ -91,9 +91,7 @@ class FarmController extends Controller
                     $farms = Farm::whereIn('id', $farmIds)->get(['id', 'nama']);
                     return response()->json(['farms' => $farms]);
                 }
-            }elseif ($roles == 'Supervisor') {
-
-
+            } elseif ($roles == 'Supervisor') {
             }
         }
     }
@@ -102,34 +100,34 @@ class FarmController extends Controller
     {
         $data = Transaksi::with(['transaksiDetail' => function ($query) {
             $query->whereNotIn('jenis_barang', ['DOC'])
-                  ->where('sisa', '>', 0);
+                ->where('sisa', '>', 0);
         }])
-        ->where('farm_id', $farmId)
-        ->where('jenis', 'Pembelian')
-        ->get()
-        ->flatMap(function ($transaksi) {
-            return $transaksi->transaksiDetail;
-        })
-        ->groupBy('item_id')
-        ->map(function ($group) {
-            return [
-                'item_id' => $group->first()->item_id,
-                'item_name' => $group->first()->item_name,
-                'total' => $group->sum('sisa')
-            ];
-        })
-        ->values();
+            ->where('farm_id', $farmId)
+            ->where('jenis', 'Pembelian')
+            ->get()
+            ->flatMap(function ($transaksi) {
+                return $transaksi->transaksiDetail;
+            })
+            ->groupBy('item_id')
+            ->map(function ($group) {
+                return [
+                    'item_id' => $group->first()->item_id,
+                    'item_name' => $group->first()->item_name,
+                    'total' => $group->sum('sisa')
+                ];
+            })
+            ->values();
 
         $oldestDate = Transaksi::with(['transaksiDetail' => function ($query) {
             $query->where('sisa', '>', 0)
-                  ->whereNotIn('jenis_barang', ['DOC']);
+                ->whereNotIn('jenis_barang', ['DOC']);
         }])
-        ->where('farm_id', $farmId)
-        ->whereHas('transaksiDetail', function ($query) {
-            $query->where('sisa', '>', 0)
-                  ->whereNotIn('jenis_barang', ['DOC']);
-        })
-        ->min('tanggal');
+            ->where('farm_id', $farmId)
+            ->whereHas('transaksiDetail', function ($query) {
+                $query->where('sisa', '>', 0)
+                    ->whereNotIn('jenis_barang', ['DOC']);
+            })
+            ->min('tanggal');
 
         $kandangs = Kandang::where('farm_id', $farmId)->where('status', 'Digunakan')->get(['id', 'nama']);
 
@@ -146,7 +144,7 @@ class FarmController extends Controller
             return response()->json($result);
         }
     }
-    
+
     public function getOperator($farmId)
     {
         $operators = FarmOperator::with('user:id,name')
@@ -199,30 +197,31 @@ class FarmController extends Controller
         }
     }
 
-    public function getKandangs(Farm $farm)
+    public function getKandangs(Request $request)
     {
-        $kandangs = $farm->kandangs()->with(['kelompokTernak' => function($query) {
-            $query->where('status', 'Aktif')->orWhere('status', 'Locked');
+        $farm = Farm::find($request->farm_id);
+        // dd($request->farm_id);
+        $kandangs = $farm->kandangs()->with(['livestock' => function ($query) {
+            // $query->where('status', 'active')->orWhere('status', 'Locked');
         }])->get()->map(function ($kandang) {
-            $kelompokTernak = $kandang->kelompokTernak;
+            $livestock = $kandang->livestock;
             return [
                 'id' => $kandang->id,
                 'nama' => $kandang->nama,
                 'kode' => $kandang->kode,
                 'kapasitas' => $kandang->kapasitas,
                 'status' => $kandang->status,
-                'kelompok_ternak' => $kelompokTernak ? [
-                    'id' => $kelompokTernak->id,
-                    'name' => $kelompokTernak->name,
-                    'breed' => $kelompokTernak->breed,
-                    'populasi_awal' => $kelompokTernak->populasi_awal,
-                    'berat_awal' => $kelompokTernak->berat_awal,
-                    'start_date' => $kelompokTernak->start_date,
+                'livestock' => $livestock ? [
+                    'id' => $livestock->id,
+                    'name' => $livestock->name,
+                    'breed' => $livestock->breed,
+                    'populasi_awal' => $livestock->populasi_awal,
+                    'berat_awal' => $livestock->berat_awal,
+                    'start_date' => $livestock->start_date,
                 ] : null,
             ];
         });
 
         return response()->json($kandangs);
     }
-    
 }

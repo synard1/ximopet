@@ -17,11 +17,8 @@ class Livestock extends BaseModel
     protected $table = 'livestocks';
 
     protected $fillable = [
-        'transaksi_id',
         'farm_id',
         'kandang_id',
-        'livestock_breed_id',
-        'livestock_breed_standard_id',
         'name',
         'breed',
         'start_date',
@@ -43,6 +40,7 @@ class Livestock extends BaseModel
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
+        'data' => 'array'
     ];
 
     public function farm()
@@ -55,21 +53,49 @@ class Livestock extends BaseModel
         return $this->belongsTo(Kandang::class, 'kandang_id', 'id');
     }
 
+    public function batches()
+    {
+        return $this->hasMany(LivestockBatch::class);
+    }
+
     public function standardWeight()
     {
         return $this->belongsTo(StandarBobot::class, 'standar_bobot_id', 'id');
     }
 
-    public function livestockDepletion(){
+    public function livestockDepletion()
+    {
         return $this->hasMany(LivestockDepletion::class, 'livestock_id', 'id');
     }
 
-    public function recordings(){
+    public function recordings()
+    {
         return $this->hasMany(Recording::class, 'livestock_id', 'id');
+    }
+
+    public function currentLivestock()
+    {
+        return $this->hasMany(CurrentLivestock::class, 'livestock_id', 'id');
     }
 
     public function isLocked()
     {
         return $this->status === 'Locked';
+    }
+
+    // Helper method to get total current population
+    public function getTotalPopulation()
+    {
+        return $this->batches()
+            ->where('status', 'active')
+            ->sum('populasi_awal');
+    }
+
+    // Helper method to get total current weight
+    public function getTotalWeight()
+    {
+        return $this->batches()
+            ->where('status', 'active')
+            ->sum('berat_awal');
     }
 }

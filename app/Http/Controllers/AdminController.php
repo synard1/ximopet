@@ -23,6 +23,14 @@ class AdminController extends Controller
         // return $dataTable->render('pages.livestock.mutation.index');
     }
 
+    public function qaTodoIndex()
+    {
+        return view('pages.admin.qa.todoIndex');
+        // addVendors(['datatables']);
+
+        // return $dataTable->render('pages.livestock.mutation.index');
+    }
+
     public function routeIndex()
     {
         return view('pages.admin.routes.index');
@@ -77,5 +85,20 @@ class AdminController extends Controller
     public function destroy(Admin $admin)
     {
         //
+    }
+
+    public function downloadAttachment($commentId, $attachmentIndex)
+    {
+        $comment = \App\Models\QaTodoComment::findOrFail($commentId);
+        $attachment = $comment->attachments[$attachmentIndex] ?? null;
+
+        if (!$attachment) {
+            return back()->with('error', 'Attachment not found.');
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->download(
+            $attachment['path'],
+            $attachment['name']
+        );
     }
 }

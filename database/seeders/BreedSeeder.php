@@ -1186,7 +1186,7 @@ class BreedSeeder extends Seeder
                 'breed' => $breedName,
                 'description' => $breedDescription,
                 'standar_data' => $standarData,
-                'status' => 'Aktif',
+                'status' => 'active',
                 'created_by' => $supervisor->id,
                 // 'updated_by' => $supervisor->id,
             ]);
@@ -1234,7 +1234,7 @@ class BreedSeeder extends Seeder
         //         'breed' => $breedName,
         //         'description' => $breedDescription,
         //         'standar_data' => $standarData,
-        //         'status' => 'Aktif',
+        //         'status' => 'active',
         //         'created_by' => $supervisor->id,
         //         // 'updated_by' => $supervisor->id,
         //     ]);

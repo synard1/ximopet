@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 use App\Models\Farm;
 use App\Models\Kandang;
 use Ramsey\Uuid\Uuid; // Import the UUID library
+use Illuminate\Support\Facades\Auth;
 
 
 class KandangList extends Component
@@ -27,6 +28,11 @@ class KandangList extends Component
 
     public function mount()
     {
+        if (!Auth::user()->can('read kandang management')) {
+            $this->dispatch('error', 'You do not have permission to view kandang management.');
+            return;
+        }
+
         $this->farms = Farm::where('status', 'Aktif')->get();
         // Check if there are any active farms
         if ($this->farms->isEmpty()) {
@@ -36,15 +42,24 @@ class KandangList extends Component
 
     public function render()
     {
+        if (!Auth::user()->can('read kandang management')) {
+            return view('livewire.unauthorized');
+        }
+
         $this->kandangs = Kandang::all();
-        // $this->farms = Farm::where('status', 'Aktif')->get();
-        return view('livewire.master-data.kandang-list', ['kandangs' => $this->kandangs,            
-        'farms' => $this->farms, // Pass $farms to the view
-    ]);
+        return view('livewire.master-data.kandang-list', [
+            'kandangs' => $this->kandangs,
+            'farms' => $this->farms,
+        ]);
     }
 
     public function create()
     {
+        if (!Auth::user()->can('create kandang management')) {
+            $this->dispatch('error', 'You do not have permission to create kandang.');
+            return;
+        }
+
         $this->resetInputFields();
         // $this->kode = (string) Uuid::uuid4(); // Generate and cast to string
         $this->openModal();
@@ -52,15 +67,27 @@ class KandangList extends Component
 
     public function store()
     {
+        if ($this->kandang_id) {
+            if (!Auth::user()->can('update kandang management')) {
+                $this->dispatch('error', 'You do not have permission to update kandang.');
+                return;
+            }
+        } else {
+            if (!Auth::user()->can('create kandang management')) {
+                $this->dispatch('error', 'You do not have permission to create kandang.');
+                return;
+            }
+        }
+
         $this->validate();
-        
+
         $kandang = Kandang::find($this->kandang_id);
-        
+
         if ($kandang && $this->kapasitas < $kandang->jumlah) {
             $this->dispatch('error', __('Kapasitas tidak boleh kurang dari jumlah ternak saat ini'));
             return;
         }
-        
+
         Kandang::updateOrCreate(['id' => $this->kandang_id], [
             'kode' => $this->kode,
             'nama' => $this->nama,
@@ -69,9 +96,9 @@ class KandangList extends Component
             'created_by' => auth()->user()->id,
         ]);
 
-        if($this->kandang_id){
+        if ($this->kandang_id) {
             $this->dispatch('success', __('Data Kandang Berhasil Diubah'));
-        }else{
+        } else {
             $this->dispatch('success', __('Data Kandang Berhasil Dibuat'));
         }
 
@@ -81,7 +108,12 @@ class KandangList extends Component
 
     public function editKandang($id)
     {
-        $kandang = Kandang::where('id',$id)->first();
+        if (!Auth::user()->can('update kandang management')) {
+            $this->dispatch('error', 'You do not have permission to edit kandang.');
+            return;
+        }
+
+        $kandang = Kandang::where('id', $id)->first();
         $this->kandang_id = $id;
         $this->kode = $kandang->kode;
         $this->nama = $kandang->nama;
@@ -95,6 +127,11 @@ class KandangList extends Component
 
     public function deleteKandangList($id)
     {
+        if (!Auth::user()->can('delete kandang management')) {
+            $this->dispatch('error', 'You do not have permission to delete kandang.');
+            return;
+        }
+
         $kandang = Kandang::find($id);
 
         if (!$kandang) {
@@ -126,7 +163,8 @@ class KandangList extends Component
         $this->isOpen = false;
     }
 
-    private function resetInputFields(){
+    private function resetInputFields()
+    {
         // $this->kode = Str::uuid(); // Generate UUID for new kandangs
         $this->kode = ''; // Generate UUID for new kandangs
         $this->nama = '';

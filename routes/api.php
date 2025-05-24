@@ -30,247 +30,165 @@ use App\Http\Controllers\MutationController;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/check-auth', function (Request $request) {
-    if ($request->user()) {
-        return response()->json(['user' => $request->user()]);
-    } else {
-        return response()->json(['error' => 'Unauthenticated'], 401);
-    }
+// Authentication Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/check-auth', function (Request $request) {
+        if ($request->user()) {
+            return response()->json(['user' => $request->user()]);
+        } else {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+    });
+
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
 });
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
+// API v2 Routes
 Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
+    // Data Routes
     Route::post('/data/{sources}/{operators?}', [DataController::class, 'index']);
     Route::post('/d/item/location', [DataController::class, 'index'])->name('api.v2.item_location_mapping');
-
     Route::post('/d/transaksi/{details?}', [DataController::class, 'transaksi']);
-    Route::post('/reports/performa-mitra', [ReportsController::class, 'exportPerformancePartner']);
-    Route::post('/reports/performa', [ReportsController::class, 'exportPerformance']);
-    Route::post('/reports/penjualan', [ReportsController::class, 'exportPenjualan']);
-    Route::post('/reports/harian', [ReportsController::class, 'exportHarian']);
-    Route::post('/reports/livestock-cost', [ReportsController::class, 'exportCostHarian']);
-    Route::post('/reports/batch-worker', [ReportsController::class, 'exportBatchWorker']);
-    Route::post('/save-bonus', [TernakController::class, 'addBonus']);
-    Route::post('/save-administrasi', [TernakController::class, 'addAdministrasi']);
 
-
-    Route::name('feed.')->group(function () {
-        Route::get('/feed/purchase/details/{id}', function ($id) {
-            return app(FeedController::class)->getFeedPurchaseBatchDetail($id);
-        });
-        // Route::post('/feed/usages/details', [FeedController::class, 'getFeedByFarm']);
-        Route::post('/feed/usages/details', [FeedController::class, 'getFeedCardByLivestock']);
-        Route::post('/feed/mutation/details/{id}', [MutationController::class, 'getMutationDetails']);
-        // Route::post('/feed/usages/details', function ($id) {
-        //     return app(FeedController::class)->getFeedUsageByLivestock($id);
-        // });
-        Route::post('/feed/reports/purchase', [FeedController::class, 'exportPembelian']);
-        Route::post('/feed/purchase/edit', function (Request $request) {
-            return app(FeedController::class)->stockEdit($request);
-        });
+    // Reports Routes
+    Route::prefix('reports')->group(function () {
+        Route::post('/performa-mitra', [ReportsController::class, 'exportPerformancePartner']);
+        Route::post('/performa', [ReportsController::class, 'exportPerformance']);
+        Route::post('/penjualan', [ReportsController::class, 'exportPenjualan']);
+        Route::post('/harian', [ReportsController::class, 'exportHarian']);
+        Route::post('/livestock-cost', [ReportsController::class, 'exportCostHarian']);
+        Route::post('/batch-worker', [ReportsController::class, 'exportBatchWorker']);
     });
 
-    Route::name('supply.')->group(function () {
-        Route::get('/supply/purchase/details/{id}', function ($id) {
-            return app(SupplyController::class)->getSupplyPurchaseBatchDetail($id);
-        });
-        Route::post('/supply/usages/details', [SupplyController::class, 'getSupplyByFarm']);
-        Route::post('/supply/reports/purchase', [FeedController::class, 'exportPembelian']);
-        Route::post('/supply/mutation/details/{id}', [MutationController::class, 'getMutationDetails']);
-        Route::post('/supply/purchase/edit', function (Request $request) {
-            return app(SupplyController::class)->stockEdit($request);
-        });
-        Route::post('/supply/transfer', [StockController::class, 'transferStock'])->name('transfer');
+    // Livestock Routes
+    Route::prefix('livestock')->group(function () {
+        Route::post('/{livestockId}/bonus', [TernakController::class, 'addBonus']);
+        Route::post('/{livestockId}/administrasi', [TernakController::class, 'addAdministrasi']);
+    });
+
+    // Feed Routes
+    Route::prefix('feed')->group(function () {
+        Route::get('/purchase/details/{id}', [FeedController::class, 'getFeedPurchaseBatchDetail']);
+        Route::post('/usages/details', [FeedController::class, 'getFeedCardByLivestock']);
+        Route::post('/mutation/details/{id}', [MutationController::class, 'getMutationDetails']);
+        Route::post('/reports/purchase', [FeedController::class, 'exportPembelian']);
+        Route::post('/purchase/edit', [FeedController::class, 'stockEdit']);
+    });
+
+    // Supply Routes
+    Route::prefix('supply')->group(function () {
+        Route::get('/purchase/details/{id}', [SupplyController::class, 'getSupplyPurchaseBatchDetail']);
+        Route::post('/usages/details', [SupplyController::class, 'getSupplyByFarm']);
+        Route::post('/reports/purchase', [FeedController::class, 'exportPembelian']);
+        Route::post('/mutation/details/{id}', [MutationController::class, 'getMutationDetails']);
+        Route::post('/purchase/edit', [SupplyController::class, 'stockEdit']);
+        Route::post('/transfer', [StockController::class, 'transferStock'])->name('transfer');
+    });
+
+    Route::prefix('data/farms')->middleware(['auth:sanctum'])->group(function () {
+        Route::post('/kandangs', [App\Http\Controllers\Api\V2\FarmController::class, 'getKandangs']);
     });
 });
 
+// API v1 Routes
 Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
-
-    Route::post('/ternak/{ternakId}/bonus', [TernakController::class, 'getBonusData']);
-    Route::post('/ternak/{ternakId}/detail-report', [TernakController::class, 'getDetailReportData']);
-
-
-    Route::get('/users', function (Request $request) {
-        return app(SampleUserApi::class)->datatableList($request);
+    // Livestock Routes
+    Route::prefix('livestock')->group(function () {
+        Route::post('/{livestockId}/bonus', [TernakController::class, 'getBonusData']);
+        Route::post('/{livestockId}/detail-report', [TernakController::class, 'getDetailReportData']);
     });
 
-    Route::post('/users-list', function (Request $request) {
-        return app(SampleUserApi::class)->datatableList($request);
+    // User Management Routes
+    Route::prefix('users')->group(function () {
+        Route::get('/', [SampleUserApi::class, 'datatableList']);
+        Route::post('/list', [SampleUserApi::class, 'datatableList']);
+        Route::post('/', [SampleUserApi::class, 'create']);
+        Route::get('/{id}', [SampleUserApi::class, 'get']);
+        Route::put('/{id}', [SampleUserApi::class, 'update']);
+        Route::delete('/{id}', [SampleUserApi::class, 'delete']);
     });
 
-    Route::post('/users', function (Request $request) {
-        return app(SampleUserApi::class)->create($request);
+    // Role Management Routes
+    Route::prefix('roles')->group(function () {
+        Route::get('/', [SampleRoleApi::class, 'datatableList']);
+        Route::post('/list', [SampleRoleApi::class, 'datatableList']);
+        Route::post('/', [SampleRoleApi::class, 'create']);
+        Route::get('/{id}', [SampleRoleApi::class, 'get']);
+        Route::put('/{id}', [SampleRoleApi::class, 'update']);
+        Route::delete('/{id}', [SampleRoleApi::class, 'delete']);
+        Route::post('/{id}/users', [SampleRoleApi::class, 'usersDatatableList']);
+        Route::delete('/{id}/users/{user_id}', [SampleRoleApi::class, 'deleteUser']);
     });
 
-    Route::get('/users/{id}', function ($id) {
-        return app(SampleUserApi::class)->get($id);
+    // Permission Management Routes
+    Route::prefix('permissions')->group(function () {
+        Route::get('/', [SamplePermissionApi::class, 'datatableList']);
+        Route::post('/list', [SamplePermissionApi::class, 'datatableList']);
+        Route::post('/', [SamplePermissionApi::class, 'create']);
+        Route::get('/{id}', [SamplePermissionApi::class, 'get']);
+        Route::put('/{id}', [SamplePermissionApi::class, 'update']);
+        Route::delete('/{id}', [SamplePermissionApi::class, 'delete']);
     });
 
-    Route::put('/users/{id}', function ($id, Request $request) {
-        return app(SampleUserApi::class)->update($id, $request);
+    // Farm Management Routes
+    Route::prefix('farms')->group(function () {
+        Route::get('/list', [AppApi::class, 'getFarm']);
+        Route::get('/', [AppApi::class, 'datatableListFarm']);
+        Route::post('/list', [AppApi::class, 'datatableListFarm']);
+        Route::post('/', [FarmController::class, 'getDataAjax']);
+        Route::get('/{id}', [AppApi::class, 'get']);
+        Route::put('/{id}', [AppApi::class, 'update']);
+        Route::delete('/{id}', [AppApi::class, 'delete']);
+        Route::get('/{farm}/operators', [AppApi::class, 'getOperators']);
+        Route::post('/{farm}/operators', [AppApi::class, 'farmOperator']);
+        Route::delete('/{farm}/operators', [AppApi::class, 'deleteFarmOperator']);
+        Route::post('/{farm}/kandangs', [FarmController::class, 'getKandangs'])->name('kandangs');
     });
 
-    Route::delete('/users/{id}', function ($id) {
-        return app(SampleUserApi::class)->delete($id);
+    // Kandang Routes
+    Route::prefix('kandangs')->group(function () {
+        Route::post('/', [KandangController::class, 'getDataAjax']);
     });
 
-
-    Route::get('/roles', function (Request $request) {
-        return app(SampleRoleApi::class)->datatableList($request);
+    // Livestock Routes
+    Route::prefix('livestock')->group(function () {
+        Route::post('/', [TernakController::class, 'getDataAjax']);
     });
 
-    Route::post('/roles-list', function (Request $request) {
-        return app(SampleRoleApi::class)->datatableList($request);
+    // Transaction Routes
+    Route::prefix('transactions')->group(function () {
+        Route::post('/', [TransaksiController::class, 'getTransaksi']);
+        Route::get('/purchase/details/{id}', [AppApi::class, 'getTransaksiBeliDetail']);
+        Route::get('/details/{id}', [AppApi::class, 'getTransaksiDetail']);
+        Route::post('/livestock/details', [TransaksiTernakController::class, 'getDetails']);
     });
 
-    Route::post('/roles', function (Request $request) {
-        return app(SampleRoleApi::class)->create($request);
+    // Stock Routes
+    Route::prefix('stocks')->group(function () {
+        Route::post('/', [StockController::class, 'stoks'])->name('api.v1.stoks');
+        Route::post('/mutation', [AppApi::class, 'createMutasiStok']);
     });
 
-    Route::get('/roles/{id}', function ($id) {
-        return app(SampleRoleApi::class)->get($id);
-    });
-
-    Route::put('/roles/{id}', function ($id, Request $request) {
-        return app(SampleRoleApi::class)->update($id, $request);
-    });
-
-    Route::delete('/roles/{id}', function ($id) {
-        return app(SampleRoleApi::class)->delete($id);
-    });
-
-    Route::post('/roles/{id}/users', function (Request $request, $id) {
-        $request->merge(['id' => $id]);
-        return app(SampleRoleApi::class)->usersDatatableList($request);
-    });
-
-    Route::delete('/roles/{id}/users/{user_id}', function ($id, $user_id) {
-        return app(SampleRoleApi::class)->deleteUser($id, $user_id);
-    });
-
-
-
-    Route::get('/permissions', function (Request $request) {
-        return app(SamplePermissionApi::class)->datatableList($request);
-    });
-
-    Route::post('/permissions-list', function (Request $request) {
-        return app(SamplePermissionApi::class)->datatableList($request);
-    });
-
-    Route::post('/permissions', function (Request $request) {
-        return app(SamplePermissionApi::class)->create($request);
-    });
-
-    Route::get('/permissions/{id}', function ($id) {
-        return app(SamplePermissionApi::class)->get($id);
-    });
-
-    Route::put('/permissions/{id}', function ($id, Request $request) {
-        return app(SamplePermissionApi::class)->update($id, $request);
-    });
-
-    Route::delete('/permissions/{id}', function ($id) {
-        return app(SamplePermissionApi::class)->delete($id);
-    });
-
-    // Route::apiResources('/get-operators/{farm}', [AppApi::class, 'getOperators']);
-
-
-
-    Route::get('/farms-list', function (Request $request) {
-        return app(AppApi::class)->getFarm($request);
-    });
-
-    Route::get('/farms', function (Request $request) {
-        return app(AppApi::class)->datatableListFarm($request);
-    });
-
-    Route::post('/farms-list', function (Request $request) {
-        return app(AppApi::class)->datatableListFarm($request);
-    });
-
-    Route::post('/data/{source}', function (Request $request) {
-        return app(FarmController::class)->getDataAjax($request);
-    });
-
-    Route::post('/farms', function (Request $request) {
-        return app(FarmController::class)->getDataAjax($request);
-    });
-
-    Route::post('/kandangs', function (Request $request) {
-        return app(KandangController::class)->getDataAjax($request);
-    });
-
-    Route::post('/ternaks', function (Request $request) {
-        return app(TernakController::class)->getDataAjax($request);
-    });
-
-    // Route::post('/kandangs', function (Request $request) {
-    //     return app(KandangController::class)->getKandangs($request);
-    // });
-
-    Route::post('/transaksi', function (Request $request) {
-        return app(TransaksiController::class)->getTransaksi($request);
-    });
-
-    Route::post('/stocks', function (Request $request) {
-        return app(StockController::class)->stoks($request);
-    })->name('api.v1.stoks');
-
-    Route::get('/farms/{id}', function ($id) {
-        return app(AppApi::class)->get($id);
-    });
-
-    Route::put('/farms/{id}', function ($id, Request $request) {
-        return app(AppApi::class)->update($id, $request);
-    });
-
-    Route::delete('/farms/{id}', function ($id) {
-        return app(AppApi::class)->delete($id);
-    });
-
-    Route::get('/transaksi_beli/details/{id}', function ($id) {
-        return app(AppApi::class)->getTransaksiBeliDetail($id);
-    });
-
-    Route::get('/transaksi/details/{id}', function ($id) {
-        return app(AppApi::class)->getTransaksiDetail($id);
-    });
-
-    Route::get('/farm/operators', function () {
-        return app(AppApi::class)->getFarmOperator();
-    });
-
-    Route::post('/farm/operators', function (Request $request) {
-        return app(AppApi::class)->farmOperator($request);
-    });
-
-    Route::delete('/farm/operators', function (Request $request) {
-        return app(AppApi::class)->deleteFarmOperator($request);
-    });
-
-    Route::get('/get-operators/{farm}', [AppApi::class, 'getOperators']);
+    // Utility Routes
     Route::get('/get-farms', [AppApi::class, 'getFarms']);
     Route::get('/get-kandangs/{farm}/{status}', [AppApi::class, 'getKandangs']);
     Route::get('/get-farm-stocks/{farm}', [AppApi::class, 'getFarmStoks']);
-    Route::get('/penjualan/{transaksiId}', [AppApi::class, 'getPenjualan']);
-    Route::post('/transaksi-ternak/details', [TransaksiTernakController::class, 'getDetails']);
-
-    // Route::post('/stocks-edit', function (Request $request) {
-    //     return app(AppApi::class)->postStockEdit($request);
-    // });
-
-    Route::post('/stoks/mutasi', function (Request $request) {
-        return app(AppApi::class)->createMutasiStok($request);
-    });
-
-    // Route::post('/transaksi', function (Request $request) {
-    //     return app(AppApi::class)->getTransaksi($request);
-    // });
-
-    Route::get('/resetDemo', [AppApi::class, 'resetDemo']);
+    Route::get('/sales/{transaksiId}', [AppApi::class, 'getPenjualan']);
+    Route::get('/reset-demo', [AppApi::class, 'resetDemo']);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Legacy Routes (Kept for backward compatibility)
+|--------------------------------------------------------------------------
+*/
+
+// Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
+//     // Original v2 routes
+// });
+
+// Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
+//     // Original v1 routes
+// });

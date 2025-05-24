@@ -15,7 +15,7 @@ return new class extends Migration
 
         Schema::create('expeditions', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('kode', 64)->unique();
+            $table->string('code', 64);
             $table->string('name');
             $table->string('contact_person')->nullable();
             $table->string('phone_number')->nullable();

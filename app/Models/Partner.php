@@ -26,4 +26,27 @@ class Partner extends BaseModel
         'updated_by',
     ];
 
+    /**
+     * Get the supply purchases for this supplier
+     */
+    public function supplyPurchaseBatch()
+    {
+        return $this->hasMany(SupplyPurchaseBatch::class, 'supplier_id');
+    }
+
+    /**
+     * Get the feed purchases for this supplier
+     */
+    public function feedPurchasesBatch()
+    {
+        return $this->hasMany(FeedPurchaseBatch::class, 'supplier_id');
+    }
+
+    /**
+     * Get the feed purchases for this supplier
+     */
+    public function livestockPurchases()
+    {
+        return $this->hasMany(LivestockPurchase::class, 'vendor_id');
+    }
 }

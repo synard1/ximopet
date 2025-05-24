@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class AuditTrail extends Model
+class AuditTrail extends BaseModel
 {
-    use HasUuids;
-    
+    use SoftDeletes, HasUuids;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -29,7 +31,7 @@ class AuditTrail extends Model
         'user_info',
         'timestamp',
     ];
-    
+
     /**
      * The attributes that should be cast.
      *
@@ -42,7 +44,7 @@ class AuditTrail extends Model
         'user_info' => 'array',
         'timestamp' => 'datetime',
     ];
-    
+
     /**
      * Get the user that performed the action.
      */
@@ -50,7 +52,7 @@ class AuditTrail extends Model
     {
         return $this->belongsTo(User::class);
     }
-    
+
     /**
      * Scope a query to only include delete operations.
      *
@@ -61,7 +63,7 @@ class AuditTrail extends Model
     {
         return $query->whereIn('action', ['delete', 'batch_delete', 'cascade_delete']);
     }
-    
+
     /**
      * Scope a query to specific model type.
      *
@@ -73,7 +75,7 @@ class AuditTrail extends Model
     {
         return $query->where('model_type', $modelType);
     }
-    
+
     /**
      * Scope a query to actions by a specific user.
      *
@@ -85,7 +87,7 @@ class AuditTrail extends Model
     {
         return $query->where('user_id', $userId);
     }
-    
+
     /**
      * Scope a query to actions within a date range.
      *

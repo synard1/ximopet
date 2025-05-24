@@ -3,6 +3,7 @@
 namespace App\Livewire\Expeditions;
 
 use App\Models\Expedition;
+use App\Models\LivestockPurchase;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +15,7 @@ class Create extends Component
     public $modalFormVisible = false;
     public $modalId;
 
-    public $kode;
+    public $code;
     public $name;
     public $contact_person;
     public $phone_number;
@@ -25,7 +26,7 @@ class Create extends Component
     public $updated_by; // Akan diisi saat update
 
     protected $rules = [
-        'kode' => 'required|string|max:64|unique:expeditions,kode',
+        'code' => 'required|string|max:64|unique:expeditions,code',
         'name' => 'required|string|max:255',
         'contact_person' => 'nullable|string|max:255',
         'phone_number' => 'nullable|string|max:20',
@@ -55,7 +56,7 @@ class Create extends Component
 
     public function resetCreateForm()
     {
-        $this->kode = '';
+        $this->code = '';
         $this->name = '';
         $this->contact_person = '';
         $this->phone_number = '';
@@ -77,7 +78,7 @@ class Create extends Component
         $this->resetCreateForm();
         $this->modalId = $id;
         $model = Expedition::findOrFail($id);
-        $this->kode = $model->kode;
+        $this->code = $model->code;
         $this->name = $model->name;
         $this->contact_person = $model->contact_person;
         $this->phone_number = $model->phone_number;
@@ -92,7 +93,7 @@ class Create extends Component
         $this->validate();
 
         Expedition::create([
-            'kode' => $this->kode,
+            'code' => $this->code,
             'name' => $this->name,
             'contact_person' => $this->contact_person,
             'phone_number' => $this->phone_number,
@@ -104,13 +105,13 @@ class Create extends Component
 
         $this->modalFormVisible = false;
         $this->resetCreateForm();
-        $this->dispatch('show-alert', ['type' => 'success', 'message' => 'Ekspedisi berhasil ditambahkan.']);
+        $this->dispatch('success', 'Ekspedisi berhasil ditambahkan.');
     }
 
     public function update()
     {
         $this->validate([
-            'kode' => 'required|string|max:64|unique:expeditions,kode,' . $this->modalId,
+            'code' => 'required|string|max:64|unique:expeditions,code,' . $this->modalId,
             'name' => 'required|string|max:255',
             'contact_person' => 'nullable|string|max:255',
             'phone_number' => 'nullable|string|max:20',
@@ -121,7 +122,7 @@ class Create extends Component
 
         $model = Expedition::findOrFail($this->modalId);
         $model->update([
-            'kode' => $this->kode,
+            'code' => $this->code,
             'name' => $this->name,
             'contact_person' => $this->contact_person,
             'phone_number' => $this->phone_number,
@@ -133,21 +134,27 @@ class Create extends Component
 
         $this->modalFormVisible = false;
         $this->resetCreateForm();
-        $this->dispatch('show-alert', ['type' => 'success', 'message' => 'Ekspedisi berhasil diperbarui.']);
+        $this->dispatch('success', 'Ekspedisi berhasil diperbarui.');
     }
 
     public function delete($id)
     {
-        Log::info('Method delete di Livewire terpanggil untuk ID:', ['id' => $id]);
-        Expedition::findOrFail($id)->delete();
-        $this->dispatch('show-alert', ['type' => 'success', 'message' => 'Ekspedisi berhasil dihapus.']);
-    }
+        try {
+            // Check if expedition is being used in LivestockPurchase
+            $isUsed = LivestockPurchase::where('expedition_id', $id)->exists();
 
-    // public function delete($id)
-    // {
-    //     Expedition::findOrFail($id)->delete();
-    //     $this->dispatch('show-alert', ['type' => 'success', 'message' => 'Ekspedisi berhasil dihapus.']);
-    // }
+            if ($isUsed) {
+                $this->dispatch('error', 'Ekspedisi tidak dapat dihapus karena masih digunakan dalam pembelian ternak.');
+                return;
+            }
+
+            Expedition::findOrFail($id)->delete();
+            $this->dispatch('success', 'Ekspedisi berhasil dihapus.');
+        } catch (\Exception $e) {
+            Log::error('Error deleting expedition:', ['id' => $id, 'error' => $e->getMessage()]);
+            $this->dispatch('error', 'Terjadi kesalahan saat menghapus ekspedisi.');
+        }
+    }
 
     public function closeModal()
     {

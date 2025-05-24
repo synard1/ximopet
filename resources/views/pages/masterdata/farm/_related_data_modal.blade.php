@@ -1,26 +1,51 @@
-<div class="modal fade" id="relatedDataModal" tabindex="-1" role="dialog" aria-labelledby="relatedDataModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+<!--begin::Modal - Farm Details-->
+<div class="modal fade" id="farmDetailsModal" tabindex="-1" aria-hidden="true">
+    <!--begin::Modal dialog-->
+    <div class="modal-dialog modal-dialog-centered mw-900px">
+        <!--begin::Modal content-->
         <div class="modal-content">
+            <!--begin::Modal header-->
             <div class="modal-header">
-                <h5 class="modal-title" id="relatedDataModalLabel">Related Data</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <!--begin::Modal title-->
+                <h2>Detail Kandang</h2>
+                <!--end::Modal title-->
+                <!--begin::Close-->
+                <div class="btn btn-icon btn-sm btn-active-light-primary ms-2" data-bs-dismiss="modal"
+                    aria-label="Close">
+                    {!! getIcon('cross', 'fs-2x') !!}
+                </div>
+                <!--end::Close-->
             </div>
-            <div class="modal-body">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th>Name</th>
-                        </tr>
-                    </thead>
-                    <tbody id="relatedDataTableBody">
-                        <!-- Data will be injected here by JavaScript -->
-                    </tbody>
-                </table>
+            <!--end::Modal header-->
+            <!--begin::Modal body-->
+            <div class="modal-body scroll-y mx-5 mx-xl-15 my-7">
+                <!--begin::Table-->
+                <div class="table-responsive">
+                    <table class="table table-row-bordered table-row-gray-100 align-middle gs-0 gy-3"
+                        id="kandangsTable">
+                        <thead>
+                            <tr class="fw-bold text-muted">
+                                <th class="min-w-100px">Kode</th>
+                                <th class="min-w-150px">Nama</th>
+                                <th class="min-w-100px">Kapasitas</th>
+                                <th class="min-w-100px">Status</th>
+                                <th class="min-w-100px">Tanggal Mulai</th>
+                                <th class="min-w-100px">Populasi</th>
+                                <th class="min-w-100px">Breed</th>
+                                <th class="min-w-100px">Berat Awal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <!--end::Table-->
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeDetails()">Close</button>
-            </div>
+            <!--end::Modal body-->
         </div>
+        <!--end::Modal content-->
     </div>
+    <!--end::Modal dialog-->
 </div>
+<!--end::Modal - Farm Details-->

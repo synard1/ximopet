@@ -48,7 +48,7 @@ class OVKSeeder extends Seeder
 
         foreach ($ovkData as $data) {
             $supervisor = User::where('email', 'supervisor@demo.com')->first();
-            // $category = ItemCategory::create(array_merge($data, ['status' => 'Aktif', 'created_by' => $supervisor->id]));
+            // $category = ItemCategory::create(array_merge($data, ['status' => 'active', 'created_by' => $supervisor->id]));
 
             // dd($ovkCategory->id);
 
@@ -59,7 +59,7 @@ class OVKSeeder extends Seeder
                 'satuan_besar' => $data['satuan_besar'],
                 'satuan_kecil' => $data['satuan_kecil'],
                 'konversi' => $data['konversi'],
-                'status' => 'Aktif',
+                'status' => 'active',
                 'is_feed' => false,
                 'created_by' => $supervisor->id,
             ]);

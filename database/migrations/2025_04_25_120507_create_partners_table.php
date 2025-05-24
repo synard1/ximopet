@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('partners', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('type'); // Supplier or Buyer
-            $table->string('code', 64)->unique();
+            $table->string('code', 64);
             $table->string('name');
             $table->string('email')->nullable();
             $table->string('contact_person')->nullable();

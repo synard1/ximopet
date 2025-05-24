@@ -1,117 +1,68 @@
-<div class="modal" tabindex="-1" role="dialog" id="kt_modal_new_farm" tabindex="-1" aria-hidden="true" wire:ignore.self>
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Buat Data Farm</h5>
-                <!--begin::Close-->
-                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal" aria-label="Close">
-                    {!! getIcon('cross','fs-1') !!}
-                </div>
-                <!--end::Close-->
-            </div>
-            <div class="modal-body">
-                <!--begin::Form-->
-                <form id="kt_modal_master_farm_form" class="form" enctype="multipart/form-data">
-                        <!--begin::Scroll-->
-                        <div class="d-flex flex-column scroll-y px-5 px-lg-10" id="kt_modal_master_farm_scroll"
-                            data-kt-scroll="true" data-kt-scroll-activate="true" data-kt-scroll-max-height="auto"
-                            data-kt-scroll-dependencies="#kt_modal_master_farm_header"
-                            data-kt-scroll-wrappers="#kt_modal_master_farm_scroll" data-kt-scroll-offset="300px">
-                            <!--begin::Input group-->
-                            <div class="fv-row mb-7">
-                                <!--begin::Label-->
-                                <label class="required fw-semibold fs-6 mb-2">Kode Farm</label>
-                                <!--end::Label-->
-                                <!--begin::Input-->
-                                <input type="text" wire:model="kode_farm" id="kode_farm"
-                                    class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Kode Farm" />
-                                <!--end::Input-->
-                                @error('kode_farm')
-                                <span class="text-danger">{{ $message }}</span> @enderror
-                                @error('kode_farm')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <!--begin::Input group-->
-                            <div class="fv-row mb-7">
-                                <!--begin::Label-->
-                                <label class="required fw-semibold fs-6 mb-2">Nama Farm</label>
-                                <!--end::Label-->
-                                <!--begin::Input-->
-                                <input type="text" wire:model="nama" name="nama" id="nama" value="{{ $nama }}"
-                                    class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Nama Farm"/>
-                                <!--end::Input-->
-                                @error('nama')
-                                <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
-                            <!--end::Input group-->
-                            <!--begin::Input group-->
-                            <div class="fv-row mb-7">
-                                <!--begin::Label-->
-                                <label class="required fw-semibold fs-6 mb-2">Alamat Farm</label>
-                                <!--end::Label-->
-                                <!--begin::Input-->
-                                <input type="text" id="alamat" name="alamat" wire:model="alamat" value="{{ $alamat }}"
-                                    class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Alamat Farm" />
-                                <!--end::Input-->
-                                @error('alamat')
-                                <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
-                            <!--end::Input group-->
-                            <!--begin::Input group-->
-                            <div class="fv-row mb-7">
-                                <!--begin::Label-->
-                                <label class="required fw-semibold fs-6 mb-2">Telp</label>
-                                <!--end::Label-->
-                                <!--begin::Input-->
-                                <input type="text" id="telp" name="telp" wire:model="telp" value="{{ $telp }}" class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Telp"/>
-                                <!--end::Input-->
-                                @error('telp')
-                                <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
-                            <!--end::Input group-->
-                            <!--begin::Input group-->
-                            <div class="fv-row mb-7">
-                                <!--begin::Label-->
-                                <label class="required fw-semibold fs-6 mb-2">Contact Person</label>
-                                <!--end::Label-->
-                                <!--begin::Input-->
-                                <input type="text" wire:model="pic" name="pic" value="{{ $pic }}"
-                                    class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Contact Person" />
-                                <!--end::Input-->
-                                @error('pic')
-                                <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
-                            <!--end::Input group-->
-                            <!--begin::Input group-->
-                            <div class="fv-row mb-7">
-                                <!--begin::Label-->
-                                <label class="required fw-semibold fs-6 mb-2">Telp. Contact Person</label>
-                                <!--end::Label-->
-                                <!--begin::Input-->
-                                <input type="text" wire:model="telp_pic" name="telp_pic" value="{{ $telp_pic }}"
-                                    class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Telp. Contact Person" />
-                                <!--end::Input-->
-                                @error('telp_pic')
-                                <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
-                            <!--end::Input group-->
-                        </div>
-                        <!--end::Scroll-->
-                    </form>
-                    <!--end::Form-->
-                {{-- <form>
-                    <div class="form-group">
-                        <label for="nama">Nama</label>
-                        <input type="text" class="form-control" wire:model="nama" id="nama">
-                        @error('nama') <span class="text-danger error">{{ $message }}</span>@enderror
+<div>
+    <div class="modal fade {{ $isOpen ? 'show' : '' }}" id="kt_modal_farm" tabindex="-1" aria-hidden="true"
+        style="display: {{ $isOpen ? 'block' : 'none' }};">
+        <div class="modal-dialog modal-dialog-centered mw-650px">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>{{ $isEdit ? 'Edit Farm' : 'Tambah Farm' }}</h2>
+                    <div class="btn btn-icon btn-sm btn-active-light-primary ms-2" data-bs-dismiss="modal"
+                        aria-label="Close" wire:click="closeModalFarm">
+                        {!! getIcon('cross', 'fs-2x') !!}
                     </div>
-                </form> --}}
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" wire:click="storeFarm()">Save changes</button>
+                </div>
+
+                <div class="modal-body scroll-y mx-5 mx-xl-15 my-7">
+                    <form wire:submit.prevent="storeFarm" id="kt_modal_farm_form" class="form">
+                        <div class="fv-row mb-7">
+                            <label class="required fw-semibold fs-6 mb-2">Kode Farm</label>
+                            <input type="text" wire:model.live="code"
+                                class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Masukkan kode farm" />
+                            @error('code') <span class="text-danger">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="fv-row mb-7">
+                            <label class="required fw-semibold fs-6 mb-2">Nama Farm</label>
+                            <input type="text" wire:model.live="name"
+                                class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Masukkan nama farm" />
+                            @error('name') <span class="text-danger">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="fv-row mb-7">
+                            <label class="fw-semibold fs-6 mb-2">Alamat</label>
+                            <textarea wire:model.live="address" class="form-control form-control-solid mb-3 mb-lg-0"
+                                rows="3" placeholder="Masukkan alamat farm"></textarea>
+                            @error('address') <span class="text-danger">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="fv-row mb-7">
+                            <label class="fw-semibold fs-6 mb-2">Nomor Telepon</label>
+                            <input type="text" wire:model.live="phone_number"
+                                class="form-control form-control-solid mb-3 mb-lg-0"
+                                placeholder="Masukkan nomor telepon" />
+                            @error('phone_number') <span class="text-danger">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="fv-row mb-7">
+                            <label class="fw-semibold fs-6 mb-2">Kontak Person</label>
+                            <input type="text" wire:model.live="contact_person"
+                                class="form-control form-control-solid mb-3 mb-lg-0"
+                                placeholder="Masukkan nama kontak person" />
+                            @error('contact_person') <span class="text-danger">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="text-center pt-15">
+                            <button type="button" class="btn btn-light me-3" wire:click="closeModalFarm">Batal</button>
+                            <button type="submit" class="btn btn-primary">
+                                <span class="indicator-label">{{ $isEdit ? 'Update' : 'Simpan' }}</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
+
+    @if($isOpen)
+    <div class="modal-backdrop fade show"></div>
+    @endif
 </div>

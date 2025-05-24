@@ -27,13 +27,15 @@
 
                     <div class="fv-row mb-7">
                         <label for="name" class="required fw-semibold fs-6 mb-2">Nama Storage</label>
-                        <input type="text" wire:model="storageName" class="form-control" id="storageName" placeholder="Nama Storage">
+                        <input type="text" wire:model="storageName" class="form-control" id="storageName"
+                            placeholder="Nama Storage">
                         @error('storageName') <span class="text-danger error">{{ $message }}</span>@enderror
                     </div>
 
                     <div class="fv-row mb-7">
                         <label for="code" class="required fw-semibold fs-6 mb-2">Kode Storage</label>
-                        <input type="text" wire:model="storageCode" class="form-control" id="storageCode" placeholder="Kode Storage">
+                        <input type="text" wire:model="storageCode" class="form-control" id="storageCode"
+                            placeholder="Kode Storage">
                         @error('storageCode') <span class="text-danger error">{{ $message }}</span>@enderror
                     </div>
 
@@ -59,7 +61,7 @@
 </div>
 
 @push('scripts')
-<script>
+{{-- <script>
     document.addEventListener('DOMContentLoaded', function () {
         const farmSelect = document.getElementById('farms');
         var modal = document.getElementById('kt_modal_tambah_storage_farm');
@@ -92,5 +94,5 @@
             .catch(error => console.error('Error fetching farms:', error));
         });
     });
-</script>
+</script> --}}
 @endpush

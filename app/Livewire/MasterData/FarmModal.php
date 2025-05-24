@@ -9,86 +9,139 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 use App\Models\Farm;
+use App\Models\Kandang;;
 
 class FarmModal extends Component
 {
-    public $farms,$farm_id, $kode_farm, $nama, $alamat, $telp, $pic, $telp_pic, $status = 'Aktif';
-    public $isOpen = 0;
+    public $farms, $farm_id, $code, $name, $address, $phone_number, $contact_person, $status = 'active';
+    public $isOpen = false;
+    public $isEdit = false;
 
-
-    protected $rules = [
-        'kode_farm' => 'required|unique:farms,kode',
-        'nama' => 'required|string',
-        'alamat' => 'string',
-        'telp' => 'numeric',
-        'pic' => 'string|max:255',
-        'telp_pic' => 'numeric',
+    protected $listeners = [
+        'delete_farm' => 'deleteFarmList',
+        'editFarm' => 'editFarm',
+        'create' => 'create',
+        'closeModalFarm' => 'closeModalFarm',
+        'openModalForm' => 'openModalForm',
     ];
+
+    protected function rules()
+    {
+        return [
+            'code' => 'required|' . ($this->isEdit ? 'unique:farms,code,' . $this->farm_id : 'unique:farms,code'),
+            'name' => 'required|string',
+            'address' => 'nullable|string',
+            'phone_number' => 'nullable|numeric',
+            'contact_person' => 'nullable|string|max:255',
+        ];
+    }
 
     public function render()
     {
         return view('livewire.master-data.farm-modal');
     }
 
+    public function create()
+    {
+        $this->isEdit = false;
+        $this->resetForm();
+        $this->openModal();
+    }
+
+    public function editFarm($id)
+    {
+        $this->isEdit = true;
+        $farm = Farm::findOrFail($id);
+        $this->farm_id = $id;
+        $this->code = $farm->code;
+        $this->name = $farm->name;
+        $this->address = $farm->address;
+        $this->phone_number = $farm->phone_number;
+        $this->contact_person = $farm->contact_person;
+        $this->status = $farm->status;
+
+        $this->openModal();
+    }
+
+    public function deleteFarmList($id)
+    {
+        try {
+            // Check if farm has any kandang data
+            $hasKandang = Kandang::where('farm_id', $id)->exists();
+
+            // dd($hasKandang);
+
+            if ($hasKandang) {
+                $this->dispatch('error', 'Farm tidak dapat dihapus karena memiliki data kandang');
+                return;
+            }
+
+            DB::beginTransaction();
+
+            // Delete farm
+            $farm = Farm::findOrFail($id);
+            $farm->delete();
+
+            DB::commit();
+
+            $this->dispatch('success', 'Farm berhasil dihapus');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting farm: ' . $e->getMessage());
+            $this->dispatch('error', 'Terjadi kesalahan saat menghapus farm');
+        }
+    }
+
     public function storeFarm()
     {
         try {
-            // Validate the form input data
-            $this->validate(); 
-        
-            // Wrap database operation in a transaction (if applicable)
-            DB::beginTransaction();
-        
-            // Prepare the data for creating/updating the farm
-            $data = [
-                'kode' => $this->kode_farm,
-                'nama' => $this->nama,
-                'alamat' => $this->alamat,
-                'telp' => $this->telp,
-                'pic' => $this->pic,
-                'telp_pic' => $this->telp_pic,
-                'status' => 'Aktif',
-            ];
-        
-            $farm = Farm::where('id', $this->farm_id)->first() ?? Farm::create($data);
-        
-            DB::commit();
-    
-            // Emit success event if no errors occurred
-            $this->dispatch('success', 'Farm '. $farm->nama .' berhasil ditambahkan');
+            $this->validate();
 
-            // Reset the form
-            $this->resetForm();
+            DB::beginTransaction();
+
+            $data = [
+                'code' => $this->code,
+                'name' => $this->name,
+                'address' => $this->address,
+                'phone_number' => $this->phone_number,
+                'contact_person' => $this->contact_person,
+                'status' => $this->status,
+            ];
+
+            if ($this->isEdit) {
+                $farm = Farm::findOrFail($this->farm_id);
+                $farm->update($data);
+                $message = 'Farm ' . $farm->name . ' berhasil diperbarui';
+            } else {
+                $farm = Farm::create($data);
+                $message = 'Farm ' . $farm->name . ' berhasil ditambahkan';
+            }
+
+            DB::commit();
+
+            $this->dispatch('success', $message);
+            $this->closeModalFarm();
+            $this->dispatch('refreshDatatable');
         } catch (ValidationException $e) {
             $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
             $this->setErrorBag($e->validator->errors());
         } catch (\Exception $e) {
             DB::rollBack();
-    
-            // Handle validation and general errors
-            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ');
-            // Optionally log the error: Log::error($e->getMessage());
-        } finally {
-            // Reset the form in all cases to prepare for new data
-            // $this->reset();
+
+            Log::error("[" . __CLASS__ . "::" . __FUNCTION__ . "] Error: " . $e->getMessage() .
+                " | Line: " . $e->getLine() .
+                " | File: " . $e->getFile());
+
+            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data farm');
         }
     }
 
     private function resetForm()
     {
-        $this->reset([
-            'kode_farm',
-            'nama',
-            'alamat',
-            'telp',
-            'pic',
-            'telp_pic',
-            'status',
-        ]);
+        $this->reset(['farm_id', 'code', 'name', 'address', 'phone_number', 'contact_person', 'status']);
         $this->resetErrorBag();
         $this->resetValidation();
     }
-
 
     public function openModal()
     {
@@ -98,9 +151,6 @@ class FarmModal extends Component
     public function closeModalFarm()
     {
         $this->isOpen = false;
-    }
-
-    private function resetInputFields(){
-        $this->nama = ''; // Generate UUID for new contacts
+        $this->resetForm();
     }
 }

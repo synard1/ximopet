@@ -31,6 +31,11 @@ class LivestockPurchaseItem extends BaseModel
 
     public function livestock()
     {
-        return $this->belongsTo(Livestock::class);
+        return $this->belongsTo(Livestock::class, 'livestock_id');
+    }
+
+    public function livestockBatches()
+    {
+        return $this->hasMany(LivestockBatch::class, 'livestock_purchase_item_id');
     }
 }

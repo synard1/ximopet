@@ -2,7 +2,7 @@
 
 namespace App\DataTables;
 
-use App\Models\Rekanan as Supplier;
+use App\Models\Partner as Supplier;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
@@ -38,7 +38,7 @@ class SuppliersDataTable extends DataTable
      */
     public function query(Supplier $model): QueryBuilder
     {
-        return $model->where('Jenis','=','Supplier')->newQuery();
+        return $model->where('type', '=', 'Supplier')->newQuery();
     }
 
     /**
@@ -63,12 +63,11 @@ class SuppliersDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('kode')->searchable(false),
-            Column::make('nama'),
-            Column::make('alamat'),
-            Column::make('telp'),
-            Column::make('pic'),
-            Column::make('telp_pic'),
+            Column::make('code')->searchable(false),
+            Column::make('name'),
+            Column::make('address'),
+            Column::make('phone_number'),
+            Column::make('contact_person'),
             Column::make('email'),
             Column::make('status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
@@ -76,7 +75,7 @@ class SuppliersDataTable extends DataTable
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
+            // ->width(60)
         ];
     }
 

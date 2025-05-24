@@ -4,7 +4,7 @@ namespace App\Livewire\MasterData;
 
 use Livewire\Component;
 use Illuminate\Support\Str;
-use App\Models\Rekanan;
+use App\Models\Partner;
 use Ramsey\Uuid\Uuid; // Import the UUID library
 
 
@@ -26,7 +26,7 @@ class Customer extends Component
 
     public function render()
     {
-        $this->customers = Rekanan::all();
+        $this->customers = Partner::where('type', 'Customer')->get();
         return view('livewire.master-data.customer', ['customers' => $this->customers]);
     }
 
@@ -40,7 +40,7 @@ class Customer extends Component
     public function store()
     {
         $this->validate();
-        Rekanan::updateOrCreate(['id' => $this->customer_id], [
+        Partner::updateOrCreate(['id' => $this->customer_id], [
             'jenis' => "Customer",
             'kode' => $this->kode,
             'nama' => $this->nama,
@@ -49,22 +49,21 @@ class Customer extends Component
             'status' => 'Aktif',
         ]);
 
-        if($this->customer_id){
+        if ($this->customer_id) {
             $this->dispatch('success', __('Data Customer Berhasil Diubah'));
-
-        }else{
+        } else {
             $this->dispatch('success', __('Data Customer Berhasil Dibuat'));
         }
 
         // session()->flash('message', 
-        // $this->customer_id ? 'Rekanan updated successfully.' : 'Rekanan created successfully.');
+        // $this->customer_id ? 'Partner updated successfully.' : 'Partner created successfully.');
         $this->closeModal();
         $this->resetInputFields();
     }
 
     public function editCustomer($id)
     {
-        $customer = Rekanan::where('id',$id)->first();
+        $customer = Partner::where('id', $id)->first();
         $this->customer_id = $id;
         $this->kode = $customer->kode;
         $this->nama = $customer->nama;
@@ -82,15 +81,15 @@ class Customer extends Component
 
     // public function delete($id)
     // {
-    //     // Rekanan::find($id)->delete();
-    //     Rekanan::where('id',$id)->delete();
-    //     session()->flash('message', 'Rekanan deleted successfully.');
+    //     // Partner::find($id)->delete();
+    //     Partner::where('id',$id)->delete();
+    //     session()->flash('message', 'Partner deleted successfully.');
     // }
 
     public function deleteCustomer($id)
     {
         // Delete the user record with the specified ID
-        Rekanan::destroy($id);
+        Partner::destroy($id);
 
         // Emit a success event with a message
         $this->dispatch('success', 'Data berhasil dihapus');
@@ -106,7 +105,8 @@ class Customer extends Component
         $this->isOpen = false;
     }
 
-    private function resetInputFields(){
+    private function resetInputFields()
+    {
         // $this->kode = Str::uuid(); // Generate UUID for new customers
         $this->kode = ''; // Generate UUID for new customers
         $this->nama = '';

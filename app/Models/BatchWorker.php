@@ -38,7 +38,7 @@ class BatchWorker extends BaseModel
     /**
      * Get the worker assigned to the batch
      */
-    public function worker(): BelongsTo
+    public function worker()
     {
         return $this->belongsTo(Worker::class);
     }
@@ -46,7 +46,7 @@ class BatchWorker extends BaseModel
     /**
      * Get the farm where the worker is assigned
      */
-    public function farm(): BelongsTo
+    public function farm()
     {
         return $this->belongsTo(Farm::class);
     }
@@ -54,7 +54,7 @@ class BatchWorker extends BaseModel
     /**
      * Get the user who created the record
      */
-    public function creator(): BelongsTo
+    public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
@@ -62,7 +62,7 @@ class BatchWorker extends BaseModel
     /**
      * Get the user who last updated the record
      */
-    public function updater(): BelongsTo
+    public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by');
     }

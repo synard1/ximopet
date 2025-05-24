@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-        Master Data Supplier
+    Master Data Supplier
     @endsection
 
     @section('breadcrumbs')
@@ -14,7 +14,9 @@
                 <!--begin::Search-->
                 <div class="d-flex align-items-center position-relative my-1">
                     {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
-                    <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Supplier" id="mySearchInput"/>
+                    <input type="text" data-kt-user-table-filter="search"
+                        class="form-control form-control-solid w-250px ps-13" placeholder="Cari Supplier"
+                        id="mySearchInput" />
                 </div>
                 <!--end::Search-->
             </div>
@@ -22,16 +24,16 @@
 
             <!--begin::Card toolbar-->
             <div class="card-toolbar">
-                {{-- <!--begin::Toolbar-->
+                <!--begin::Toolbar-->
                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
                     <!--begin::Add user-->
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#kt_modal_add_user">
+                    <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('showCreateForm')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}
-                        Add User
+                        Tambah Supplier
                     </button>
                     <!--end::Add user-->
                 </div>
-                <!--end::Toolbar--> --}}
+                <!--end::Toolbar-->
 
                 <!--begin::Modal-->
                 <livewire:master-data.supplier />
@@ -53,9 +55,9 @@
     </div>
 
     @push('scripts')
-        {{ $dataTable->scripts() }}
-        <script>
-            document.getElementById('mySearchInput').addEventListener('keyup', function () {
+    {{ $dataTable->scripts() }}
+    <script>
+        document.getElementById('mySearchInput').addEventListener('keyup', function () {
                 window.LaravelDataTables['suppliers-table'].search(this.value).draw();
             });
             document.addEventListener('livewire:init', function () {
@@ -67,7 +69,6 @@
             $('#kt_modal_add_user').on('hidden.bs.modal', function () {
                 Livewire.dispatch('new_user');
             });
-        </script>
+    </script>
     @endpush
 </x-default-layout>
-

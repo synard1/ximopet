@@ -8,6 +8,8 @@ use App\Models\Farm;
 use App\Models\FarmOperator;
 use App\Models\Kandang;
 use Ramsey\Uuid\Uuid; // Import the UUID library
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 
 class FarmList extends Component
@@ -20,7 +22,6 @@ class FarmList extends Component
     // protected $listeners = ['edit','create']; // Add the listener
 
     protected $listeners = [
-        'delete_farm' => 'deleteFarmList',
         'editFarm' => 'editFarm',
         'create' => 'create',
         'openModalForm' => 'openModalForm',
@@ -39,7 +40,7 @@ class FarmList extends Component
         // $this->kode = (string) Uuid::uuid4(); // Generate and cast to string
         $this->openModal();
     }
-    
+
     public function openModalForm()
     {
         $this->resetInputFields();
@@ -62,14 +63,13 @@ class FarmList extends Component
                 'status' => 'Aktif',
             ]);
 
-            if($this->farm_id){
+            if ($this->farm_id) {
                 $farmOperator = FarmOperator::where('farm_id', $this->farm_id)
-                ->update([
-                    'nama_farm' => $farm->nama,
-                ]);
+                    ->update([
+                        'nama_farm' => $farm->nama,
+                    ]);
                 $this->dispatch('success', __('Data FarmList Berhasil Diubah'));
-
-            }else{
+            } else {
                 $this->dispatch('success', __('Data FarmList Berhasil Dibuat'));
             }
             $this->closeModal();
@@ -78,16 +78,16 @@ class FarmList extends Component
             // Handle validation and general errors
             $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ');
         }
-        
+
 
         // session()->flash('message', 
         // $this->farm_id ? 'Farm updated successfully.' : 'Farm created successfully.');
-        
+
     }
 
     public function editFarm($id)
     {
-        $farm = Farm::where('id',$id)->first();
+        $farm = Farm::where('id', $id)->first();
         $this->farm_id = $id;
         $this->kode = $farm->kode;
         $this->nama = $farm->nama;
@@ -109,22 +109,7 @@ class FarmList extends Component
     //     session()->flash('message', 'Farm deleted successfully.');
     // }
 
-    public function deleteFarmList($id)
-    {
-        $kandang = Kandang::where('farm_id',$id)->first();
 
-        // Prevent deletion if have sub data
-        if ($kandang) {
-            $this->dispatch('error', 'Farm sudah memiliki Data Kandang');
-            return;
-        }
-
-        // Delete the user record with the specified ID
-        Farm::destroy($id);
-
-        // Emit a success event with a message
-        $this->dispatch('success', 'Data berhasil dihapus');
-    }
 
     public function openModal()
     {
@@ -136,7 +121,8 @@ class FarmList extends Component
         $this->isOpen = false;
     }
 
-    private function resetInputFields(){
+    private function resetInputFields()
+    {
         // $this->kode = Str::uuid(); // Generate UUID for new farms
         $this->kode = ''; // Generate UUID for new farms
         $this->nama = '';

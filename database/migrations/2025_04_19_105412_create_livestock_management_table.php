@@ -53,6 +53,8 @@ return new class extends Migration {
             $table->date('tanggal');
             $table->string('invoice_number');
             $table->foreignUuid('vendor_id')->constrained('partners')->onDelete('cascade');
+            $table->foreignUuid('expedition_id')->nullable()->constrained('expeditions');
+            $table->decimal('expedition_fee', 15, 2)->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();

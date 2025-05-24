@@ -1,0 +1,921 @@
+[
+    {
+        "id": 48,
+        "parent_id": null,
+        "name": "dashboard",
+        "label": "Dashboard",
+        "route": "\/",
+        "icon": "fa-solid fa-house",
+        "location": "sidebar",
+        "order_number": 1,
+        "is_active": 1,
+        "created_at": "2025-05-22T04:52:17.000000Z",
+        "updated_at": "2025-05-22T04:52:17.000000Z",
+        "children": [],
+        "roles": [
+            {
+                "id": 1,
+                "name": "SuperAdmin",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:58.000000Z",
+                "updated_at": "2025-05-22T04:48:58.000000Z",
+                "pivot": {
+                    "menu_id": 48,
+                    "role_id": 1
+                }
+            },
+            {
+                "id": 2,
+                "name": "Administrator",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:58.000000Z",
+                "updated_at": "2025-05-22T04:48:58.000000Z",
+                "pivot": {
+                    "menu_id": 48,
+                    "role_id": 2
+                }
+            },
+            {
+                "id": 3,
+                "name": "Supervisor",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:58.000000Z",
+                "updated_at": "2025-05-22T04:48:58.000000Z",
+                "pivot": {
+                    "menu_id": 48,
+                    "role_id": 3
+                }
+            },
+            {
+                "id": 4,
+                "name": "Manager",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:59.000000Z",
+                "updated_at": "2025-05-22T04:48:59.000000Z",
+                "pivot": {
+                    "menu_id": 48,
+                    "role_id": 4
+                }
+            },
+            {
+                "id": 5,
+                "name": "Operator",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:59.000000Z",
+                "updated_at": "2025-05-22T04:48:59.000000Z",
+                "pivot": {
+                    "menu_id": 48,
+                    "role_id": 5
+                }
+            },
+            {
+                "id": 6,
+                "name": "QA Tester",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:49:00.000000Z",
+                "updated_at": "2025-05-22T04:49:00.000000Z",
+                "pivot": {
+                    "menu_id": 48,
+                    "role_id": 6
+                }
+            }
+        ],
+        "permissions": []
+    },
+    {
+        "id": 49,
+        "parent_id": null,
+        "name": "master-data",
+        "label": "Master Data",
+        "route": "#",
+        "icon": "fa-solid fa-database",
+        "location": "sidebar",
+        "order_number": 2,
+        "is_active": 1,
+        "created_at": "2025-05-22T04:52:17.000000Z",
+        "updated_at": "2025-05-22T04:52:17.000000Z",
+        "children": [
+            {
+                "id": 50,
+                "parent_id": 49,
+                "name": "farm",
+                "label": "Farm",
+                "route": "\/master\/farms",
+                "icon": "fa-solid fa-farm",
+                "location": "sidebar",
+                "order_number": 1,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 51,
+                "parent_id": 49,
+                "name": "kandang",
+                "label": "Kandang",
+                "route": "\/master\/kandangs",
+                "icon": "fa-solid fa-truck",
+                "location": "sidebar",
+                "order_number": 2,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 52,
+                "parent_id": 49,
+                "name": "supplier",
+                "label": "Supplier",
+                "route": "\/master\/suppliers",
+                "icon": "fa-solid fa-user-plus",
+                "location": "sidebar",
+                "order_number": 3,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 53,
+                "parent_id": 49,
+                "name": "customer",
+                "label": "Pembeli",
+                "route": "\/master\/customers",
+                "icon": "fa-solid fa-user-plus",
+                "location": "sidebar",
+                "order_number": 4,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 54,
+                "parent_id": 49,
+                "name": "expedition",
+                "label": "Ekspedisi",
+                "route": "\/master\/expeditions",
+                "icon": "fa-solid fa-truck",
+                "location": "sidebar",
+                "order_number": 5,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 55,
+                "parent_id": 49,
+                "name": "unit",
+                "label": "Unit Satuan",
+                "route": "\/master\/units",
+                "icon": "fa-solid fa-ruler",
+                "location": "sidebar",
+                "order_number": 6,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 56,
+                "parent_id": 49,
+                "name": "feed",
+                "label": "Pakan",
+                "route": "\/master\/feeds",
+                "icon": "fa-solid fa-wheat-awn",
+                "location": "sidebar",
+                "order_number": 7,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 57,
+                "parent_id": 49,
+                "name": "supply",
+                "label": "Supply",
+                "route": "\/master\/supplies",
+                "icon": "fa-solid fa-box",
+                "location": "sidebar",
+                "order_number": 8,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 58,
+                "parent_id": 49,
+                "name": "worker",
+                "label": "Pekerja",
+                "route": "\/master\/workers",
+                "icon": "fa-solid fa-users",
+                "location": "sidebar",
+                "order_number": 9,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            }
+        ],
+        "roles": [
+            {
+                "id": 1,
+                "name": "SuperAdmin",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:58.000000Z",
+                "updated_at": "2025-05-22T04:48:58.000000Z",
+                "pivot": {
+                    "menu_id": 49,
+                    "role_id": 1
+                }
+            },
+            {
+                "id": 2,
+                "name": "Administrator",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:58.000000Z",
+                "updated_at": "2025-05-22T04:48:58.000000Z",
+                "pivot": {
+                    "menu_id": 49,
+                    "role_id": 2
+                }
+            },
+            {
+                "id": 6,
+                "name": "QA Tester",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:49:00.000000Z",
+                "updated_at": "2025-05-22T04:49:00.000000Z",
+                "pivot": {
+                    "menu_id": 49,
+                    "role_id": 6
+                }
+            }
+        ],
+        "permissions": [
+            {
+                "id": 1,
+                "name": "access master data",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:54.000000Z",
+                "updated_at": "2025-05-22T04:48:54.000000Z",
+                "pivot": {
+                    "menu_id": 49,
+                    "permission_id": 1
+                }
+            }
+        ]
+    },
+    {
+        "id": 59,
+        "parent_id": null,
+        "name": "inventory",
+        "label": "Inventory",
+        "route": "#",
+        "icon": "fa-solid fa-box",
+        "location": "sidebar",
+        "order_number": 3,
+        "is_active": 1,
+        "created_at": "2025-05-22T04:52:17.000000Z",
+        "updated_at": "2025-05-22T04:52:17.000000Z",
+        "children": [
+            {
+                "id": 60,
+                "parent_id": 59,
+                "name": "doc",
+                "label": "DOC",
+                "route": "\/inventory\/docs",
+                "icon": "fa-solid fa-folder",
+                "location": "sidebar",
+                "order_number": 1,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 61,
+                "parent_id": 59,
+                "name": "feed-inventory",
+                "label": "Pakan",
+                "route": "\/stocks\/feed",
+                "icon": "fa-solid fa-wheat-awn",
+                "location": "sidebar",
+                "order_number": 2,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 62,
+                "parent_id": 59,
+                "name": "supply-inventory",
+                "label": "Supply",
+                "route": "\/stocks\/supply",
+                "icon": "fa-solid fa-box",
+                "location": "sidebar",
+                "order_number": 3,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            }
+        ],
+        "roles": [
+            {
+                "id": 2,
+                "name": "Administrator",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:58.000000Z",
+                "updated_at": "2025-05-22T04:48:58.000000Z",
+                "pivot": {
+                    "menu_id": 59,
+                    "role_id": 2
+                }
+            },
+            {
+                "id": 5,
+                "name": "Operator",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:59.000000Z",
+                "updated_at": "2025-05-22T04:48:59.000000Z",
+                "pivot": {
+                    "menu_id": 59,
+                    "role_id": 5
+                }
+            }
+        ],
+        "permissions": []
+    },
+    {
+        "id": 63,
+        "parent_id": null,
+        "name": "user-management",
+        "label": "User Management",
+        "route": "#",
+        "icon": "fa-solid fa-users",
+        "location": "sidebar",
+        "order_number": 4,
+        "is_active": 1,
+        "created_at": "2025-05-22T04:52:17.000000Z",
+        "updated_at": "2025-05-22T04:52:17.000000Z",
+        "children": [
+            {
+                "id": 64,
+                "parent_id": 63,
+                "name": "user-list",
+                "label": "User List",
+                "route": "\/users",
+                "icon": "fa-solid fa-users",
+                "location": "sidebar",
+                "order_number": 1,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 65,
+                "parent_id": 63,
+                "name": "user-role",
+                "label": "User Role",
+                "route": "\/user\/roles",
+                "icon": "fa-solid fa-shield",
+                "location": "sidebar",
+                "order_number": 2,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            },
+            {
+                "id": 66,
+                "parent_id": 63,
+                "name": "user-permission",
+                "label": "User Permission",
+                "route": "\/user\/permissions",
+                "icon": "fa-solid fa-lock",
+                "location": "sidebar",
+                "order_number": 3,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:17.000000Z",
+                "updated_at": "2025-05-22T04:52:17.000000Z"
+            }
+        ],
+        "roles": [
+            {
+                "id": 1,
+                "name": "SuperAdmin",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:58.000000Z",
+                "updated_at": "2025-05-22T04:48:58.000000Z",
+                "pivot": {
+                    "menu_id": 63,
+                    "role_id": 1
+                }
+            },
+            {
+                "id": 2,
+                "name": "Administrator",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:58.000000Z",
+                "updated_at": "2025-05-22T04:48:58.000000Z",
+                "pivot": {
+                    "menu_id": 63,
+                    "role_id": 2
+                }
+            }
+        ],
+        "permissions": []
+    },
+    {
+        "id": 67,
+        "parent_id": null,
+        "name": "peternakan",
+        "label": "Peternakan",
+        "route": "#",
+        "icon": "fa-solid fa-warehouse",
+        "location": "sidebar",
+        "order_number": 5,
+        "is_active": 1,
+        "created_at": "2025-05-22T04:52:17.000000Z",
+        "updated_at": "2025-05-22T04:52:17.000000Z",
+        "children": [
+            {
+                "id": 68,
+                "parent_id": 67,
+                "name": "data-farm",
+                "label": "Data Farm",
+                "route": "\/data\/farms",
+                "icon": "fa-solid fa-warehouse",
+                "location": "sidebar",
+                "order_number": 1,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 69,
+                "parent_id": 67,
+                "name": "data-kandang",
+                "label": "Data Kandang",
+                "route": "\/data\/kandangs",
+                "icon": "fa-solid fa-house",
+                "location": "sidebar",
+                "order_number": 2,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 70,
+                "parent_id": 67,
+                "name": "data-livestock",
+                "label": "Data Ayam",
+                "route": "\/master\/livestocks",
+                "icon": "\/assets\/media\/icons\/custom\/chicken.png",
+                "location": "sidebar",
+                "order_number": 3,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 71,
+                "parent_id": 67,
+                "name": "data-standar-bobot",
+                "label": "Data Standar Bobot",
+                "route": "\/data\/standar-bobot",
+                "icon": "fa-solid fa-weight-hanging",
+                "location": "sidebar",
+                "order_number": 4,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 72,
+                "parent_id": 67,
+                "name": "data-afkir",
+                "label": "Data Ternak Afkir",
+                "route": "\/livestock\/afkir",
+                "icon": "fa-solid fa-ban",
+                "location": "sidebar",
+                "order_number": 5,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 73,
+                "parent_id": 67,
+                "name": "data-jual",
+                "label": "Data Ternak Jual",
+                "route": "\/livestock\/jual",
+                "icon": "fa-solid fa-tags",
+                "location": "sidebar",
+                "order_number": 6,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 74,
+                "parent_id": 67,
+                "name": "data-mati",
+                "label": "Data Ternak Mati",
+                "route": "\/livestock\/mati",
+                "icon": "fa-solid fa-skull",
+                "location": "sidebar",
+                "order_number": 7,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            }
+        ],
+        "roles": [
+            {
+                "id": 3,
+                "name": "Supervisor",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:58.000000Z",
+                "updated_at": "2025-05-22T04:48:58.000000Z",
+                "pivot": {
+                    "menu_id": 67,
+                    "role_id": 3
+                }
+            },
+            {
+                "id": 4,
+                "name": "Manager",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:59.000000Z",
+                "updated_at": "2025-05-22T04:48:59.000000Z",
+                "pivot": {
+                    "menu_id": 67,
+                    "role_id": 4
+                }
+            }
+        ],
+        "permissions": [
+            {
+                "id": 193,
+                "name": "access livestock management",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:57.000000Z",
+                "updated_at": "2025-05-22T04:48:57.000000Z",
+                "pivot": {
+                    "menu_id": 67,
+                    "permission_id": 193
+                }
+            },
+            {
+                "id": 195,
+                "name": "read livestock management",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:58.000000Z",
+                "updated_at": "2025-05-22T04:48:58.000000Z",
+                "pivot": {
+                    "menu_id": 67,
+                    "permission_id": 195
+                }
+            }
+        ]
+    },
+    {
+        "id": 75,
+        "parent_id": null,
+        "name": "transaksi",
+        "label": "Transaksi",
+        "route": "#",
+        "icon": "fa-solid fa-money-bill",
+        "location": "sidebar",
+        "order_number": 6,
+        "is_active": 1,
+        "created_at": "2025-05-22T04:52:18.000000Z",
+        "updated_at": "2025-05-22T04:52:18.000000Z",
+        "children": [
+            {
+                "id": 76,
+                "parent_id": 75,
+                "name": "pembelian-doc",
+                "label": "Pembelian DOC",
+                "route": "\/pembelian\/doc",
+                "icon": "fa-solid fa-cart-shopping",
+                "location": "sidebar",
+                "order_number": 1,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 77,
+                "parent_id": 75,
+                "name": "pembelian-pakan",
+                "label": "Pembelian Pakan",
+                "route": "\/transaction\/feed",
+                "icon": "fa-solid fa-cart-shopping",
+                "location": "sidebar",
+                "order_number": 2,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 78,
+                "parent_id": 75,
+                "name": "pembelian-ovk",
+                "label": "Pembelian OVK",
+                "route": "\/pembelian\/ovk",
+                "icon": "fa-solid fa-cart-shopping",
+                "location": "sidebar",
+                "order_number": 3,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 79,
+                "parent_id": 75,
+                "name": "pembelian-stock",
+                "label": "Pembelian Stock",
+                "route": "\/transaction\/supply",
+                "icon": "fa-solid fa-cart-shopping",
+                "location": "sidebar",
+                "order_number": 4,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 80,
+                "parent_id": 75,
+                "name": "penjualan-ternak",
+                "label": "Penjualan Ternak",
+                "route": "\/transaction\/sales",
+                "icon": "fa-solid fa-tags",
+                "location": "sidebar",
+                "order_number": 5,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 81,
+                "parent_id": 75,
+                "name": "pemakaian-supply",
+                "label": "Pemakaian Supply",
+                "route": "\/livestock\/supply-recording",
+                "icon": "fa-solid fa-tags",
+                "location": "sidebar",
+                "order_number": 6,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 82,
+                "parent_id": 75,
+                "name": "mutasi-feed",
+                "label": "Mutasi Pakan",
+                "route": "\/feeds\/mutation",
+                "icon": "fa-solid fa-arrows-rotate",
+                "location": "sidebar",
+                "order_number": 7,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 83,
+                "parent_id": 75,
+                "name": "mutasi-supply",
+                "label": "Mutasi Supply",
+                "route": "\/transaction\/supply-mutation",
+                "icon": "fa-solid fa-arrows-rotate",
+                "location": "sidebar",
+                "order_number": 8,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 84,
+                "parent_id": 75,
+                "name": "mutasi-ayam",
+                "label": "Mutasi Ayam",
+                "route": "\/livestock\/mutasi",
+                "icon": "fa-solid fa-arrows-rotate",
+                "location": "sidebar",
+                "order_number": 9,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 85,
+                "parent_id": 75,
+                "name": "mutasi-feed",
+                "label": "Mutasi Pakan",
+                "route": "\/transaction\/feed-mutation",
+                "icon": "fa-solid fa-arrows-rotate",
+                "location": "sidebar",
+                "order_number": 10,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            }
+        ],
+        "roles": [],
+        "permissions": [
+            {
+                "id": 121,
+                "name": "access transaction",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:56.000000Z",
+                "updated_at": "2025-05-22T04:48:56.000000Z",
+                "pivot": {
+                    "menu_id": 75,
+                    "permission_id": 121
+                }
+            },
+            {
+                "id": 123,
+                "name": "read transaction",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:56.000000Z",
+                "updated_at": "2025-05-22T04:48:56.000000Z",
+                "pivot": {
+                    "menu_id": 75,
+                    "permission_id": 123
+                }
+            }
+        ]
+    },
+    {
+        "id": 86,
+        "parent_id": null,
+        "name": "reports",
+        "label": "Reports",
+        "route": "#",
+        "icon": "fa-solid fa-chart-line",
+        "location": "sidebar",
+        "order_number": 7,
+        "is_active": 1,
+        "created_at": "2025-05-22T04:52:18.000000Z",
+        "updated_at": "2025-05-22T04:52:18.000000Z",
+        "children": [
+            {
+                "id": 87,
+                "parent_id": 86,
+                "name": "report-harian",
+                "label": "Harian",
+                "route": "\/reports\/harian",
+                "icon": "fa-solid fa-chart-line",
+                "location": "sidebar",
+                "order_number": 1,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 88,
+                "parent_id": 86,
+                "name": "report-daily-cost",
+                "label": "Harian Biaya",
+                "route": "\/reports\/daily-cost",
+                "icon": "fa-solid fa-chart-line",
+                "location": "sidebar",
+                "order_number": 2,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 89,
+                "parent_id": 86,
+                "name": "report-performa",
+                "label": "Performa",
+                "route": "\/reports\/performa",
+                "icon": "fa-solid fa-chart-line",
+                "location": "sidebar",
+                "order_number": 3,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 90,
+                "parent_id": 86,
+                "name": "report-penjualan",
+                "label": "Penjualan",
+                "route": "\/reports\/penjualan",
+                "icon": "fa-solid fa-chart-line",
+                "location": "sidebar",
+                "order_number": 4,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 91,
+                "parent_id": 86,
+                "name": "report-feed-purchase",
+                "label": "Pembelian Pakan",
+                "route": "\/reports\/feed\/purchase",
+                "icon": "fa-solid fa-chart-line",
+                "location": "sidebar",
+                "order_number": 5,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 92,
+                "parent_id": 86,
+                "name": "report-performa-mitra",
+                "label": "Performa Kemitraan",
+                "route": "\/reports\/performa-mitra",
+                "icon": "fa-solid fa-chart-line",
+                "location": "sidebar",
+                "order_number": 6,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            }
+        ],
+        "roles": [],
+        "permissions": []
+    },
+    {
+        "id": 93,
+        "parent_id": null,
+        "name": "administrator",
+        "label": "Administrator",
+        "route": "#",
+        "icon": "fa-solid fa-gear",
+        "location": "sidebar",
+        "order_number": 8,
+        "is_active": 1,
+        "created_at": "2025-05-22T04:52:18.000000Z",
+        "updated_at": "2025-05-22T04:52:18.000000Z",
+        "children": [
+            {
+                "id": 94,
+                "parent_id": 93,
+                "name": "qa",
+                "label": "QA",
+                "route": "\/administrator\/qa",
+                "icon": "fa-solid fa-chart-line",
+                "location": "sidebar",
+                "order_number": 1,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 95,
+                "parent_id": 93,
+                "name": "routes",
+                "label": "Routes",
+                "route": "\/administrator\/routes",
+                "icon": "fa-solid fa-chart-line",
+                "location": "sidebar",
+                "order_number": 2,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            },
+            {
+                "id": 96,
+                "parent_id": 93,
+                "name": "AdminMenu",
+                "label": "Menu",
+                "route": "\/administrator\/menu",
+                "icon": null,
+                "location": "sidebar",
+                "order_number": 3,
+                "is_active": 1,
+                "created_at": "2025-05-22T04:52:18.000000Z",
+                "updated_at": "2025-05-22T04:52:18.000000Z"
+            }
+        ],
+        "roles": [
+            {
+                "id": 1,
+                "name": "SuperAdmin",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:48:58.000000Z",
+                "updated_at": "2025-05-22T04:48:58.000000Z",
+                "pivot": {
+                    "menu_id": 93,
+                    "role_id": 1
+                }
+            },
+            {
+                "id": 6,
+                "name": "QA Tester",
+                "guard_name": "web",
+                "created_at": "2025-05-22T04:49:00.000000Z",
+                "updated_at": "2025-05-22T04:49:00.000000Z",
+                "pivot": {
+                    "menu_id": 93,
+                    "role_id": 6
+                }
+            }
+        ],
+        "permissions": []
+    }
+]

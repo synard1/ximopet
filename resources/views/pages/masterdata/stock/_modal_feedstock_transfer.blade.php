@@ -1,5 +1,6 @@
 <!-- Stock Transfer Modal -->
-<div class="modal fade" id="modalFeedstockTransfer" tabindex="-1" role="dialog" aria-labelledby="modalFeedstockTransferLabel" aria-hidden="true">
+<div class="modal fade" id="modalFeedstockTransfer" tabindex="-1" role="dialog"
+    aria-labelledby="modalFeedstockTransferLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -8,18 +9,20 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            {{-- {{  dd($kelompokTernaks ); }} --}}
-            <form id="stokTransferForm" method="POST" action="{{ route('stocks.transfer') }}">
+            {{-- {{ dd($kelompokTernaks ); }} --}}
+            <form id="stokTransferForm" method="POST" action="{{ route('stock.transfer') }}">
                 @csrf
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="source_livestock_id">Asal <span class="text-danger">*</span></label>
-                                <select class="form-control" id="source_livestock_id" name="source_livestock_id" required>
+                                <select class="form-control" id="source_livestock_id" name="source_livestock_id"
+                                    required>
                                     <option value="">Pilih Kelompok Ternak</option>
                                     @foreach($livestocks ?? [] as $livestock)
-                                        <option value="{{ $livestock->id }}">{{ $livestock->name }} ({{ $livestock->farm->name ?? 'Unknown' }})</option>
+                                    <option value="{{ $livestock->id }}">{{ $livestock->name }} ({{
+                                        $livestock->farm->name ?? 'Unknown' }})</option>
                                     @endforeach
                                 </select>
                                 <div class="invalid-feedback" id="source_livestock_id_error"></div>
@@ -28,10 +31,12 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="destination_livestock_id">Tujuan <span class="text-danger">*</span></label>
-                                <select class="form-control " id="destination_livestock_id" name="destination_livestock_id" required>
+                                <select class="form-control " id="destination_livestock_id"
+                                    name="destination_livestock_id" required>
                                     <option value="">Pilih Kelompok Ternak</option>
                                     @foreach($livestocks ?? [] as $livestock)
-                                        <option value="{{ $livestock->id }}">{{ $livestock->name }} ({{ $livestock->farm->name ?? 'Unknown' }})</option>
+                                    <option value="{{ $livestock->id }}">{{ $livestock->name }} ({{
+                                        $livestock->farm->name ?? 'Unknown' }})</option>
                                     @endforeach
                                 </select>
                                 <div class="invalid-feedback" id="destination_livestock_id_error"></div>
@@ -46,7 +51,7 @@
                                 <select class="form-control " id="feed_id" name="feed_id" required>
                                     <option value="">Pilih Item</option>
                                     @foreach($feeds ?? [] as $feed)
-                                        <option value="{{ $feed->id }}">{{ $feed->name }} ({{ $feed->unit }})</option>
+                                    <option value="{{ $feed->id }}">{{ $feed->name }} ({{ $feed->unit }})</option>
                                     @endforeach
                                 </select>
                                 <div class="invalid-feedback" id="feed_id_error"></div>
@@ -56,13 +61,15 @@
                             <div class="form-group">
                                 <label for="quantity">Jumlah <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <input type="number" step="0.01" min="0.01" class="form-control" id="quantity" name="quantity" placeholder="Masukkan jumlah" required>
+                                    <input type="number" step="0.01" min="0.01" class="form-control" id="quantity"
+                                        name="quantity" placeholder="Masukkan jumlah" required>
                                     <div class="input-group-append">
                                         <span class="input-group-text item-unit">Unit</span>
                                     </div>
                                 </div>
                                 <div class="invalid-feedback" id="quantity_error"></div>
-                                <small class="text-muted available-stock">Stok tersedia: <span id="available_stock">0</span></small>
+                                <small class="text-muted available-stock">Stok tersedia: <span
+                                        id="available_stock">0</span></small>
                             </div>
                         </div>
                     </div>
@@ -71,7 +78,8 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="tanggal">Tanggal Transfer <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="tanggal" name="tanggal" value="{{ date('Y-m-d') }}" required>
+                                <input type="date" class="form-control" id="tanggal" name="tanggal"
+                                    value="{{ date('Y-m-d') }}" required>
                                 <div class="invalid-feedback" id="tanggal_error"></div>
                             </div>
                         </div>
@@ -79,7 +87,8 @@
 
                     <div class="form-group">
                         <label for="notes">Catatan</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Tambahkan catatan (opsional)"></textarea>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"
+                            placeholder="Tambahkan catatan (opsional)"></textarea>
                         <div class="invalid-feedback" id="notes_error"></div>
                     </div>
                 </div>
@@ -135,7 +144,7 @@
             
             if (sourceId && itemId) {
                 $.ajax({
-                    url: "{{ route('stocks.check-available') }}",
+                    url: "{{ route('stock.check-available') }}",
                     type: "GET",
                     data: {
                         location_id: sourceId,
@@ -234,6 +243,5 @@
             $('.item-unit').text('Unit');
         });
     });
-    </script>
+</script>
 @endpush
-

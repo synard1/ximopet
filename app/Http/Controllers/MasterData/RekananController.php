@@ -23,7 +23,17 @@ class RekananController extends Controller
         return $dataTable->render('pages/masterdata.supplier.list');
         // return $dataTable->render('test2');
     }
-    
+
+    public function supplierIndex(SuppliersDataTable $dataTable)
+    {
+        // return view('pages/masterdata.supplier.list');
+
+        addVendors(['datatables']);
+
+        return $dataTable->render('pages/masterdata.supplier.list');
+        // return $dataTable->render('test2');
+    }
+
     public function customerIndex(CustomersDataTable $dataTable)
     {
         // return view('pages/masterdata.supplier.list');

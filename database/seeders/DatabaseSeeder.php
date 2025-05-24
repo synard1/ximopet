@@ -24,6 +24,15 @@ class DatabaseSeeder extends Seeder
             QaPermissionSeeder::class,
             QaUserSeeder::class,
             // RoutePermissionSeeder::class,
+            MenuSeeder::class,
+            // UnitSeeder::class,
+            SupplyCategorySeeder::class,
+            // BreedSeeder::class,
+            // WorkerSeeder::class,
+            // OVKSeeder::class,
+            LivestockBatchSeeder::class,
+            QaTodoPermissionSeeder::class,
+            QaTodoMasterDataSeeder::class,
         ]);
 
         // \App\Models\User::factory(20)->create();

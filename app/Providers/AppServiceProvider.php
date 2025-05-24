@@ -8,7 +8,10 @@ use Illuminate\Support\ServiceProvider;
 // use App\Livewire\MasterData\SupplierModal;
 use Livewire\Livewire; // Import the facade
 use App\Livewire\QaChecklistForm;
-
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+use App\Observers\RoleObserver;
+use App\Observers\PermissionObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,5 +47,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Register Livewire components
         Livewire::component('qa-checklist-form', QaChecklistForm::class);
+
+        Role::observe(RoleObserver::class);
+        Permission::observe(PermissionObserver::class);
     }
 }

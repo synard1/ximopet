@@ -9,6 +9,7 @@ use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 
 class AssignWorker extends Component
 {
@@ -238,6 +239,13 @@ class AssignWorker extends Component
 
     public function deleteWorkerPermanent()
     {
+        if (!Auth::user()->can('delete worker assignment')) {
+            $this->dispatch('error', 'You do not have permission to delete worker assignments.');
+            $this->showDeleteOptionsModal = false;
+            $this->indexToDelete = null;
+            return;
+        }
+
         $index = $this->indexToDelete;
         if (isset($this->workersData[$index]) && !empty($this->workersData[$index]['id'])) {
             BatchWorker::where('id', $this->workersData[$index]['id'])->delete();
@@ -251,6 +259,12 @@ class AssignWorker extends Component
 
     public function confirmEndWorker()
     {
+        if (!Auth::user()->can('update worker assignment')) {
+            $this->dispatch('error', 'You do not have permission to update worker assignments.');
+            $this->closeEndDateModal();
+            return;
+        }
+
         try {
             $this->validate([
                 'endDateToDelete' => 'required|date|after_or_equal:workersData.' . $this->indexToDelete . '.start_date',
@@ -306,6 +320,12 @@ class AssignWorker extends Component
 
                 if (!empty($workerData['id'])) {
                     // Update
+                    if (!Auth::user()->can('update worker assignment')) {
+                        DB::rollBack();
+                        $this->dispatch('error', 'You do not have permission to update worker assignments.');
+                        return;
+                    }
+
                     $updateData = [
                         'worker_id' => $workerData['worker_id'],
                         'start_date' => $workerData['start_date'],
@@ -322,6 +342,12 @@ class AssignWorker extends Component
                     BatchWorker::where('id', $workerData['id'])->update($updateData);
                 } else {
                     // Insert baru
+                    if (!Auth::user()->can('create worker assignment')) {
+                        DB::rollBack();
+                        $this->dispatch('error', 'You do not have permission to create worker assignments.');
+                        return;
+                    }
+
                     BatchWorker::create([
                         'id' => Str::uuid(),
                         'livestock_id' => $this->livestockId,

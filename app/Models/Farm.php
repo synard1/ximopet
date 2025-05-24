@@ -50,6 +50,11 @@ class Farm extends BaseModel
         return $this->hasMany(KelompokTernak::class);
     }
 
+    public function livestock()
+    {
+        return $this->hasMany(Livestock::class);
+    }
+
     public function inventoryLocations()
     {
         return $this->hasMany(InventoryLocation::class);

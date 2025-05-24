@@ -49,6 +49,7 @@
 
         {{-- Worker Assignment Form --}}
         @if($livestockId)
+        @if (auth()->user()->can('create worker assignment'))
         <div class="mb-4">
             <div class="d-flex align-items-center mb-3">
                 <i class="bi bi-person-plus-fill text-primary me-2"></i>
@@ -138,6 +139,7 @@
                 </button>
             </div>
         </div>
+        @endif
         @else
         <div class="alert alert-warning">
             <i class="bi bi-exclamation-triangle me-2"></i>

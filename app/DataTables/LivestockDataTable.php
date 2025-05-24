@@ -44,7 +44,7 @@ class LivestockDataTable extends DataTable
                 $tanggalMasuk = Carbon::parse($livestock->start_date);
                 $HariIni = Carbon::now();
                 $umur = $tanggalMasuk->diffInDays($HariIni) + 1;
-                return $umur. ' Hari';
+                return $umur . ' Hari';
             })
             ->editColumn('jumlah_mati', function (Livestock $livestock) {
                 $deplesi = LivestockDepletion::where('livestock_id', $livestock->id)->where('jenis', 'Mati')->sum('jumlah');
@@ -83,7 +83,11 @@ class LivestockDataTable extends DataTable
 
             // })
             ->editColumn('name', function (Livestock $livestock) {
-                return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_livestock" data-kt-livestock-id="' . $livestock->id . '">' . $livestock->name . '</a>';
+                if (auth()->user()->can('read records management')) {
+                    return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_livestock" data-kt-livestock-id="' . $livestock->id . '">' . $livestock->name . '</a>';
+                } else {
+                    return $livestock->name;
+                }
             })
 
             ->editColumn('start_date', function (Livestock $livestock) {
@@ -139,10 +143,10 @@ class LivestockDataTable extends DataTable
                 'searching'       =>  true,
                 // 'responsive'       =>  true,
                 'lengthMenu' => [
-                        [ 10, 25, 50, -1 ],
-                        [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+                    [10, 25, 50, -1],
+                    ['10 rows', '25 rows', '50 rows', 'Show all']
                 ],
-                'buttons'      => ['export', 'print', 'reload','colvis'],
+                'buttons'      => ['export', 'print', 'reload', 'colvis'],
             ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/livestock/_draw-scripts.js')) . "}");
     }
@@ -158,10 +162,10 @@ class LivestockDataTable extends DataTable
             Column::make('populasi_awal'),
             Column::computed('umur'),
             Column::computed('jumlah_mati')
-            ->title(trans('content.ternak',[],'id').' Mati')
-            ->orderable(true)
-            ->orderDataType('custom-jumlah-mati'),
-            Column::computed('jumlah_afkir')->title(trans('content.ternak',[],'id').' Afkir'),
+                ->title(trans('content.ternak', [], 'id') . ' Mati')
+                ->orderable(true)
+                ->orderDataType('custom-jumlah-mati'),
+            Column::computed('jumlah_afkir')->title(trans('content.ternak', [], 'id') . ' Afkir'),
             // Column::computed('jumlah_terjual')->title(trans('content.ternak',[],'id').' Terjual'),
             // Column::computed('stok_akhir')->title('Sisa '.trans('content.ternak',[],'id')),
             Column::make('status'),

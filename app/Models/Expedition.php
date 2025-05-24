@@ -13,7 +13,7 @@ class Expedition extends BaseModel
 
     protected $fillable = [
         'id',
-        'kode',
+        'code',
         'name',
         'contact_person',
         'phone_number',

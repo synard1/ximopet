@@ -90,7 +90,7 @@ class DemoSeeder extends Seeder
 
         foreach ($categoryData as $data) {
             $supervisor = User::where('email', 'supervisor@demo.com')->first();
-            $category = ItemCategory::create(array_merge($data, ['status' => 'Aktif', 'created_by' => $supervisor->id]));
+            $category = ItemCategory::create(array_merge($data, ['status' => 'active', 'created_by' => $supervisor->id]));
 
             // Item::create([
             //     'category_id' => $category->id,
@@ -99,7 +99,7 @@ class DemoSeeder extends Seeder
             //     'satuan_besar' => $this->getSatuanBesar($category->name),
             //     'satuan_kecil' => $this->getSatuanKecil($category->name),
             //     'konversi' => $category->name === 'Pakan' ? 1000 : 1,
-            //     'status' => 'Aktif',
+            //     'status' => 'active',
             //     'is_feed' => $category->name === 'Pakan',
             //     'created_by' => $supervisor->id,
             // ]);
@@ -125,7 +125,7 @@ class DemoSeeder extends Seeder
                 'name' => 'Pakan',
                 'code' => 'PKN',
                 'description' => 'Feed Category',
-                'status' => 'Aktif',
+                'status' => 'active',
                 'created_by' => $supervisor->id
             ]);
         }
@@ -138,7 +138,7 @@ class DemoSeeder extends Seeder
                 'satuan_besar' => 'Kg',
                 'satuan_kecil' => 'Kg',
                 'konversi' => 1,
-                'status' => 'Aktif',
+                'status' => 'active',
                 'is_feed' => false,
                 'created_by' => $supervisor->id,
             ]);
@@ -298,7 +298,7 @@ class DemoSeeder extends Seeder
                 'name' => 'Gudang ' . $farm->nama,
                 'code' => 'WH-' . $farm->kode,
                 'type' => 'warehouse',
-                'status' => 'Aktif',
+                'status' => 'active',
                 'created_by' => $supervisor->id,
             ]);
 
@@ -338,7 +338,7 @@ class DemoSeeder extends Seeder
                 'code'       => $data['kode'],
                 'name'       => $data['farmName'],
                 'address'     => $faker->address,
-                'status'     => 'Aktif',
+                'status'     => 'active',
                 'created_by' => $supervisor->id,
                 'updated_by' => $supervisor->id,
             ]);
@@ -349,7 +349,7 @@ class DemoSeeder extends Seeder
                 'name'       => 'Gudang ' . $data['farmName'],
                 'code'       => 'WH-' . $data['kode'],
                 'type'       => 'warehouse',
-                'status'     => 'Aktif',
+                'status'     => 'active',
                 'created_by' => $supervisor->id,
             ]);
 
@@ -360,7 +360,7 @@ class DemoSeeder extends Seeder
                     'kode'       => "K0{$i}-" . $data['kode'],
                     'nama'       => "Kandang {$i} - " . $data['farmName'],
                     'kapasitas'  => 20000,
-                    'status'     => 'Aktif',
+                    'status'     => 'active',
                     'created_by' => $supervisor->id,
                 ]);
             }
@@ -370,17 +370,15 @@ class DemoSeeder extends Seeder
 
     private function createFarmOperator()
     {
-        Farm::where('status','Aktif')->each(function ($farm) {
+        Farm::where('status', 'active')->each(function ($farm) {
             $supervisor = User::where('email', 'supervisor@demo.com')->first();
             $operator = User::where('email', 'operator@demo.com')->first();
 
             // Assign operator
             $farm->operators()->attach($operator);
-
         });
-
     }
-    
+
 
     private function createPurchases(Generator $faker)
     {
@@ -411,7 +409,7 @@ class DemoSeeder extends Seeder
 
     private function getSatuanBesar($categoryName)
     {
-        return match($categoryName) {
+        return match ($categoryName) {
             'DOC' => 'Ekor',
             'Pakan' => 'Kg',
             'Obat' => 'Butir',
@@ -423,7 +421,7 @@ class DemoSeeder extends Seeder
 
     private function getSatuanKecil($categoryName)
     {
-        return match($categoryName) {
+        return match ($categoryName) {
             'DOC' => 'Ekor',
             'Pakan' => 'Kg',
             'Obat' => 'Butir',
@@ -508,7 +506,7 @@ class DemoSeeder extends Seeder
     {
         if ($supervisor) {
             $supplier = Partner::where('type', 'Supplier')->inRandomOrder()->first();
-            $docItem = Item::whereHas('category', function($q) {
+            $docItem = Item::whereHas('category', function ($q) {
                 $q->where('name', 'DOC');
             })->first();
 
@@ -517,7 +515,7 @@ class DemoSeeder extends Seeder
             $tanggal = $faker->dateTimeBetween('-1 month', 'now');
             $batchNumber = $this->generateUniqueBatchNumber($tanggal);
 
-            
+
 
             // Create purchase transaction
             $purchase = TransaksiBeli::create([
@@ -535,7 +533,7 @@ class DemoSeeder extends Seeder
                 'terpakai' => 0,
                 'sisa' => $qty,
                 'notes' => 'Initial DOC Purchase',
-                'status' => 'Aktif',
+                'status' => 'active',
                 'created_by' => 3,
             ]);
 
@@ -556,7 +554,7 @@ class DemoSeeder extends Seeder
                 'satuan_besar' => $docItem->satuan_besar,
                 'satuan_kecil' => $docItem->satuan_kecil,
                 'konversi' => $docItem->konversi,
-                'status' => 'Aktif',
+                'status' => 'active',
                 'created_by' => 3,
             ]);
 
@@ -569,32 +567,32 @@ class DemoSeeder extends Seeder
                 'populasi_awal' => $qty,
                 'berat_awal' => $qty * 0.1,
                 'hpp' => $harga,
-                'status' => 'Aktif',
+                'status' => 'active',
                 'keterangan' => 'Initial DOC Purchase',
                 'created_by' => 3,
             ]);
 
-        // Add new code: Create transaksi_ternak record
-        TransaksiTernak::create([
-            'kelompok_ternak_id' => $ternak->id,
-            'jenis_transaksi' => 'Pembelian',
-            'tanggal' => $purchase->tanggal,
-            'farm_id' => $farm->id,
-            'kandang_id' => $kandang->id,
-            'quantity' => $qty,
-            'berat_total' => $qty * 0.1,
-            'berat_rata' => 0.1, // DOC average weight
-            'harga_satuan' => $harga,
-            'total_harga' => $qty * $harga,
-            'status' => 'Aktif',
-            'keterangan' => 'Pembelian DOC Batch ' . $ternak->name,
-            'created_by' => 3,
-        ]);
+            // Add new code: Create transaksi_ternak record
+            TransaksiTernak::create([
+                'kelompok_ternak_id' => $ternak->id,
+                'jenis_transaksi' => 'Pembelian',
+                'tanggal' => $purchase->tanggal,
+                'farm_id' => $farm->id,
+                'kandang_id' => $kandang->id,
+                'quantity' => $qty,
+                'berat_total' => $qty * 0.1,
+                'berat_rata' => 0.1, // DOC average weight
+                'harga_satuan' => $harga,
+                'total_harga' => $qty * $harga,
+                'status' => 'active',
+                'keterangan' => 'Pembelian DOC Batch ' . $ternak->name,
+                'created_by' => 3,
+            ]);
 
-        // Update purchase with kelompok_ternak_id
-        $purchase->update([
-            'kelompok_ternak_id' => $ternak->id
-        ]);
+            // Update purchase with kelompok_ternak_id
+            $purchase->update([
+                'kelompok_ternak_id' => $ternak->id
+            ]);
 
             // Create current ternak record
             CurrentTernak::create([
@@ -604,18 +602,18 @@ class DemoSeeder extends Seeder
                 'quantity' => $qty,
                 'berat_total' => $qty * 0.1,
                 'avg_berat' => 0.1,
-                'status' => 'Aktif',
+                'status' => 'active',
                 'created_by' => 3,
             ]);
 
-        // Update kandang
-        $kandang->update([
-            'jumlah' => $qty,
-            'berat' => $qty * 0.1,
-            'kelompok_ternak_id' => $ternak->id,
-            'status' => 'Digunakan',
-            'updated_by' => $supervisor->id,
-        ]);
+            // Update kandang
+            $kandang->update([
+                'jumlah' => $qty,
+                'berat' => $qty * 0.1,
+                'kelompok_ternak_id' => $ternak->id,
+                'status' => 'Digunakan',
+                'updated_by' => $supervisor->id,
+            ]);
         }
     }
 
@@ -653,7 +651,7 @@ class DemoSeeder extends Seeder
             'terpakai' => 0,
             'sisa' => $qty,
             'notes' => 'Purchase of ' . $item->name,
-            'status' => 'Aktif',
+            'status' => 'active',
             'created_by' => $operator->id,
         ]);
 
@@ -674,7 +672,7 @@ class DemoSeeder extends Seeder
             'satuan_besar' => $item->satuan_besar,
             'satuan_kecil' => $item->satuan_kecil,
             'konversi' => $item->konversi,
-            'status' => 'Aktif',
+            'status' => 'active',
             'created_by' => $operator->id,
         ]);
 
@@ -688,10 +686,10 @@ class DemoSeeder extends Seeder
             'reserved_quantity' => 0,
             'available_quantity' => $qty,
             'hpp' => $harga,
-            'status' => 'Aktif',
+            'status' => 'active',
             'created_by' => $operator->id,
         ]);
-        
+
         // Create stock movement record
         StockMovement::create([
             'transaksi_id' => $purchase->id,
