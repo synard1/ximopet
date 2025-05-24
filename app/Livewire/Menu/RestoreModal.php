@@ -34,7 +34,7 @@ class RestoreModal extends Component
         $backupDir = storage_path('app/backups/menus');
         $comparisonDir = storage_path('app/comparison_temp');
 
-        $backupFiles = [];
+        $backupFiles = collect();
 
         if (File::exists($backupDir)) {
             $files = File::files($backupDir);
@@ -69,6 +69,8 @@ class RestoreModal extends Component
                 ->sortByDesc('date')
                 ->values();
             Log::info('Successfully loaded comparison temp files', ['count' => count($comparisonFiles), 'directory' => $comparisonDir]);
+        } else {
+            Log::warning('Comparison temp directory not found', ['directory' => $comparisonDir]);
         }
 
         $this->backupFiles = $backupFiles->concat($comparisonFiles)->sortByDesc('date')->values()->toArray();
