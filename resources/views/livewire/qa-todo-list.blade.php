@@ -39,17 +39,26 @@
                 </div>
             </div>
 
-            @if (session()->has('message'))
-            <div class="alert alert-success">
-                {{ session('message') }}
+            {{-- Livewire-controlled Flash Message --}}
+            <div x-data="{ show: @entangle('flashMessage').live, message: @entangle('flashMessage').live, type: @entangle('flashMessageType').live }"
+                x-show="show" x-init="$watch('show', value => {
+                    if (value) {
+                        setTimeout(() => { show = false }, 5000);
+                        // Optional: Also hide the modal here if it's still open
+                        const modalElement = document.getElementById('todoModal');
+                        const modal = bootstrap.Modal.getInstance(modalElement);
+                        if (modal) {
+                            modal.hide();
+                        }
+                    }
+                })" x-transition:leave.duration.500ms class="alert alert-dismissible fade show" :class="{
+                    'alert-success': type === 'success',
+                    'alert-danger': type === 'error'
+                }" role="alert">
+                <span x-text="message"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"
+                    @click="show = false"></button>
             </div>
-            @endif
-
-            @if (session()->has('error'))
-            <div class="alert alert-danger">
-                {{ session('error') }}
-            </div>
-            @endif
 
             <div class="table-responsive">
                 <table class="table table-striped table-row-bordered table-row-gray-100 align-middle gs-0 gy-3">
@@ -85,7 +94,7 @@
                             </td>
                             <td>
                                 <select class="form-select form-select-sm"
-                                    wire:change="updateStatus({{ $todo->id }}, $event.target.value)">
+                                    wire:change="updateStatus('{{ $todo->id }}', $event.target.value)">
                                     @foreach($statuses as $status)
                                     <option value="{{ $status }}" {{ $todo->status === $status ? 'selected' : '' }}>
                                         {{ ucfirst(str_replace('_', ' ', $status)) }}
@@ -332,12 +341,27 @@
     @push('scripts')
     <script>
         document.addEventListener('livewire:initialized', function () {
+            // Auto close alerts after 5 seconds
+            const autoCloseAlerts = () => {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(alert => {
+                    setTimeout(() => {
+                        const bsAlert = new bootstrap.Alert(alert);
+                        bsAlert.close();
+                    }, 5000);
+                });
+            };
+
+            // Run on initial load
+            autoCloseAlerts();
+
+            // Run when Livewire updates
             Livewire.on('todoSaved', () => {
-                const modal = document.getElementById('todoModal');
-                const modalInstance = bootstrap.Modal.getInstance(modal);
-                if (modalInstance) {
-                    modalInstance.hide();
-                }
+                setTimeout(autoCloseAlerts, 100);
+            });
+
+            Livewire.on('error', () => {
+                setTimeout(autoCloseAlerts, 100);
             });
 
             // Listen for the 'error' event and display validation errors

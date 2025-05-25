@@ -39,6 +39,11 @@ class QaTodoList extends Component
     public $selectedTodoId = null;
     public $showComments = false;
 
+    // --- Properti untuk Flash Message ---
+    public $flashMessage = '';
+    public $flashMessageType = ''; // 'success' atau 'error'
+    // --- End Flash Message Properties ---
+
     protected $rules = [
         'module_name' => 'required|string|max:255',
         'feature_name' => 'required|string|max:255',
@@ -277,17 +282,50 @@ class QaTodoList extends Component
         }
     }
 
+    // public function updateStatus($id, $status)
+    // {
+    //     if (!Auth::user()->can('update qa-todo')) {
+    //         session()->flash('error', 'You do not have permission to update QA todo items.');
+    //         return;
+    //     }
+
+    //     $todoList = QaTodoListModel::findOrFail($id);
+    //     $todoList->update(['status' => $status]);
+    //     session()->flash('message', 'Status updated successfully.');
+    // }
+
+    // --- Ubah fungsi updateStatus Anda di sini ---
     public function updateStatus($id, $status)
     {
+        // Sesuaikan model name jika QaTodoListModel bukan nama yang benar
+        $todoList = QaTodoListModel::findOrFail($id);
+
+        // Pastikan izin diperiksa sebelum pembaruan
         if (!Auth::user()->can('update qa-todo')) {
-            session()->flash('error', 'You do not have permission to update QA todo items.');
+            $this->setFlashMessage('You do not have permission to update QA todo items.', 'error');
             return;
         }
 
-        $todoList = QaTodoListModel::findOrFail($id);
         $todoList->update(['status' => $status]);
-        session()->flash('message', 'Status updated successfully.');
+        $this->setFlashMessage('Status updated successfully.', 'success');
     }
+    // --- Akhir perubahan fungsi updateStatus ---
+
+    // --- Fungsi tambahan untuk Flash Message ---
+    public function setFlashMessage($message, $type)
+    {
+        $this->flashMessage = $message;
+        $this->flashMessageType = $type;
+        // Dispatch a browser event to trigger the JS for auto-closing
+        $this->dispatch('flash-message-shown', type: $type);
+    }
+
+    public function clearFlashMessage()
+    {
+        $this->flashMessage = '';
+        $this->flashMessageType = '';
+    }
+    // --- End Fungsi tambahan ---
 
     public function updatedSearch()
     {
