@@ -6,8 +6,8 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\StandarBobot;
-use App\Models\LivestockBreed;
-use App\Models\LivestockBreedStandard;
+use App\Models\LivestockStrain;
+use App\Models\LivestockStrainStandard;
 
 class BreedSeeder extends Seeder
 {
@@ -1137,27 +1137,27 @@ class BreedSeeder extends Seeder
             $breedName = $breedData['name'];
             $breedDescription = $breedData['description'];
             $data = $breedData['data'];
-        
-            // Check if breed already exists in LivestockBreed table
-            $existingBreed = LivestockBreed::where('name', $breedName)->first();
+
+            // Check if breed already exists in LivestockStrain table
+            $existingBreed = LivestockStrain::where('name', $breedName)->first();
             if ($existingBreed) {
                 $this->command->info("Breed '{$breedName}' already exists. Skipping standard data creation.");
                 continue; // Skip to the next breed
             }
-        
-            // Create LivestockBreed entry
-            $livestockBreed = LivestockBreed::create([
+
+            // Create LivestockStrain entry
+            $livestockStrain = LivestockStrain::create([
                 'name' => $breedName,
                 'description' => $breedDescription,
             ]);
-        
-            // Check if LivestockBreed creation was successful
-            if (!$livestockBreed) {
-                $this->command->error("Failed to create LivestockBreed entry for '{$breedName}'.");
+
+            // Check if LivestockStrain creation was successful
+            if (!$livestockStrain) {
+                $this->command->error("Failed to create LivestockStrain entry for '{$breedName}'.");
                 continue; // Skip to the next breed
             }
-        
-            // Transform data into the new JSON structure for LivestockBreedStandard
+
+            // Transform data into the new JSON structure for LivestockStrainStandard
             $standarData = [];
             foreach ($data as $age => $ageData) {
                 $standarData[] = [
@@ -1179,10 +1179,10 @@ class BreedSeeder extends Seeder
                     ]
                 ];
             }
-        
-            // Create a single record in LivestockBreedStandard with all data in JSON format
-            LivestockBreedStandard::create([
-                'livestock_breed_id' => $livestockBreed->id, // Use the newly created LivestockBreed ID
+
+            // Create a single record in LivestockStrainStandard with all data in JSON format
+            LivestockStrainStandard::create([
+                'livestock_strain_id' => $livestockStrain->id, // Use the newly created LivestockStrain ID
                 'breed' => $breedName,
                 'description' => $breedDescription,
                 'standar_data' => $standarData,
@@ -1190,8 +1190,8 @@ class BreedSeeder extends Seeder
                 'created_by' => $supervisor->id,
                 // 'updated_by' => $supervisor->id,
             ]);
-        
-            $this->command->info("Created LivestockBreed '{$breedName}' and standard weight data (ages 0-42).");
+
+            $this->command->info("Created LivestockStrain '{$breedName}' and standard weight data (ages 0-42).");
         }
         // foreach ($breeds as $breedData) {
         //     $breedName = $breedData['name'];
@@ -1199,7 +1199,7 @@ class BreedSeeder extends Seeder
         //     $data = $breedData['data'];
 
         //     // Check if breed already exists
-        //     $existingBreed = LivestockBreedStandard::where('breed', $breedName)->first();
+        //     $existingBreed = LivestockStrainStandard::where('breed', $breedName)->first();
         //     if ($existingBreed) {
         //         $this->command->info("Standard weight data for breed '{$breedName}' already exists. Skipping.");
         //         continue;
@@ -1229,8 +1229,8 @@ class BreedSeeder extends Seeder
         //     }
 
         //     // Create a single record with all data in JSON format
-        //     LivestockBreedStandard::create([
-        //         'livestock_breed_id' => $livestock_breed_id,
+        //     LivestockStrainStandard::create([
+        //         'livestock_strain_id' => $livestock_strain_id,
         //         'breed' => $breedName,
         //         'description' => $breedDescription,
         //         'standar_data' => $standarData,

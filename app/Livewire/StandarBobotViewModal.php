@@ -4,7 +4,7 @@ namespace App\Livewire;
 
 use Livewire\Component;
 // use App\Models\StandarBobot;
-use App\Models\LivestockBreedStandard as StandarBobot;
+use App\Models\LivestockStrainStandard as StandarBobot;
 
 
 class StandarBobotViewModal extends Component

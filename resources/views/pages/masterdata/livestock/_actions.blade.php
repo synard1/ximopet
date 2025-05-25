@@ -1,3 +1,4 @@
+@if(auth()->user()->canAny(['edit livestock management', 'read records management', 'read worker assignment']))
 <a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click"
     data-kt-menu-placement="bottom-end">
     Actions
@@ -15,20 +16,7 @@
         </a>
     </div>
     <!--end::Menu item-->
-
     @endif
-
-
-
-
-    {{--
-    <!--begin::Menu item-->
-    <div class="menu-item px-3">
-        <a href="#" class="menu-link px-3" data-ternak-id="{{ $livestock->id }}" data-kt-action="delete_row">
-            Delete
-        </a>
-    </div>
-    <!--end::Menu item--> --}}
 
     @can('read records management')
     <!--begin::Menu item-->
@@ -38,7 +26,6 @@
         </a>
     </div>
     <!--end::Menu item-->
-
     @endcan
 
     @can('read worker assignment')
@@ -51,11 +38,7 @@
     <!--end::Menu item-->
     @endcan
 
-
-
-
     @if($livestock->isLocked())
-
     <!--begin::Menu item-->
     <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" data-ternak-id="{{ $livestock->id }}" data-kt-action="update_detail">
@@ -63,7 +46,6 @@
         </a>
     </div>
     <!--end::Menu item-->
-
 
     <!--begin::Menu item-->
     <div class="menu-item px-3">
@@ -76,3 +58,4 @@
 
 </div>
 <!--end::Menu-->
+@endif

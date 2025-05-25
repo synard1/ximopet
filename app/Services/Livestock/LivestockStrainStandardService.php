@@ -8,25 +8,26 @@ use App\Models\FeedUsage;
 use App\Models\FeedUsageDetail;
 use App\Models\Livestock;
 use App\Models\Recording;
-use App\Models\LivestockBreedStandard;
+use App\Models\LivestockStrainStandard;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
-class LivestockBreedStandardService
+class LivestockStrainStandardService
 {
-    public function updateLivestockBreedStandard($data){
+    public function updateLivestockStrainStandard($data)
+    {
         try {
             DB::beginTransaction();
 
-            $standarBobot = LivestockBreedStandard::where('id', $data['livestock_breed_standard_id'])->first();
+            $standarBobot = LivestockStrainStandard::where('id', $data['livestock_strain_standard_id'])->first();
             $kelompokTernak = Livestock::findOrFail($data['livestock_id']);
 
             // Prepare the new data structure
             $newData = [
-                'livestock_breed_standard' => [
+                'livestock_strain_standard' => [
                     'id' => $standarBobot->id,
                     'name' => $standarBobot->breed ?? '',
                     'description' => $standarBobot->description ?? '',
@@ -38,8 +39,8 @@ class LivestockBreedStandardService
             $currentData = $kelompokTernak->data ?? [];
 
             // Remove any existing standar_bobot entries
-            $filteredData = array_filter($currentData, function($item) {
-                return !isset($item['livestock_breed_standard']);
+            $filteredData = array_filter($currentData, function ($item) {
+                return !isset($item['livestock_strain_standard']);
             });
 
             // Add the new standar_bobot data
@@ -51,7 +52,7 @@ class LivestockBreedStandardService
 
             DB::commit();
             Log::info("Updated Standar Bobot data for KelompokTernak ID: {$kelompokTernak->id} with new Standar Bobot ID: {$standarBobot->id}");
-            
+
             return response()->json(['message' => 'Kelompok Ternak updated successfully.']);
         } catch (\Exception $e) {
             DB::rollBack();

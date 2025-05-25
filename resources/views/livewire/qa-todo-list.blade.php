@@ -118,6 +118,10 @@
                                     wire:click="toggleComments('{{ $todo->id }}')">
                                     Comments
                                 </button>
+                                <button class="btn btn-sm btn-light-warning"
+                                    wire:click="confirmDuplicate('{{ $todo->id }}')">
+                                    Duplicate
+                                </button>
                             </td>
                         </tr>
                         @if($showComments && $selectedTodoId === $todo->id)
@@ -338,6 +342,40 @@
         </div>
     </div>
 
+    <!-- Duplicate Confirmation Modal -->
+    <div class="modal fade" id="duplicateModal" tabindex="-1" wire:ignore.self>
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Duplicate Todo Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to duplicate this todo item?</p>
+                    <div class="mb-3">
+                        <label class="form-label">New Module Name</label>
+                        <input type="text" class="form-control" wire:model="duplicateModuleName">
+                        @error('duplicateModuleName') <span class="text-danger">{{ $message }}</span> @enderror
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Feature Name</label>
+                        <input type="text" class="form-control" wire:model="duplicateFeatureName">
+                        @error('duplicateFeatureName') <span class="text-danger">{{ $message }}</span> @enderror
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" wire:click="duplicateConfirmed"
+                        wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="duplicateConfirmed">Duplicate</span>
+                        <span wire:loading wire:target="duplicateConfirmed"
+                            class="spinner-border spinner-border-sm"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @push('scripts')
     <script>
         document.addEventListener('livewire:initialized', function () {
@@ -426,6 +464,26 @@
                          Livewire.find('{{ $this->getId() }}').deleteCommentConfirmed(commentId);
                     }
                 });
+            });
+
+            // Listen for the confirmDuplicate event
+            Livewire.on('confirmDuplicate', (todoId) => {
+                const modal = new bootstrap.Modal(document.getElementById('duplicateModal'));
+                modal.show();
+            });
+
+            // Listen for modal close event
+            Livewire.on('closeModal', (modalId) => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
+                if (modal) {
+                    modal.hide();
+                }
+            });
+
+            // Listen for todoSaved event
+            Livewire.on('todoSaved', () => {
+                // Refresh the page data
+                Livewire.find('{{ $this->getId() }}').refresh();
             });
         });
     </script>

@@ -7,8 +7,8 @@ use App\Models\Livestock;
 use App\Models\LivestockBatch;
 use App\Models\Farm;
 use App\Models\Kandang;
-use App\Models\LivestockBreed;
-use App\Models\LivestockBreedStandard;
+use App\Models\LivestockStrain;
+use App\Models\LivestockStrainStandard;
 use App\Models\LivestockPurchase;
 use App\Models\LivestockPurchaseItem;
 use App\Models\CurrentLivestock;
@@ -17,7 +17,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use App\Services\Livestock\LivestockBreedStandardService;
+use App\Services\Livestock\LivestockStrainStandardService;
 
 class LivestockBatchSeeder extends Seeder
 {
@@ -27,7 +27,7 @@ class LivestockBatchSeeder extends Seeder
             DB::beginTransaction();
 
             // Initialize service
-            $livestockBreedStandardService = new LivestockBreedStandardService();
+            $livestockStrainStandardService = new LivestockStrainStandardService();
 
             // Get or create a test farm
             $farm = Farm::firstOrCreate(
@@ -61,7 +61,7 @@ class LivestockBatchSeeder extends Seeder
             );
 
             // Get or create a breed
-            $breed = LivestockBreed::firstOrCreate(
+            $breed = LivestockStrain::firstOrCreate(
                 ['name' => 'Broiler Test'],
                 [
                     'description' => 'Test Breed',
@@ -71,8 +71,8 @@ class LivestockBatchSeeder extends Seeder
             );
 
             // Get or create breed standard
-            $breedStandard = LivestockBreedStandard::firstOrCreate(
-                ['livestock_breed_id' => $breed->id],
+            $breedStandard = LivestockStrainStandard::firstOrCreate(
+                ['livestock_strain_id' => $breed->id],
                 [
                     'breed' => 'Broiler Test',
                     'description' => 'Test Standard',
@@ -110,8 +110,8 @@ class LivestockBatchSeeder extends Seeder
                 'kandang_id' => $kandang->id,
                 'name' => 'Test Livestock',
                 'breed' => 'Broiler Test',
-                'livestock_breed_id' => $breed->id,
-                'livestock_breed_standard_id' => $breedStandard->id,
+                'livestock_strain_id' => $breed->id,
+                'livestock_strain_standard_id' => $breedStandard->id,
                 'start_date' => Carbon::now(),
                 'populasi_awal' => 0, // Will be updated with total
                 'quantity_depletion' => 0,
@@ -171,8 +171,8 @@ class LivestockBatchSeeder extends Seeder
                     'livestock_id' => $livestock->id,
                     'farm_id' => $farm->id,
                     'kandang_id' => $kandang->id,
-                    'livestock_breed_id' => $breed->id,
-                    'livestock_breed_standard_id' => $breedStandard->id,
+                    'livestock_strain_id' => $breed->id,
+                    'livestock_strain_standard_id' => $breedStandard->id,
                     'name' => $batchData['name'],
                     'breed' => 'Broiler Test',
                     'start_date' => $batchData['tanggal'],
@@ -190,14 +190,14 @@ class LivestockBatchSeeder extends Seeder
 
                 // 4. Run service for batch
                 try {
-                    $livestockBreedStandardService->updateLivestockBreedStandard([
+                    $livestockStrainStandardService->updateLivestockStrainStandard([
                         'livestock_id' => $livestock->id,
                         'livestock_batch_id' => $batch->id,
-                        'livestock_breed_standard_id' => $breedStandard->id,
+                        'livestock_strain_standard_id' => $breedStandard->id,
                     ]);
-                    $this->command->info("LivestockBreedStandardService executed for {$batchData['name']} ID: {$batch->id}");
+                    $this->command->info("LivestockStrainStandardService executed for {$batchData['name']} ID: {$batch->id}");
                 } catch (\Exception $e) {
-                    $this->command->error("Failed to run LivestockBreedStandardService for {$batchData['name']} ID: {$batch->id}. Error: " . $e->getMessage());
+                    $this->command->error("Failed to run LivestockStrainStandardService for {$batchData['name']} ID: {$batch->id}. Error: " . $e->getMessage());
                     throw $e;
                 }
 

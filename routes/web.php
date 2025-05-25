@@ -163,6 +163,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Livestock Management
         Route::resource('/master/livestocks', LivestockController::class);
+        Route::resource('/master/livestock-standard', StandarBobotController::class);
         Route::resource('/master/ternaks', TernakController::class);
         Route::resource('/master/workers', WorkerController::class);
 

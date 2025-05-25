@@ -7,7 +7,7 @@ use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class LivestockBreedStandard extends BaseModel
+class LivestockStrainStandard extends BaseModel
 {
     use HasFactory, SoftDeletes, HasUuids;
 

@@ -12,8 +12,8 @@ return new class extends Migration {
         // Livestock (master ternak)
         Schema::create('livestocks', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('livestock_breed_id')->nullable(); // Add this!
-            $table->uuid('livestock_breed_standard_id')->nullable();
+            $table->uuid('livestock_strain_id')->nullable(); // Add this!
+            $table->uuid('livestock_strain_standard_id')->nullable();
             $table->uuid('farm_id');
             $table->uuid('kandang_id');
             $table->string('name'); //name for batch code / periode
@@ -40,8 +40,8 @@ return new class extends Migration {
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('kandang_id')->references('id')->on('master_kandangs');
-            $table->foreign('livestock_breed_id')->references('id')->on('livestock_breeds'); // Add this!
-            $table->foreign('livestock_breed_standard_id')->references('id')->on('livestock_breed_standards'); // Add this!
+            $table->foreign('livestock_strain_id')->references('id')->on('livestock_strains'); // Add this!
+            $table->foreign('livestock_strain_standard_id')->references('id')->on('livestock_strain_standards'); // Add this!
 
 
             $table->index(['id', 'start_date']);

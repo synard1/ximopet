@@ -2,7 +2,7 @@
 
 namespace App\DataTables;
 
-use App\Models\LivestockBreedStandard as StandarBobot;
+use App\Models\LivestockStrainStandard as StandarBobot;
 // use App\Models\StandarBobot;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
@@ -20,6 +20,7 @@ class StandarBobotDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+            ->addIndexColumn() // Add this line to include row numbers
             ->rawColumns(['standarBobot'])
             // ->editColumn('standarBobot', function (StandarBobot $standarBobot) {
             //     return view('pages/apps.standarBobot-management.standarBobots.columns._standarBobot', compact('standarBobot'));
@@ -64,7 +65,10 @@ class StandarBobotDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('id')->searchable(false),
+            Column::computed('DT_RowIndex', 'No.')
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
             Column::make('breed'),
             Column::make('description'),
             Column::make('status'),
@@ -73,7 +77,7 @@ class StandarBobotDataTable extends DataTable
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
+            // ->width(60)
         ];
     }
 

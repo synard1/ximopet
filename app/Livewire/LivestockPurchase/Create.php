@@ -26,7 +26,7 @@ use App\Models\LivestockPurchase;
 use App\Models\CurrentLivestock;
 use App\Models\LivestockBatch;
 use App\Models\Livestock;
-use App\Models\LivestockBreed;
+use App\Models\LivestockStrain;
 use App\Models\Kandang;
 use App\Models\LivestockPurchaseItem;
 
@@ -530,7 +530,7 @@ class Create extends Component
 
             // Process each item
             foreach ($this->items as $item) {
-                $breed = LivestockBreed::findOrFail($item['livestock_breed_id']);
+                $breed = LivestockStrain::findOrFail($item['livestock_breed_id']);
                 $farm = Farm::findOrFail($item['farm_id']);
                 $kandang = Kandang::findOrFail($item['kandang_id']);
 
@@ -663,7 +663,7 @@ class Create extends Component
 
     public function render()
     {
-        $breeds = LivestockBreed::active()->orderBy('name')->get();
+        $breeds = LivestockStrain::active()->orderBy('name')->get();
 
         // Get farms based on user role
         $user = auth()->user();

@@ -50,7 +50,7 @@ class LivestockBatch extends BaseModel
 
         static::creating(function ($model) {
             if (empty($model->data) && $model->livestock_breed_standard_id) {
-                $breedStandard = LivestockBreedStandard::find($model->livestock_breed_standard_id);
+                $breedStandard = LivestockStrainStandard::find($model->livestock_breed_standard_id);
                 if ($breedStandard) {
                     $model->data = [
                         'standar_data' => $breedStandard->standar_data,
@@ -84,14 +84,14 @@ class LivestockBatch extends BaseModel
         return $this->belongsTo(Kandang::class);
     }
 
-    public function livestockBreed()
+    public function livestockStrain()
     {
-        return $this->belongsTo(LivestockBreed::class);
+        return $this->belongsTo(LivestockStrain::class);
     }
 
-    public function livestockBreedStandard()
+    public function livestockStrainStandard()
     {
-        return $this->belongsTo(LivestockBreedStandard::class);
+        return $this->belongsTo(LivestockStrainStandard::class);
     }
 
     public function purchaseItem()

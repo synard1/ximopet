@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-        Schema::create('livestock_breeds', function (Blueprint $table) {
+        Schema::create('livestock_strains', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('name');           // Name of the livestock strain (e.g., "Broiler", "Layer", "Dairy")
             $table->text('description')->nullable(); // Optional: Description of the strain category
@@ -35,6 +35,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('livestock_breeds');
+        Schema::dropIfExists('livestock_strains');
     }
 };

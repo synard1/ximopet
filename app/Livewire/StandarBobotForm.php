@@ -4,7 +4,7 @@ namespace App\Livewire;
 
 use Livewire\Component;
 // use App\Models\StandarBobot;
-use App\Models\LivestockBreedStandard as StandarBobot;
+use App\Models\LivestockStrainStandard as StandarBobot;
 
 class StandarBobotForm extends Component
 {
@@ -68,7 +68,7 @@ class StandarBobotForm extends Component
         $this->dispatch('standarBobotEdit');
     }
 
-    
+
     // public function loadStandarBobot($standarBobotId)
     // {
     //     $standarBobot = StandarBobot::findOrFail($standarBobotId);
@@ -158,7 +158,6 @@ class StandarBobotForm extends Component
 
         session()->flash('message', 'Standard removed successfully.');
         $this->dispatch('success', 'Standard removed successfully');
-
     }
 
     public function saveStandard($index)

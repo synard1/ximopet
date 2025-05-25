@@ -38,6 +38,9 @@ class QaTodoList extends Component
     public $attachments = [];
     public $selectedTodoId = null;
     public $showComments = false;
+    public $duplicateModuleName;
+    public $duplicateFeatureName;
+    public $todoToDuplicate = null;
 
     // --- Properti untuk Flash Message ---
     public $flashMessage = '';
@@ -490,5 +493,64 @@ class QaTodoList extends Component
     public function refresh()
     {
         $this->resetPage();
+    }
+
+    public function confirmDuplicate($id)
+    {
+        if (!Auth::user()->can('create qa-todo')) {
+            session()->flash('error', 'You do not have permission to duplicate QA todo items.');
+            return;
+        }
+
+        try {
+            $todo = QaTodoListModel::findOrFail($id);
+            $this->todoToDuplicate = $todo;
+            $this->duplicateModuleName = $todo->module_name . ' (Copy)';
+            $this->duplicateFeatureName = $todo->feature_name . ' (Copy)';
+            $this->dispatch('confirmDuplicate', $id);
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error preparing todo item for duplication: ' . $e->getMessage());
+        }
+    }
+
+    public function duplicateConfirmed()
+    {
+        if (!Auth::user()->can('create qa-todo')) {
+            $this->setFlashMessage('You do not have permission to duplicate QA todo items.', 'error');
+            return;
+        }
+
+        try {
+            $this->validate([
+                'duplicateModuleName' => 'required|string|max:255',
+                'duplicateFeatureName' => 'required|string|max:255',
+            ]);
+
+            if (!$this->todoToDuplicate) {
+                throw new \Exception('No todo item selected for duplication.');
+            }
+
+            // Create new todo item with duplicated data
+            $newTodo = $this->todoToDuplicate->replicate();
+            $newTodo->module_name = $this->duplicateModuleName;
+            $newTodo->feature_name = $this->duplicateFeatureName;
+            $newTodo->status = 'pending';
+            $newTodo->created_by = Auth::id();
+            $newTodo->created_at = now();
+            $newTodo->updated_at = now();
+            $newTodo->save();
+
+            // Reset the form and close modal
+            $this->reset(['duplicateModuleName', 'duplicateFeatureName', 'todoToDuplicate']);
+
+            // Set success message
+            $this->setFlashMessage('QA todo item duplicated successfully.', 'success');
+
+            // Dispatch events for modal closing and refresh
+            $this->dispatch('closeModal', 'duplicateModal');
+            $this->dispatch('todoSaved');
+        } catch (\Exception $e) {
+            $this->setFlashMessage('Error duplicating todo item: ' . $e->getMessage(), 'error');
+        }
     }
 }

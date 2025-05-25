@@ -7,7 +7,7 @@ use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class LivestockBreed extends BaseModel
+class LivestockStrain extends BaseModel
 {
     use HasFactory, SoftDeletes, HasUuids;
 
@@ -26,7 +26,7 @@ class LivestockBreed extends BaseModel
 
     public function breedStandards()
     {
-        return $this->hasMany(LivestockBreedStandard::class);
+        return $this->hasMany(LivestockStrainStandard::class);
     }
 
     public function livestock()
