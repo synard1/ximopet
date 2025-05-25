@@ -18,6 +18,7 @@ return new class extends Migration
             $table->enum('status', ['pending', 'in_progress', 'completed', 'blocked'])->default('pending');
             $table->foreignId('assigned_to')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('url')->nullable();
             $table->date('due_date')->nullable();
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('created_by');

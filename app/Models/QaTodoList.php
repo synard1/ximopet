@@ -22,6 +22,7 @@ class QaTodoList extends BaseModel
         'assigned_to',
         'reviewed_by',
         'created_by',
+        'url',
         'due_date',
         'notes'
     ];

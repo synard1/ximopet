@@ -320,6 +320,12 @@
                                 @error('due_date') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
 
+                            <div class="col-md-6">
+                                <label class="form-label">URL</label>
+                                <input type="text" class="form-control" wire:model="url" placeholder="Enter URL">
+                                @error('url') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div>
+
                             <div class="col-md-12">
                                 <label class="form-label">Notes</label>
                                 <textarea class="form-control" wire:model="notes" rows="3"

@@ -27,6 +27,7 @@ class QaTodoList extends Component
     public $status = 'pending';
     public $assigned_to;
     public $reviewed_by;
+    public $url;
     public $due_date;
     public $notes;
     public $editingId;
@@ -57,6 +58,7 @@ class QaTodoList extends Component
         'assigned_to' => 'nullable|exists:users,id',
         'reviewed_by' => 'nullable|exists:users,id',
         'due_date' => 'nullable|date',
+        'url' => 'nullable|string|max:255',
         'notes' => 'nullable|string',
         // 'comment' => 'required|string|min:1',
         // 'attachments.*' => 'nullable|image|max:2048'
@@ -129,6 +131,7 @@ class QaTodoList extends Component
                 'reviewed_by' => $this->reviewed_by,
                 'due_date' => $this->due_date,
                 'notes' => $this->notes,
+                'url' => $this->url,
             ];
 
             // Save or update
