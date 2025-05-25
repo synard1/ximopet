@@ -16,7 +16,7 @@
                         <select id="farms" wire:model="selectedFarm" class="js-select2 form-control">
                             <option value="">=== Pilih Farm ===</option>
                             @foreach($farms as $farm)
-                            <option value="{{ $farm->id }}">{{ $farm->nama }}</option>
+                            <option value="{{ $farm->id }}">{{ $farm->name }}</option>
                             @endforeach
                         </select>
                         <!--end::Select2-->
@@ -39,7 +39,8 @@
                         @error('selectedOperator') <span class="text-danger error">{{ $message }}</span>@enderror
                     </div>
 
-                    {{-- <!--begin::Input group-->
+                    {{--
+                    <!--begin::Input group-->
                     <div class="fv-row mb-7">
                         <!--begin::Label-->
                         <label class="required fw-semibold fs-6 mb-2">Status</label>
@@ -101,7 +102,7 @@
                         data.farms.forEach(farm => {
                             const option = document.createElement('option');
                             option.value = farm.id;
-                            option.text = farm.nama;
+                            option.text = farm.name;
                             farmSelect.appendChild(option);
                         });
                     }

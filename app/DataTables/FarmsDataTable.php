@@ -24,10 +24,10 @@ class FarmsDataTable extends DataTable
             ->editColumn('name', function (Farm $farm) {
                 return '<a href="#" class="farm-detail" data-farm-id="' . $farm->id . '">' . $farm->name . '</a>';
             })
-            ->addColumn('kapasitas', function (Farm $farm) {
-                $jumlah = Kandang::where('farm_id', $farm->id)->sum('kapasitas');
-                return $jumlah;
-            })
+            // ->addColumn('kapasitas', function (Farm $farm) {
+            //     $jumlah = Kandang::where('farm_id', $farm->id)->sum('kapasitas');
+            //     return $jumlah;
+            // })
             ->editColumn('created_at', function (Farm $farm) {
                 return $farm->created_at->format('d M Y, h:i a');
             })
@@ -84,7 +84,7 @@ class FarmsDataTable extends DataTable
             Column::make('address')->visible(false),
             Column::make('phone_number')->visible(false),
             Column::make('contact_person')->visible(false),
-            Column::computed('capacity'),
+            // Column::computed('capacity'),
             Column::make('status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
             Column::computed('action')

@@ -28,6 +28,9 @@ class KandangsDataTable extends DataTable
             ->editColumn('jumlah', function (Kandang $kandang) {
                 return intval($kandang->jumlah)  ?? '';
             })
+            ->editColumn('kapasitas', function (Kandang $kandang) {
+                return intval($kandang->kapasitas)  ?? '';
+            })
             ->editColumn('berat', function (Kandang $kandang) {
                 $beratGram = floatval($kandang->berat);
                 if ($beratGram >= 1000000) {

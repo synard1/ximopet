@@ -157,6 +157,8 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::post('/', [TernakController::class, 'getDataAjax']);
     });
 
+    Route::get('/get-operators/{farm}', [AppApi::class, 'getOperators']);
+
     // Transaction Routes
     Route::prefix('transactions')->group(function () {
         Route::post('/', [TransaksiController::class, 'getTransaksi']);

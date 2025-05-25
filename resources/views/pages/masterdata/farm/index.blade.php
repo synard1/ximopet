@@ -7,6 +7,7 @@
     @section('breadcrumbs')
     @endsection
     <div class="card">
+        {{--
         <!--begin::Card header-->
         <div class="card-header border-0 pt-6">
             <!--begin::Card title-->
@@ -32,7 +33,7 @@
             <!--end::Card toolbar-->
 
         </div>
-        <!--end::Card header-->
+        <!--end::Card header--> --}}
 
         <div class="card-body py-4">
             <ul class="nav nav-tabs nav-line-tabs mb-5 fs-6">
@@ -41,7 +42,7 @@
                     <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_farm">Data Farm</a>
                 </li>
                 @endif
-                @if(auth()->user()->hasAllPermissions(['access farm management', 'read farm operator']))
+                @if(auth()->user()->can('read operator assignment'))
                 <li class="nav-item">
                     <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_operator">Data Operator</a>
                 </li>
@@ -55,10 +56,35 @@
 
             <div class="tab-content" id="myTabContent">
                 <div class="tab-pane fade show active" id="kt_tab_farm" role="tabpanel">
-                    <div class="card-body py-4">
-                        <div class="table-responsive">
-                            {!! $dataTable->table(['class' => 'table table-striped table-row-bordered gy-5 gs-7'], true)
-                            !!}
+                    <div class="card">
+                        <div class="card-header border-0 pt-6">
+                            <div class="card-title">
+                                {{-- <div class="d-flex align-items-center position-relative my-1">
+                                    {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
+                                    <input type="text" data-kt-user-table-filter="search"
+                                        class="form-control form-control-solid w-250px ps-13"
+                                        placeholder="Cari Operator" id="mySearchInput2" />
+                                </div> --}}
+                            </div>
+                            <!--begin::Toolbar-->
+                            <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
+                                @if (auth()->user()->can('create farm management'))
+                                <!--begin::Add user-->
+                                <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('create')">
+                                    {!! getIcon('plus', 'fs-2', '', 'i') !!}
+                                    Tambah Data
+                                </button>
+                                <!--end::Add user-->
+                                @endif
+                            </div>
+                            <!--end::Toolbar-->
+                        </div>
+                        <div class="card-body py-4">
+                            <div class="table-responsive">
+                                {!! $dataTable->table(['class' => 'table table-striped table-row-bordered gy-5 gs-7'],
+                                true)
+                                !!}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -76,11 +102,13 @@
                         </div>
                         <div class="card-toolbar">
                             <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
+                                @if (auth()->user()->can('create operator assignment'))
                                 <button type="button" class="btn btn-primary" data-bs-toggle="modal"
                                     data-bs-target="#kt_modal_tambah_operator_farm">
                                     {!! getIcon('plus', 'fs-2', '', 'i') !!}
                                     Tambah Petugas Operator
                                 </button>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -143,8 +171,9 @@
     </div>
     @if(auth()->user()->hasRole(['Manager']))
     @else
-    {{--
+
     <livewire:master-data.tambah-operator-farm />
+    {{--
     <livewire:master-data.tambah-storage-farm /> --}}
     @include('pages.masterdata.farm._related_data_modal')
     @endif
@@ -244,7 +273,10 @@
                         { data: 'nama_operator' },
                         { data: 'email' },
                         { data: null, orderable: false, searchable: false, render: function (data, type, row) {
-                            return `<button class="btn btn-sm btn-danger" onclick="deleteOperator('${row.user_id}','${row.farm_id}')">Delete</button>`;
+                            if ('{{ auth()->user()->can('delete operator assignment') }}') {
+                                return `<button class="btn btn-sm btn-danger" onclick="deleteOperator('${row.user_id}','${row.farm_id}')">Delete</button>`;
+                            }
+                            return '';
                         }}
                     ],
                     error: function (xhr, error, thrown) {

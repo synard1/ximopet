@@ -92,7 +92,7 @@ class KandangForm extends Component
         $rules = [
             'farm_id' => 'required',
             'nama' => 'required|string|max:255',
-            'kapasitas' => 'required|numeric|min:1',
+            'kapasitas' => 'required|integer|min:1',
             'status' => 'required|in:active,Nonaktif'
         ];
 
@@ -162,7 +162,7 @@ class KandangForm extends Component
         $this->farm_id = $kandang->farm_id;
         $this->kode = $kandang->kode;
         $this->nama = $kandang->nama;
-        $this->kapasitas = $kandang->kapasitas;
+        $this->kapasitas = intval($kandang->kapasitas);
         $this->status = $kandang->status;
 
         $this->openModal();

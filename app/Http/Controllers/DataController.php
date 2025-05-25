@@ -64,33 +64,32 @@ class DataController extends Controller
                 } else {
                     return response()->json(['error' => 'Unauthorized'], 403);
                 }
-            } elseif($type === 'items'){
+            } elseif ($type === 'items') {
                 if ($submodul && $submodul === 'location') {
                     if ($task === 'GET') {
                         $data = $this->getItemLocationMapping();
                     }
-                }else{
+                } else {
                     if ($task === 'GET') {
                         $data = $this->getActiveItems();
                     }
                 }
-            } elseif($type === 'farms'){
+            } elseif ($type === 'farms') {
                 if ($submodul && $submodul === 'items_mapping') {
                     if ($task === 'GET') {
                         $farmId = $request->input('farm_id');
                         $data = $this->getItemsNotInLocation($farmId);
-                    }elseif ($task === 'ADD') {
+                    } elseif ($task === 'ADD') {
                         // dd($request->all());
                         return $this->storeItemLocationMapping($request);
-
                     } elseif ($task === 'DELETE') {
                         $id = $request->input('id');
                         return $this->deleteStorageMapping($id);
                     }
-                }elseif ($submodul && $submodul === 'location') {
+                } elseif ($submodul && $submodul === 'location') {
                     $farmId = $request->input('farm_id');
                     $data = $this->getFarmStorage($farmId);
-                }else{
+                } else {
                     $data = $this->getActiveFarms();
                 }
                 // dd($request->all());
@@ -128,7 +127,7 @@ class DataController extends Controller
                 } else {
                     return response()->json(['error' => 'Unauthorized'], 403);
                 }
-            }elseif ($submodul && $submodul === 'details') {
+            } elseif ($submodul && $submodul === 'details') {
                 if ($task === 'GET') {
                     $farmId = $request->input('farm_id');
                     $data = $this->getFarmDetails($farmId);
@@ -136,25 +135,25 @@ class DataController extends Controller
                         return response()->json($data, 404);
                     }
                 }
-            } elseif($type === 'items'){
+            } elseif ($type === 'items') {
                 if ($submodul && $submodul === 'location') {
                     if ($task === 'GET') {
                         $data = $this->getItemLocationMapping();
                     }
-                }else{
+                } else {
                     if ($task === 'GET') {
                         $data = $this->getActiveItems();
                     }
                 }
-            }elseif($type === 'farms'){
+            } elseif ($type === 'farms') {
                 if ($submodul && $submodul === 'location') {
                     $farmId = $request->input('farm_id');
                     $data = $this->getFarmStorage($farmId);
-                }else{
+                } else {
                     $data = $this->getActiveFarms();
                 }
-            }elseif($type === 'ternaks'){
-                    $data = $this->getActiveTernaks();
+            } elseif ($type === 'ternaks') {
+                $data = $this->getActiveTernaks();
             }
         } else {
             return response()->json(['error' => 'Unauthorized'], 403);
@@ -166,7 +165,7 @@ class DataController extends Controller
     public function getItemLocationMapping()
     {
         $data = ItemLocation::with(['item:id,name', 'farm:id,nama', 'location:id,name'])
-            ->get(['id', 'item_id','farm_id', 'location_id']);
+            ->get(['id', 'item_id', 'farm_id', 'location_id']);
 
         $formattedData = $data->map(function ($mapping) {
             return [
@@ -180,7 +179,7 @@ class DataController extends Controller
         return $formattedData;
     }
 
-    
+
 
     public function getFarmStocks($farmId)
     {
@@ -223,7 +222,7 @@ class DataController extends Controller
         // Skip If Quantity 0
         $currentStocks = CurrentStock::whereHas('inventoryLocation', function ($query) use ($farmId) {
             $query->where('farm_id', $farmId);
-        })->where('quantity','>',0)->get();
+        })->where('quantity', '>', 0)->get();
 
         // $currentTernak = CurrentTernak::where('farm_id', $farmId)->get();
 
@@ -242,32 +241,32 @@ class DataController extends Controller
         $kandangs = Kandang::whereHas('kelompokTernak', function ($query) {
             $query->where('status', 'Aktif');
         })
-        ->where('farm_id', $farmId)
-        ->where('status', 'Digunakan')
-        ->with(['kelompokTernak' => function ($query) {
-            $query->select('id', 'start_date')->where('status', 'Aktif');
-        }])
-        ->get(['id', 'nama','kelompok_ternak_id'])
-        ->map(function ($kandang) {
-            return [
-                'id' => $kandang->id,
-                'nama' => $kandang->nama,
-                'start_date' => $kandang->kelompokTernak && $kandang->kelompokTernak->first()
-                    ? $kandang->kelompokTernak->first()->start_date 
-                    : null,
-            ];
-        });
+            ->where('farm_id', $farmId)
+            ->where('status', 'Digunakan')
+            ->with(['kelompokTernak' => function ($query) {
+                $query->select('id', 'start_date')->where('status', 'Aktif');
+            }])
+            ->get(['id', 'nama', 'kelompok_ternak_id'])
+            ->map(function ($kandang) {
+                return [
+                    'id' => $kandang->id,
+                    'nama' => $kandang->nama,
+                    'start_date' => $kandang->kelompokTernak && $kandang->kelompokTernak->first()
+                        ? $kandang->kelompokTernak->first()->start_date
+                        : null,
+                ];
+            });
 
         $result = [
             'stock' => $formattedStocks,
             'parameter' => ['oldestDate' => $oldestDate],
             'kandangs' => $kandangs
         ];
-    
+
         if ($formattedStocks->isEmpty()) {
-            $result['error'] = trans('menu.no_inventory_stock_farm',[],'id');
+            $result['error'] = trans('menu.no_inventory_stock_farm', [], 'id');
         }
-    
+
         return $result;
     }
 
@@ -283,14 +282,14 @@ class DataController extends Controller
     public function getFarmOperator()
     {
         $data = FarmOperator::with('user:id,name,email')
-                ->get(['farm_id', 'user_id']);
+            ->get(['farm_id', 'user_id']);
 
         // Extract the 'nama' from the 'farm' relationship
         $data = $data->map(function ($farmOperator) {
             return [
                 'farm_id' => $farmOperator->farm_id,
                 'user_id' => $farmOperator->user_id,
-                'nama_farm' => $farmOperator->farm ? $farmOperator->farm->nama : 'N/A',
+                'nama_farm' => $farmOperator->farm ? $farmOperator->farm->name : 'N/A',
                 'nama_operator' => $farmOperator->user ? $farmOperator->user->name : 'N/A',
                 'email' => $farmOperator->user ? $farmOperator->user->email : 'N/A',
             ];
@@ -354,8 +353,8 @@ class DataController extends Controller
         dd('aa');
         $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
         $farms = Farm::whereIn('id', $farmIds)->get(['id', 'name']);
-        
-        $activeTernaks = KelompokTernak::where('status', 'Aktif')->orWhere('status','Locked')->get(['id', 'name','populasi_awal']);
+
+        $activeTernaks = KelompokTernak::where('status', 'Aktif')->orWhere('status', 'Locked')->get(['id', 'name', 'populasi_awal']);
 
         return $activeItems->map(function ($item) {
             return [
@@ -515,7 +514,7 @@ class DataController extends Controller
 
         $request->validate([
             'item_select' => 'required|array',
-            'item_select.*' => 'exists:items,id',            
+            'item_select.*' => 'exists:items,id',
             'farm_select' => 'required|exists:farms,id',
             'location_select' => 'required|exists:inventory_locations,id',
         ]);
@@ -524,9 +523,9 @@ class DataController extends Controller
             $itemIds = $request->item_select;
             $farmId = $request->farm_select;
             $locationId = $request->location_select;
-    
+
             $createdMappings = [];
-    
+
             foreach ($itemIds as $itemId) {
                 $itemLocation = ItemLocation::updateOrCreate(
                     [
@@ -535,10 +534,10 @@ class DataController extends Controller
                     ],
                     ['location_id' => $locationId]
                 );
-    
+
                 $createdMappings[] = $itemLocation;
             }
-    
+
             return response()->json([
                 'message' => 'Item location mappings saved successfully',
                 'data' => $createdMappings
@@ -569,7 +568,7 @@ class DataController extends Controller
     {
         try {
             $itemLocation = ItemLocation::findOrFail($id);
-            
+
             // Check if the item location mapping exists
             if (!$itemLocation) {
                 return response()->json(['error' => 'Item location mapping not found'], 404);
@@ -577,8 +576,8 @@ class DataController extends Controller
 
             // Check if there's related data in CurrentStock
             $hasCurrentStock = CurrentStock::where('item_id', $itemLocation->item_id)
-            ->where('location_id', $itemLocation->location_id)
-            ->exists();
+                ->where('location_id', $itemLocation->location_id)
+                ->exists();
 
             if ($hasCurrentStock) {
                 return response()->json(['error' => 'Cannot delete mapping. There is current stock associated with this item and location.'], 400);
@@ -629,7 +628,7 @@ class DataController extends Controller
         //
     }
 
-    public function transaksi(Request $request, $type =null)
+    public function transaksi(Request $request, $type = null)
     {
         $bentuk = $request->bentuk;
         // $status = $request->status;
@@ -647,7 +646,7 @@ class DataController extends Controller
             $formattedDate = "{$matches[3]}-{$matches[2]}-{$matches[1]}";
         }
 
-        if($task == 'UPDATE'){
+        if ($task == 'UPDATE') {
             // dd($request->all());
             // Update Detail Items
             $transaksiDetail = TransaksiHarian::findOrFail($id);
@@ -667,7 +666,7 @@ class DataController extends Controller
                 ], 404);
             }
 
-        
+
             $oldValue = $transaksiDetail->quantity;
             $difference = $value - $oldValue;
 
@@ -675,13 +674,13 @@ class DataController extends Controller
                 $ternakMati = KematianTernak::where('kelompok_ternak_id', $transaksiDetail->kelompok_ternak_id)
                     ->whereDate('tanggal', $formattedDate)
                     ->first();
-            
+
                 if ($ternakMati) {
                     $ternakMati->update([
                         'quantity' => $value,
                         'updated_by' => auth()->user()->id,
                     ]);
-            
+
                     // Update the related TransaksiHarian detail
                     $transaksiDetail->update([
                         'quantity' => $value
@@ -689,7 +688,7 @@ class DataController extends Controller
 
                     $currentTernak->decrement('quantity', $difference);
 
-            
+
                     return response()->json([
                         'message' => 'Data kematian ternak berhasil diupdate',
                         'status' => 'success',
@@ -701,17 +700,17 @@ class DataController extends Controller
                         'status' => 'error'
                     ], 404);
                 }
-            }elseif ($category == 'Afkir') {
+            } elseif ($category == 'Afkir') {
                 $ternakAfkir = TernakAfkir::where('kelompok_ternak_id', $transaksiDetail->kelompok_ternak_id)
                     ->whereDate('tanggal', $formattedDate)
                     ->first();
-            
+
                 if ($ternakAfkir) {
                     $ternakAfkir->update([
                         'jumlah' => $value,
                         'updated_by' => auth()->user()->id,
                     ]);
-            
+
                     // Update the related TransaksiHarian detail
                     $transaksiDetail->update([
                         'quantity' => $value
@@ -719,7 +718,7 @@ class DataController extends Controller
 
                     $currentTernak->decrement('quantity', $difference);
 
-            
+
                     return response()->json([
                         'message' => 'Data ternak afkir berhasil diupdate',
                         'status' => 'success',
@@ -731,17 +730,17 @@ class DataController extends Controller
                         'status' => 'error'
                     ], 404);
                 }
-            }elseif ($category == 'Jual') {
+            } elseif ($category == 'Jual') {
                 $ternakJual = TernakJual::where('kelompok_ternak_id', $transaksiDetail->kelompok_ternak_id)
                     ->whereDate('tanggal', $formattedDate)
                     ->first();
-            
+
                 if ($ternakJual) {
                     $ternakJual->update([
                         'quantity' => $value,
                         'updated_by' => auth()->user()->id,
                     ]);
-            
+
                     // Update the related TransaksiHarian detail
                     $transaksiDetail->update([
                         'quantity' => $value
@@ -749,7 +748,7 @@ class DataController extends Controller
 
                     $currentTernak->decrement('quantity', $difference);
 
-            
+
                     return response()->json([
                         'message' => 'Data ternak jual berhasil diupdate',
                         'status' => 'success',
@@ -776,8 +775,8 @@ class DataController extends Controller
             //     );
             // }
 
-            return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success' ]);
-        }elseif($task == 'READ'){
+            return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success']);
+        } elseif ($task == 'READ') {
             // Refactored READ logic
             $transaction = TransaksiHarian::with([
                 'details',
@@ -855,9 +854,7 @@ class DataController extends Controller
             }
 
             return response()->json(['data' => $data]);
-    
         }
-
     }
     // public function transaksi(Request $request, $type =null)
     // {
@@ -905,7 +902,7 @@ class DataController extends Controller
     //         ->get()
     //         ->map(function ($transaction) {
     //             return $transaction->details->map(function ($detail) use ($transaction) {
-                    
+
     //                 return [
     //                     'nama' => $detail->item->name ?? 'N/A',
     //                     'kategori' => $detail->item->category->name ?? 'N/A',

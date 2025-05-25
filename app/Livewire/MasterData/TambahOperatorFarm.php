@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Permission;
 
 class TambahOperatorFarm extends Component
 {
@@ -16,132 +17,81 @@ class TambahOperatorFarm extends Component
     public $id, $farms, $nama_farm, $status;
     public $selectedFarm;
     public $selectedOperator;
-    // Initialize $operators as an empty collection
     public $operators = [];
 
     protected $rules = [
-        'selectedFarm' => 'required', // Unique except on update
-        'farms' => 'required', // Unique except on update
+        'selectedFarm' => 'required',
+        'farms' => 'required',
         'selectedOperator' => 'required',
-        // 'status' => 'required',
     ];
 
     public function mount()
     {
-        // Get all available farms
-        $this->farms = Farm::where('status', 'Aktif')->get();
+        // Check if user has permission to read operator assignments
+        // if (!auth()->user()->can('read operator assignments')) {
+        //     abort(403, 'Unauthorized action.');
+        // }
 
+        $this->farms = Farm::where('status', 'active')->get();
         $this->operators = User::role('Operator')->pluck('name', 'id');
     }
 
     public function render()
     {
+        // Check if user has permission to read operator assignments
+        // if (!auth()->user()->can('read operator assignments')) {
+        //     abort(403, 'Unauthorized action.');
+        // }
+
         return view('livewire.master-data.tambah-operator-farm');
     }
 
-    // public function updatedSelectedFarm()
-    // {
-    //     // Load operators that DON'T belong to the selected farm
-    //     $this->operators = User::role('Operator') // Get users with 'Operator' role
-    //         ->whereDoesntHave('farmOperators', function ($query) {
-    //             $query->where('farm_id', $this->selectedFarm);
-    //         })
-    //         ->pluck('name', 'id');
-
-    //     $this->emit('refresh-operator-select'); // Signal to frontend to re-render Choices.js select
-    // }
-
     public function storeFarmOperator()
     {
-        $this->validate(); 
+        // Check if user has permission to create operator assignments
+        if (!auth()->user()->can('create operator assignments')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $this->validate();
+
+        try {
+            DB::beginTransaction();
 
             $farm = Farm::where('id', $this->selectedFarm)->first();
             $user = User::where('id', $this->selectedOperator)->first();
-        
-            // Prepare the data for creating/updating the supplier
+
+            if (!$farm || !$user) {
+                throw new \Exception('Farm or Operator not found');
+            }
+
+            // Check if operator is already assigned to this farm
+            $existingAssignment = FarmOperator::where('farm_id', $this->selectedFarm)
+                ->where('user_id', $this->selectedOperator)
+                ->first();
+
+            if ($existingAssignment) {
+                throw new \Exception('Operator is already assigned to this farm');
+            }
+
             $data = [
                 'farm_id' => $this->selectedFarm,
-                // 'nama_farm' => $farm->nama,
                 'user_id' => $user->id,
-                // 'nama_operator' => $user->name,
-                // 'status' => $this->status,
             ];
 
-            // dd($data);
-        
             $farmOperator = FarmOperator::create($data);
-        // try {
-        // //     // Validate the form input data
-        //     // $this->validate(); 
-        
-        // //     // Wrap database operation in a transaction (if applicable)
-        //     DB::beginTransaction();
 
-        //     $farm = Farm::where('id', $this->selectedFarm)->first();
-        //     $user = User::where('id', $this->selectedOperator)->first();
-        
-        //     // Prepare the data for creating/updating the supplier
-        //     $data = [
-        //         'farm_id' => $this->selectedFarm,
-        //         'nama_farm' => $farm->nama,
-        //         'nama_operator' => $user->name,
-        //         'status' => 'Aktif',
-        //     ];
+            DB::commit();
 
-        //     // dd($data);
-        
-        //     $farmOperator = FarmOperator::where('id', $this->id)->first() ?? FarmOperator::create($data);
-
-        // //     // Log::info("Edit mode ID: " .  $this->supplier_id);
-        
-        // //     // // Handle update logic (if applicable)
-        // //     // if ($this->edit_mode) {
-                
-        // //     //     $this->dispatch('error', 'Terjadi kesalahan saat update data. ');
-        // //     //     // Update the existing supplier
-        // //     //     $rekanan->update($data);
-        // //     // } else {
-        // //     //     // Create a new supplier (already done above with Rekanan::create($data))
-        // //     // }
-        
-        //     DB::commit();
-    
-        //     // Emit success event if no errors occurred
-        //     $this->dispatch('success', 'Datag berhasil ditambahkan');
-        // } catch (ValidationException $e) {
-        //     $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
-        //     $this->setErrorBag($e->validator->errors());
-        // } catch (\Exception $e) {
-        //     DB::rollBack();
-    
-        //     // Handle validation and general errors
-        //     $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ');
-        //     // Optionally log the error: Log::error($e->getMessage());
-        // } finally {
-        //     // Reset the form in all cases to prepare for new data
-        //     // $this->reset();
-        // }
-
-        if($farmOperator){
             $this->dispatch('success', __('Data Operator Berhasil Ditambahkan'));
-
-        }else{
-                $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ');
-
+            $this->reset(['selectedFarm', 'selectedOperator']);
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
+            $this->setErrorBag($e->validator->errors());
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->dispatch('error', $e->getMessage());
         }
-
-        //     } catch (\Throwable $th) {
-        //         //throw $th;
-        //         // Handle validation and general errors
-        // }
-
-        // $this->validate();
-
-        // // session()->flash('message', $this->nama ? 'Contact updated successfully.' : 'Contact created successfully.');
-        
-        // // Emit a success event with a message
-
-        // $this->closeModalSupplier();
-        // $this->resetInputFields();
     }
 }

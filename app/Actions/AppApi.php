@@ -94,8 +94,8 @@ class AppApi
         $options = TransaksiBeliDetail::with(['items' => function ($query) {
             $query->select('id', 'satuan_besar', 'satuan_kecil', 'konversi');
         }])
-        ->where('transaksi_id', $id)
-        ->get(['id', 'jenis', 'jenis_barang', 'item_id', 'item_name', 'qty', 'terpakai', 'sisa', 'harga', 'sub_total']);
+            ->where('transaksi_id', $id)
+            ->get(['id', 'jenis', 'jenis_barang', 'item_id', 'item_name', 'qty', 'terpakai', 'sisa', 'harga', 'sub_total']);
 
         $formattedOptions = $options->map(function ($item) {
             if ($item->items) {
@@ -125,9 +125,9 @@ class AppApi
             $item->harga = floatval($item->harga);
             // $item->sub_total = floatval($item->sub_total);
 
-            if(config('xolution.ALLOW_ROUNDUP_PRICE') == true){
+            if (config('xolution.ALLOW_ROUNDUP_PRICE') == true) {
                 $item->sub_total = floatval($item->sub_total);
-            }else{
+            } else {
                 $item->sub_total = intval($item->sub_total);
             }
 
@@ -136,40 +136,40 @@ class AppApi
 
         return response()->json(['data' => $formattedOptions]);
     }
-    
+
     public function getTransaksiDetail($id)
     {
         // $options = TransaksiDetail::where('transaksi_id', $id)->get(['id','jenis','jenis_barang','item_nama','qty','terpakai', 'sisa', 'harga','sub_total']);
         // Gunakan eager loading untuk mengambil data terkait dari model items
         $options = TransaksiDetail::with(['items' => function ($query) {
-            $query->select('id', 'satuan_besar', 'satuan_kecil','konversi');
+            $query->select('id', 'satuan_besar', 'satuan_kecil', 'konversi');
         }])
-        ->where('transaksi_id', $id)
-        ->get(['id','jenis','jenis_barang','item_id','item_name','qty','terpakai', 'sisa', 'harga','sub_total']);
+            ->where('transaksi_id', $id)
+            ->get(['id', 'jenis', 'jenis_barang', 'item_id', 'item_name', 'qty', 'terpakai', 'sisa', 'harga', 'sub_total']);
 
         // Map over the collection to calculate the 'sisa' field and include satuan data
         $formattedOptions = $options->map(function ($item) {
 
-        // Pastikan relasi 'items' ada sebelum mengakses propertinya
-        if ($item->items) {
-            // $item->qty = number_format(($item->qty / $item->items->konversi), 3);
-            $item->qty = number_format(($item->qty / $item->items->konversi), 0);
-            // $item->sisa = ((floatval($item->qty) * floatval($item->items->konversi)) -  (floatval($item->terpakai)) / floatval($item->items->konversi));
-            $item->sisa = number_format(($item->sisa / $item->items->konversi), 0);
-            $item->terpakai = number_format(($item->terpakai / $item->items->konversi), 0);
-            $item->jumlah = number_format(($item->terpakai / $item->items->konversi), 0);
-            $item->satuan_besar = $item->items->satuan_besar;
-            $item->satuan_kecil = $item->items->satuan_kecil;
-            $item->konversi = $item->items->konversi;
-        } else {
-            $item->sisa = $item->qty - ( $item->terpakai / $item->items->konversi );
-            // Tangani kasus ketika 'items' null (misalnya, berikan nilai default)
-            $item->satuan_besar = null; 
-            $item->satuan_kecil = null; 
-            $item->konversi = null; 
-        }
+            // Pastikan relasi 'items' ada sebelum mengakses propertinya
+            if ($item->items) {
+                // $item->qty = number_format(($item->qty / $item->items->konversi), 3);
+                $item->qty = number_format(($item->qty / $item->items->konversi), 0);
+                // $item->sisa = ((floatval($item->qty) * floatval($item->items->konversi)) -  (floatval($item->terpakai)) / floatval($item->items->konversi));
+                $item->sisa = number_format(($item->sisa / $item->items->konversi), 0);
+                $item->terpakai = number_format(($item->terpakai / $item->items->konversi), 0);
+                $item->jumlah = number_format(($item->terpakai / $item->items->konversi), 0);
+                $item->satuan_besar = $item->items->satuan_besar;
+                $item->satuan_kecil = $item->items->satuan_kecil;
+                $item->konversi = $item->items->konversi;
+            } else {
+                $item->sisa = $item->qty - ($item->terpakai / $item->items->konversi);
+                // Tangani kasus ketika 'items' null (misalnya, berikan nilai default)
+                $item->satuan_besar = null;
+                $item->satuan_kecil = null;
+                $item->konversi = null;
+            }
 
-        return $item;
+            return $item;
         });
 
         return response()->json(['data' => $formattedOptions]);
@@ -186,16 +186,16 @@ class AppApi
         //     return $item;
         // });
 
-        $data = FarmOperator::with('user:id,name') 
-                ->get(['farm_id','user_id']);
+        $data = FarmOperator::with('user:id,name')
+            ->get(['farm_id', 'user_id']);
 
         // Extract the 'nama' from the 'farm' relationship
         $data = $data->map(function ($farmOperator) {
             return [
                 'farm_id' => $farmOperator->farm_id,
                 'user_id' => $farmOperator->user_id,
-                'nama_farm' => $farmOperator->farm ? $farmOperator->farm->nama : 'N/A', 
-                'nama_operator' => $farmOperator->user ? $farmOperator->user->name : 'N/A', 
+                'nama_farm' => $farmOperator->farm ? $farmOperator->farm->nama : 'N/A',
+                'nama_operator' => $farmOperator->user ? $farmOperator->user->name : 'N/A',
             ];
         });
 
@@ -224,7 +224,7 @@ class AppApi
     public function getFarms()
     {
         // Fetch operators not associated with the selected farm
-        $farms = Farm::where('status', 'Aktif')->get(['id', 'nama']);
+        $farms = Farm::where('status', 'active')->get(['id', 'name']);
 
         // $operators = User::where('role', 'Operator')
         //     ->whereNotIn('id', $existingOperatorIds)
@@ -239,10 +239,10 @@ class AppApi
     public function getKandangs($farmId, $status)
     {
         // Fetch operators not associated with the selected farm
-        if( $status == 'used'){
+        if ($status == 'used') {
             $kandangs = Kandang::where('farm_id', $farmId)->where('status', 'Digunakan')->get(['id', 'nama']);
-        // }else{
-        //     $kandangs = Kandang::where('status', 'Tidak Aktif')->get(['id', 'nama']);
+            // }else{
+            //     $kandangs = Kandang::where('status', 'Tidak Aktif')->get(['id', 'nama']);
         }
 
         $result = ['kandangs' => $kandangs];
@@ -259,11 +259,11 @@ class AppApi
 
         // Fetch operators not associated with the selected farm
         $operators = User::role('Operator') // Get users with 'Operator' role
-                    ->whereDoesntHave('farmOperators', function ($query) use($farmId) {
-                        $query->where('farm_id', $farmId);
-                    })
-                    // ->pluck('name', 'id');
-                    ->get(['id','name']);
+            ->whereDoesntHave('farmOperators', function ($query) use ($farmId) {
+                $query->where('farm_id', $farmId);
+            })
+            // ->pluck('name', 'id');
+            ->get(['id', 'name']);
 
         // $operators = User::where('role', 'Operator')
         //     ->whereNotIn('id', $existingOperatorIds)
@@ -282,11 +282,11 @@ class AppApi
 
         // Fetch operators not associated with the selected farm
         $operators = User::role('Operator') // Get users with 'Operator' role
-                    ->whereDoesntHave('farmOperators', function ($query) use($farmId) {
-                        $query->where('farm_id', $farmId);
-                    })
-                    // ->pluck('name', 'id');
-                    ->get(['id','name']);
+            ->whereDoesntHave('farmOperators', function ($query) use ($farmId) {
+                $query->where('farm_id', $farmId);
+            })
+            // ->pluck('name', 'id');
+            ->get(['id', 'name']);
 
         // $operators = User::where('role', 'Operator')
         //     ->whereNotIn('id', $existingOperatorIds)
@@ -305,37 +305,37 @@ class AppApi
         //         ->groupBy('farm_id')
         //         ->distinct('nama')
         //         ->get();
-        $data = Transaksi::with(['transaksiDetail' => function($query) {
-                    $query->whereNotIn('jenis_barang', ['DOC'])
-                          ->where('sisa', '>', 0);
-                }])
-                ->where('farm_id', $farmId)
-                ->where('jenis', 'Pembelian')
-                ->get()
-                ->flatMap(function ($transaksi) {
-                    return $transaksi->transaksiDetail;
-                })
-                ->groupBy('item_id')
-                ->map(function ($group) {
-                    return [
-                        'item_id' => $group->first()->item_id,
-                        'item_name' => $group->first()->item_name,
-                        'total' => $group->sum('sisa')
-                    ];
-                })
-                ->values();
+        $data = Transaksi::with(['transaksiDetail' => function ($query) {
+            $query->whereNotIn('jenis_barang', ['DOC'])
+                ->where('sisa', '>', 0);
+        }])
+            ->where('farm_id', $farmId)
+            ->where('jenis', 'Pembelian')
+            ->get()
+            ->flatMap(function ($transaksi) {
+                return $transaksi->transaksiDetail;
+            })
+            ->groupBy('item_id')
+            ->map(function ($group) {
+                return [
+                    'item_id' => $group->first()->item_id,
+                    'item_name' => $group->first()->item_name,
+                    'total' => $group->sum('sisa')
+                ];
+            })
+            ->values();
 
         // Separate query to get the oldest date
-        $oldestDate = Transaksi::with(['transaksiDetail' => function($query) {
-                    $query->where('sisa', '>', 0)
-                          ->whereNotIn('jenis_barang', ['DOC']);
-                }])
-                ->where('farm_id', $farmId)
-                ->whereHas('transaksiDetail', function($query) {
-                    $query->where('sisa', '>', 0)
-                          ->whereNotIn('jenis_barang', ['DOC']);
-                })
-                ->min('tanggal');
+        $oldestDate = Transaksi::with(['transaksiDetail' => function ($query) {
+            $query->where('sisa', '>', 0)
+                ->whereNotIn('jenis_barang', ['DOC']);
+        }])
+            ->where('farm_id', $farmId)
+            ->whereHas('transaksiDetail', function ($query) {
+                $query->where('sisa', '>', 0)
+                    ->whereNotIn('jenis_barang', ['DOC']);
+            })
+            ->min('tanggal');
 
         // return $data->count();
 
@@ -364,16 +364,16 @@ class AppApi
         $userId = $request->input('user_id');
         $farmId = $request->input('farm_id');
 
-        if($type == 'DELETE'){
+        if ($type == 'DELETE') {
             // Assuming you have $userId and $farmId
             $user = User::find($userId);
 
             // dd($type);
-            $user->farms()->detach($farmId); 
+            $user->farms()->detach($farmId);
             return response()->json(['success' => true, 'message' => 'Berhasil Hapus Data',]);
         }
 
-        
+
 
         // return FarmOperator::destroy($id);
     }
@@ -384,12 +384,12 @@ class AppApi
         $userId = $request->input('user_id');
         $farmId = $request->input('farm_id');
 
-        if($type == 'DELETE'){
+        if ($type == 'DELETE') {
             // Assuming you have $userId and $farmId
             // Using Eloquent model (if you have a model for the pivot table)
             FarmOperator::where('user_id', $userId)
-            ->where('farm_id', $farmId)
-            ->delete();
+                ->where('farm_id', $farmId)
+                ->delete();
             // $user = User::find($userId);
 
             // dd($type);
@@ -431,25 +431,25 @@ class AppApi
 
             // Update Detail Items
             $transaksiDetail = TransaksiDetail::findOrFail($id);
-            if($column == 'qty'){
+            if ($column == 'qty') {
                 $transaksiDetail->update(
                     [
                         $column => $value * $transaksiDetail->items->konversi,
                         'sisa' => $value * $transaksiDetail->items->konversi,
                     ]
                 );
-            }else{
+            } else {
                 $transaksiDetail->update(
                     [
                         $column => $value,
                     ]
                 );
             }
-            
 
-            $test = ($transaksiDetail->qty / $transaksiDetail->items->konversi) * $transaksiDetail->harga ;
+
+            $test = ($transaksiDetail->qty / $transaksiDetail->items->konversi) * $transaksiDetail->harga;
             // dd($transaksiDetail->qty . '-'. $transaksiDetail->items->konversi . '-'. $transaksiDetail->harga . '-'. $test);
-            
+
             $transaksiDetail->update(
                 [
                     'sub_total' => ($transaksiDetail->qty / $transaksiDetail->items->konversi) * $transaksiDetail->harga,
@@ -464,12 +464,12 @@ class AppApi
             $transaksi = Transaksi::findOrFail($transaksiDetail->transaksi_id);
             // $sumQty = TransaksiDetail::where('transaksi_id',$transaksiDetail->transaksi_id)->sum('qty');
             $sumQty = TransaksiDetail::where('transaksi_id', $transaksiDetail->transaksi_id)
-                                    ->with('items') // Eager load relasi 'items'
-                                    ->get() // Ambil semua data yang sesuai
-                                    ->sum(function ($item) {
-                                        return $item->qty / $item->items->konversi; // Hitung qty / konversi untuk setiap item
-                                    });
-            $sumHarga = TransaksiDetail::where('transaksi_id',$transaksiDetail->transaksi_id)->sum('harga');
+                ->with('items') // Eager load relasi 'items'
+                ->get() // Ambil semua data yang sesuai
+                ->sum(function ($item) {
+                    return $item->qty / $item->items->konversi; // Hitung qty / konversi untuk setiap item
+                });
+            $sumHarga = TransaksiDetail::where('transaksi_id', $transaksiDetail->transaksi_id)->sum('harga');
             $transaksi->update(
                 [
                     'total_qty' => $sumQty,
@@ -477,14 +477,13 @@ class AppApi
                     'harga' => $sumHarga,
                     'sub_total' => $sumHarga * $sumQty
                 ]
-                );
+            );
 
             // Commit the transaction
             DB::commit();
 
             // return response()->json(['success' => true,'message'=>'Berhasil Update Data']);
-            return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success' ]);
-
+            return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success']);
         } catch (\Throwable $th) {
             //throw $th;
             DB::rollBack();
@@ -507,13 +506,10 @@ class AppApi
             Artisan::call('migrate:fresh --seed');
             // Artisan::call('db:seed');
             return response()->json(['message' => 'Data Berhasil Direset', 'status' => 'success']);
-
         } catch (\Throwable $th) {
             //throw $th;
             return response()->json(['errors' => 'Reset Error'], 400);
-
         }
-
     }
 
     public function showVersion()

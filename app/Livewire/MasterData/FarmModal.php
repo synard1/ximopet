@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 use App\Models\Farm;
-use App\Models\Kandang;;
+use App\Models\Kandang;
 
 class FarmModal extends Component
 {
@@ -71,10 +71,10 @@ class FarmModal extends Component
 
             // dd($hasKandang);
 
-            // if ($hasKandang) {
-            //     $this->dispatch('error', 'Farm tidak dapat dihapus karena memiliki data kandang');
-            //     return;
-            // }
+            if ($hasKandang) {
+                $this->dispatch('error', 'Farm tidak dapat dihapus karena memiliki data kandang');
+                return;
+            }
 
             DB::beginTransaction();
 
