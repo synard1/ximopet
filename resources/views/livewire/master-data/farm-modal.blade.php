@@ -16,7 +16,8 @@
                         <div class="fv-row mb-7">
                             <label class="required fw-semibold fs-6 mb-2">Kode Farm</label>
                             <input type="text" wire:model.live="code"
-                                class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Masukkan kode farm" />
+                                class="form-control form-control-solid mb-3 mb-lg-0" placeholder="Masukkan kode farm" {{
+                                $isEdit ? 'readonly disable' : '' }} />
                             @error('code') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
 

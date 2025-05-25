@@ -14,6 +14,7 @@ use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Services\PermissionDisplayService;
 
 class FarmController extends Controller
 {
@@ -25,7 +26,12 @@ class FarmController extends Controller
         addVendors(['datatables']);
 
         $availableFarms = Farm::where('status', 'Aktif')->get();
-        return $dataTable->render('pages/masterdata.farm.index', ['availableFarms' => $availableFarms]);
+        $permissionInfo = PermissionDisplayService::getPermissionInfo();
+
+        return $dataTable->render('pages.masterdata.farm.index', [
+            'availableFarms' => $availableFarms,
+            'permissionInfo' => $permissionInfo
+        ]);
     }
 
     /**

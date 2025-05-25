@@ -143,12 +143,17 @@
     </div>
     @if(auth()->user()->hasRole(['Manager']))
     @else
+    {{--
     <livewire:master-data.tambah-operator-farm />
-    <livewire:master-data.tambah-storage-farm />
+    <livewire:master-data.tambah-storage-farm /> --}}
     @include('pages.masterdata.farm._related_data_modal')
     @endif
 
-    <livewire:master-data.farm-modal />
+    {{--
+    <x-permission-info :permissionInfo="$permissionInfo" /> --}}
+
+    {{--
+    <livewire:master-data.farm-modal /> --}}
 
     <!-- Farm Details Modal -->
     <div class="modal fade" id="farmDetailsModal" tabindex="-1" aria-labelledby="farmDetailsModalLabel"
@@ -409,4 +414,8 @@
             });
         </script>
         @endpush
+    </div>
+
+    <!-- Add the permission info component at the end of the file -->
+    <x-permission-info :permissionInfo="$permissionInfo" />
 </x-default-layout>
