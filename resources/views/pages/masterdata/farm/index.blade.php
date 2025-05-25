@@ -450,4 +450,6 @@
 
     <!-- Add the permission info component at the end of the file -->
     <x-permission-info :permissionInfo="$permissionInfo" />
+
+    @livewire('qa-checklist-monitor', ['url' => request()->path()])
 </x-default-layout>

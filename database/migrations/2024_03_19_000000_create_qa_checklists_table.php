@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('feature_category');
             $table->string('feature_subcategory')->nullable();
             $table->text('test_case');
+            $table->text('url')->nullable();
             $table->text('test_steps')->nullable();
             $table->text('expected_result')->nullable();
             $table->enum('test_type', [

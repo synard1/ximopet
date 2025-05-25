@@ -89,6 +89,15 @@
 
                 <div class="row mb-5">
                     <div class="col-md-12">
+                        <label class="form-label">URL</label>
+                        <input type="text" class="form-control" wire:model="url"
+                            placeholder="Enter URL or path (optional)">
+                        @error('url') <span class="text-danger">{{ $message }}</span> @enderror
+                    </div>
+                </div>
+
+                <div class="row mb-5">
+                    <div class="col-md-12">
                         <label class="form-label">Test Steps</label>
                         <textarea class="form-control" wire:model="test_steps" rows="3" placeholder="Contoh:
 1. Login ke aplikasi sebagai admin
@@ -189,6 +198,11 @@
                 </div>
 
                 <div class="text-end">
+                    @if($editingId)
+                    <button type="button" class="btn btn-light me-2" wire:click="cancelEdit">
+                        Batal
+                    </button>
+                    @endif
                     <button type="submit" class="btn btn-primary">
                         <i class="ki-duotone ki-check fs-2">
                             <span class="path1"></span>
@@ -218,6 +232,7 @@
                             <th>Status</th>
                             <th>Tester</th>
                             <th>Date</th>
+                            <th>URL</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -248,6 +263,15 @@
                             </td>
                             <td>{{ $checklist->tester_name }}</td>
                             <td>{{ $checklist->test_date->format('Y-m-d') }}</td>
+                            <td>
+                                @if($checklist->url)
+                                <a href="{{ $checklist->url }}" target="_blank" class="btn btn-sm btn-light-info">
+                                    Go to URL
+                                </a>
+                                @else
+                                N/A
+                                @endif
+                            </td>
                             <td>
                                 <button wire:click="edit({{ $checklist->id }})"
                                     class="btn btn-sm btn-light-primary me-2">

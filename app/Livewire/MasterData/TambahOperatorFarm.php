@@ -27,8 +27,8 @@ class TambahOperatorFarm extends Component
 
     public function mount()
     {
-        // Check if user has permission to read operator assignments
-        // if (!auth()->user()->can('read operator assignments')) {
+        // Check if user has permission to read operator assignment
+        // if (!auth()->user()->can('read operator assignment')) {
         //     abort(403, 'Unauthorized action.');
         // }
 
@@ -38,8 +38,8 @@ class TambahOperatorFarm extends Component
 
     public function render()
     {
-        // Check if user has permission to read operator assignments
-        // if (!auth()->user()->can('read operator assignments')) {
+        // Check if user has permission to read operator assignment
+        // if (!auth()->user()->can('read operator assignment')) {
         //     abort(403, 'Unauthorized action.');
         // }
 
@@ -48,8 +48,8 @@ class TambahOperatorFarm extends Component
 
     public function storeFarmOperator()
     {
-        // Check if user has permission to create operator assignments
-        if (!auth()->user()->can('create operator assignments')) {
+        // Check if user has permission to create operator assignment
+        if (!auth()->user()->can('create operator assignment')) {
             abort(403, 'Unauthorized action.');
         }
 

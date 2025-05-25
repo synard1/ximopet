@@ -12,14 +12,14 @@
 
                 <div class="modal-body">
                     @if($importErrors)
-                    <div class="alert alert-danger">
-                        <ul class="mb-0">
-                            @foreach($importErrors as $error)
-                            <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                    @endif
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                @foreach($importErrors as $error)
+                                <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                        @endif
 
                     @if($importStatus)
                     <div class="alert alert-info">

@@ -12,6 +12,7 @@ class QaChecklist extends Model
         'feature_category',
         'feature_subcategory',
         'test_case',
+        'url',
         'test_steps',
         'expected_result',
         'test_type',

@@ -28,6 +28,7 @@ class QaChecklistForm extends Component
     public $browser;
     public $device;
     public $editingId;
+    public $url;
 
     protected $rules = [
         'feature_name' => 'required|string|max:255',
@@ -45,7 +46,8 @@ class QaChecklistForm extends Component
         'test_date' => 'required|date',
         'environment' => 'required|string|max:255',
         'browser' => 'nullable|string|max:255',
-        'device' => 'nullable|string|max:255'
+        'device' => 'nullable|string|max:255',
+        'url' => 'nullable|string|max:255'
     ];
 
     public function mount()
@@ -126,7 +128,8 @@ class QaChecklistForm extends Component
             'test_date' => $this->test_date,
             'environment' => $this->environment,
             'browser' => $this->browser,
-            'device' => $this->device
+            'device' => $this->device,
+            'url' => $this->url,
         ];
 
         if ($this->editingId) {
@@ -137,6 +140,7 @@ class QaChecklistForm extends Component
 
         $this->reset();
         $this->test_date = now()->format('Y-m-d');
+        $this->url = null;
 
         // Reset user info after save
         if (Auth::check()) {
@@ -171,6 +175,7 @@ class QaChecklistForm extends Component
         $this->environment = $checklist->environment;
         $this->browser = $checklist->browser;
         $this->device = $checklist->device;
+        $this->url = $checklist->url;
     }
 
     public function delete($id)
@@ -215,6 +220,9 @@ class QaChecklistForm extends Component
             if ($checklist->feature_subcategory) {
                 $content .= "Subcategory: {$checklist->feature_subcategory}\n";
             }
+            if ($checklist->url) {
+                $content .= "URL: {$checklist->url}\n";
+            }
             $content .= "Test Case: {$checklist->test_case}\n";
             if ($checklist->test_steps) {
                 $content .= "Test Steps:\n{$checklist->test_steps}\n";
@@ -246,5 +254,14 @@ class QaChecklistForm extends Component
         return response()->streamDownload(function () use ($content) {
             echo $content;
         }, 'qa-checklist-' . now()->format('Y-m-d') . '.txt');
+    }
+
+    public function cancelEdit()
+    {
+        $this->reset();
+        $this->test_date = now()->format('Y-m-d');
+        if (Auth::check()) {
+            $this->tester_name = Auth::user()->name;
+        }
     }
 }

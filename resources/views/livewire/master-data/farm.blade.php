@@ -1,0 +1,1 @@
+@livewire('qa-checklist-monitor', ['url' => request()->path()])

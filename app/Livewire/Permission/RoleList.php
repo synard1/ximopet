@@ -114,26 +114,63 @@ class RoleList extends Component
 
     public function exportPermissions()
     {
-        Log::info('Exporting permissions');
+        Log::info('Exporting roles and permissions');
         try {
+            // Get all roles with their permissions
             $roles = Role::with('permissions')->get();
-            $data = [];
 
+            // Get all permissions, including unused ones
+            $allPermissions = Permission::all();
+
+            // Prepare the export data structure
+            $data = [
+                'roles' => [],
+                'permissions' => [],
+                'metadata' => [
+                    'exported_at' => now()->toIso8601String(),
+                    'total_roles' => $roles->count(),
+                    'total_permissions' => $allPermissions->count()
+                ]
+            ];
+
+            // Process roles and their permissions
             foreach ($roles as $role) {
-                $data[] = [
+                $roleData = [
                     'name' => $role->name,
-                    'permissions' => $role->permissions->pluck('name')->toArray()
+                    'guard_name' => $role->guard_name,
+                    'permissions' => $role->permissions->pluck('name')->toArray(),
+                    'users_count' => $role->users()->count()
                 ];
+                $data['roles'][] = $roleData;
             }
 
-            $filename = 'roles_permissions_' . date('Y-m-d_His') . '.json';
+            // Process all permissions
+            foreach ($allPermissions as $permission) {
+                $permissionData = [
+                    'name' => $permission->name,
+                    'guard_name' => $permission->guard_name,
+                    'roles_count' => $permission->roles()->count(),
+                    'is_used' => $permission->roles()->count() > 0
+                ];
+                $data['permissions'][] = $permissionData;
+            }
+
+            // Create the export file
+            $filename = 'roles_permissions_export_' . date('Y-m-d_His') . '.json';
             $path = storage_path('app/public/' . $filename);
 
-            file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT));
+            // Write the data with pretty print for better readability
+            file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
+            Log::info('Export completed successfully', ['filename' => $filename]);
+
+            // Return the file for download and delete it after sending
             return response()->download($path)->deleteFileAfterSend(true);
         } catch (\Exception $e) {
-            Log::error('Failed to export permissions', ['error' => $e->getMessage()]);
+            Log::error('Failed to export permissions', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             $this->dispatch('error', 'Failed to export permissions: ' . $e->getMessage());
         }
     }
@@ -287,15 +324,23 @@ class RoleList extends Component
 
     protected function processImportData($data)
     {
-        Log::info('Processing import data', ['total_items' => count($data)]);
-        $total = count($data);
-        $processed = 0;
+        Log::info('Processing import data', ['data_structure' => array_keys($data)]);
 
         DB::beginTransaction();
         try {
-            foreach ($data as $roleData) {
-                $this->processRoleData($roleData, $processed, $total);
+            // Process permissions first
+            if (isset($data['permissions']) && is_array($data['permissions'])) {
+                $this->processPermissions($data['permissions']);
             }
+
+            // Then process roles
+            if (isset($data['roles']) && is_array($data['roles'])) {
+                $this->processRoles($data['roles']);
+            } else if (isset($data[0])) {
+                // Handle legacy format (array of roles)
+                $this->processRoles($data);
+            }
+
             DB::commit();
             $this->handleSuccessfulImport();
         } catch (\Exception $e) {
@@ -304,24 +349,58 @@ class RoleList extends Component
         }
     }
 
-    protected function processRoleData($roleData, &$processed, $total)
+    protected function processPermissions($permissions)
     {
-        try {
-            if (!isset($roleData['name'])) {
-                throw new \Exception('Role name is required');
+        Log::info('Processing permissions', ['count' => count($permissions)]);
+        foreach ($permissions as $permissionData) {
+            if (!isset($permissionData['name'])) {
+                Log::warning('Skipping permission: missing name', ['data' => $permissionData]);
+                continue;
             }
 
-            Log::info('Processing role', ['name' => $roleData['name']]);
-            $role = Role::firstOrCreate(['name' => $roleData['name']]);
-
-            if (isset($roleData['permissions']) && is_array($roleData['permissions'])) {
-                $this->syncRolePermissions($role, $roleData['permissions']);
+            try {
+                Permission::firstOrCreate(
+                    ['name' => $permissionData['name']],
+                    ['guard_name' => $permissionData['guard_name'] ?? 'web']
+                );
+                Log::info('Processed permission', ['name' => $permissionData['name']]);
+            } catch (\Exception $e) {
+                Log::error('Error processing permission', [
+                    'name' => $permissionData['name'],
+                    'error' => $e->getMessage()
+                ]);
+                $this->importErrors[] = "Error processing permission {$permissionData['name']}: " . $e->getMessage();
             }
+        }
+    }
 
-            $processed++;
-            $this->updateImportProgress($processed, $total);
-        } catch (\Exception $e) {
-            $this->handleRoleProcessingError($roleData, $e);
+    protected function processRoles($roles)
+    {
+        Log::info('Processing roles', ['count' => count($roles)]);
+        $total = count($roles);
+        $processed = 0;
+
+        foreach ($roles as $roleData) {
+            try {
+                if (!isset($roleData['name'])) {
+                    throw new \Exception('Role name is required');
+                }
+
+                Log::info('Processing role', ['name' => $roleData['name']]);
+                $role = Role::firstOrCreate(
+                    ['name' => $roleData['name']],
+                    ['guard_name' => $roleData['guard_name'] ?? 'web']
+                );
+
+                if (isset($roleData['permissions']) && is_array($roleData['permissions'])) {
+                    $this->syncRolePermissions($role, $roleData['permissions']);
+                }
+
+                $processed++;
+                $this->updateImportProgress($processed, $total);
+            } catch (\Exception $e) {
+                $this->handleRoleProcessingError($roleData, $e);
+            }
         }
     }
 
@@ -329,7 +408,10 @@ class RoleList extends Component
     {
         Log::info('Syncing permissions for role', ['role' => $role->name, 'permissions' => $permissions]);
         $permissionModels = collect($permissions)->map(function ($permissionName) {
-            return Permission::firstOrCreate(['name' => $permissionName]);
+            return Permission::firstOrCreate(
+                ['name' => $permissionName],
+                ['guard_name' => 'web']
+            );
         });
         $role->syncPermissions($permissionModels);
     }
