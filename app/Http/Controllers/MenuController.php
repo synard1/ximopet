@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\MenuBackupService;
+use Illuminate\Support\Facades\File;
 
 class MenuController extends Controller
 {
@@ -223,15 +224,78 @@ class MenuController extends Controller
 
     public function export()
     {
-        $menus = Menu::with(['children', 'roles', 'permissions'])
-            ->whereNull('parent_id')
-            ->orderBy('order_number')
-            ->get();
+        try {
+            $menus = Menu::with(['roles', 'permissions', 'children.roles', 'children.permissions'])
+                ->whereNull('parent_id')
+                ->orderBy('order_number')
+                ->get();
 
-        $menuConfig = $menus->toArray();
+            $data = $menus->map(function ($menu) {
+                return [
+                    'id' => $menu->id,
+                    'name' => $menu->name,
+                    'label' => $menu->label,
+                    'route' => $menu->route,
+                    'icon' => $menu->icon,
+                    'location' => $menu->location,
+                    'order_number' => $menu->order_number,
+                    'is_active' => $menu->is_active,
+                    'roles' => $menu->roles->map(function ($role) {
+                        return [
+                            'id' => $role->id,
+                            'name' => $role->name
+                        ];
+                    })->toArray(),
+                    'permissions' => $menu->permissions->map(function ($permission) {
+                        return [
+                            'id' => $permission->id,
+                            'name' => $permission->name
+                        ];
+                    })->toArray(),
+                    'children' => $menu->children->map(function ($child) {
+                        return [
+                            'id' => $child->id,
+                            'name' => $child->name,
+                            'label' => $child->label,
+                            'route' => $child->route,
+                            'icon' => $child->icon,
+                            'location' => $child->location,
+                            'order_number' => $child->order_number,
+                            'is_active' => $child->is_active,
+                            'roles' => $child->roles->map(function ($role) {
+                                return [
+                                    'id' => $role->id,
+                                    'name' => $role->name
+                                ];
+                            })->toArray(),
+                            'permissions' => $child->permissions->map(function ($permission) {
+                                return [
+                                    'id' => $permission->id,
+                                    'name' => $permission->name
+                                ];
+                            })->toArray()
+                        ];
+                    })->toArray()
+                ];
+            })->toArray();
 
-        return response()->json($menuConfig, Response::HTTP_OK, [], JSON_PRETTY_PRINT)
-            ->header('Content-Disposition', 'attachment; filename="menu_configuration.json"');
+            $filename = 'menu_configuration_' . date('Y-m-d_His') . '.json';
+            $path = storage_path('app/backups/menus/' . $filename);
+
+            if (!File::exists(storage_path('app/backups/menus'))) {
+                File::makeDirectory(storage_path('app/backups/menus'), 0755, true);
+            }
+
+            File::put($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+            return response()->download($path)->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            Log::error('Failed to export menu configuration', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'Failed to export menu configuration: ' . $e->getMessage());
+        }
     }
 
     public function import(Request $request)
