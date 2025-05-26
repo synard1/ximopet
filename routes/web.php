@@ -38,7 +38,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\OVKRecordController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\UserManagement\RoleController;
-
+use App\Http\Controllers\MasterData\PartnerController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -144,7 +144,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('/master/companies', CompanyController::class);
 
         // Expedition Management
-        Route::resource('/master/expeditions', ExpeditionController::class);
+        Route::get('/master/expeditions', [PartnerController::class, 'expeditionIndex'])->name('expeditions.index');
 
         // Partner Management
         Route::resource('/master/partners', RekananController::class);

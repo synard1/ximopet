@@ -45,11 +45,11 @@ class KandangsDataTable extends DataTable
                     : '';
             })
             ->addColumn('action', function (Kandang $kandang) {
-                return view('pages/masterdata.kandang._actions', compact('kandang'));
+                return view('pages.masterdata.kandang._actions', compact('kandang'));
             })
             ->filterColumn('farm', function ($query, $keyword) {
-                $query->whereHas('farms', function ($query) use ($keyword) { // Assuming you have a 'farm' relationship on your model
-                    $query->where('nama', 'like', "%{$keyword}%");
+                $query->whereHas('farm', function ($query) use ($keyword) { // Assuming you have a 'farm' relationship on your model
+                    $query->where('name', 'like', "%{$keyword}%");
                 });
             })
             ->setRowId('id')
@@ -88,6 +88,8 @@ class KandangsDataTable extends DataTable
             ->setTableId('kandangs-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
+            ->dom('Bfrtip')
+
             // ->dom('Bfrtip')
             // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
             // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')

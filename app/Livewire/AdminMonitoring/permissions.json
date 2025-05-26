@@ -1,0 +1,118 @@
+{
+    "permissions": {
+        "/master/farms": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true,
+                "Operator": true
+            },
+            "permissions": {
+                "read farm management": true,
+                "create farm management": true,
+                "update farm management": true,
+                "delete farm management": true,
+                "read operator assignment": true,
+                "create operator assignment": true,
+                "update operator assignment": true,
+                "delete operator assignment": true
+            }
+        },
+        "/master/kandangs": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true,
+                "Operator": true
+            },
+            "permissions": {
+                "read kandang management": true,
+                "create kandang management": true,
+                "update kandang management": true,
+                "delete kandang management": true
+            }
+        },
+        "/master/suppliers": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true
+            },
+            "permissions": {
+                "read supplier management": true,
+                "create supplier management": true,
+                "update supplier management": true,
+                "delete supplier management": true
+            }
+        },
+        "/master/customers": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true
+            },
+            "permissions": {
+                "read customer management": true,
+                "create customer management": true,
+                "update customer management": true,
+                "delete customer management": true
+            }
+        },
+        "/master/expeditions": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true
+            },
+            "permissions": {
+                "read expedition": true,
+                "create expedition": true,
+                "update expedition": true,
+                "delete expedition": true
+            }
+        },
+        "/master/pakans": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true
+            },
+            "permissions": {
+                "read pakan": true,
+                "create pakan": true,
+                "update pakan": true,
+                "delete pakan": true
+            }
+        },
+        "/master/supplies": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true
+            },
+            "permissions": {
+                "read supply": true,
+                "create supply": true,
+                "update supply": true,
+                "delete supply": true
+            }
+        },
+        "/master/pekerjas": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true
+            },
+            "permissions": {
+                "read pekerja": true,
+                "create pekerja": true,
+                "update pekerja": true,
+                "delete pekerja": true
+            }
+        },
+        "/master/standar-ayam": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true
+            },
+            "permissions": {
+                "read standard ayam": true,
+                "create standard ayam": true,
+                "update standard ayam": true,
+                "delete standard ayam": true
+            }
+        }
+    }
+}

@@ -70,4 +70,8 @@
         </div>
     </div>
     @endif
+
+    @livewire('admin-monitoring.permission-info')
+
+    @livewire('qa-checklist-monitor', ['url' => request()->path()])
 </x-default-layout>

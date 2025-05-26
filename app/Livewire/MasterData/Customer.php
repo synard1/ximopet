@@ -10,7 +10,8 @@ use Ramsey\Uuid\Uuid; // Import the UUID library
 
 class Customer extends Component
 {
-    public $customers, $kode, $nama, $alamat, $telp, $pic, $telp_pic, $email, $status = 'Aktif';
+    public $customers, $code, $name, $address, $phone_number, $contact_person, $email, $status = 'active';
+    public $showForm = false;
 
     public $customer_id = null; // Initialize with null instead of empty string
     public $isOpen = 0;
@@ -21,6 +22,7 @@ class Customer extends Component
         'delete_customer' => 'deleteCustomer',
         'editCustomer' => 'editCustomer',
         'create' => 'create',
+        'createShowModal' => 'createShowModal',
     ];
 
 
@@ -41,12 +43,12 @@ class Customer extends Component
     {
         $this->validate();
         Partner::updateOrCreate(['id' => $this->customer_id], [
-            'jenis' => "Customer",
-            'kode' => $this->kode,
-            'nama' => $this->nama,
-            'alamat' => $this->alamat,
+            'type' => "Customer",
+            'code' => $this->kode,
+            'name' => $this->nama,
+            'address' => $this->alamat,
             'email' => $this->email,
-            'status' => 'Aktif',
+            'status' => 'active',
         ]);
 
         if ($this->customer_id) {
@@ -65,12 +67,11 @@ class Customer extends Component
     {
         $customer = Partner::where('id', $id)->first();
         $this->customer_id = $id;
-        $this->kode = $customer->kode;
-        $this->nama = $customer->nama;
-        $this->alamat = $customer->alamat;
-        $this->telp = $customer->telp;
-        $this->pic = $customer->pic;
-        $this->telp_pic = $customer->telp_pic;
+        $this->code = $customer->code;
+        $this->name = $customer->name;
+        $this->address = $customer->address;
+        $this->phone_number = $customer->phone_number;
+        $this->contact_person = $customer->contact_person;
         $this->email = $customer->email;
 
         // session()->flash('message', 'test edit');
@@ -108,24 +109,33 @@ class Customer extends Component
     private function resetInputFields()
     {
         // $this->kode = Str::uuid(); // Generate UUID for new customers
-        $this->kode = ''; // Generate UUID for new customers
-        $this->nama = '';
-        $this->alamat = '';
+        $this->code = ''; // Generate UUID for new customers
+        $this->name = '';
+        $this->address = '';
         $this->email = '';
         $this->customer_id = '';
     }
 
     protected $rules = [
-        'kode' => 'required', // Unique except on update
-        'nama' => 'required',
-        'alamat' => 'required',
-        'email' => 'required|email',
+        'code' => 'required', // Unique except on update
+        'name' => 'required',
+        'address' => 'required',
+        'email' => 'nullable',
+        'phone_number' => 'nullable',
+        'contact_person' => 'nullable',
     ];
 
     public function updatingKode()
     {
         if ($this->customer_id) {
-            $this->resetErrorBag('kode'); // Clear error if it's an edit
+            $this->resetErrorBag('code'); // Clear error if it's an edit
         }
+    }
+
+    public function createShowModal()
+    {
+        $this->resetInputFields();
+        $this->showForm = true;
+        $this->dispatch('hide-datatable');
     }
 }

@@ -449,7 +449,12 @@
     </div>
 
     <!-- Add the permission info component at the end of the file -->
-    <x-permission-info :permissionInfo="$permissionInfo" />
+
+    {{--
+    <x-permission-info :permissionInfo="$permissionInfo" /> --}}
+    @livewire('admin-monitoring.permission-info')
+    <!-- Add this line to include the new component -->
+
 
     @livewire('qa-checklist-monitor', ['url' => request()->path()])
 </x-default-layout>

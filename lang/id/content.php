@@ -15,5 +15,13 @@ return [
 
     'ternak' => 'Ayam',
     'livestocks' => 'Ayam',
+    'expeditions' => 'Expedisi',
+    'suppliers' => 'Supplier',
+    'customers' => 'Customer',
+    'pakans' => 'Pakan',
+    'supplies' => 'Bahan',
+    'farms' => 'Kandang',
+    'users' => 'User',
+    
 
 ];

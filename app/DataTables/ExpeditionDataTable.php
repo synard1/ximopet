@@ -2,14 +2,14 @@
 
 namespace App\DataTables;
 
-use App\Models\Partner as Supplier;
+use App\Models\Partner as Expedition;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 
-class SuppliersDataTable extends DataTable
+class ExpeditionDataTable extends DataTable
 {
     /**
      * Build the DataTable class.
@@ -19,15 +19,15 @@ class SuppliersDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
-            ->rawColumns(['supplier'])
+            ->rawColumns(['expedition'])
             // ->editColumn('supplier', function (Supplier $supplier) {
             //     return view('pages/apps.supplier-management.suppliers.columns._supplier', compact('supplier'));
             // })
-            ->editColumn('created_at', function (Supplier $supplier) {
-                return $supplier->created_at->format('d M Y, h:i a');
+            ->editColumn('created_at', function (Expedition $expedition) {
+                return $expedition->created_at->format('d M Y, h:i a');
             })
-            ->addColumn('action', function (Supplier $supplier) {
-                return view('pages.masterdata.supplier._actions', compact('supplier'));
+            ->addColumn('action', function (Expedition $expedition) {
+                return view('pages.masterdata.expedition._actions', compact('expedition'));
             })
             ->setRowId('id');
     }
@@ -36,9 +36,9 @@ class SuppliersDataTable extends DataTable
     /**
      * Get the query source of dataTable.
      */
-    public function query(Supplier $model): QueryBuilder
+    public function query(Expedition $model): QueryBuilder
     {
-        return $model->where('type', '=', 'Supplier')->newQuery();
+        return $model->where('type', '=', 'Expedition')->newQuery();
     }
 
     /**
@@ -50,12 +50,11 @@ class SuppliersDataTable extends DataTable
             ->setTableId('suppliers-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->dom('Bfrtip')
             // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             ->orderBy(1)
-            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/supplier/_draw-scripts.js')) . "}");
+            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/expedition/_draw-scripts.js')) . "}");
     }
 
     /**
@@ -64,13 +63,13 @@ class SuppliersDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('code')->searchable(false),
-            Column::make('name'),
-            Column::make('address'),
-            Column::make('phone_number'),
-            Column::make('contact_person'),
-            Column::make('email'),
-            Column::make('status'),
+            Column::make('code')->title('Kode'),
+            Column::make('name')->title('Nama'),
+            Column::make('address')->title('Alamat'),
+            Column::make('phone_number')->title('Telp'),
+            Column::make('contact_person')->title('Kontak Person'),
+            Column::make('email')->title('Email'),
+            Column::make('status')->title('Status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
             Column::computed('action')
                 // ->addClass('text-end text-nowrap')

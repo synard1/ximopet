@@ -49,4 +49,14 @@ class Partner extends BaseModel
     {
         return $this->hasMany(LivestockPurchase::class, 'vendor_id');
     }
+
+    public function livestockPurchasesAsVendor()
+    {
+        return $this->hasMany(LivestockPurchase::class, 'vendor_id');
+    }
+
+    public function livestockPurchasesAsExpedition()
+    {
+        return $this->hasMany(LivestockPurchase::class, 'expedition_id');
+    }
 }

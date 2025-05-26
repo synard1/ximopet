@@ -13,7 +13,7 @@ class Create extends Component
     use WithPagination;
 
     public $modalFormVisible = false;
-    public $modalId;
+    public $modalId = null;
 
     public $code;
     public $name;
