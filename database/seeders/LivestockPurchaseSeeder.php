@@ -33,11 +33,11 @@ class LivestockPurchaseSeeder extends Seeder
         $vendor = Partner::where('type', 'Supplier')->inRandomOrder()->first();
         $vendorId = optional($vendor)->id;
 
-        $breed = LivestockStrain::inRandomOrder()->first();
-        $breedId = optional($breed)->id;
+        $strain = LivestockStrain::inRandomOrder()->first();
+        $strainId = optional($strain)->id;
 
-        if (!$breed) {
-            $this->command->warn("No livestock breed found. Using null for livestock_strain_id.");
+        if (!$strain) {
+            $this->command->warn("No livestock strain found. Using null for livestock_strain_id.");
         }
 
         $hargaPerEkor = 5500;
@@ -74,7 +74,7 @@ class LivestockPurchaseSeeder extends Seeder
             ];
 
             try {
-                $livestockStrainStandard = LivestockStrainStandard::where('livestock_strain_id', $breedId)->first();
+                $livestockStrainStandard = LivestockStrainStandard::where('livestock_strain_id', $strainId)->first();
                 $livestockStrainStandardId = optional($livestockStrainStandard)->id;
 
                 DB::beginTransaction();
@@ -85,8 +85,8 @@ class LivestockPurchaseSeeder extends Seeder
                         'farm_id' => $farmId,
                         'kandang_id' => $item['kandang_id'],
                         'name' => $item['name'],
-                        'livestock_strain_id' => $breedId,
-                        'breed' => $breed->name,
+                        'livestock_strain_id' => $strainId,
+                        'livestock_strain_name' => $strain->name,
                         'livestock_strain_standard_id' => $livestockStrainStandardId,
                         'start_date' => Carbon::parse($item['tanggal']),
                         'populasi_awal' => $item['jumlah'],
@@ -125,10 +125,10 @@ class LivestockPurchaseSeeder extends Seeder
                             'livestock_id' => $livestock->id,
                             'farm_id' => $farmId,
                             'kandang_id' => $item['kandang_id'],
-                            'livestock_strain_id' => $breedId,
+                            'livestock_strain_id' => $strainId,
                             'livestock_strain_standard_id' => $livestockStrainStandardId,
                             'name' => $item['name'],
-                            'breed' => $breed->name,
+                            'livestock_strain_name' => $strain->name,
                             'start_date' => Carbon::parse($item['tanggal']),
                             'populasi_awal' => $item['jumlah'],
                             'quantity_depletion' => 0,

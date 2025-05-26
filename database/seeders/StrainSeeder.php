@@ -9,7 +9,7 @@ use App\Models\StandarBobot;
 use App\Models\LivestockStrain;
 use App\Models\LivestockStrainStandard;
 
-class BreedSeeder extends Seeder
+class StrainSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -24,7 +24,7 @@ class BreedSeeder extends Seeder
 
         $this->command->info('Generating standard weight data...');
 
-        $breeds = [
+        $strains = [
             'Cobb' => [
                 'name' => 'Cobb',
                 'description' => 'Cobb 500 Broiler',
@@ -903,7 +903,7 @@ class BreedSeeder extends Seeder
                         'fcr' => ['min' => 0.9, 'max' => 1.1, 'target' => 1.0]
                     ],
                     42 => [
-                        'bobot' => ['min' => 984, 'max' => 988, 'target' => 986],
+                        'bobot' => ['min' => 983, 'max' => 987, 'target' => 985],
                         'feed_intake' => ['min' => 210, 'max' => 212, 'target' => 211],
                         'fcr' => ['min' => 0.9, 'max' => 1.1, 'target' => 1.0]
                     ],
@@ -1132,29 +1132,31 @@ class BreedSeeder extends Seeder
             ],
         ];
 
-        // Create standard weight records for each breed
-        foreach ($breeds as $breedData) {
-            $breedName = $breedData['name'];
-            $breedDescription = $breedData['description'];
-            $data = $breedData['data'];
+        // Create standard weight records for each strain
+        foreach ($strains as $strainData) {
+            $strainName = $strainData['name'];
+            $strainDescription = $strainData['description'];
+            $data = $strainData['data'];
 
-            // Check if breed already exists in LivestockStrain table
-            $existingBreed = LivestockStrain::where('name', $breedName)->first();
-            if ($existingBreed) {
-                $this->command->info("Breed '{$breedName}' already exists. Skipping standard data creation.");
-                continue; // Skip to the next breed
+            // Check if strain already exists in LivestockStrain table
+            $existingStrain = LivestockStrain::where('name', $strainName)->first();
+            if ($existingStrain) {
+                $this->command->info("Strain '{$strainName}' already exists. Skipping standard data creation.");
+                continue; // Skip to the next strain
             }
 
-            // Create LivestockStrain entry
+            // Create LivestockStrain entry with random code
+            $randomCode = strtoupper(substr(md5(uniqid()), 0, 6));
             $livestockStrain = LivestockStrain::create([
-                'name' => $breedName,
-                'description' => $breedDescription,
+                'code' => $randomCode,
+                'name' => $strainName,
+                'description' => $strainDescription,
             ]);
 
             // Check if LivestockStrain creation was successful
             if (!$livestockStrain) {
-                $this->command->error("Failed to create LivestockStrain entry for '{$breedName}'.");
-                continue; // Skip to the next breed
+                $this->command->error("Failed to create LivestockStrain entry for '{$strainName}'.");
+                continue; // Skip to the next strain
             }
 
             // Transform data into the new JSON structure for LivestockStrainStandard
@@ -1182,66 +1184,15 @@ class BreedSeeder extends Seeder
 
             // Create a single record in LivestockStrainStandard with all data in JSON format
             LivestockStrainStandard::create([
-                'livestock_strain_id' => $livestockStrain->id, // Use the newly created LivestockStrain ID
-                'breed' => $breedName,
-                'description' => $breedDescription,
+                'livestock_strain_id' => $livestockStrain->id,
+                'livestock_strain_name' => $strainName,
+                'description' => $strainDescription,
                 'standar_data' => $standarData,
                 'status' => 'active',
                 'created_by' => $supervisor->id,
-                // 'updated_by' => $supervisor->id,
             ]);
 
-            $this->command->info("Created LivestockStrain '{$breedName}' and standard weight data (ages 0-42).");
+            $this->command->info("Created LivestockStrain '{$strainName}' and standard weight data (ages 0-42).");
         }
-        // foreach ($breeds as $breedData) {
-        //     $breedName = $breedData['name'];
-        //     $breedDescription = $breedData['description'];
-        //     $data = $breedData['data'];
-
-        //     // Check if breed already exists
-        //     $existingBreed = LivestockStrainStandard::where('breed', $breedName)->first();
-        //     if ($existingBreed) {
-        //         $this->command->info("Standard weight data for breed '{$breedName}' already exists. Skipping.");
-        //         continue;
-        //     }
-
-        //     // Transform data into the new JSON structure
-        //     $standarData = [];
-        //     foreach ($data as $age => $ageData) {
-        //         $standarData[] = [
-        //             'umur' => $age,
-        //             'bobot' => [
-        //                 'min' => $ageData['bobot']['min'],
-        //                 'max' => $ageData['bobot']['max'],
-        //                 'target' => $ageData['bobot']['target']
-        //             ],
-        //             'feed_intake' => [
-        //                 'min' => $ageData['feed_intake']['min'],
-        //                 'max' => $ageData['feed_intake']['max'],
-        //                 'target' => $ageData['feed_intake']['target']
-        //             ],
-        //             'fcr' => [
-        //                 'min' => $ageData['fcr']['min'],
-        //                 'max' => $ageData['fcr']['max'],
-        //                 'target' => $ageData['fcr']['target']
-        //             ]
-        //         ];
-        //     }
-
-        //     // Create a single record with all data in JSON format
-        //     LivestockStrainStandard::create([
-        //         'livestock_strain_id' => $livestock_strain_id,
-        //         'breed' => $breedName,
-        //         'description' => $breedDescription,
-        //         'standar_data' => $standarData,
-        //         'status' => 'active',
-        //         'created_by' => $supervisor->id,
-        //         // 'updated_by' => $supervisor->id,
-        //     ]);
-
-
-        //     $this->command->info("Created standard weight data for breed '{$breedName}' (ages 0-42).");
-        // }
-
     }
 }

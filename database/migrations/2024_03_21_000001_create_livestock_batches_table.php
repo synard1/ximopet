@@ -15,7 +15,7 @@ return new class extends Migration {
             $table->uuid('livestock_strain_id')->nullable();
             $table->uuid('livestock_strain_standard_id')->nullable();
             $table->string('name'); // Batch name/code
-            $table->string('breed'); // Chicken breed type
+            $table->string('livestock_strain_name'); // Chicken strain type
             $table->dateTime('start_date');
             $table->dateTime('end_date')->nullable();
             $table->integer('populasi_awal');

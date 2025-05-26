@@ -13,7 +13,8 @@ class LivestockStrainStandard extends BaseModel
 
     protected $fillable = [
         'id',
-        'breed',
+        'livestock_strain_id',
+        'livestock_strain_name',
         'standar_data', // JSON column untuk menyimpan semua standar
         'description',
         'status',
@@ -44,4 +45,9 @@ class LivestockStrainStandard extends BaseModel
             'target' => 0
         ]
     ];
+
+    public function strain()
+    {
+        return $this->belongsTo(LivestockStrain::class, 'strain_id');
+    }
 }

@@ -60,9 +60,9 @@ class LivestockBatchSeeder extends Seeder
                 ]
             );
 
-            // Get or create a breed
-            $breed = LivestockStrain::firstOrCreate(
-                ['name' => 'Broiler Test'],
+            // Get or create a strain
+            $strain = LivestockStrain::firstOrCreate(
+                ['name' => 'Broiler Test', 'code' => 'BRO-TEST'],
                 [
                     'description' => 'Test Breed',
                     'created_by' => 1,
@@ -71,10 +71,10 @@ class LivestockBatchSeeder extends Seeder
             );
 
             // Get or create breed standard
-            $breedStandard = LivestockStrainStandard::firstOrCreate(
-                ['livestock_strain_id' => $breed->id],
+            $strainStandard = LivestockStrainStandard::firstOrCreate(
+                ['livestock_strain_id' => $strain->id],
                 [
-                    'breed' => 'Broiler Test',
+                    'livestock_strain_name' => 'Broiler Test',
                     'description' => 'Test Standard',
                     'standar_data' => [
                         [
@@ -109,9 +109,9 @@ class LivestockBatchSeeder extends Seeder
                 'farm_id' => $farm->id,
                 'kandang_id' => $kandang->id,
                 'name' => 'Test Livestock',
-                'breed' => 'Broiler Test',
-                'livestock_strain_id' => $breed->id,
-                'livestock_strain_standard_id' => $breedStandard->id,
+                'livestock_strain_id' => $strain->id,
+                'livestock_strain_standard_id' => $strainStandard->id,
+                'livestock_strain_name' => $strain->name,
                 'start_date' => Carbon::now(),
                 'populasi_awal' => 0, // Will be updated with total
                 'quantity_depletion' => 0,
@@ -171,10 +171,10 @@ class LivestockBatchSeeder extends Seeder
                     'livestock_id' => $livestock->id,
                     'farm_id' => $farm->id,
                     'kandang_id' => $kandang->id,
-                    'livestock_strain_id' => $breed->id,
-                    'livestock_strain_standard_id' => $breedStandard->id,
+                    'livestock_strain_id' => $strain->id,
+                    'livestock_strain_standard_id' => $strainStandard->id,
                     'name' => $batchData['name'],
-                    'breed' => 'Broiler Test',
+                    'livestock_strain_name' => 'Broiler Test',
                     'start_date' => $batchData['tanggal'],
                     'populasi_awal' => $batchData['jumlah'],
                     'quantity_depletion' => 0,
@@ -193,7 +193,7 @@ class LivestockBatchSeeder extends Seeder
                     $livestockStrainStandardService->updateLivestockStrainStandard([
                         'livestock_id' => $livestock->id,
                         'livestock_batch_id' => $batch->id,
-                        'livestock_strain_standard_id' => $breedStandard->id,
+                        'livestock_strain_standard_id' => $strainStandard->id,
                     ]);
                     $this->command->info("LivestockStrainStandardService executed for {$batchData['name']} ID: {$batch->id}");
                 } catch (\Exception $e) {

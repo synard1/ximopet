@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->uuid('farm_id');
             $table->uuid('kandang_id');
             $table->string('name'); //name for batch code / periode
-            $table->string('breed'); //jenis
+            $table->string('livestock_strain_name'); //jenis
             $table->dateTime('start_date'); //tanggal mulai
             $table->dateTime('end_date')->nullable();
             $table->integer('populasi_awal'); //jumlah awal

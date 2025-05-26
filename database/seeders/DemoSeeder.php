@@ -47,7 +47,7 @@ class DemoSeeder extends Seeder
             SupplyCategorySeeder::class,
             UnitSeeder::class,
             OVKSeeder::class,
-            BreedSeeder::class,
+            StrainSeeder::class,
             WorkerSeeder::class,
         ]);
 

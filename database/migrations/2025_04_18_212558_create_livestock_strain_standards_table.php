@@ -11,13 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
+
         Schema::disableForeignKeyConstraints();
 
-        Schema::create('livestock_strains', function (Blueprint $table) {
+        Schema::create('livestock_strain_standards', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('name');           // Name of the livestock strain (e.g., "Broiler", "Layer", "Dairy")
-            $table->text('description')->nullable(); // Optional: Description of the strain category
-            $table->string('status')->default('active');
+            $table->uuid('livestock_strain_id');
+            $table->string('livestock_strain_name');
+            $table->json('standar_data');
+            $table->string('description')->nullable();
+            $table->string('status');
+
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -25,6 +29,7 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('livestock_strain_id')->references('id')->on('livestock_strains');
         });
 
         Schema::enableForeignKeyConstraints();
@@ -35,6 +40,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('livestock_strains');
+        Schema::dropIfExists('livestock_strain_standards');
     }
 };

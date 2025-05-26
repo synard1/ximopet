@@ -12,6 +12,7 @@ class LivestockStrain extends BaseModel
     use HasFactory, SoftDeletes, HasUuids;
 
     protected $fillable = [
+        'code',
         'name',
         'description',
         'status',
