@@ -36,7 +36,7 @@ class LivestockController extends Controller
     {
         addVendors(['datatables']);
 
-        return $dataTable->render('pages.livestock.mutation.index');
+        return $dataTable->render('pages.livestock.purchase.index');
     }
 
     public function mutationIndex(LivestockMutationDataTable $dataTable)

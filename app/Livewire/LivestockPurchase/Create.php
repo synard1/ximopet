@@ -63,15 +63,7 @@ class Create extends Component
 
     public function mount()
     {
-        // $this->items = [
-        //     [
-        //         'supply_id' => null,
-        //         'quantity' => null,
-        //         'unit' => null, // ← new: satuan yang dipilih user
-        //         'price_per_unit' => null,
-        //         'available_units' => [], // ← new: daftar satuan berdasarkan supply
-        //     ]
-        // ];
+        $this->authorize('read livestock purchase');
     }
 
     public function updatedFarmId($value)
@@ -449,6 +441,7 @@ class Create extends Component
 
     public function save()
     {
+        $this->authorize($this->pembelianId ? 'edit livestock purchase' : 'create livestock purchase');
         $this->errorItems = [];
 
         // Validate unique combination of livestock_breed_id, farm_id, and kandang_id
@@ -685,6 +678,7 @@ class Create extends Component
 
     public function showCreateForm()
     {
+        $this->authorize('create livestock purchase');
         $this->resetForm();
         $this->showForm = true;
         $this->dispatch('hide-datatable');
@@ -795,6 +789,7 @@ class Create extends Component
 
     public function deleteLivestockPurchase($purchaseId)
     {
+        $this->authorize('delete livestock purchase');
         try {
             Log::info("Starting deletion process for livestock purchase", ['purchase_id' => $purchaseId]);
             DB::beginTransaction();
@@ -953,6 +948,7 @@ class Create extends Component
 
     public function updateDoNumber($transaksiId, $newNoSj)
     {
+        $this->authorize('edit livestock purchase');
         $transaksiDetail = SupplyPurchaseBatch::findOrFail($transaksiId);
 
         if ($transaksiDetail->exists()) {
@@ -967,6 +963,7 @@ class Create extends Component
 
     public function showEditForm($id)
     {
+        $this->authorize('edit livestock purchase');
         $this->pembelianId = $id;
         $pembelian = LivestockPurchase::with([
             'details',

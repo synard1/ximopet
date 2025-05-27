@@ -25,8 +25,8 @@ class StockSupplyDataTable extends DataTable
 
             // ->editColumn('kode', function (SupplyStock $item) {
             //     return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_stok" data-item-id="' . $item->id . '"><span class="menu-icon">
-			// 				<i class="ki-outline ki-package fs-4 text-success"></i>
-			// 			</span>' . $item->kode . '</a>';
+            // 				<i class="ki-outline ki-package fs-4 text-success"></i>
+            // 			</span>' . $item->kode . '</a>';
             // })
             // ->editColumn('jumlah', function (SupplyStock $stok) {
             //     if (auth()->user()->farmOperators()->exists()) {
@@ -77,6 +77,12 @@ class StockSupplyDataTable extends DataTable
                     return view('pages.masterdata.stock._actions', compact('stok'));
                 };
             })
+            ->filterColumn('farm_id', function ($query, $keyword) {
+                dd($keyword);
+                $query->whereHas('farms', function ($q) use ($keyword) {
+                    $q->where('id', 'like', "%{$keyword}%");
+                });
+            })
             // ->filterColumn('farm', function($query, $keyword) {
 
             //     $query->whereHas('farms', function($query) use ($keyword) { // Assuming you have a 'farm' relationship on your model
@@ -85,7 +91,7 @@ class StockSupplyDataTable extends DataTable
             // })
             ->setRowId('id')
             ->rawColumns(['kode']);
-            // ->make(true);
+        // ->make(true);
     }
 
 
@@ -96,7 +102,12 @@ class StockSupplyDataTable extends DataTable
     {
         $query = $model->newQuery();
 
-        
+        // if (request()->has('farm_id')) {
+        //     $query->where('farm_id', request('farm_id'));
+        // }
+        // if (request()->has('supply_id')) {
+        //     $query->where('supply_id', request('supply_id'));
+        // }
 
         // return $model->newQuery();
         // if (auth()->user()->hasRole('Operator')) {
@@ -104,7 +115,7 @@ class StockSupplyDataTable extends DataTable
         //     $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
 
         //     // dd($farmIds);
-            
+
         //     // Add a condition to filter items based on farm IDs
         //     $query->whereHas('stockHistory.inventoryLocation.farm', function ($q) use ($farmIds) {
         //         $q->whereIn('id', $farmIds);
@@ -130,7 +141,6 @@ class StockSupplyDataTable extends DataTable
         // }
 
         return $query;
-
     }
 
     /**
@@ -148,6 +158,16 @@ class StockSupplyDataTable extends DataTable
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             ->orderBy(1)
+            ->parameters([
+                'scrollX'      =>  true,
+                'searching'       =>  true,
+                // 'responsive'       =>  true,
+                'lengthMenu' => [
+                    [10, 25, 50, -1],
+                    ['10 rows', '25 rows', '50 rows', 'Show all']
+                ],
+                'buttons'      => ['export', 'print', 'reload', 'colvis'],
+            ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/stock/_draw-scripts.js')) . "}");
     }
 
@@ -158,9 +178,9 @@ class StockSupplyDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex', 'No.')
-            ->title('No.')
-            ->addClass('text-center')
-            ->width(50),
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
             // Column::make('kode')->searchable(false),
             Column::computed('farm_id')->searchable(true),
             Column::computed('supply_id')->title('Supply')->searchable(true),
@@ -184,7 +204,7 @@ class StockSupplyDataTable extends DataTable
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
+            // ->width(60)
         ];
     }
 

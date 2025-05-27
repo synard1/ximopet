@@ -1,5 +1,6 @@
 <!-- Stock Transfer Modal -->
-<div class="modal fade" id="modalStokTransfer" tabindex="-1" role="dialog" aria-labelledby="modalStokTransferLabel" aria-hidden="true">
+<div class="modal fade" id="modalStokTransfer" tabindex="-1" role="dialog" aria-labelledby="modalStokTransferLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -8,7 +9,7 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form id="stokTransferForm" method="POST" action="{{ route('supply.transfer') }}">
+            <form id="stokTransferForm" method="POST" action="{{ route('stock.transfer') }}">
                 @csrf
                 <div class="modal-body">
                     <x-error-messages />
@@ -19,7 +20,7 @@
                                 <select class="form-control" id="source_farm_id" name="source_farm_id" required>
                                     <option value="">Pilih Farm</option>
                                     @foreach($farms ?? [] as $farm)
-                                        <option value="{{ $farm->id }}">{{ $farm->name ?? 'Unknown' }}</option>
+                                    <option value="{{ $farm->id }}">{{ $farm->name ?? 'Unknown' }}</option>
                                     @endforeach
                                 </select>
                                 <div class="invalid-feedback" id="source_farm_id_error"></div>
@@ -28,7 +29,8 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="destination_farm_id">Tujuan Farm <span class="text-danger">*</span></label>
-                                <select class="form-control " id="destination_farm_id" name="destination_farm_id" required>
+                                <select class="form-control " id="destination_farm_id" name="destination_farm_id"
+                                    required>
                                     <option value="">Pilih Farm</option>
                                     @foreach($farms ?? [] as $farm)
                                     <option value="{{ $farm->id }}">{{ $farm->name ?? 'Unknown' }}</option>
@@ -46,7 +48,7 @@
                                 <select class="form-control " id="item_id" name="item_id" required>
                                     <option value="">Pilih Item</option>
                                     @foreach($items ?? [] as $item)
-                                        <option value="{{ $item->id }}">{{ $item->name }} ({{ $item->unit }})</option>
+                                    <option value="{{ $item->id }}">{{ $item->name }} ({{ $item->unit }})</option>
                                     @endforeach
                                 </select>
                                 <div class="invalid-feedback" id="item_id_error"></div>
@@ -56,13 +58,15 @@
                             <div class="form-group">
                                 <label for="quantity">Jumlah <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <input type="number" step="0.01" min="0.01" class="form-control" id="quantity" name="quantity" placeholder="Masukkan jumlah" required>
+                                    <input type="number" step="0.01" min="0.01" class="form-control" id="quantity"
+                                        name="quantity" placeholder="Masukkan jumlah" required>
                                     <div class="input-group-append">
                                         <span class="input-group-text item-unit">Unit</span>
                                     </div>
                                 </div>
                                 <div class="invalid-feedback" id="quantity_error"></div>
-                                <small class="text-muted available-stock">Stok tersedia: <span id="available_stock">0</span></small>
+                                <small class="text-muted available-stock">Stok tersedia: <span
+                                        id="available_stock">0</span></small>
                             </div>
                         </div>
                     </div>
@@ -71,7 +75,8 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="tanggal">Tanggal Transfer <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="tanggal" name="tanggal" value="{{ date('Y-m-d') }}" required>
+                                <input type="date" class="form-control" id="tanggal" name="tanggal"
+                                    value="{{ date('Y-m-d') }}" required>
                                 <div class="invalid-feedback" id="tanggal_error"></div>
                             </div>
                         </div>
@@ -79,7 +84,8 @@
 
                     <div class="form-group">
                         <label for="notes">Catatan</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Tambahkan catatan (opsional)"></textarea>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"
+                            placeholder="Tambahkan catatan (opsional)"></textarea>
                         <div class="invalid-feedback" id="notes_error"></div>
                     </div>
                 </div>
@@ -93,8 +99,8 @@
 </div>
 
 @push('scripts')
-    <script>
-        $(document).ready(function() {
+<script>
+    $(document).ready(function() {
             // Initialize select2
             $('.select2').select2({
                 dropdownParent: $('#modalStokTransfer')
@@ -135,7 +141,7 @@
                 
                 if (sourceId && itemId) {
                     $.ajax({
-                        url: "{{ route('stocks.check-available') }}",
+                        url: "{{ route('stock.check-available') }}",
                         type: "GET",
                         data: {
                             location_id: sourceId,
@@ -234,10 +240,10 @@
                 $('.item-unit').text('Unit');
             });
         });
-    </script>
-    
-    <script>
-        document.getElementById('stokTransferForm').addEventListener('submit', function (e) {
+</script>
+
+<script>
+    document.getElementById('stokTransferForm').addEventListener('submit', function (e) {
             e.preventDefault();
 
             const form = e.target;
@@ -256,7 +262,7 @@
             document.querySelectorAll('.invalid-feedback').forEach(el => el.innerText = '');
 
             // Kirim request ke Laravel
-            axios.post("{{ route('supply.transfer') }}", data, {
+            axios.post("{{ route('stock.transfer') }}", data, {
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('input[name=_token]').value,
                     'Accept': 'application/json',
@@ -281,6 +287,5 @@
                 }
             });
         });
-    </script>
+</script>
 @endpush
-

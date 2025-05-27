@@ -4,7 +4,8 @@
         {{-- === Informasi Utama Livestock Strain === --}}
         <div class="row g-3">
             <x-input.group col="6" label="Kode">
-                <input type="text" wire:model="code" class="form-control" placeholder="Masukkan Kode Strain">
+                <input type="text" wire:model="code" class="form-control" placeholder="Masukkan Kode Strain" {{
+                    $edit_mode ? 'readonly disabled' : '' }}>
                 <x-input.error for="code" />
             </x-input.group>
 
@@ -31,7 +32,7 @@
 
         {{-- === Action Buttons === --}}
         <div class="d-flex justify-content-end my-4">
-            <button type="button" class="btn btn-secondary me-2" wire:click="closeModalLivestockStrain">Batal</button>
+            <button type="button" class="btn btn-secondary me-2" wire:click="close">Batal</button>
             <button type="submit" class="btn btn-primary">
                 <i class="bi bi-save me-1"></i> Simpan
             </button>

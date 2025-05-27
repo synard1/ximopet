@@ -40,13 +40,13 @@ class StockController extends Controller
     public function stoks(Request $request)
     {
         $type = $request->input('type');
-        if($type == 'reduce'){
+        if ($type == 'reduce') {
             return $this->reduceStock($request);
-        }elseif($type == 'edit'){
+        } elseif ($type == 'edit') {
             return $this->stockEdit($request);
-        }elseif($type == 'reverse'){
+        } elseif ($type == 'reverse') {
             return $this->reverseStockReduction($request);
-        }elseif($type == 'details'){
+        } elseif ($type == 'details') {
             return $this->detailsStok($request);
         }
     }
@@ -91,10 +91,10 @@ class StockController extends Controller
             // Update Detail Items
             $transaksiDetail = TransaksiBeliDetail::findOrFail($id);
             // Find the corresponding StokMutasi & StockHistory record
-            $stockHistory = StockHistory::where('transaksi_id', $transaksiDetail->transaksi_id)->where('jenis','Pembelian')->first();
+            $stockHistory = StockHistory::where('transaksi_id', $transaksiDetail->transaksi_id)->where('jenis', 'Pembelian')->first();
 
-            
-            if($column == 'qty'){
+
+            if ($column == 'qty') {
                 $stockHistory->update([
                     'quantity'  =>  $value,
                     'available_quantity' => $value,
@@ -110,7 +110,7 @@ class StockController extends Controller
 
                     ]
                 );
-            }else{
+            } else {
                 $transaksiDetail->update(
                     [
                         $column => $value,
@@ -123,9 +123,9 @@ class StockController extends Controller
 
                 ]);
             }
-            
-            $test = ($transaksiDetail->qty / $transaksiDetail->items->konversi) * $transaksiDetail->harga ;
-            
+
+            $test = ($transaksiDetail->qty / $transaksiDetail->items->konversi) * $transaksiDetail->harga;
+
             $transaksiDetail->update(
                 [
                     'sub_total' => ($transaksiDetail->qty / $transaksiDetail->items->konversi) * $transaksiDetail->harga,
@@ -137,12 +137,12 @@ class StockController extends Controller
             //Update Parent Transaksi
             $transaksi = TransaksiBeli::findOrFail($transaksiDetail->transaksi_id);
             $sumQty = TransaksiBeliDetail::where('transaksi_id', $transaksiDetail->transaksi_id)
-                                    ->with('items') // Eager load relasi 'items'
-                                    ->get() // Ambil semua data yang sesuai
-                                    ->sum(function ($item) {
-                                        return $item->qty / $item->items->konversi; // Hitung qty / konversi untuk setiap item
-                                    });
-            $sumHarga = TransaksiBeliDetail::where('transaksi_id',$transaksiDetail->transaksi_id)->sum('harga');
+                ->with('items') // Eager load relasi 'items'
+                ->get() // Ambil semua data yang sesuai
+                ->sum(function ($item) {
+                    return $item->qty / $item->items->konversi; // Hitung qty / konversi untuk setiap item
+                });
+            $sumHarga = TransaksiBeliDetail::where('transaksi_id', $transaksiDetail->transaksi_id)->sum('harga');
             $transaksi->update(
                 [
                     'total_qty' => $sumQty,
@@ -150,20 +150,18 @@ class StockController extends Controller
                     'harga' => $sumHarga,
                     'sub_total' => $sumHarga * $sumQty
                 ]
-                );
+            );
 
 
             // Commit the transaction
             DB::commit();
 
             // return response()->json(['success' => true,'message'=>'Berhasil Update Data']);
-            return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success' ]);
-
+            return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success']);
         } catch (\Exception $e) {
             //throw $th;
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 400);
-
         }
     }
 
@@ -263,22 +261,22 @@ class StockController extends Controller
             // Get source and destination kelompokTernak
             $sourceKelompokTernak = Livestock::findOrFail($validatedData['source_farm_id']);
             $destinationKelompokTernak = Livestock::findOrFail($validatedData['destination_farm_id']);
-            
+
             // Get the item
             $item = Supply::findOrFail($validatedData['item_id']);
-            
+
             // Check if source has enough stock
             $sourceStock = \App\Models\CurrentStock::where('item_id', $item->id)
                 ->where('location_id', $sourceKelompokTernak->id)
                 ->first();
-                
+
             if (!$sourceStock || $sourceStock->quantity < $validatedData['quantity']) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient stock in source kelompokTernak'
                 ], 400);
             }
-            
+
             // Create stock movement record for source (reduction)
             $sourceMovement = \App\Models\StockMovement::create([
                 'transaksi_id' => null,
@@ -292,7 +290,7 @@ class StockController extends Controller
                 'created_by' => auth()->id(),
                 'updated_by' => auth()->id(),
             ]);
-            
+
             // Create stock movement record for destination (addition)
             $destinationMovement = \App\Models\StockMovement::create([
                 'transaksi_id' => null,
@@ -306,18 +304,18 @@ class StockController extends Controller
                 'created_by' => auth()->id(),
                 'updated_by' => auth()->id(),
             ]);
-            
+
             // Update source stock
             $sourceStock->update([
                 'quantity' => $sourceStock->quantity - $validatedData['quantity'],
                 'updated_by' => auth()->id(),
             ]);
-            
+
             // Update or create destination stock
             $destinationStock = \App\Models\CurrentStock::where('item_id', $item->id)
                 ->where('location_id', $destinationKelompokTernak->id)
                 ->first();
-                
+
             if ($destinationStock) {
                 $destinationStock->update([
                     'quantity' => $destinationStock->quantity + $validatedData['quantity'],
@@ -333,7 +331,7 @@ class StockController extends Controller
                     'updated_by' => auth()->id(),
                 ]);
             }
-            
+
             // Create stock history records
             \App\Models\StockHistory::create([
                 'transaksi_id' => null,
@@ -348,7 +346,7 @@ class StockController extends Controller
                 'created_by' => auth()->id(),
                 'updated_by' => auth()->id(),
             ]);
-            
+
             \App\Models\StockHistory::create([
                 'transaksi_id' => null,
                 'item_id' => $item->id,
@@ -362,9 +360,9 @@ class StockController extends Controller
                 'created_by' => auth()->id(),
                 'updated_by' => auth()->id(),
             ]);
-            
+
             DB::commit();
-            
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Stock transferred successfully',
@@ -373,7 +371,6 @@ class StockController extends Controller
                     'destination_movement' => $destinationMovement,
                 ]
             ], 200);
-            
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Stock transfer error: ' . $e->getMessage());
@@ -396,14 +393,14 @@ class StockController extends Controller
             'location_id' => 'required|uuid',
             'item_id' => 'required|uuid',
         ]);
-        
+
         try {
             $stock = \App\Models\CurrentStock::where('item_id', $validatedData['item_id'])
                 ->where('kelompok_ternak_id', $validatedData['location_id'])
                 ->first();
-                
+
             $item = Item::findOrFail($validatedData['item_id']);
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
@@ -412,7 +409,6 @@ class StockController extends Controller
                     'available' => $stock && $stock->quantity > 0,
                 ]
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Check available stock error: ' . $e->getMessage());
             return response()->json([
@@ -426,10 +422,10 @@ class StockController extends Controller
     {
         addVendors(['datatables']);
         addJavascriptFile('assets/js/custom/fetch-data.js');
-                                
+
         $livestocks = Livestock::all();
         $feeds = Feed::orderBy('name', 'DESC')
-        ->get();
+            ->get();
         // $items = Item::with(['itemCategory'])
         // ->whereHas('itemCategory', function ($q) {
         //     $q->where('name', '!=', 'DOC');
@@ -437,25 +433,22 @@ class StockController extends Controller
         // ->orderBy('name', 'DESC')
         // ->get();
 
-        return $dataTable->render('pages/masterdata.stock.index_pakan', compact(['livestocks','feeds']));
+        return $dataTable->render('pages/masterdata.stock.index_pakan', compact(['livestocks', 'feeds']));
     }
 
     public function stockSupply(SupplyStockDataTable $dataTable)
     {
         addVendors(['datatables']);
         addJavascriptFile('assets/js/custom/fetch-data.js');
-                                
-        $livestocks = Livestock::all();
-        $supplies = Supply::orderBy('name', 'DESC')
-        ->get();
-        // $items = Item::with(['itemCategory'])
-        // ->whereHas('itemCategory', function ($q) {
-        //     $q->where('name', '!=', 'DOC');
-        // })
-        // ->orderBy('name', 'DESC')
-        // ->get();
 
-        return $dataTable->render('pages/masterdata.stock.index_supply', compact(['livestocks','supplies']));
+        // Fetch the farms data
+        $farms = Farm::where('status', 'active')->select('id', 'name')->get();
+
+        // Fetch supplies or other necessary data
+        $supplies = Supply::orderBy('name', 'DESC')->get();
+
+        // Pass the farms and supplies to the view
+        return $dataTable->render('pages.masterdata.stock.index_supply', compact(['farms', 'supplies']));
     }
 
     // original backup
@@ -470,7 +463,7 @@ class StockController extends Controller
 
     //     try {
     //         $user = auth()->user();
-        
+
     //         if ($user->hasRole('Manager') || $user->hasRole('Supervisor')) {
     //             // If user is a Manager, get all active farm IDs
     //             $farmIds = Farm::whereIn('status', ['Digunakan','Aktif'])->pluck('id')->toArray();
@@ -535,8 +528,5 @@ class StockController extends Controller
         addVendors(['datatables']);
 
         return $dataTable->render('pages.stock.mutasi');
-
     }
-
-    
 }

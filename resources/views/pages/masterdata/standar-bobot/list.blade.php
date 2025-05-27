@@ -1,6 +1,6 @@
 <x-default-layout>
     @section('title')
-    Data Standar Bobot
+    Data Standar Ayam
     @endsection
 
     @section('breadcrumbs')
@@ -10,7 +10,9 @@
             <div class="card-title">
                 {{-- <div class="d-flex align-items-center position-relative my-1">
                     {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
-                    <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Operator" id="mySearchInput2"/>
+                    <input type="text" data-kt-user-table-filter="search"
+                        class="form-control form-control-solid w-250px ps-13" placeholder="Cari Operator"
+                        id="mySearchInput2" />
                 </div> --}}
             </div>
             <div class="card-toolbar">
@@ -22,7 +24,7 @@
                 </div>
             </div>
         </div>
-        <div class="card-body py-4">                    
+        <div class="card-body py-4">
             <div class="table-responsive">
                 {!! $dataTable->table(['class' => 'table table-striped table-row-bordered gy-5 gs-7'], true) !!}
             </div>
@@ -32,7 +34,7 @@
     <div class="card" id="bobotForm" style="display: none">
         <div class="card-header border-0 pt-6">
             <div class="card-title">
-                <h3 class="card-title">Form Standar Bobot</h3>
+                <h3 class="card-title">Form Standar Ayam</h3>
             </div>
             <div class="card-toolbar">
                 <div class="d-flex justify-content-end">
@@ -44,7 +46,7 @@
             </div>
         </div>
         <div class="card-body">
-            <livewire:standar-bobot-form />
+            <livewire:master-data.livestock-strain.standard />
         </div>
     </div>
 
@@ -81,7 +83,7 @@
        
 
         document.addEventListener('livewire:init', function () {
-            Livewire.on('standarBobotEdit', function () {
+            Livewire.on('strainStandardEdit', function () {
                 const tableCard = document.getElementById('standarBobotTables');
                 const formCard = document.getElementById('bobotForm');
                 

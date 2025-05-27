@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-    Data Pembelian Pakan
+    Data Pembelian Ayam
     @endsection
 
     @section('breadcrumbs')
@@ -14,7 +14,7 @@
             </div>
             <!--begin::Card title-->
 
-            @can('create transaction')
+            @can('create livestock purchase')
             <!--begin::Card toolbar-->
             <div class="card-toolbar" id="cardToolbar">
                 <!--begin::Toolbar-->
@@ -22,7 +22,7 @@
                     <!--begin::Add user-->
                     <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('showCreateForm')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}
-                        Tambah Data Pembelian
+                        Tambah Data Pembelian Ayam
                     </button>
                     <!--end::Add user-->
                 </div>

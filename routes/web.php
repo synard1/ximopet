@@ -196,7 +196,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Document Routes
         // Route::get('/transaction/documents', [TransaksiController::class, 'docIndex'])->name('documents.index');
 
-        // Livestock Death Routes
+        // Livestock Routes
+        Route::get('/transaction/livestock', [LivestockController::class, 'purchaseIndex'])->name('livestock.index');
         Route::get('/transaction/livestock-death', [TernakController::class, 'kematianTernakIndex'])->name('livestock-death.index');
 
         // Document Routes

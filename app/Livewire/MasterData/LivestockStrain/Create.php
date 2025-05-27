@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\LivestockStrain;
 use App\Models\Unit;
 use App\Models\UnitConversion;
+use App\Models\LivestockStrainStandard;
 
 class Create extends Component
 {
@@ -18,9 +19,10 @@ class Create extends Component
     public $edit_mode = false;
 
     protected $listeners = [
-        'showEditForm' => 'showEditForm',
+        'editStrain' => 'showEditForm',
         'showCreateForm' => 'showCreateForm',
         'cancel' => 'cancel',
+        'delete_strain' => 'deleteStrain',
     ];
 
     public function mount()
@@ -99,5 +101,21 @@ class Create extends Component
             Log::error('Failed to save livestock strain data: ' . $e->getMessage());
             $this->dispatch('error', 'Gagal menyimpan data strain. Silakan coba lagi. Error: ' . $e->getMessage());
         }
+    }
+
+    public function deleteStrain($strainId)
+    {
+        $strain = LivestockStrain::findOrFail($strainId);
+
+        // Check if strain has any associated standards
+        $hasStandards = LivestockStrainStandard::where('livestock_strain_id', $strainId)->exists();
+
+        if ($hasStandards) {
+            $this->dispatch('error', 'Cannot delete strain because it has associated standards. Please delete the standards first.');
+            return;
+        }
+
+        $strain->delete();
+        $this->dispatch('success', 'Strain deleted successfully');
     }
 }

@@ -30,8 +30,8 @@ class SupplyStockDataTable extends DataTable
 
             ->editColumn('farm_id', function (SupplyStock $supply) {
                 return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_supplystocks" data-supply-id="' . $supply->supply_id . '" data-farm-id="' . $supply->farm_id . '"><span class="menu-icon">
-							<i class="ki-outline ki-package fs-4 text-success"></i>
-						</span>' . $supply->farm->name . '</a>';
+            				<i class="ki-outline ki-package fs-4 text-success"></i>
+            			</span>' . $supply->farm->name . '</a>';
             })
 
             ->editColumn('unit', function (SupplyStock $supply) {
@@ -46,6 +46,11 @@ class SupplyStockDataTable extends DataTable
             ->addColumn('action', function (SupplyStock $transaction) {
                 // dd($transaction);
                 return view('pages.masterdata.stock._feedstock_actions', compact('transaction'));
+            })
+            ->filterColumn('farm_id', function ($query, $keyword) {
+                $query->whereHas('farm', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
             })
 
             // ->editColumn('created_at', function (SupplyStock $supply) {
@@ -71,8 +76,23 @@ class SupplyStockDataTable extends DataTable
                 SUM(quantity_mutated) as total_mutated
             ')
             ->with('supply')
-            ->groupBy('farm_id','supply_id');
+            ->with('farm')
+            ->groupBy('farm_id', 'supply_id');
     }
+    // public function query(SupplyStock $model): QueryBuilder
+    // {
+    //     $query = $model->newQuery()->with(['farm', 'supply']);
+
+    //     if (request()->filled('farm_id')) {
+    //         $query->where('farm_id', request('farm_id'));
+    //     }
+
+    //     if (request()->filled('supply_id')) {
+    //         $query->where('supply_id', request('supply_id'));
+    //     }
+
+    //     return $query;
+    // }
 
 
 
@@ -85,12 +105,34 @@ class SupplyStockDataTable extends DataTable
             ->setTableId('stoks-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            // ->dom('Bfrtip')
+            ->dom('Bfrtip')
             // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
             // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             // ->orderBy(1)
+            ->parameters([
+                'scrollX'      =>  true,
+                'searching'       =>  true,
+                // 'responsive'       =>  true,
+                'lengthMenu' => [
+                    [10, 25, 50, -1],
+                    ['10 rows', '25 rows', '50 rows', 'Show all']
+                ],
+                'buttons' => [
+                    'copy',
+                    'csv',
+                    'excel',
+                    'pdf',
+                    'print',
+                    'colvis',
+                    [
+                        'text' => 'Reload',
+                        'action' => 'function ( e, dt, node, config ) { dt.ajax.reload(); }',
+                        'className' => 'btn btn-secondary'
+                    ]
+                ],
+            ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/stock/_draw-scripts.js')) . "}");
     }
 
@@ -101,10 +143,10 @@ class SupplyStockDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex', 'No.')
-            ->title('No.')
-            ->addClass('text-center')
-            ->width(50),
-            Column::make('farm_id')->title('Farm Ayam')->searchable(false),
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
+            Column::make('farm_id')->title('Farm Ayam')->searchable(true),
             // Column::computed('farm')->searchable(true),
             Column::make('supply_id')->title('Nama Pakan'),
             Column::computed('quantity')->title('Jumlah')
@@ -124,7 +166,7 @@ class SupplyStockDataTable extends DataTable
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
+            // ->width(60)
         ];
     }
 

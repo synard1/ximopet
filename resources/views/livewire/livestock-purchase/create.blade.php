@@ -115,9 +115,11 @@
 
         <div class="d-flex justify-content-end">
             <button type="button" class="btn btn-secondary" wire:click="cancel">Cancel</button>
+            @can('create livestock purchase')
             <button type="submit" class="btn btn-warning text-white">
                 <i class="bi bi-save me-1"></i> Simpan Pembelian
             </button>
+            @endcan
         </div>
     </form>
     @endif

@@ -35,8 +35,8 @@ document
                 },
             }).then((result) => {
                 if (result.isConfirmed) {
-                    Livewire.dispatch("delete_expedition", [
-                        this.getAttribute("data-kt-expedition-id"),
+                    Livewire.dispatch("delete_strain", [
+                        this.getAttribute("data-kt-livestock-strain-id"),
                     ]);
                 }
             });
@@ -53,16 +53,16 @@ document
             const parent = e.target.closest("tr");
 
             // Get ekspedisi ID
-            const expeditionId = event.currentTarget.getAttribute(
-                "data-kt-expedition-id"
+            const strainId = event.currentTarget.getAttribute(
+                "data-kt-livestock-strain-id"
             );
 
             // Get subject name
-            const ekspedisiName = parent.querySelectorAll("td")[1].innerText;
+            const strainName = parent.querySelectorAll("td")[1].innerText;
 
             // Simulate delete request -- for demo purpose only
             Swal.fire({
-                html: `Membuka Data <b>` + ekspedisiName + `</b>`,
+                html: `Membuka Data <b>` + strainName + `</b>`,
                 icon: "info",
                 buttonsStyling: false,
                 showConfirmButton: false,
@@ -75,7 +75,7 @@ document
                 //     this.set('ekspedisi_id', event.detail.ekspedisiId);
                 // });
 
-                Livewire.dispatch("editExpedition", [expeditionId]);
+                Livewire.dispatch("editStrain", [strainId]);
             });
         });
     });
@@ -83,5 +83,5 @@ document
 // Listen for 'success' event emitted by Livewire
 Livewire.on("success", (message) => {
     // Reload the ekspedisis-table datatable
-    LaravelDataTables["expedisis-table"].ajax.reload();
+    LaravelDataTables["livestock-strain-table"].ajax.reload();
 });

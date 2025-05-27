@@ -10,7 +10,8 @@ use App\Models\LivestockStrainStandard as StandarBobot;
 class StandarBobotViewModal extends Component
 {
     public $standards = [];
-    public $breed = '';
+    public $strain_name = '';
+    public $description = '';
     public $index = '';
     public $keterangan = '';
     public $isEditing = false;
@@ -62,8 +63,8 @@ class StandarBobotViewModal extends Component
         // }
         // return view('livewire.standar-bobot-view-modal');
         return view('livewire.standar-bobot-view-modal', [
-            'breed' => $this->breed,
-            'keterangan' => $this->keterangan
+            'strain_name' => $this->strain_name,
+            'description' => $this->description
         ]);
     }
 
@@ -72,8 +73,8 @@ class StandarBobotViewModal extends Component
         $standarBobot = StandarBobot::findOrFail($standarBobotId);
 
         // Prepare the data for display
-        $this->breed = $standarBobot->breed;
-        $this->keterangan = $standarBobot->keterangan;
+        $this->strain_name = $standarBobot->livestock_strain_name;
+        $this->description = $standarBobot->description;
         $this->standarBobotId = $standarBobot->id;
 
         // Ensure standar_data is an associative array with umur as keys
