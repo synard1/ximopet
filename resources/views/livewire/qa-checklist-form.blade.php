@@ -1,9 +1,10 @@
 <div>
-    <div class="card">
+    @if ($showForm)
+    <div class="card" id="qaForm">
         <div class="card-header">
             <h3 class="card-title">QA Checklist Form</h3>
             <div class="card-toolbar">
-                <button wire:click="exportToJson" class="btn btn-sm btn-light-primary me-2">
+                {{-- <button wire:click="exportToJson" class="btn btn-sm btn-light-primary me-2">
                     <i class="ki-duotone ki-file-down fs-2">
                         <span class="path1"></span>
                         <span class="path2"></span>
@@ -16,7 +17,7 @@
                         <span class="path2"></span>
                     </i>
                     Export TXT
-                </button>
+                </button> --}}
             </div>
         </div>
         <div class="card-body">
@@ -26,7 +27,7 @@
             </div>
             @endif
 
-            <form wire:submit="save">
+            <form wire:submit.prevent="save">
                 <div class="row mb-5">
                     <div class="col-md-6">
                         <label class="form-label required">Feature Name</label>
@@ -198,11 +199,10 @@
                 </div>
 
                 <div class="text-end">
-                    @if($editingId)
                     <button type="button" class="btn btn-light me-2" wire:click="cancelEdit">
                         Batal
                     </button>
-                    @endif
+
                     <button type="submit" class="btn btn-primary">
                         <i class="ki-duotone ki-check fs-2">
                             <span class="path1"></span>
@@ -215,15 +215,28 @@
         </div>
     </div>
 
+    {{-- @else
+
     <div class="card mt-5">
         <div class="card-header">
             <h3 class="card-title">QA Checklist Results</h3>
+            <div class="card-toolbar">
+                <button type="button" class="btn btn-primary ms-2" id="show-qa-form"
+                    onclick="Livewire.dispatch('showQaForm')">
+                    <i class="fa fa-plus"></i> Add New QA
+                </button>
+
+                <div class="d-flex align-items-center position-relative my-1">
+                    <input type="text" wire:model.live="search" class="form-control form-control-solid w-250px ps-13"
+                        placeholder="Search..." />
+                </div>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-row-bordered table-row-gray-100 align-middle gs-0 gy-3">
+                <table id="qa-checklist-table" class="table table-bordered table-striped">
                     <thead>
-                        <tr class="fw-bold text-muted">
+                        <tr>
                             <th>Feature</th>
                             <th>Category</th>
                             <th>Subcategory</th>
@@ -237,6 +250,8 @@
                         </tr>
                     </thead>
                     <tbody>
+                    </tbody>
+                    <tbody>
                         @foreach($checklists as $checklist)
                         <tr>
                             <td>{{ $checklist->feature_name }}</td>
@@ -244,7 +259,7 @@
                             <td>{{ $checklist->feature_subcategory }}</td>
                             <td>{{ $checklist->test_type }}</td>
                             <td>
-                                <span class="badge badge-{{ 
+                                <span class="badge bg-{{ 
                                         $checklist->priority === 'Critical' ? 'danger' : 
                                         ($checklist->priority === 'High' ? 'warning' : 
                                         ($checklist->priority === 'Medium' ? 'info' : 'success')) 
@@ -253,7 +268,7 @@
                                 </span>
                             </td>
                             <td>
-                                <span class="badge badge-{{ 
+                                <span class="badge bg-{{ 
                                         $checklist->status === 'Passed' ? 'success' : 
                                         ($checklist->status === 'Failed' ? 'danger' : 
                                         ($checklist->status === 'Blocked' ? 'dark' : 'warning')) 
@@ -265,7 +280,7 @@
                             <td>{{ $checklist->test_date->format('Y-m-d') }}</td>
                             <td>
                                 @if($checklist->url)
-                                <a href="{{ $checklist->url }}" target="_blank" class="btn btn-sm btn-light-info">
+                                <a href="{{ $checklist->url }}" target="_blank" class="btn btn-sm btn-info">
                                     Go to URL
                                 </a>
                                 @else
@@ -273,14 +288,13 @@
                                 @endif
                             </td>
                             <td>
-                                <button wire:click="edit({{ $checklist->id }})"
-                                    class="btn btn-sm btn-light-primary me-2">
+                                <button wire:click="edit({{ $checklist->id }})" class="btn btn-sm btn-primary me-2">
                                     <i class="ki-duotone ki-pencil fs-2">
                                         <span class="path1"></span>
                                         <span class="path2"></span>
                                     </i>
                                 </button>
-                                <button wire:click="delete({{ $checklist->id }})" class="btn btn-sm btn-light-danger"
+                                <button wire:click="delete({{ $checklist->id }})" class="btn btn-sm btn-danger"
                                     onclick="confirm('Are you sure?') || event.stopImmediatePropagation()">
                                     <i class="ki-duotone ki-trash fs-2">
                                         <span class="path1"></span>
@@ -300,7 +314,9 @@
                 {{ $checklists->links() }}
             </div>
         </div>
-    </div>
+    </div> --}}
+    @endif
+
 </div>
 
 <script>
@@ -321,3 +337,35 @@
         @this.set('device', device);
     });
 </script>
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+@endpush
+
+@push('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#qa-checklist-table').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: '{{ route('administrator.qa.index') }}', // Ensure this route is defined
+            columns: [
+                { data: 'feature_name', name: 'feature_name' },
+                { data: 'feature_category', name: 'feature_category' },
+                { data: 'feature_subcategory', name: 'feature_subcategory' },
+                { data: 'test_type', name: 'test_type' },
+                { data: 'priority', name: 'priority' },
+                { data: 'status', name: 'status' },
+                { data: 'tester_name', name: 'tester_name' },
+                { data: 'test_date', name: 'test_date' },
+                { data: 'url', name: 'url' },
+                { data: 'actions', name: 'actions', orderable: false, searchable: false }
+            ]
+        });
+    });
+</script>
+@endpush

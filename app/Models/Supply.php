@@ -48,4 +48,9 @@ class Supply extends BaseModel
     {
         return $this->belongsTo(Unit::class);
     }
+
+    public function supplyPurchase()
+    {
+        return $this->hasMany(SupplyPurchase::class, 'supply_id');
+    }
 }

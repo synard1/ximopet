@@ -106,4 +106,6 @@
         });
     </script>
     @endpush
+    @livewire('qa-checklist-monitor', ['url' => request()->path()])
+    @livewire('admin-monitoring.permission-info')
 </x-default-layout>

@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-        Master Data Pekerja Kandang
+    Master Data Pekerja Kandang
     @endsection
 
     @section('breadcrumbs')
@@ -48,9 +48,9 @@
     </div>
 
     @push('scripts')
-        {{ $dataTable->scripts() }}
-        <script>
-            document.addEventListener('livewire:init', function () {
+    {{ $dataTable->scripts() }}
+    <script>
+        document.addEventListener('livewire:init', function () {
                 window.addEventListener('hide-datatable', () => {
                     $('#datatable-container').hide();
                     $('#cardToolbar').hide();
@@ -63,7 +63,8 @@
                 
             });
 
-        </script>
+    </script>
     @endpush
+    @livewire('qa-checklist-monitor', ['url' => request()->path()])
+    @livewire('admin-monitoring.permission-info')
 </x-default-layout>
-

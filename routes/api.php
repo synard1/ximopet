@@ -18,6 +18,8 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\SupplyController;
 use App\Http\Controllers\MutationController;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\MenuController;
 
 /*
 |--------------------------------------------------------------------------
@@ -180,6 +182,24 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/sales/{transaksiId}', [AppApi::class, 'getPenjualan']);
     Route::get('/reset-demo', [AppApi::class, 'resetDemo']);
 });
+
+// Authentication Routes
+Route::prefix('auth')->group(function () {
+    // User Registration
+    Route::post('/register', [AuthenticatedSessionController::class, 'register']);
+
+    // User Login
+    Route::post('/login', [AuthenticatedSessionController::class, 'login']);
+
+    // User Logout
+    Route::post('/logout', [AuthenticatedSessionController::class, 'logout'])->middleware('auth:sanctum');
+
+    // Password Reset
+    Route::post('/password/reset', [AuthenticatedSessionController::class, 'resetPassword']);
+});
+
+// New route for getting menu data
+Route::middleware('auth:sanctum')->get('/menu', [MenuController::class, 'getMenu']);
 
 /*
 |--------------------------------------------------------------------------

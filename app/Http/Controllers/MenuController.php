@@ -482,4 +482,17 @@ class MenuController extends Controller
             ], 500);
         }
     }
+
+    public function getMenu(Request $request)
+    {
+        $location = $request->query('location'); // Get location from query parameters
+        $user = $request->user(); // Get the authenticated user
+        $token = $request->header('Authorization');
+        // dd($token);
+
+        // Fetch the menu based on location and user permissions
+        $menus = Menu::getMenuByLocationApi($location, $token);
+
+        return response()->json($menus);
+    }
 }

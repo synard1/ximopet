@@ -9,6 +9,7 @@ use Illuminate\Validation\ValidationException;
 use App\Models\Supply;
 use App\Models\Unit;
 use App\Models\UnitConversion;
+use App\Models\SupplyCategory;
 
 class Create extends Component
 {
@@ -35,7 +36,8 @@ class Create extends Component
         'cancel' => 'cancel',
         'edit' => 'edit',
         'addConversion' => 'addConversion',
-        
+        'deleteSupply' => 'deleteSupply',
+
     ];
 
     public function mount()
@@ -152,6 +154,7 @@ class Create extends Component
     {
         return view('livewire.master-data.supply.create', [
             'units' => Unit::all(),
+            'types' => SupplyCategory::all(),
         ]);
     }
 
@@ -181,7 +184,7 @@ class Create extends Component
         $this->supplyId = $supply->id;
         $this->code = $supply->code;
         $this->name = $supply->name;
-        $this->type = "Supply";
+        $this->type = $supply->supplyCategory->name;
         $this->unit_id = $supply->payload['unit_id'];
         $this->description = $supply->description;
         $this->conversion_units = $supply->payload['conversion_units'] ?? [];
@@ -196,7 +199,7 @@ class Create extends Component
         $this->validate([
             'code' => 'required',
             'name' => 'required',
-            'type' => 'required|in:Supply,Suplement,Medicine,Others', // Contoh dengan aturan tambahan
+            'type' => 'required', // Contoh dengan aturan tambahan
         ]);
 
         $this->validateConversionDefaults();
@@ -206,7 +209,7 @@ class Create extends Component
             $payload = [
                 'unit_id' => $this->unit_id,
                 'unit_details' => Unit::find($this->unit_id)?->only('id', 'name', 'description'),
-                'conversion_units' => collect($this->conversion_units)->map(function ($conv){
+                'conversion_units' => collect($this->conversion_units)->map(function ($conv) {
                     $unit = Unit::find($conv['unit_id'])?->only('id', 'name', 'description');
 
                     // dd($unit);
@@ -221,29 +224,34 @@ class Create extends Component
                     ];
                 })->toArray(),
             ];
-        
+
             // Simpan atau update Supply
             $supply = $this->edit_mode && $this->supplyId
                 ? Supply::findOrFail($this->supplyId)
                 : new Supply(['created_by' => auth()->id()]);
-        
+
+            $supplyCategory = SupplyCategory::where('name', $this->type)->first();
+
+            // dd($supplyCategory);
+
             $supply->fill([
                 'code' => $this->code,
                 'name' => $this->name,
                 'payload' => $payload,
+                'supply_category_id' => $supplyCategory->id,
             ])->save();
-        
+
             // Bersihkan semua konversi lama untuk supply ini
             // UnitConversion::where('type', 'Supply')->where('item_id', $supply->id)->delete();
-        
+
             // Simpan ulang konversi, hindari duplikasi
             $uniqueConversions = collect($this->conversion_units)
-                ->unique(fn ($conv) => $this->unit_id . '-' . $conv['unit_id']);
-        
+                ->unique(fn($conv) => $this->unit_id . '-' . $conv['unit_id']);
+
             foreach ($uniqueConversions as $conversion) {
                 UnitConversion::updateOrCreate(
                     [
-                        'type' => 'Supply',
+                        'type' => $this->type,
                         'item_id' => $supply->id,
                         'unit_id' => $this->unit_id,
                         'conversion_unit_id' => $conversion['unit_id'],
@@ -259,8 +267,21 @@ class Create extends Component
                 );
             }
         });
-    
+
         $this->dispatch('success', 'Data Pakan berhasil ' . ($this->edit_mode ? 'diperbarui' : 'disimpan'));
         $this->close();
+    }
+
+    public function deleteSupply($id)
+    {
+        $supply = Supply::findOrFail($id);
+
+        if ($supply->supplyPurchase->count() > 0) {
+            $this->dispatch('error', 'Data Supply tidak bisa dihapus karena sudah memiliki data pembelian');
+            return;
+        }
+
+        $supply->delete();
+        $this->dispatch('success', 'Data Supply berhasil dihapus');
     }
 }

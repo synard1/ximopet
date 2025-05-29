@@ -88,6 +88,7 @@ class QaChecklist extends Component
     {
         QaChecklist::find($id)->delete();
         session()->flash('message', 'Checklist deleted successfully.');
+        $this->dispatch('success', 'Checklist deleted successfully.');
     }
 
     public function exportToJson()

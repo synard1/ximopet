@@ -66,16 +66,16 @@
                 "delete expedition": true
             }
         },
-        "/master/pakans": {
+        "/master/feeds": {
             "roles": {
                 "Admin": true,
                 "Supervisor": true
             },
             "permissions": {
-                "read pakan": true,
-                "create pakan": true,
-                "update pakan": true,
-                "delete pakan": true
+                "read feed": true,
+                "create feed": true,
+                "update feed": true,
+                "delete feed": true
             }
         },
         "/master/supplies": {
@@ -102,17 +102,43 @@
                 "delete pekerja": true
             }
         },
-        "/master/standar-ayam": {
+        "/master/workers": {
             "roles": {
                 "Admin": true,
                 "Supervisor": true
             },
             "permissions": {
-                "read standard ayam": true,
-                "create standard ayam": true,
-                "update standard ayam": true,
-                "delete standard ayam": true
+                "read worker": true,
+                "create worker": true,
+                "update worker": true,
+                "delete worker": true
             }
+
+        },
+        "/master/livestock-standard": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true
+            },
+            "permissions": {
+                "read livestock standard": true,
+                "create livestock standard": true,
+                "update livestock standard": true,
+                "delete livestock standard": true
+            }
+        },
+        "/master/livestock-strains": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true
+            },
+            "permissions": {
+                "read livestock strain": true,
+                "create livestock strain": true,
+                "update livestock strain": true,
+                "delete livestock strain": true
+            }
+
         }
     }
 }

@@ -50,7 +50,7 @@ class Create extends Component
         $this->validate([
             'code' => 'required',
             'name' => 'required',
-            'type' => 'required', // Contoh dengan 'in'
+            // 'type' => 'required', // Contoh dengan 'in'
             'unit_id' => 'required', // Contoh dengan 'in'
         ]);
 
@@ -98,7 +98,7 @@ class Create extends Component
         $this->validate([
             'code' => 'required',
             'name' => 'required',
-            'type' => 'required', // Contoh dengan 'in'
+            // 'type' => 'required', // Contoh dengan 'in'
             // validasi tambahan lain
         ]);
 
@@ -266,7 +266,7 @@ class Create extends Component
         $this->validate([
             'code' => 'required',
             'name' => 'required',
-            'type' => 'required|in:Feed,Suplement,Medicine,Others', // Contoh dengan aturan tambahan
+            // 'type' => 'required|in:Feed,Supplement,Medicine,Others', // Contoh dengan aturan tambahan
         ]);
 
         $this->validateConversionDefaults();

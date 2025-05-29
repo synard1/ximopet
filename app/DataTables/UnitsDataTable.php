@@ -66,11 +66,12 @@ class UnitsDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex', 'No.')
-            ->title('No.')
-            ->addClass('text-center')
-            ->width(50),
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
             Column::make('code')->searchable(false)->visible(false),
             Column::make('type'),
+            Column::make('symbol'),
             Column::make('name'),
             Column::make('status'),
             Column::make('created_at')->title('Created Date')->visible(false)->addClass('text-nowrap')->searchable(false),
@@ -78,8 +79,8 @@ class UnitsDataTable extends DataTable
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                
-                // ->width(60)
+
+            // ->width(60)
         ];
     }
 

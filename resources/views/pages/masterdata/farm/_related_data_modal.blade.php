@@ -1,7 +1,7 @@
 <!--begin::Modal - Farm Details-->
 <div class="modal fade" id="farmDetailsModal" tabindex="-1" aria-hidden="true">
     <!--begin::Modal dialog-->
-    <div class="modal-dialog modal-dialog-centered mw-900px">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
         <!--begin::Modal content-->
         <div class="modal-content">
             <!--begin::Modal header-->
@@ -31,7 +31,6 @@
                                 <th class="min-w-100px">Status</th>
                                 <th class="min-w-100px">Tanggal Mulai</th>
                                 <th class="min-w-100px">Populasi</th>
-                                <th class="min-w-100px">Breed</th>
                                 <th class="min-w-100px">Berat Awal</th>
                             </tr>
                         </thead>

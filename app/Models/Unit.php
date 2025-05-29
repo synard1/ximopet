@@ -23,4 +23,24 @@ class Unit extends BaseModel
     ];
 
     protected $casts = [];
+
+    public function supplyPurchase()
+    {
+        return $this->hasMany(SupplyPurchase::class, 'unit_id', 'id');
+    }
+
+    public function feedPurchase()
+    {
+        return $this->hasMany(FeedPurchase::class, 'unit_id', 'id');
+    }
+
+    public function unitConversion()
+    {
+        return $this->hasMany(UnitConversion::class, 'unit_id', 'id');
+    }
+
+    public function conversionUnit()
+    {
+        return $this->hasMany(UnitConversion::class, 'conversion_unit_id', 'id');
+    }
 }

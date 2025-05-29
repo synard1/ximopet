@@ -15,6 +15,17 @@ return [
         'Version' => 'V1.2.1',
     ],
 
+    // Dipakai untuk menentukan tipe unit yang akan ditampilkan di dropdown type pada model Unit Satuan
+    'unit_type' => [
+        'Alat' => 'Alat',
+        'Berat' => 'Berat',
+        'Lainnya' => 'Lainnya',
+        'Obat' => 'Obat',
+        'Panjang' => 'Panjang',
+        'Umum' => 'Umum',
+        'Volume' => 'Volume',
+    ],
+
     'menu' => [
         'General' => [
             'order' => 1,

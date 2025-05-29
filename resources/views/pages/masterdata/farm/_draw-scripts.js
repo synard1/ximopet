@@ -132,11 +132,6 @@ $(document).on("click", ".farm-detail", function (e) {
                             }</td>
                             <td>${
                                 kandang.livestock
-                                    ? kandang.livestock.breed
-                                    : "-"
-                            }</td>
-                            <td>${
-                                kandang.livestock
                                     ? parseFloat(
                                           kandang.livestock.berat_awal
                                       ).toLocaleString("id-ID") + " gr"
@@ -156,7 +151,10 @@ $(document).on("click", ".farm-detail", function (e) {
         },
         error: function (xhr) {
             if (xhr.status === 401) {
-                window.location.href = "/login";
+                toastr.warning(
+                    "Sesi Anda telah berakhir. Silakan login ulang."
+                );
+                // window.location.href = "/login";
             } else {
                 toastr.error("Terjadi kesalahan saat mengambil data kandang");
             }

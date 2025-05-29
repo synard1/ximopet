@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Services\LoginLogService;
+use App\Models\User;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -71,28 +73,6 @@ class AuthenticatedSessionController extends Controller
             throw $e;
         }
     }
-    // public function store(LoginRequest $request)
-    // {
-    //     $request->authenticate();
-
-    //     $request->session()->regenerate();
-
-    //     $user = $request->user();
-
-    //     $user->update([
-    //         'last_login_at' => Carbon::now()->toDateTimeString(),
-    //         'last_login_ip' => $request->getClientIp()
-    //     ]);
-
-    //     // Create a new Sanctum token for the user
-    //     $token = $user->createToken('auth_token')->plainTextToken;
-
-    //     // You might want to store this token in the session or return it in the response
-    //     // For this example, we'll store it in the session
-    //     $request->session()->put('auth_token', $token);
-
-    //     return redirect()->intended(RouteServiceProvider::HOME);
-    // }
 
     /**
      * Destroy an authenticated session.
@@ -110,5 +90,48 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    // User Registration
+    public function register(RegisterRequest $request)
+    {
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+        ]);
+
+        // Optionally, create a token for the user after registration
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json(['token' => $token, 'user' => $user], 201);
+    }
+
+    // User Login
+    public function login(LoginRequest $request)
+    {
+        if (!Auth::attempt($request->only('email', 'password'))) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user = Auth::user();
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json(['token' => $token, 'user' => $user]);
+    }
+
+    // User Logout
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json(['message' => 'Logged out successfully']);
+    }
+
+    // Password Reset (You may need to implement this based on your requirements)
+    public function resetPassword(Request $request)
+    {
+        // Implement password reset logic here
+        // This typically involves sending a reset link to the user's email
     }
 }

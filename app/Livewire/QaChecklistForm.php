@@ -29,6 +29,10 @@ class QaChecklistForm extends Component
     public $device;
     public $editingId;
     public $url;
+    public $search;
+    public $showForm = false;
+
+    protected $listeners = ['showQaForm', 'showModal', 'delete'];
 
     protected $rules = [
         'feature_name' => 'required|string|max:255',
@@ -65,15 +69,42 @@ class QaChecklistForm extends Component
         }
     }
 
+    public function showQaForm()
+    {
+        $this->showForm = true;
+        $this->dispatch('hide-qaList');
+    }
+
+    public function hideQaForm()
+    {
+        $this->showForm = false;
+        $this->dispatch('show-qaList');
+    }
+
     public function render()
     {
+        $query = QaChecklist::query();
+
+        // Apply search filter if search term is provided
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->where('feature_name', 'like', '%' . $this->search . '%')
+                    ->orWhere('feature_category', 'like', '%' . $this->search . '%')
+                    ->orWhere('feature_subcategory', 'like', '%' . $this->search . '%')
+                    ->orWhere('test_case', 'like', '%' . $this->search . '%')
+                    ->orWhere('tester_name', 'like', '%' . $this->search . '%');
+            });
+        }
+
+        $checklists = $query->paginate(10);
+
         $subcategories = [];
         if ($this->feature_category) {
             $subcategories = QaChecklist::getSubcategories($this->feature_category);
         }
 
         return view('livewire.qa-checklist-form', [
-            'checklists' => QaChecklist::latest()->paginate(10),
+            // 'checklists' => $checklists,
             'categories' => QaChecklist::getFeatureCategories(),
             'subcategories' => $subcategories
         ]);
@@ -105,49 +136,55 @@ class QaChecklistForm extends Component
 
     public function save()
     {
-        // Check if user has permission to create/update QA checklist
-        if (!Auth::user()->can('create qa checklist') && !Auth::user()->can('update qa checklist')) {
-            abort(403, 'Unauthorized action.');
+        try {
+            // Check if user has permission to create/update QA checklist
+            if (!Auth::user()->can('create qa checklist') && !Auth::user()->can('update qa checklist')) {
+                throw new \Exception('Unauthorized action.');
+            }
+
+            $this->validate();
+
+            $data = [
+                'feature_name' => $this->feature_name,
+                'feature_category' => $this->feature_category,
+                'feature_subcategory' => $this->feature_subcategory,
+                'test_case' => $this->test_case,
+                'test_steps' => $this->test_steps,
+                'expected_result' => $this->expected_result,
+                'test_type' => $this->test_type,
+                'priority' => $this->priority,
+                'status' => $this->status,
+                'notes' => $this->notes,
+                'error_details' => $this->error_details,
+                'tester_name' => $this->tester_name,
+                'test_date' => $this->test_date,
+                'environment' => $this->environment,
+                'browser' => $this->browser,
+                'device' => $this->device,
+                'url' => $this->url,
+            ];
+
+            if ($this->editingId) {
+                QaChecklist::find($this->editingId)->update($data);
+            } else {
+                QaChecklist::create($data);
+            }
+
+            $this->reset();
+            $this->test_date = now()->format('Y-m-d');
+            $this->url = null;
+
+            // Reset user info after save
+            if (Auth::check()) {
+                $this->tester_name = Auth::user()->name;
+            }
+
+            session()->flash('message', 'Checklist saved successfully.');
+            $this->dispatch('success', 'Checklist saved successfully.');
+            $this->hideQaForm();
+        } catch (\Exception $e) {
+            abort(403, $e->getMessage());
         }
-
-        $this->validate();
-
-        $data = [
-            'feature_name' => $this->feature_name,
-            'feature_category' => $this->feature_category,
-            'feature_subcategory' => $this->feature_subcategory,
-            'test_case' => $this->test_case,
-            'test_steps' => $this->test_steps,
-            'expected_result' => $this->expected_result,
-            'test_type' => $this->test_type,
-            'priority' => $this->priority,
-            'status' => $this->status,
-            'notes' => $this->notes,
-            'error_details' => $this->error_details,
-            'tester_name' => $this->tester_name,
-            'test_date' => $this->test_date,
-            'environment' => $this->environment,
-            'browser' => $this->browser,
-            'device' => $this->device,
-            'url' => $this->url,
-        ];
-
-        if ($this->editingId) {
-            QaChecklist::find($this->editingId)->update($data);
-        } else {
-            QaChecklist::create($data);
-        }
-
-        $this->reset();
-        $this->test_date = now()->format('Y-m-d');
-        $this->url = null;
-
-        // Reset user info after save
-        if (Auth::check()) {
-            $this->tester_name = Auth::user()->name;
-        }
-
-        session()->flash('message', 'Checklist saved successfully.');
     }
 
     public function edit($id)
@@ -176,6 +213,8 @@ class QaChecklistForm extends Component
         $this->browser = $checklist->browser;
         $this->device = $checklist->device;
         $this->url = $checklist->url;
+
+        $this->showForm = true;
     }
 
     public function delete($id)
@@ -186,7 +225,9 @@ class QaChecklistForm extends Component
         }
 
         QaChecklist::find($id)->delete();
-        session()->flash('message', 'Checklist deleted successfully.');
+        // session()->flash('message', 'Checklist deleted successfully.');
+        $this->dispatch('success', 'Checklist deleted successfully.');
+        // $this->dispatch('reload-qaList');
     }
 
     public function exportToJson()
@@ -263,5 +304,7 @@ class QaChecklistForm extends Component
         if (Auth::check()) {
             $this->tester_name = Auth::user()->name;
         }
+        $this->dispatch('show-qaList');
+        $this->showForm = false;
     }
 }

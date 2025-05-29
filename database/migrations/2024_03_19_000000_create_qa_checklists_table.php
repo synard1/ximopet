@@ -17,19 +17,9 @@ return new class extends Migration
             $table->text('url')->nullable();
             $table->text('test_steps')->nullable();
             $table->text('expected_result')->nullable();
-            $table->enum('test_type', [
-                'CRUD',
-                'UI/UX',
-                'Functionality',
-                'Performance',
-                'Security',
-                'Data Validation',
-                'Error Handling',
-                'Integration',
-                'Business Logic'
-            ]);
-            $table->enum('priority', ['Low', 'Medium', 'High', 'Critical'])->default('Medium');
-            $table->enum('status', ['Passed', 'Failed', 'Not Tested', 'Blocked'])->default('Not Tested');
+            $table->string('test_type');
+            $table->string('priority')->default('Medium');
+            $table->string('status')->default('Not Tested');
             $table->text('notes')->nullable();
             $table->text('error_details')->nullable();
             $table->string('tester_name');

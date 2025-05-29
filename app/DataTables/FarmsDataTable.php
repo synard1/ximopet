@@ -32,7 +32,7 @@ class FarmsDataTable extends DataTable
                 return $farm->created_at->format('d M Y, h:i a');
             })
             ->addColumn('action', function (Farm $farm) {
-                return view('pages/masterdata.farm._actions', compact('farm'));
+                return view('pages.masterdata.farm._actions', compact('farm'));
             })
             ->setRowId('id');
     }

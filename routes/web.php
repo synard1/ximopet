@@ -39,6 +39,7 @@ use App\Http\Controllers\OVKRecordController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\UserManagement\RoleController;
 use App\Http\Controllers\MasterData\PartnerController;
+use App\Http\Controllers\QaController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -77,6 +78,46 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/qa', [AdminController::class, 'qaIndex'])
             ->middleware(['permission:access qa checklist'])
             ->name('qa');
+
+        // Resource route for standard CRUD operations (excluding index, show, edit, and destroy)
+        Route::resource('/qa', QaController::class)->except([
+            'index',
+            'show',
+            'edit',
+            'destroy' // Exclude destroy as we are defining it explicitly
+        ]);
+
+        // QA Management Routes
+        Route::middleware(['auth', 'permission:access qa checklist'])->name('qa.')->prefix('qa')->group(function () {
+            // Add export route BEFORE the resource route
+            Route::get('export', [QaController::class, 'export'])->name('export');
+            // Add import route BEFORE the resource route
+            Route::post('import', [QaController::class, 'import'])->name('import');
+
+            // Explicitly define the index route for DataTables
+            Route::get('/', [QaController::class, 'index'])->name('index');
+
+            // Explicitly define the edit route
+            Route::get('{qa}/edit', [QaController::class, 'edit'])->name('edit');
+            Route::put('{qa}', [QaController::class, 'update'])->name('update');
+
+            // Add duplicate route
+            Route::post('{qa}/duplicate', [QaController::class, 'duplicate'])->name('duplicate');
+
+            // Explicitly define the delete route
+            Route::delete('{qa}', [QaController::class, 'destroy'])->name('destroy');
+
+            // Resource route for standard CRUD operations (excluding index, show, edit, and destroy)
+            Route::resource('/', QaController::class)->except([
+                'index',
+                'show',
+                'edit',
+                'destroy' // Exclude destroy as we are defining it explicitly
+            ]);
+
+            // Custom route for updating QA order
+            Route::post('update-order', [QaController::class, 'updateOrder'])->name('update-order');
+        });
 
         // QA Todo Routes
         Route::get('/qa-todo', [AdminController::class, 'qaTodoIndex'])

@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-        Master Data Unit Satuan
+    Master Data Unit Satuan
     @endsection
 
     @section('breadcrumbs')
@@ -11,31 +11,33 @@
         <div class="card-header border-0 pt-6">
             <!--begin::Card title-->
             <div class="card-title">
-                {{-- <!--begin::Search-->
+                {{--
+                <!--begin::Search-->
                 <div class="d-flex align-items-center position-relative my-1">
                     {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
-                    <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Supplier" id="mySearchInput"/>
+                    <input type="text" data-kt-user-table-filter="search"
+                        class="form-control form-control-solid w-250px ps-13" placeholder="Cari Supplier"
+                        id="mySearchInput" />
                 </div>
                 <!--end::Search--> --}}
             </div>
             <!--begin::Card title-->
 
             <!--begin::Card toolbar-->
-            <div class="card-toolbar">
-                {{-- <!--begin::Toolbar-->
+            <div class="card-toolbar" id="cardToolbar">
+
+                <!--begin::Toolbar-->
                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
                     <!--begin::Add user-->
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#kt_modal_add_user">
+                    @if(auth()->user()->can('create unit master data'))
+                    <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('showCreateForm')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}
-                        Add User
+                        Add New Unit
                     </button>
+                    @endif
                     <!--end::Add user-->
                 </div>
-                <!--end::Toolbar--> --}}
-
-                <!--begin::Modal-->
-                {{-- <livewire:master-data.supplier /> --}}
-                <!--end::Modal-->
+                <!--end::Toolbar-->
             </div>
             <!--end::Card toolbar-->
         </div>
@@ -43,21 +45,40 @@
 
         <!--begin::Card body-->
         <div class="card-body py-4">
-            <!--begin::Table-->
-            <div class="table-responsive">
-                {{ $dataTable->table() }}
+            <div id="datatable-container">
+
+                <!--begin::Table-->
+                <div class="table-responsive">
+                    {{ $dataTable->table() }}
+                </div>
+                <!--end::Table-->
             </div>
-            <!--end::Table-->
+            <livewire:master-data.unit.create />
+
         </div>
         <!--end::Card body-->
     </div>
 
+
     @push('scripts')
-        {{ $dataTable->scripts() }}
-        <script>
-            document.getElementById('mySearchInput').addEventListener('keyup', function () {
-                window.LaravelDataTables['suppliers-table'].search(this.value).draw();
+    {{ $dataTable->scripts() }}
+    <script>
+        document.addEventListener('livewire:init', function () {
+            window.addEventListener('hide-datatable', () => {
+                $('#datatable-container').hide();
+                $('#cardToolbar').hide();
             });
+
+            window.addEventListener('show-datatable', () => {
+                $('#datatable-container').show();
+                $('#cardToolbar').show();
+            });
+            
+        });
+
+        // document.getElementById('mySearchInput').addEventListener('keyup', function () {
+        //         window.LaravelDataTables['suppliers-table'].search(this.value).draw();
+        //     });
             document.addEventListener('livewire:init', function () {
                 Livewire.on('success', function () {
                     $('#kt_modal_add_user').modal('hide');
@@ -67,7 +88,8 @@
             $('#kt_modal_add_user').on('hidden.bs.modal', function () {
                 Livewire.dispatch('new_user');
             });
-        </script>
+    </script>
     @endpush
+    @livewire('qa-checklist-monitor', ['url' => request()->path()])
+    @livewire('admin-monitoring.permission-info')
 </x-default-layout>
-

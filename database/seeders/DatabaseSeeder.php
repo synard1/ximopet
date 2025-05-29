@@ -33,7 +33,7 @@ class DatabaseSeeder extends Seeder
             LivestockBatchSeeder::class,
             QaTodoPermissionSeeder::class,
             QaTodoMasterDataSeeder::class,
-            // QaChecklistFormSeeder::class,
+            // QaChecklistSeeder::class,
         ]);
 
         // \App\Models\User::factory(20)->create();

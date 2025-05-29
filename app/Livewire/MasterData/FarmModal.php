@@ -80,7 +80,7 @@ class FarmModal extends Component
 
             // Delete farm
             $farm = Farm::findOrFail($id);
-            // $farm->delete();
+            $farm->delete();
 
             DB::commit();
 

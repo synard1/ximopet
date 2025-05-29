@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('units', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('type')->nullable();
-            $table->string('code', 64)->unique();
+            $table->string('code', 64);
             $table->string('symbol');
             $table->string('name');
             $table->text('description')->nullable();

@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-        Master Data Jenis Pakan
+    Master Data Jenis Pakan
     @endsection
 
     @section('breadcrumbs')
@@ -11,10 +11,13 @@
         <div class="card-header border-0 pt-6">
             <!--begin::Card title-->
             <div class="card-title">
-                {{-- <!--begin::Search-->
+                {{--
+                <!--begin::Search-->
                 <div class="d-flex align-items-center position-relative my-1">
                     {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
-                    <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Supplier" id="mySearchInput"/>
+                    <input type="text" data-kt-user-table-filter="search"
+                        class="form-control form-control-solid w-250px ps-13" placeholder="Cari Supplier"
+                        id="mySearchInput" />
                 </div>
                 <!--end::Search--> --}}
             </div>
@@ -54,9 +57,9 @@
     </div>
 
     @push('scripts')
-        {{ $dataTable->scripts() }}
-        <script>
-            document.addEventListener('livewire:init', function () {
+    {{ $dataTable->scripts() }}
+    <script>
+        document.addEventListener('livewire:init', function () {
                 window.addEventListener('hide-datatable', () => {
                     $('#datatable-container').hide();
                     $('#cardToolbar').hide();
@@ -69,7 +72,8 @@
                 
             });
 
-        </script>
+    </script>
     @endpush
+    @livewire('qa-checklist-monitor', ['url' => request()->path()])
+    @livewire('admin-monitoring.permission-info')
 </x-default-layout>
-
