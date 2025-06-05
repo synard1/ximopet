@@ -8,11 +8,11 @@
         <li class="nav-item">
             <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_pane_4">Data Supply</a>
         </li>
-        @if(auth()->user()->hasRole(['Supervisor']))
+        {{-- @if(auth()->user()->hasRole(['Supervisor']))
         <li class="nav-item">
             <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_5">Pemetaan Lokasi</a>
         </li>
-        @endif
+        @endif --}}
     </ul>
 
     <div class="tab-content" id="myTabContent">
@@ -20,11 +20,11 @@
             @include('pages.masterdata.stock._table')
         </div>
 
-        @if(auth()->user()->hasRole(['Supervisor']))
+        {{-- @if(auth()->user()->hasRole(['Supervisor']))
         <div class="tab-pane fade" id="kt_tab_pane_5" role="tabpanel">
             @include('pages.masterdata.stock._pemetaan_lokasi_table')
         </div>
-        @endif
+        @endif --}}
     </div>
 
     @include('pages.masterdata.stock._modal_stok_transfer')

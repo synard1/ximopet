@@ -8,6 +8,7 @@ use App\DataTables\LivestockMutationDataTable;
 use App\DataTables\OVKRecordDataTable;
 use App\DataTables\LivestockPurchaseDataTable;
 use App\DataTables\LivestockStrainDataTable;
+use App\DataTables\LivestockStandardDataTable;
 use Carbon\Carbon;
 
 use App\Models\FeedUsage;
@@ -31,6 +32,13 @@ class LivestockController extends Controller
         addVendors(['datatables']);
 
         return $dataTable->render('pages.masterdata.livestock-strain.list');
+    }
+
+    public function livestockStandardIndex(LivestockStandardDataTable $dataTable)
+    {
+        addVendors(['datatables']);
+
+        return $dataTable->render('pages.masterdata.livestock-standard.list');
     }
     public function purchaseIndex(LivestockPurchaseDataTable $dataTable)
     {
@@ -61,7 +69,7 @@ class LivestockController extends Controller
         $startDate = Carbon::parse($livestock->start_date);
         $today = Carbon::today();
 
-        $endDate = $livestock->status === 'Aktif' || $livestock->status === 'Locked'
+        $endDate = $livestock->status === 'active' || $livestock->status === 'locked'
             ? max(
                 Carbon::parse(
                     Recording::where('livestock_id', $livestock->id)->latest('tanggal')->value('tanggal') ?? now()

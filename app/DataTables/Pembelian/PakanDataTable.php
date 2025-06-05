@@ -68,8 +68,8 @@ class PakanDataTable extends DataTable
                     $q->where('nama', 'like', "%{$keyword}%");
                 });
             })
-            ->filterColumn('kandang_id', function ($query, $keyword) {
-                $query->whereHas('kandangs', function ($q) use ($keyword) {
+            ->filterColumn('coop_id', function ($query, $keyword) {
+                $query->whereHas('coops', function ($q) use ($keyword) {
                     $q->where('nama', 'like', "%{$keyword}%");
                 });
             })

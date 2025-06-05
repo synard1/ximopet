@@ -45,7 +45,7 @@ class Create extends Component
 
     // Form fields
     public $tanggal_beli, $invoice, $tanggal, $tanggal_harian, $tipe_transaksi, $ternak_jual, $harga, $status;
-    public $pelanggan_id, $farm_id, $kandang_id, $harga_beli, $harga_jual, $qty, $total_berat, $umur, $hpp, $estimated_cost;
+    public $pelanggan_id, $farm_id, $coop_id, $harga_beli, $harga_jual, $qty, $total_berat, $umur, $hpp, $estimated_cost;
 
     // Dynamic data
     public $partners = [];
@@ -83,7 +83,7 @@ class Create extends Component
         'harga_jual' => 'required|numeric',
         'total_berat' => 'required|numeric|between:0,9999999.99',
         'farm_id' => 'required|exists:farms,id',
-        'kandang_id' => 'required|exists:master_kandangs,id',
+        'coop_id' => 'required|exists:coops,id',
     ];
 
     public function updated($propertyName)
@@ -185,7 +185,7 @@ class Create extends Component
         try {
             // Check if livestock exists and has sufficient quantity
             $livestock = Livestock::where('farm_id', $this->farm_id)
-                ->where('kandang_id', $this->kandang_id)
+                ->where('coop_id', $this->coop_id)
                 ->where('status', 'active')
                 ->whereRaw('(populasi_awal - quantity_depletion - quantity_sales - quantity_mutated) > 0')
                 ->lockForUpdate()
@@ -331,7 +331,7 @@ class Create extends Component
         $this->harga = null;
         $this->status = null;
         $this->farm_id = null;
-        $this->kandang_id = null;
+        $this->coop_id = null;
         $this->harga_beli = null;
         $this->harga_jual = null;
         $this->qty = null;
@@ -356,7 +356,7 @@ class Create extends Component
         $farmIds = FarmOperator::where('user_id', auth()->id())->pluck('farm_id')->toArray();
         $this->kandangs = Kandang::whereIn('farm_id', $farmIds)->where('status', 'Digunakan')->get(['id', 'farm_id', 'kode', 'nama', 'jumlah', 'kapasitas', 'livestock_id', 'status']);
 
-        $this->livestocks  = Livestock::whereIn('farm_id', $farmIds)->get(['id', 'farm_id', 'kandang_id', 'name', 'start_date', 'populasi_awal', 'harga', 'status']);
+        $this->livestocks  = Livestock::whereIn('farm_id', $farmIds)->get(['id', 'farm_id', 'coop_id', 'name', 'start_date', 'populasi_awal', 'harga', 'status']);
     }
 
     public function updatedKandangId($value)
@@ -365,7 +365,7 @@ class Create extends Component
             return;
         }
 
-        $selectedLivestock = $this->livestocks->firstWhere('kandang_id', $value);
+        $selectedLivestock = $this->livestocks->firstWhere('coop_id', $value);
 
         if ($selectedLivestock) {
             $this->tanggal_beli = $selectedLivestock->start_date->format('Y-m-d');
@@ -393,7 +393,7 @@ class Create extends Component
             'harga_jual',
             'total_berat',
             'farm_id',
-            'kandang_id',
+            'coop_id',
             'tanggal_beli',
             'harga_beli',
             'umur'
@@ -406,14 +406,14 @@ class Create extends Component
     public function showEditForm($id)
     {
         $sales = SalesTransaction::with('livestock')->findOrFail($id);
-        $selectedLivestock = $this->livestocks->firstWhere('kandang_id', $sales->livestock->kandang_id);
+        $selectedLivestock = $this->livestocks->firstWhere('coop_id', $sales->livestock->coop_id);
 
         $this->salesId = $sales->id;
         $this->invoice = $sales->invoice_number;
         $this->tanggal = $sales->transaction_date->format('Y-m-d');
         $this->pelanggan_id = $sales->customer_id;
         $this->farm_id = $sales->livestock->farm_id;
-        $this->kandang_id = $sales->livestock->kandang_id;
+        $this->coop_id = $sales->livestock->coop_id;
         $this->ternak_jual = $sales->quantity;
         $this->total_berat = $sales->weight;
         $this->harga_jual = $sales->price;

@@ -16,7 +16,7 @@ class InventoryLocation extends BaseModel
     protected $fillable = [
         'id',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'silo_id',
         'name',
         'code',
@@ -34,6 +34,6 @@ class InventoryLocation extends BaseModel
 
     public function currentStocks()
     {
-        return $this->hasMany(CurrentStock::class,'location_id','id');
+        return $this->hasMany(CurrentStock::class, 'location_id', 'id');
     }
 }

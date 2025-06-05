@@ -17,18 +17,20 @@ class LivestockDataTable extends DataTable
      * @param QueryBuilder $query Results from query() method.
      */
 
-    private function formatRupiah($amount) {
+    private function formatRupiah($amount)
+    {
         // Convert the number to a string with two decimal places
         $formattedAmount = number_format($amount, 2, ',', '.');
-    
+
         // Add the currency symbol and return the formatted number
         return "Rp " . $formattedAmount;
     }
 
-    private function formatNumber($amount) {
+    private function formatNumber($amount)
+    {
         // Convert the number to a string with two decimal places
         $formattedAmount = number_format($amount, 2, ',', '.');
-    
+
         // Add the currency symbol and return the formatted number
         return $formattedAmount;
     }
@@ -56,14 +58,14 @@ class LivestockDataTable extends DataTable
             ->editColumn('sub_total', function (LivestockPurchase $transaksi) {
                 $harga = $transaksi->livestockPurchaseItem->first()?->harga_per_ekor ?? null;
                 $jumlah = $transaksi->livestockPurchaseItem->sum('jumlah');
-                $total = $harga * $jumlah ;
+                $total = $harga * $jumlah;
                 return $this->formatRupiah($total);
             })
             ->editColumn('farm_id', function (LivestockPurchase $transaksi) {
                 return $transaksi->farms->nama ?? '';
             })
-            ->editColumn('kandang_id', function (LivestockPurchase $transaksi) {
-                return $transaksi->kandangs->nama ?? '';
+            ->editColumn('coop_id', function (LivestockPurchase $transaksi) {
+                return $transaksi->coops->nama ?? '';
             })
             ->editColumn('kelompok_ternak_id', function (LivestockPurchase $transaksi) {
                 return $transaksi->kelompokTernak->name ?? '';
@@ -71,26 +73,26 @@ class LivestockDataTable extends DataTable
             // ->editColumn('harga', function (LivestockPurchase $transaksi) {
             //     return $this->formatRupiah($transaksi->harga);
             // })
-            
+
             ->setRowId('id')
             ->rawColumns([''])
-            ->filterColumn('rekanan_id', function($query, $keyword) {
-                $query->whereHas('rekanans', function($q) use ($keyword) {
+            ->filterColumn('rekanan_id', function ($query, $keyword) {
+                $query->whereHas('rekanans', function ($q) use ($keyword) {
                     $q->where('nama', 'like', "%{$keyword}%");
                 });
             })
-            ->filterColumn('farm_id', function($query, $keyword) {
-                $query->whereHas('farms', function($q) use ($keyword) {
+            ->filterColumn('farm_id', function ($query, $keyword) {
+                $query->whereHas('farms', function ($q) use ($keyword) {
                     $q->where('nama', 'like', "%{$keyword}%");
                 });
             })
-            ->filterColumn('kandang_id', function($query, $keyword) {
-                $query->whereHas('kandangs', function($q) use ($keyword) {
+            ->filterColumn('coop_id', function ($query, $keyword) {
+                $query->whereHas('coops', function ($q) use ($keyword) {
                     $q->where('nama', 'like', "%{$keyword}%");
                 });
             })
-            ->filterColumn('kelompok_ternak_id', function($query, $keyword) {
-                $query->whereHas('kelompokTernak', function($q) use ($keyword) {
+            ->filterColumn('kelompok_ternak_id', function ($query, $keyword) {
+                $query->whereHas('kelompokTernak', function ($q) use ($keyword) {
                     $q->where('name', 'like', "%{$keyword}%");
                 });
             });
@@ -115,7 +117,6 @@ class LivestockDataTable extends DataTable
         //     ->newQuery();
 
         return $query;
-
     }
 
     /**
@@ -138,10 +139,10 @@ class LivestockDataTable extends DataTable
                 'searching'       =>  true,
                 // 'responsive'       =>  true,
                 'lengthMenu' => [
-                        [ 10, 25, 50, -1 ],
-                        [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+                    [10, 25, 50, -1],
+                    ['10 rows', '25 rows', '50 rows', 'Show all']
                 ],
-                'buttons'      => ['export', 'print', 'reload','colvis'],
+                'buttons'      => ['export', 'print', 'reload', 'colvis'],
             ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/pembelian/doc/_draw-scripts.js')) . "}");
     }
@@ -170,7 +171,7 @@ class LivestockDataTable extends DataTable
             Column::make('sub_total')->searchable(true),
             // Column::make('kelompok_ternak_id')->visible(true)->title('Kelompok Ternak'),
             // Column::make('farm_id')->visible(false)->title('Farm'),
-            // Column::make('kandang_id')->visible(false)->title('Kandang'),
+            // Column::make('coop_id')->visible(false)->title('Kandang'),
             Column::make('created_at')->title('Created Date')
                 ->visible(false)
                 // ->addClass('text-nowrap')

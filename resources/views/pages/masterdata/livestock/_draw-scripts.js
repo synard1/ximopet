@@ -87,14 +87,14 @@ document
 
             // Use Livewire dispatch with proper payload format
             Livewire.dispatch("setRecords", [ternakId]);
-            console.log("records click");
+            // console.log("records click");
 
             // Toggle visibility
-            tableContainer.style.display = "none";
-            recordsContainer.style.display = "block";
+            // tableContainer.style.display = "none";
+            // recordsContainer.style.display = "block";
 
             // Smooth scroll
-            recordsContainer.scrollIntoView({ behavior: "smooth" });
+            // recordsContainer.scrollIntoView({ behavior: "smooth" });
         });
     });
 
@@ -109,15 +109,15 @@ document
             Livewire.dispatch("setLivestockId", [livestockId]);
 
             // Toggle visibility
-            const tableContainer = document.querySelector("#ternaksTables");
-            const workerContainer = document.querySelector(
-                "#assignWorkerContainer"
-            );
+            // const tableContainer = document.querySelector("#ternaksTables");
+            // const workerContainer = document.querySelector(
+            //     "#assignWorkerContainer"
+            // );
 
-            if (tableContainer && workerContainer) {
-                tableContainer.style.display = "none";
-                workerContainer.style.display = "block";
-            }
+            // if (tableContainer && workerContainer) {
+            //     tableContainer.style.display = "none";
+            //     workerContainer.style.display = "block";
+            // }
         });
     });
 
@@ -137,52 +137,49 @@ document.querySelectorAll(".closeRecordsBtn").forEach(function (btn) {
 });
 
 // Add click event listener to update buttons
-document
-    .querySelectorAll('[data-kt-action="view_detail_livestock"]')
-    .forEach(function (element) {
-        element.addEventListener("click", function (e) {
-            e.preventDefault();
-            var modal = document.getElementById("kt_modal_ternak_details");
+// document
+//     .querySelectorAll('[data-kt-action="view_detail_livestock"]')
+//     .forEach(function (element) {
+//         element.addEventListener("click", function (e) {
+//             e.preventDefault();
+//             var modal = document.getElementById("kt_modal_ternak_details");
+//             // Select parent row
+//             const parent = e.target.closest("tr");
 
-            console.log("okk");
+//             // Get transaksi ID
+//             const transaksiId = event.currentTarget.getAttribute(
+//                 "data-kt-transaksi-id"
+//             );
 
-            // Select parent row
-            const parent = e.target.closest("tr");
+//             // Get suppliers name
+//             const transaksiSupplier =
+//                 parent.querySelectorAll("td")[2].innerText;
+//             const transaksiFaktur = parent.querySelectorAll("td")[0].innerText;
 
-            // Get transaksi ID
-            const transaksiId = event.currentTarget.getAttribute(
-                "data-kt-transaksi-id"
-            );
+//             // Simulate delete request -- for demo purpose only
+//             Swal.fire({
+//                 html: `Membuka Data <b>${transaksiFaktur} - ${transaksiSupplier}</b>`,
+//                 icon: "info",
+//                 buttonsStyling: false,
+//                 showConfirmButton: false,
+//                 timer: 2000,
+//             }).then(function () {
+//                 modal.addEventListener("show.bs.modal", function (event) {
+//                     // Button that triggered the modal
+//                     var button = event.relatedTarget;
+//                     // Extract info from data-* attributes
+//                     var title = `${transaksiFaktur} - ${transaksiSupplier} Detail Data`;
+//                     // Update the modal's title
+//                     var modalTitle = modal.querySelector(".modal-title");
+//                     modalTitle.textContent = title;
+//                 });
+//                 getDetailsTernak(transaksiId);
 
-            // Get suppliers name
-            const transaksiSupplier =
-                parent.querySelectorAll("td")[2].innerText;
-            const transaksiFaktur = parent.querySelectorAll("td")[0].innerText;
-
-            // Simulate delete request -- for demo purpose only
-            Swal.fire({
-                html: `Membuka Data <b>${transaksiFaktur} - ${transaksiSupplier}</b>`,
-                icon: "info",
-                buttonsStyling: false,
-                showConfirmButton: false,
-                timer: 2000,
-            }).then(function () {
-                modal.addEventListener("show.bs.modal", function (event) {
-                    // Button that triggered the modal
-                    var button = event.relatedTarget;
-                    // Extract info from data-* attributes
-                    var title = `${transaksiFaktur} - ${transaksiSupplier} Detail Data`;
-                    // Update the modal's title
-                    var modalTitle = modal.querySelector(".modal-title");
-                    modalTitle.textContent = title;
-                });
-                getDetailsTernak(transaksiId);
-
-                $("#kt_modal_ternak_details").modal("show");
-                // Livewire.dispatch('editKandang', [transaksiId]);
-            });
-        });
-    });
+//                 $("#kt_modal_ternak_details").modal("show");
+//                 // Livewire.dispatch('editKandang', [transaksiId]);
+//             });
+//         });
+//     });
 
 document
     .querySelectorAll('[data-kt-action="view_detail_livestock"]')
@@ -247,44 +244,16 @@ document
                     `;
                             tableBody.insertAdjacentHTML("beforeend", row);
                         });
-                        // // Populate table with data
-                        // data.result.forEach(item => {
-                        //     const row = `
-                        //         <tr>
-                        //             <td>${item.tanggal}</td>
-                        //             <td>${item.mati || 0}</td>
-                        //             <td>${item.afkir || 0}</td>
-                        //             <td>${item.ternak_terjual || 0}</td>
-                        //             <td>${item.pakan_jenis}</td>
-                        //             <td>${item.pakan_harian}</td>
-                        //             <td>${item.ovk_harian || 0}</td>
-                        //             <td>
-                        //                 <button class="btn btn-danger btn-sm delete-btn"
-                        //                     data-id="${item.recording_id}"
-                        //                     data-tanggal="${item.tanggal}">
-                        //                     Hapus
-                        //                 </button>
-                        //             </td>
-                        //         </tr>
-                        //     `;
-                        //     tableBody.insertAdjacentHTML('beforeend', row);
-                        // });
-
-                        // Show the modal
-                        $("#kt_modal_ternak_details").modal("show");
 
                         // Initialize or refresh DataTable
                         if ($.fn.DataTable.isDataTable("#detailTable")) {
                             $("#detailTable").DataTable().destroy();
                         }
+
+                        // Show the modal
+                        $("#kt_modal_ternak_details").modal("show");
+
                         $("#detailTable").DataTable({
-                            // pageLength: 10,
-                            // lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
-                            // order: [[0, 'desc']],
-                            // columnDefs: [
-                            //     { targets: 0, type: 'date' },
-                            //     { targets: '_all', type: 'num' }
-                            // ],
                             autoWidth: true,
                             responsive: false,
                             // scrollX: true,

@@ -28,14 +28,14 @@ use Carbon\Carbon;
 
 class PembelianList extends Component
 {
-    public $faktur, $tanggal, $noSj, $suppliers, $supplier, $name =[], $quantity=[], $allItems, $farms, $selectedFarm, $ternaks, $selectedTernak, $ekspedisis, $selectedEkspedisi, $tarifEkspedisi;
+    public $faktur, $tanggal, $noSj, $suppliers, $supplier, $name = [], $quantity = [], $allItems, $farms, $selectedFarm, $ternaks, $selectedTernak, $ekspedisis, $selectedEkspedisi, $tarifEkspedisi;
     public $selectedSupplier = null;
-    public $items = [['id' => '','name' => '', 'qty' => 0.00, 'harga' => 0]]; // Initial empty item
+    public $items = [['id' => '', 'name' => '', 'qty' => 0.00, 'harga' => 0]]; // Initial empty item
     public $transaksi_id;
 
     public $isOpen = 0;
     public $editMode = false;
-    public $fakturPlaceholder = '000000'; 
+    public $fakturPlaceholder = '000000';
 
 
     protected $rules = [
@@ -63,7 +63,6 @@ class PembelianList extends Component
         // $this->addItem();
         // $this->faktur = "000000";
         $this->fakturPlaceholder = $this->fakturPlaceholder;
-
     }
 
     public function removeItem($index)
@@ -80,7 +79,7 @@ class PembelianList extends Component
 
 
 
-        $this->ekspedisis = Rekanan::where('jenis','Ekspedisi')->where('status', 'Aktif')->get();
+        $this->ekspedisis = Rekanan::where('jenis', 'Ekspedisi')->where('status', 'Aktif')->get();
         $this->suppliers = Rekanan::where('jenis', 'Supplier')->get();
         // $this->farms = FarmOperator::where('user_id', auth()->user()->id)->get();
         // $this->farms =[];
@@ -94,7 +93,7 @@ class PembelianList extends Component
         // $this->allItems = Item::where('status', 'Aktif')->where('jenis','!=','DOC')->get();
         // $this->suppliers = Rekanan::where('jenis', 'Supplier')->get();
 
-        $this->ternaks = Ternak::whereIn('farm_id', $farmIds)->where('status','Aktif')->get(['id', 'name']);
+        $this->ternaks = Ternak::whereIn('farm_id', $farmIds)->where('status', 'Aktif')->get(['id', 'name']);
 
         return view('livewire.transaksi.pembelian-list', [
             'suppliers' => $this->suppliers,
@@ -104,7 +103,7 @@ class PembelianList extends Component
 
     public function addItem()
     {
-        $this->items[] = ['id' => '','name' => '', 'qty' => 0.00, 'harga' => 0];
+        $this->items[] = ['id' => '', 'name' => '', 'qty' => 0.00, 'harga' => 0];
         // $this->dispatch('reinitialize-select2'); // Trigger Select2 initialization
     }
 
@@ -122,17 +121,16 @@ class PembelianList extends Component
     {
         $this->isOpen = false;
         $this->dispatch('closeForm');
-
     }
 
-//TODO Refractor fitur pembelian stok, dengan relasi ke data stok dan transaksi_beli_detail
+    //TODO Refractor fitur pembelian stok, dengan relasi ke data stok dan transaksi_beli_detail
     public function store()
     {
         // dd($this->all());
         try {
-            $this->validate(); 
+            $this->validate();
 
-            if($this->tarifEkspedisi > 0 && $this->selectedEkspedisi === null){
+            if ($this->tarifEkspedisi > 0 && $this->selectedEkspedisi === null) {
                 return $this->dispatch('error', "Data Ekspedisi kosong.");
                 return false;
             }
@@ -164,7 +162,7 @@ class PembelianList extends Component
                 'rekanan_id' => $suppliers->id,
                 'batch_number' => $batchNumber,
                 'farm_id' => $ternak->farm_id,
-                'kandang_id' => $ternak->kandang_id,
+                'coop_id' => $ternak->coop_id,
                 'rekanan_nama' => $suppliers->nama,
                 'harga' => null,
                 'total_qty' => null,
@@ -181,7 +179,7 @@ class PembelianList extends Component
             // Loop through each item
             foreach ($this->items as $itemData) {
                 // dd($itemData);
-                $item = Item::where('id',$itemData['id'])->first();
+                $item = Item::where('id', $itemData['id'])->first();
                 // Get random item category (excluding DOC)
                 // $category = ItemCategory::where('name', '!=', 'DOC')->inRandomOrder()->first();
                 // Check if the item has a LocationMapping for the selected farm
@@ -220,9 +218,9 @@ class PembelianList extends Component
 
                 // Update CurrentStock
                 $currentStock = CurrentStock::where('item_id', $item->id)
-                                            // ->where('location_id',$locationMapping->location_id)
-                                            ->where('kelompok_ternak_id',$this->selectedTernak)
-                                            ->first();
+                    // ->where('location_id',$locationMapping->location_id)
+                    ->where('kelompok_ternak_id', $this->selectedTernak)
+                    ->first();
 
                 if ($currentStock) {
                     // Update existing stock
@@ -285,7 +283,7 @@ class PembelianList extends Component
                     // Other fields for StockHistory
                 ]);
             }
-            
+
             DB::commit();
 
             // Emit success event if no errors occurred
@@ -297,23 +295,22 @@ class PembelianList extends Component
             $this->setErrorBag($e->validator->errors());
         } catch (\Exception $e) {
             DB::rollBack();
-        
+
             // Human-readable error message
             $errorMessage = 'Terjadi kesalahan saat menyimpan data. Silakan coba lagi.';
-        
+
             // Detailed error message for logging (optional)
             $detailedErrorMessage = 'Terjadi kesalahan saat menyimpan data. ' . $e->getMessage() . ' (Line: ' . $e->getLine() . ', File: ' . $e->getFile() . ')';
-        
+
             // Dispatch a user-friendly error event
             $this->dispatch('error', $errorMessage);
-        
+
             // Log the detailed error for debugging
             Log::error($detailedErrorMessage);
         } finally {
             // Reset the form in all cases to prepare for new data
             // $this->reset();
         }
-        
     }
 
     private function createStokTransaksiAndDetail($transaksi, $item, $itemData, $supplier)
@@ -365,7 +362,7 @@ class PembelianList extends Component
             'transaksi_id' => $transaksi->id,
             'parent_id' => null,
             'farm_id' => $transaksi->farm_id,
-            'kandang_id' => $transaksi->kandang_id,
+            'coop_id' => $transaksi->coop_id,
             'tanggal' => $this->tanggal,
             'jenis' => 'Masuk',
             'item_id' => $transaksiDetail->item_id,
@@ -413,8 +410,8 @@ class PembelianList extends Component
 
     public function editPembelian($id)
     {
-        $pembelian = Transaksi::where('id',$id)->first();
-        $items = TransaksiDetail::where('transaksi_id',$id)->get();
+        $pembelian = Transaksi::where('id', $id)->first();
+        $items = TransaksiDetail::where('transaksi_id', $id)->get();
 
         // Format the date using Carbon
         $formattedTanggal = $this->formatDateTime($pembelian->tanggal);
@@ -448,7 +445,7 @@ class PembelianList extends Component
             if ($relatedStokHistories->isNotEmpty() && $detail->terpakai > 0) {
                 $this->dispatch('error', 'Tidak dapat menghapus transaksi. Terdapat riwayat stok terkait.');
                 return;
-            }else{
+            } else {
                 // Delete the user record with the specified ID
                 TransaksiBeli::destroy($id);
                 $transaksiDetail = TransaksiBeliDetail::where('transaksi_id', $id)->first();
@@ -509,21 +506,21 @@ class PembelianList extends Component
             $this->dispatch('error', 'Tidak ada detail transaksi yang ditemukan.');
         }
     }
-    
-    function getItemIdList() {
+
+    function getItemIdList()
+    {
         $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
-    
+
         // Assuming you have a way to filter based on farmIds, adjust the query as needed.
         // For example, if 'kelompok_ternak' is related to 'farms', you might need a join.
-    
+
         $itemIds = DB::table('current_stocks')
             ->join('kelompok_ternak', 'current_stocks.kelompok_ternak_id', '=', 'kelompok_ternak.id')
             ->whereIn('kelompok_ternak.farm_id', $farmIds) // Assuming 'kelompok_ternak' has 'farm_id'
             ->distinct()
             ->pluck('item_id')
             ->toArray();
-    
+
         return $itemIds;
     }
-
 }

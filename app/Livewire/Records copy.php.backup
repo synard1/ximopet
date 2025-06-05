@@ -877,7 +877,7 @@ class Records extends Component
                 // Data farm dan kandang
                 'farm_id' => $ternak->livestock->farm_id,
                 'farm_name' => $ternak->livestock->farm->name ?? 'Unknown Farm',
-                'kandang_id' => $ternak->livestock->kandang_id,
+                'coop_id' => $ternak->livestock->coop_id,
                 'kandang_name' => $ternak->livestock->kandang->name ?? 'Unknown Kandang',
 
                 // Metadata
@@ -1718,7 +1718,7 @@ class Records extends Component
                     'livestock_name' => $livestock->name ?? 'Unknown',
                     'farm_id' => $livestock->farm_id ?? null,
                     'farm_name' => $livestock->farm->name ?? 'Unknown',
-                    'kandang_id' => $livestock->kandang_id ?? null,
+                    'coop_id' => $livestock->coop_id ?? null,
                     'kandang_name' => $livestock->kandang->name ?? 'Unknown',
                     'age_days' => $age,
                     'updated_at' => now()->toIso8601String(),
@@ -1848,7 +1848,7 @@ class Records extends Component
                 'name' => $livestock->name,
                 'farm_id' => $livestock->farm_id,
                 'farm_name' => $livestock->farm->name ?? 'Unknown Farm',
-                'kandang_id' => $livestock->kandang_id,
+                'coop_id' => $livestock->coop_id,
                 'kandang_name' => $livestock->kandang->name ?? 'Unknown Kandang',
                 'strain' => $livestock->strain ?? 'Unknown Strain',
                 'start_date' => $livestock->start_date,

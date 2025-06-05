@@ -15,7 +15,7 @@ class Edit extends Component
     public OVKRecord $ovkRecord;
     public $supply_id;
     public $farm_id;
-    public $kandang_id;
+    public $coop_id;
     public $quantity;
     public $unit_id;
     public $usage_date;
@@ -24,7 +24,7 @@ class Edit extends Component
     protected $rules = [
         'supply_id' => 'required|exists:supplies,id',
         'farm_id' => 'required|exists:farms,id',
-        'kandang_id' => 'required|exists:kandangs,id',
+        'coop_id' => 'required|exists:kandangs,id',
         'quantity' => 'required|numeric|min:0',
         'unit_id' => 'required|exists:units,id',
         'usage_date' => 'required|date',
@@ -36,7 +36,7 @@ class Edit extends Component
         $this->ovkRecord = $ovkRecord;
         $this->supply_id = $ovkRecord->supply_id;
         $this->farm_id = $ovkRecord->farm_id;
-        $this->kandang_id = $ovkRecord->kandang_id;
+        $this->coop_id = $ovkRecord->coop_id;
         $this->quantity = $ovkRecord->quantity;
         $this->unit_id = $ovkRecord->unit_id;
         $this->usage_date = $ovkRecord->usage_date->format('Y-m-d');
@@ -69,7 +69,7 @@ class Edit extends Component
             $this->ovkRecord->update([
                 'supply_id' => $this->supply_id,
                 'farm_id' => $this->farm_id,
-                'kandang_id' => $this->kandang_id,
+                'coop_id' => $this->coop_id,
                 'quantity' => $this->quantity,
                 'unit_id' => $this->unit_id,
                 'usage_date' => $this->usage_date,

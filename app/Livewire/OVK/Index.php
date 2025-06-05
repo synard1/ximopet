@@ -17,7 +17,7 @@ class Index extends Component
 
     public $supply_id;
     public $farm_id;
-    public $kandang_id;
+    public $coop_id;
     public $quantity;
     public $unit_id;
     public $usage_date;

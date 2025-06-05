@@ -15,21 +15,20 @@ return new class extends Migration {
             $table->uuid('livestock_strain_id')->nullable(); // Add this!
             $table->uuid('livestock_strain_standard_id')->nullable();
             $table->uuid('farm_id');
-            $table->uuid('kandang_id');
+            $table->uuid('coop_id');
             $table->string('name'); //name for batch code / periode
             $table->string('livestock_strain_name'); //jenis
             $table->dateTime('start_date'); //tanggal mulai
             $table->dateTime('end_date')->nullable();
-            $table->integer('populasi_awal'); //jumlah awal
+            $table->integer('initial_quantity'); //jumlah awal
             $table->integer('quantity_depletion')->nullable();
             $table->integer('quantity_sales')->nullable();
             $table->integer('quantity_mutated')->nullable();
-            $table->decimal('berat_awal', 10, 2)->default(0); //berat beli rata - rata
-            $table->decimal('harga', 10, 2);        // Harga per unit saat beli
-            $table->string('pic')->nullable();
+            $table->decimal('initial_weight', 10, 2)->default(0); //berat beli rata - rata
+            $table->decimal('price', 10, 2);        // Harga per unit saat beli
             $table->json('data')->nullable();
             $table->string('status'); //status
-            $table->text('keterangan')->nullable(); //keterangan
+            $table->text('notes')->nullable(); //keterangan
             $table->unsignedBigInteger('created_by');
             $table->unsignedBigInteger('updated_by')->nullable();
 
@@ -39,12 +38,50 @@ return new class extends Migration {
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('livestock_strain_id')->references('id')->on('livestock_strains'); // Add this!
             $table->foreign('livestock_strain_standard_id')->references('id')->on('livestock_strain_standards'); // Add this!
 
 
             $table->index(['id', 'start_date']);
+        });
+
+        Schema::create('livestock_batches', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('livestock_id');
+            $table->uuid('livestock_purchase_item_id')->nullable();
+            $table->string('source_type');
+            $table->uuid('source_id');
+            $table->uuid('farm_id');
+            $table->uuid('coop_id');
+            $table->uuid('livestock_strain_id')->nullable();
+            $table->uuid('livestock_strain_standard_id')->nullable();
+            $table->string('name'); // Batch name/code
+            $table->string('livestock_strain_name'); // Chicken strain type
+            $table->dateTime('start_date');
+            $table->dateTime('end_date')->nullable();
+            $table->integer('initial_quantity');
+            $table->integer('quantity_depletion')->default(0);
+            $table->integer('quantity_sales')->default(0);
+            $table->integer('quantity_mutated')->default(0);
+            $table->decimal('initial_weight', 10, 2);
+            $table->decimal('weight', 10, 2);
+            $table->string('weight_type');
+            $table->decimal('weight_per_unit', 10, 2);
+            $table->decimal('weight_total', 10, 2);
+            $table->json('data')->nullable();
+            $table->string('status');
+            $table->text('notes')->nullable();
+            $table->unsignedBigInteger('created_by');
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+
+            $table->foreign('livestock_id')->references('id')->on('livestocks')->onDelete('cascade');
+            $table->foreign('farm_id')->references('id')->on('farms');
+            $table->foreign('coop_id')->references('id')->on('coops');
+            $table->foreign('created_by')->references('id')->on('users');
+            $table->foreign('updated_by')->references('id')->on('users');
         });
 
         // Livestock Purchase
@@ -68,8 +105,26 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->foreignUuid('livestock_purchase_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
-            $table->integer('jumlah');
-            $table->decimal('harga_per_ekor', 12, 2);
+
+            // Quantity information
+            $table->integer('quantity');
+
+            // Price information
+            $table->decimal('price_value', 12, 2); // Input price value
+            $table->string('price_type')->default('per_unit'); // per_unit or total
+            $table->decimal('price_per_unit', 12, 2); // Price per unit (calculated)
+            $table->decimal('price_total', 12, 2); // Total price (calculated)
+            $table->decimal('tax_amount', 12, 2)->nullable(); // Tax amount if any
+            $table->decimal('tax_percentage', 5, 2)->nullable(); // Tax percentage
+
+            // Weight information
+            $table->decimal('weight_value', 10, 2); // Input weight value
+            $table->string('weight_type')->default('per_unit'); // per_unit or total
+            $table->decimal('weight_per_unit', 10, 2); // Weight per unit (calculated)
+            $table->decimal('weight_total', 10, 2); // Total weight (calculated)
+
+            // Additional information
+            $table->text('notes')->nullable(); // Catatan tambahan jika ada
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -212,7 +267,7 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
             $table->uuid('farm_id');
-            $table->uuid('kandang_id');
+            $table->uuid('coop_id');
             $table->integer('quantity');          // Jumlah saat ini
             $table->decimal('berat_total', 10, 2); // Estimasi berat total
             $table->decimal('avg_berat', 10, 2);   // Rata-rata berat per ekor
@@ -226,7 +281,7 @@ return new class extends Migration {
             $table->softDeletes();
 
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -247,5 +302,6 @@ return new class extends Migration {
         Schema::dropIfExists('livestock_purchase_items');
         Schema::dropIfExists('livestock_purchases');
         Schema::dropIfExists('livestocks');
+        Schema::dropIfExists('livestock_batches');
     }
 };

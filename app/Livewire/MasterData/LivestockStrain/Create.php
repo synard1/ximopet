@@ -10,6 +10,8 @@ use App\Models\LivestockStrain;
 use App\Models\Unit;
 use App\Models\UnitConversion;
 use App\Models\LivestockStrainStandard;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 
 class Create extends Component
 {
@@ -48,6 +50,11 @@ class Create extends Component
         $this->reset();
     }
 
+    public function resetInputStandard()
+    {
+        $this->reset();
+    }
+
     public function close()
     {
         $this->resetForm();
@@ -76,6 +83,17 @@ class Create extends Component
             'code' => 'required',
             'name' => 'required',
         ]);
+
+        // Check if the user has the permission to create or update livestock strains
+        if (!auth()->user()->can('create livestock strain') && !$this->edit_mode) {
+            $this->dispatch('error', 'You do not have permission to create livestock strains.');
+            return;
+        }
+
+        if (!auth()->user()->can('update livestock strain') && $this->edit_mode) {
+            $this->dispatch('error', 'You do not have permission to update livestock strain.');
+            return;
+        }
 
         try {
             DB::beginTransaction();
@@ -112,6 +130,12 @@ class Create extends Component
 
         if ($hasStandards) {
             $this->dispatch('error', 'Cannot delete strain because it has associated standards. Please delete the standards first.');
+            return;
+        }
+
+        // Check if the user has the permission to delete livestock strains
+        if (!auth()->user()->can('delete livestock strain')) {
+            $this->dispatch('error', 'You do not have permission to delete livestock strain.');
             return;
         }
 

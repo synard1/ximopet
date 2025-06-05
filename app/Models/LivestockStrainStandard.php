@@ -46,8 +46,19 @@ class LivestockStrainStandard extends BaseModel
         ]
     ];
 
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+
     public function strain()
     {
         return $this->belongsTo(LivestockStrain::class, 'strain_id');
+    }
+
+    public function livestocks()
+    {
+        return $this->hasMany(Livestock::class, 'livestock_strain_standard_id');
     }
 }

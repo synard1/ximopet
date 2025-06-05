@@ -20,10 +20,11 @@ class FeedPurchaseDataTable extends DataTable
      * @param QueryBuilder $query Results from query() method.
      */
 
-    private function formatRupiah($amount) {
+    private function formatRupiah($amount)
+    {
         // Convert the number to a string with two decimal places
         $formattedAmount = number_format($amount, 2, ',', '.');
-    
+
         // Add the currency symbol and return the formatted number
         return "Rp " . $formattedAmount;
     }
@@ -43,7 +44,7 @@ class FeedPurchaseDataTable extends DataTable
                 return $firstPurchase?->livestok?->farm?->name ?? '-';
                 // return $transaction->feedPurchases->livestok ?? '';
             })
-            ->editColumn('kandang_id', function (FeedPurchaseBatch $transaction) {
+            ->editColumn('coop_id', function (FeedPurchaseBatch $transaction) {
                 $firstPurchase = $transaction->feedPurchases->first();
                 return $firstPurchase?->livestok?->kandang?->nama ?? '-';
             })
@@ -51,13 +52,13 @@ class FeedPurchaseDataTable extends DataTable
                 $total = $transaction->feedPurchases->sum(function ($purchase) {
                     return $purchase->quantity * $purchase->price_per_unit;
                 });
-            
+
                 return $this->formatRupiah($total);
             })
             ->addColumn('action', function (FeedPurchaseBatch $transaction) {
                 return view('pages.transaction.feed-purchases._actions', compact('transaction'));
             })
-                    
+
             ->setRowId('id')
             ->rawColumns(['action']);
     }
@@ -111,10 +112,10 @@ class FeedPurchaseDataTable extends DataTable
                 'searching'       =>  true,
                 // 'responsive'       =>  true,
                 'lengthMenu' => [
-                        [ 10, 25, 50, -1 ],
-                        [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+                    [10, 25, 50, -1],
+                    ['10 rows', '25 rows', '50 rows', 'Show all']
                 ],
-                'buttons'      => ['export', 'print', 'reload','colvis'],
+                'buttons'      => ['export', 'print', 'reload', 'colvis'],
             ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaction/feed-purchases/_draw-scripts.js')) . "}");
     }
@@ -126,15 +127,15 @@ class FeedPurchaseDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex', 'No.')
-            ->title('No.')
-            ->addClass('text-center')
-            ->width(50),
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
             Column::make('date')->title('Tanggal Pembelian')->searchable(true),
             // Column::make('no_sj')->title('No. SJ')->searchable(false),
             Column::make('invoice_number')->title('Invoice')->searchable(true),
             Column::make('supplier_id')->title('Supplier')->searchable(true),
             Column::computed('farm_id')->title('Farm')->searchable(true),
-            Column::computed('kandang_id')->title('Kandang')->searchable(true),
+            Column::computed('coop_id')->title('Kandang')->searchable(true),
             // Column::make('rekanan_id')->title('Nama Supplier')->searchable(true),
             // Column::make('payload.doc.nama')->title('Nama DOC')->searchable(true),
             // Column::make('qty')->searchable(true),

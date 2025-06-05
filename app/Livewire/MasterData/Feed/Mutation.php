@@ -43,6 +43,10 @@ class Mutation extends Component
     public $default_unit_id = null;
     public $source_id, $source_name, $livestocks = [], $feeds = [];
     public $availableStock, $availableUnit;
+    public $errorItems = [];
+
+    public bool $withHistory = true;
+
 
     protected $listeners = [
         'showMutationForm' => 'showMutationForm',
@@ -242,6 +246,12 @@ class Mutation extends Component
     public function handleItemSelected($index)
     {
         $itemId = $this->items[$index]['item_id'] ?? null;
+        $type = $this->items[$index]['type'] ?? null;
+        Log::debug('handleItemSelected', [
+            'index' => $index,
+            'itemId' => $itemId,
+            'type' => $type,
+        ]);
         $selected = collect($this->availableItems)->firstWhere('id', $itemId);
 
         if (!$selected) return;
@@ -264,6 +274,7 @@ class Mutation extends Component
 
             $totalAvailable = $stocks->sum(fn($s) => $s->quantity_in - $s->quantity_used - $s->quantity_mutated);
             $this->items[$index]['available_stock'] = $totalAvailable;
+            $this->items[$index]['smallest_unit_name'] = $feed->payload['unit_details']['name'] ?? '';
         }
     }
 
@@ -309,8 +320,9 @@ class Mutation extends Component
 
     public function showEditForm($id)
     {
-        // $mutation = MutationModel::with('items')->findOrFail($id);
-        $mutation = MutationModel::with(['items.item', 'fromLivestock', 'toLivestock'])->findOrFail($id);
+        // $mutation = MutationModel::with(['mutationItems.item', 'fromLivestock', 'toLivestock'])->findOrFail($id);
+        // $mutation = MutationModel::with(['mutationItems', 'fromLivestock', 'toLivestock'])->findOrFail($id);
+        $mutation = MutationModel::with(['mutationItems.feed', 'fromLivestock', 'toLivestock'])->lockForUpdate()->findOrFail($id);
 
         $this->mutationId = $mutation->id;
         $this->tanggal = $mutation->date->format('Y-m-d');
@@ -318,27 +330,33 @@ class Mutation extends Component
         $this->destination_livestock_id = $mutation->to_livestock_id;
         $this->notes = $mutation->notes;
 
-        $this->items = $mutation->items->map(function ($item) {
-            $feed = $item->item;
-            $unitId = $feed->payload['unit_id'] ?? null;
+        $this->items = $mutation->mutationItems->map(function ($item) {
+            $feed = $item->feed;
+            $unitId = $item->unit_metadata['input_unit_id'] ?? null;
             $conversionUnits = $feed->payload['conversion_units'] ?? [];
-
-            // Cari unit_id yang paling sesuai (default ke satuan terkecil)
-            $defaultUnitId = collect($conversionUnits)->where('is_smallest', true)->first()['unit_id'] ?? $unitId;
-
-            // Hitung ulang quantity dalam satuan yang sesuai
+            $defaultUnitId = $unitId;
             $conversionRate = collect($conversionUnits)
                 ->where('unit_id', $defaultUnitId)
-                ->first()['conversion_value'] ?? 1;
+                ->first()['value'] ?? 1;
 
             return [
                 'item_id' => $feed->id,
                 'type' => 'feed',
-                'name' => $feed->name,
                 'unit_id' => $defaultUnitId,
-                'quantity' => $item->quantity / $conversionRate, // Kembalikan ke satuan input
+                'quantity' => $item->quantity / $conversionRate,
+                // 'units' => [], // will be filled by handleItemSelected
+                // 'available_stock' => 0, // will be filled by handleItemSelected
             ];
         })->toArray();
+
+        $this->loadAvailableItems();
+
+        // Hydrate units and available_stock for each item
+        foreach ($this->items as $index => $item) {
+            $this->handleItemSelected($index);
+        }
+
+        // dd($this->items);
 
         $this->edit_mode = true;
         $this->showForm = true;
@@ -386,8 +404,24 @@ class Mutation extends Component
 
     public function save()
     {
+        $this->errorItems = [];
 
+        // Process each item to enrich with unit information
+        // Validasi kombinasi feed_id dan unit_id tidak boleh duplikat
+        $uniqueKeys = [];
+        foreach ($this->items as $idx => $item) {
+            $key = $item['item_id'] . '-' . $item['unit_id'];
+            if (in_array($key, $uniqueKeys)) {
+                $this->errorItems[$idx] = 'Jenis pakan dan satuan tidak boleh sama dengan baris lain.';
+                Log::error("Duplicate feed_id and unit_id found for item at index $idx");
+            }
+            $uniqueKeys[] = $key;
+        }
 
+        if (!empty($this->errorItems)) {
+            $this->dispatch('validation-errors', ['errors' => array_values($this->errorItems)]);
+            return;
+        }
 
         try {
             // Validate the form data
@@ -401,59 +435,104 @@ class Mutation extends Component
                 'items.*.quantity' => 'required|numeric|gt:0',
             ]);
 
-            // Process each item to enrich with unit information
+            // If editing, first return the previous mutation quantities
+            if ($this->edit_mode && $this->mutationId) {
+                $previousMutation = FeedMutation::with('details')->find($this->mutationId);
+                if ($previousMutation) {
+                    foreach ($previousMutation->details as $detail) {
+                        $stock = FeedStock::where('livestock_id', $this->source_livestock_id)
+                            ->where('feed_id', $detail->feed_id)
+                            ->first();
+
+                        if ($stock) {
+                            $stock->quantity_mutated -= $detail->quantity;
+                            $stock->save();
+                        }
+                    }
+                }
+            }
+
             foreach ($this->items as $index => $item) {
                 $feedId = $item['item_id'];
                 $unitId = $item['unit_id'];
 
-                $feed = Feed::with('unit')->findOrFail($feedId);
-                $unit = Unit::findOrFail($unitId);
+                try {
+                    // Log the start of processing for each item
+                    Log::info("Starting to process item at index $index with feed_id $feedId and unit_id $unitId");
 
-                // Get and validate unit conversion information
-                $conversionUnits = collect($feed->payload['conversion_units'] ?? []);
-                $selectedUnit = $conversionUnits->firstWhere('unit_id', $unitId);
-                $smallestUnit = $conversionUnits->firstWhere('is_smallest', true);
+                    $feed = Feed::with('unit')->findOrFail($feedId);
+                    $unit = Unit::findOrFail($unitId);
 
-                if (!$selectedUnit || !$smallestUnit) {
-                    $this->addError("items.$index.unit_id", "Informasi konversi untuk unit {$unit->name} tidak ditemukan pada pakan {$feed->name}");
-                    return;
-                }
+                    // Log the retrieval of feed and unit data
+                    Log::info("Retrieved feed and unit data for item at index $index");
 
-                // Enrich the item with unit names and type information
-                $this->items[$index]['unit_name'] = $unit->name;
-                $this->items[$index]['type'] = 'feed'; // Since this is feed mutation
+                    // Get and validate unit conversion information
+                    $conversionUnits = collect($feed->payload['conversion_units'] ?? []);
+                    $selectedUnit = $conversionUnits->firstWhere('unit_id', $unitId);
+                    $smallestUnit = $conversionUnits->firstWhere('is_smallest', true);
 
-                // Check available stock in smallest units
-                $inputQty = floatval($item['quantity']);
-                $inputUnitValue = floatval($selectedUnit['value']);
-                $smallestUnitValue = floatval($smallestUnit['value']);
-                $requiredQtySmallest = ($inputQty * $inputUnitValue) / $smallestUnitValue;
+                    if (!$selectedUnit || !$smallestUnit) {
+                        $this->errorItems[$index] = "Informasi konversi untuk unit {$unit->name} tidak ditemukan pada pakan {$feed->name}";
+                        Log::error("Unit conversion not found for item at index $index");
+                        continue;
+                    }
 
-                // Verify stock availability
-                $stocks = FeedStock::where('livestock_id', $this->source_livestock_id)
-                    ->where('feed_id', $feedId)
-                    ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
-                    ->get();
+                    // Enrich the item with unit names and type information
+                    $this->items[$index]['unit_name'] = $unit->name;
+                    $this->items[$index]['type'] = 'feed';
 
-                $totalAvailable = $stocks->sum(fn($s) => $s->quantity_in - $s->quantity_used - $s->quantity_mutated);
+                    // Log the enrichment of item with unit information
+                    Log::info("Enriched item at index $index with unit information");
 
-                if ($totalAvailable < $requiredQtySmallest) {
-                    $availableInInputUnits = ($totalAvailable * $smallestUnitValue) / $inputUnitValue;
-                    $this->addError(
-                        "items.$index.quantity",
-                        "Stok {$feed->name} tidak mencukupi. Tersedia: " . number_format($availableInInputUnits, 2) . " {$unit->name}"
-                    );
-                    return;
+                    // Check available stock in smallest units
+                    $inputQty = floatval($item['quantity']);
+                    $inputUnitValue = floatval($selectedUnit['value']);
+                    $smallestUnitValue = floatval($smallestUnit['value']);
+                    $requiredQtySmallest = ($inputQty * $inputUnitValue) / $smallestUnitValue;
+
+                    // Verify stock availability
+                    $stocks = FeedStock::where('livestock_id', $this->source_livestock_id)
+                        ->where('feed_id', $feedId)
+                        ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
+                        ->get();
+
+                    // Log the retrieval of stock data
+                    Log::info("Retrieved stock data for feed_id $feedId and livestock_id {$this->source_livestock_id}");
+
+                    $totalAvailable = $stocks->sum(fn($s) => $s->quantity_in - $s->quantity_used - $s->quantity_mutated);
+
+                    if ($totalAvailable < $requiredQtySmallest) {
+                        $availableInInputUnits = ($totalAvailable * $smallestUnitValue) / $inputUnitValue;
+                        $this->errorItems[$index] = "Stok {$feed->name} tidak mencukupi. Tersedia: " . number_format($availableInInputUnits, 2) . " {$unit->name}";
+                        Log::error("Insufficient stock for item at index $index");
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Error processing item at index $index: " . $e->getMessage());
+                    $this->errorItems[$index] = "Terjadi kesalahan saat memproses item: " . $e->getMessage();
                 }
             }
 
+            if (!empty($this->errorItems)) {
+                $this->dispatch('validation-errors', ['errors' => array_values($this->errorItems)]);
+                return;
+            }
+
             // Create/update the mutation
-            $mutation = MutationService::feedMutation([
+            // $mutation = MutationService::feedMutation([
+            //     'date' => $this->tanggal,
+            //     'source_livestock_id' => $this->source_livestock_id,
+            //     'destination_livestock_id' => $this->destination_livestock_id,
+            //     'notes' => $this->notes,
+            // ], $this->items, $this->mutationId, $this->withHistory);
+            $mutation = MutationService::feedMutationWithHistoryControl([
                 'date' => $this->tanggal,
                 'source_livestock_id' => $this->source_livestock_id,
                 'destination_livestock_id' => $this->destination_livestock_id,
                 'notes' => $this->notes,
-            ], $this->items, $this->mutationId);
+            ], $this->items, $this->mutationId, $this->withHistory);
+
+            // Log the creation/update of mutation
+            Log::info("Created/Updated mutation with ID {$this->mutationId} for feed mutation");
 
             $this->dispatch('success', 'Data Mutasi Pakan berhasil ' . ($this->edit_mode ? 'diperbarui' : 'disimpan'));
             $this->close();
@@ -737,7 +816,7 @@ class Mutation extends Component
             [
                 'quantity' => $total,
                 'farm_id' => $livestock->farm_id,
-                'kandang_id' => $livestock->kandang_id ?? null, // kalau ada
+                'coop_id' => $livestock->coop_id ?? null, // kalau ada
                 'unit_id' => $feed->payload['unit_id'],
                 'created_by' => auth()->id(),
             ]

@@ -20,8 +20,28 @@ class LivestockPurchaseDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+            ->addIndexColumn()
             ->editColumn('created_at', function (Transaksi $transaksi) {
                 return $transaksi->created_at->format('d M Y, h:i a');
+            })
+            ->editColumn('farm_id', function (Transaksi $transaksi) {
+                $detail = $transaksi->details->first();
+                if ($detail && $detail->livestock && $detail->livestock->farm) {
+                    return $detail->livestock->farm->name;
+                }
+                return 'N/A';
+            })
+            ->editColumn('coop_id', function (Transaksi $transaksi) {
+                $detail = $transaksi->details->first();
+                if ($detail && $detail->livestock && $detail->livestock->coop) {
+                    return $detail->livestock->coop->name;
+                }
+                // Fallback: cek batch jika ada
+                $batch = $detail->livestockBatches->first() ?? null;
+                if ($batch && $batch->coop_id) {
+                    return optional(\App\Models\Coop::find($batch->coop_id))->name ?? 'N/A';
+                }
+                return 'N/A';
             })
             ->editColumn('tanggal', function (Transaksi $transaksi) {
                 return $transaksi->tanggal->format('d-m-Y');
@@ -29,11 +49,14 @@ class LivestockPurchaseDataTable extends DataTable
             ->editColumn('vendor_id', function (Transaksi $transaksi) {
                 return $transaksi->vendor->name ?? '';
             })
+            ->editColumn('expedition_id', function (Transaksi $transaksi) {
+                return $transaksi->expedition->name ?? '';
+            })
             ->editColumn('details.jumlah', function (Transaksi $transaksi) {
-                return $transaksi->details->sum('jumlah') ?? 0;
+                return formatNumber($transaksi->details->sum('quantity'), 0) ?? 0;
             })
             ->editColumn('details.harga_per_ekor', function (Transaksi $transaksi) {
-                return $transaksi->details->sum('harga_per_ekor') ?? 0;
+                return formatRupiah($transaksi->details->sum('price_per_unit'), 0) ?? 0;
             })
             ->addColumn('action', function (Transaksi $transaksi) {
                 return view('pages.transaction.livestock-purchases._actions', compact('transaksi'));
@@ -51,8 +74,8 @@ class LivestockPurchaseDataTable extends DataTable
             // ->editColumn('farm_id', function (Transaksi $transaksi) {
             //     return $transaksi->farms->nama ?? '';
             // })
-            // ->editColumn('kandang_id', function (Transaksi $transaksi) {
-            //     return $transaksi->kandangs->nama ?? '';
+            // ->editColumn('coop_id', function (Transaksi $transaksi) {
+            //     return $transaksi->coops->nama ?? '';
             // })
             // ->editColumn('kelompok_ternak_id', function (Transaksi $transaksi) {
             //     return $transaksi->kelompokTernak->name ?? '';
@@ -75,8 +98,8 @@ class LivestockPurchaseDataTable extends DataTable
         //         $q->where('nama', 'like', "%{$keyword}%");
         //     });
         // })
-        // ->filterColumn('kandang_id', function ($query, $keyword) {
-        //     $query->whereHas('kandangs', function ($q) use ($keyword) {
+        // ->filterColumn('coop_id', function ($query, $keyword) {
+        //     $query->whereHas('coops', function ($q) use ($keyword) {
         //         $q->where('nama', 'like', "%{$keyword}%");
         //     });
         // })
@@ -96,7 +119,7 @@ class LivestockPurchaseDataTable extends DataTable
         $query = $model->newQuery();
 
         // return $model->newQuery();
-        $query = $model::with('details')
+        $query = $model::with('details.livestock.farm')
             // ->where('jenis', 'DOC')
             // ->whereHas('details', function ($query) {
             //     // $query->where('jenis_barang', 'DOC');
@@ -142,9 +165,14 @@ class LivestockPurchaseDataTable extends DataTable
     public function getColumns(): array
     {
         return [
+            Column::make('DT_RowIndex')->title('No')->searchable(false),
+            Column::make('id')->title('ID')->searchable(false)->visible(env('APP_ENV') === 'local')->visible(false),
             Column::make('invoice_number')->searchable(true),
             Column::make('tanggal')->title('Tanggal Pembelian')->searchable(true),
-            Column::make('vendor_id')->title('Supplier')->searchable(true),
+            Column::computed('farm_id')->title('Farm')->searchable(true)->visible(false),
+            Column::computed('coop_id')->title('Kandang')->searchable(true)->visible(false),
+            Column::make('vendor_id')->title('Supplier')->searchable(true)->visible(true),
+            Column::make('expedition_id')->title('Ekspedisi')->searchable(true)->visible(false),
             Column::make('details.jumlah')->title('Jumlah')->searchable(false),
             Column::make('details.harga_per_ekor')->title('Harga Per Ekor')->searchable(false),
             Column::make('created_at')->title('Created Date')

@@ -20,8 +20,15 @@ return [
     'customers' => 'Customer',
     'pakans' => 'Pakan',
     'supplies' => 'Bahan',
-    'farms' => 'Kandang',
+    'farms' => 'Peternakan',
+    'coops' => 'Kandang',
+    'coop' => 'Kandang',
     'users' => 'User',
-    
 
+    'status' => [
+        'active' => 'Aktif',
+        'inactive' => 'Tidak Aktif',
+        'in_use' => 'Digunakan',
+        'not_in_use' => 'Tidak Digunakan',
+    ],
 ];

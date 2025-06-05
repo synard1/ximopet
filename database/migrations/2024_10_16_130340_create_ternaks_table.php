@@ -18,7 +18,7 @@ return new class extends Migration
             $table->uuid('transaksi_id')->nullable();
             $table->uuid('standar_bobot_id')->nullable();
             $table->uuid('farm_id');
-            $table->uuid('kandang_id');
+            $table->uuid('coop_id');
             $table->string('name'); //name for batch code / periode
             $table->string('breed'); //jenis
             $table->dateTime('start_date'); //tanggal mulai
@@ -39,7 +39,7 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('transaksi_id')->references('id')->on('transaksi_beli')->onDelete('cascade');
             $table->foreign('standar_bobot_id')->references('id')->on('standar_bobots')->onDelete('cascade');
         });
@@ -77,7 +77,7 @@ return new class extends Migration
             $table->string('jenis_transaksi');
             $table->dateTime('tanggal');
             $table->uuid('farm_id');
-            $table->uuid('kandang_id');
+            $table->uuid('coop_id');
 
             // Data Kuantitas
             $table->integer('quantity');          // Jumlah saat ini
@@ -102,12 +102,12 @@ return new class extends Migration
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
             $table->foreign('farm_tujuan_id')->references('id')->on('farms');
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('kandang_tujuan_id')->references('id')->on('master_kandangs');
-            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('kandang_tujuan_id')->references('id')->on('coops');
+            $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('pembeli_id')->references('id')->on('partners');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
@@ -118,7 +118,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('kelompok_ternak_id');
             $table->uuid('farm_id');
-            $table->uuid('kandang_id');
+            $table->uuid('coop_id');
             $table->integer('quantity');          // Jumlah saat ini
             $table->decimal('berat_total', 10, 2); // Estimasi berat total
             $table->decimal('avg_berat', 10, 2);   // Rata-rata berat per ekor
@@ -129,10 +129,10 @@ return new class extends Migration
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -149,9 +149,9 @@ return new class extends Migration
 
             // Untuk transfer/mutasi
             $table->uuid('source_farm_id')->nullable();
-            $table->uuid('source_kandang_id')->nullable();
+            $table->uuid('source_coop_id')->nullable();
             $table->uuid('destination_farm_id')->nullable();
-            $table->uuid('destination_kandang_id')->nullable();
+            $table->uuid('destination_coop_id')->nullable();
 
             // Untuk penjualan
             $table->uuid('pembeli_id')->nullable();
@@ -162,7 +162,7 @@ return new class extends Migration
             $table->string('reference_id')->nullable();    // ID dari tabel terkait
             $table->string('keterangan')->nullable();
             $table->string('status');                     // draft, completed, cancelled
-            
+
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -172,8 +172,8 @@ return new class extends Migration
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('source_farm_id')->references('id')->on('farms');
             $table->foreign('destination_farm_id')->references('id')->on('farms');
-            $table->foreign('source_kandang_id')->references('id')->on('master_kandangs');
-            $table->foreign('destination_kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('source_coop_id')->references('id')->on('coops');
+            $table->foreign('destination_coop_id')->references('id')->on('coops');
             $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
             $table->foreign('pembeli_id')->references('id')->on('partners');
             $table->foreign('current_ternak_id')->references('id')->on('current_ternaks');
@@ -204,8 +204,8 @@ return new class extends Migration
             $table->foreign('kelompok_ternak_tujuan_id')->references('id')->on('ternaks');
             $table->foreign('farm_asal_id')->references('id')->on('farms');
             $table->foreign('farm_tujuan_id')->references('id')->on('farms');
-            $table->foreign('kandang_asal_id')->references('id')->on('master_kandangs');
-            $table->foreign('kandang_tujuan_id')->references('id')->on('master_kandangs');
+            $table->foreign('kandang_asal_id')->references('id')->on('coops');
+            $table->foreign('kandang_tujuan_id')->references('id')->on('coops');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -213,11 +213,11 @@ return new class extends Migration
         Schema::create('konsumsi_pakan', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('kelompok_ternak_id');
-            $table->uuid('item_id')->nullable();    
+            $table->uuid('item_id')->nullable();
             $table->decimal('quantity', 10, 2);
             $table->decimal('harga', 10, 2);
             $table->dateTime('tanggal');
-            $table->string('keterangan')->nullable(); 
+            $table->string('keterangan')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
 
@@ -237,7 +237,7 @@ return new class extends Migration
             $table->string('tipe_transaksi');
             $table->dateTime('tanggal');
             $table->uuid('farm_id');
-            $table->uuid('kandang_id');
+            $table->uuid('coop_id');
             $table->string('stok_awal');
             $table->integer('quantity');
             $table->string('stok_akhir');
@@ -254,7 +254,7 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
         });
 
@@ -353,6 +353,5 @@ return new class extends Migration
         Schema::dropIfExists('kelompok_ternak');
 
         Schema::enableForeignKeyConstraints();
-
     }
 };

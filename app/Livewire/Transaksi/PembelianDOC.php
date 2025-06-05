@@ -129,7 +129,7 @@ class PembelianDOC extends Component
                 'tanggal' => $this->tanggal,
                 'partner_id' => $this->supplierSelect,
                 'farm_id' => $kandang->farm_id,
-                'kandang_id' => $this->selectedKandang,
+                'coop_id' => $this->selectedKandang,
                 'pic' => $this->pic,
                 'harga' => $this->harga,
                 'total_qty' => $this->qty,
@@ -175,7 +175,7 @@ class PembelianDOC extends Component
             //         'kelompok_ternak_id' => $kelompokTernak->id,
             //         'parent_id' => null,
             //         'farm_id' => $transaksi->farm_id,
-            //         'kandang_id' => $transaksi->kandang_id,
+            //         'coop_id' => $transaksi->coop_id,
             //         'tanggal' => $transaksi->tanggal,
             //         'jenis' => 'Masuk',
             //         'perusahaan_nama' => $transaksi->rekanans->nama,
@@ -202,7 +202,7 @@ class PembelianDOC extends Component
             //     'tanggal' => $transaksi->tanggal,
             //     'rekanan_id' => $transaksi->rekanan_id,
             //     'farm_id' => $transaksi->farm_id,
-            //     'kandang_id' => $kandang->id,
+            //     'coop_id' => $kandang->id,
             //     'item_id' => $doc->id,
             //     'item_name' => $doc->name,
             //     'harga' => $transaksi->harga,
@@ -273,7 +273,7 @@ class PembelianDOC extends Component
 
         $pembelian = $pembelianItem->livestockPurchase;
 
-        // dd($ternak->kandang_id);
+        // dd($ternak->coop_id);
 
         // Mapping data ke property Livewire
         $this->livestockId = $ternak->id;
@@ -282,7 +282,7 @@ class PembelianDOC extends Component
         $this->supplierSelect = $pembelian->vendor_id;
 
         $this->docSelect = $ternak->livestock_breed_id  ?? null; // asumsi `doc_id` di ternak
-        $this->selectedKandang = $ternak->kandang_id ?? null;
+        $this->selectedKandang = $ternak->coop_id ?? null;
         $this->standarDocSelect = $ternak->livestock_breed_standard_id;
         $this->qty = $pembelianItem->jumlah;
         $this->harga = $pembelianItem->harga_per_ekor;
@@ -310,7 +310,7 @@ class PembelianDOC extends Component
     //     $this->tanggal = $pembelian->tanggal;
     //     $this->supplierSelect = $pembelian->rekanan_id;
     //     $this->docSelect = $pembelian->transaksiDetails[0]['item_id'];
-    //     $this->selectedKandang = $pembelian->kandang_id;
+    //     $this->selectedKandang = $pembelian->coop_id;
     //     $this->standarDocSelect = $ternak->standar_bobot_id;
     //     $this->qty = $pembelian->total_qty;
     //     $this->harga = $pembelian->harga;
@@ -334,14 +334,14 @@ class PembelianDOC extends Component
             $currentTernak = CurrentTernak::where('kelompok_ternak_id', $id)->first();
             $transaksi = TransaksiBeli::with('transaksiDetails')->findOrFail($ternak->transaksi_id);
             $transaksiDetail = $transaksi->transaksiDetails()->first();
-            $kandang = Kandang::find($transaksi->kandang_id);
+            $kandang = Kandang::find($transaksi->coop_id);
 
             if ($ternak->populasi_awal !== $currentTernak->quantity) {
                 $this->dispatch('error', 'Terjadi kesalahan, populasi awal ternak tidak sama dengan populasi saat ini / Sudah ada data transaksi');
                 return;
             }
 
-            $this->updateKandangStatusToAktif($kandang, $transaksi->kandang_id);
+            $this->updateKandangStatusToAktif($kandang, $transaksi->coop_id);
 
             $this->deleteRelatedRecords($transaksi->kelompok_ternak_id);
 
@@ -531,7 +531,7 @@ class PembelianDOC extends Component
                 'harga' => $this->harga,
                 'sub_total' => $this->qty * $this->harga,
                 'partner_id' => $this->supplierSelect,
-                'kandang_id' => $this->selectedKandang,
+                'coop_id' => $this->selectedKandang,
                 'farm_id' => $farmId,
                 'pic' => $this->pic,
                 'standar_bobot_id' => $this->standarDocSelect,
@@ -555,7 +555,7 @@ class PembelianDOC extends Component
 
     //     $validatedData = $this->validate();
     //     $validatedData['rekanan_id'] = $this->supplierSelect;
-    //     $validatedData['kandang_id'] = $this->selectedKandang;
+    //     $validatedData['coop_id'] = $this->selectedKandang;
 
     //     // dd($this->transaksi_id);
     //     // dd($validatedData);
@@ -583,7 +583,7 @@ class PembelianDOC extends Component
     //             'faktur' => $validatedData['faktur'],
     //             'rekanan_id' => $validatedData['rekanan_id'],
     //             'farm_id' => $validatedData['farm_id'],
-    //             'kandang_id' => $validatedData['kandang_id'],
+    //             'coop_id' => $validatedData['coop_id'],
     //             'total_qty' => $validatedData['qty'],
     //             'total_berat' => $validatedData['qty'] * $validatedData['berat'],
     //             'harga' => $validatedData['harga'],
@@ -632,7 +632,7 @@ class PembelianDOC extends Component
     //         TransaksiTernak::where('kelompok_ternak_id', $purchase->kelompok_ternak_id)->update([
     //             'tanggal' => $validatedData['tanggal'],
     //             'farm_id' => $validatedData['farm_id'],
-    //             'kandang_id' => $validatedData['kandang_id'],
+    //             'coop_id' => $validatedData['coop_id'],
     //             'quantity' => $validatedData['qty'],
     //             'berat_total' => $validatedData['qty'] * 0.1,
     //             'berat_rata' => 0.1,
@@ -644,7 +644,7 @@ class PembelianDOC extends Component
     //         // Update CurrentTernak
     //         CurrentTernak::where('kelompok_ternak_id', $purchase->kelompok_ternak_id)->update([
     //             'farm_id' => $validatedData['farm_id'],
-    //             'kandang_id' => $validatedData['kandang_id'],
+    //             'coop_id' => $validatedData['coop_id'],
     //             'quantity' => $validatedData['qty'],
     //             'berat_total' => $validatedData['qty'] * 0.1,
     //             'avg_berat' => 0.1,
@@ -652,7 +652,7 @@ class PembelianDOC extends Component
     //         ]);
 
     //         // Update Kandang
-    //         Kandang::find($validatedData['kandang_id'])->update([
+    //         Kandang::find($validatedData['coop_id'])->update([
     //             'jumlah' => $validatedData['qty'],
     //             'berat' => $validatedData['qty'] * 0.1,
     //             'kelompok_ternak_id' => $purchase->kelompok_ternak_id,
@@ -707,7 +707,7 @@ class PembelianDOC extends Component
         return Ternak::create([
             'transaksi_id' => $purchase->id,
             'farm_id' => $farm->id,
-            'kandang_id' => $kandang->id,
+            'coop_id' => $kandang->id,
             'name' => $periode,
             'breed' => $this->docSelect,
             'start_date' => $purchase->tanggal,
@@ -728,7 +728,7 @@ class PembelianDOC extends Component
             'jenis_transaksi' => 'Pembelian',
             'tanggal' => $purchase->tanggal,
             'farm_id' => $farm->id,
-            'kandang_id' => $kandang->id,
+            'coop_id' => $kandang->id,
             'quantity' => $purchase->total_qty,
             'berat_total' => $purchase->total_berat,
             'berat_rata' => $purchase->total_berat / $purchase->total_qty,
@@ -751,7 +751,7 @@ class PembelianDOC extends Component
         return CurrentTernak::create([
             'kelompok_ternak_id' => $kelompokTernak->id,
             'farm_id' => $farm->id,
-            'kandang_id' => $kandang->id,
+            'coop_id' => $kandang->id,
             'quantity' => $data['total_qty'],
             'berat_total' => $data['total_berat'],
             'avg_berat' => $data['total_berat'] / $data['total_qty'],

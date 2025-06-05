@@ -28,7 +28,7 @@ class Farm extends BaseModel
 
     public function kandangs()
     {
-        return $this->hasMany(Kandang::class);
+        return $this->hasMany(Coop::class);
     }
     public function storages()
     {

@@ -18,7 +18,7 @@ class OVKRecord extends BaseModel
     protected $fillable = [
         'usage_date',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'livestock_id',
         'notes',
         'metadata',
@@ -38,7 +38,7 @@ class OVKRecord extends BaseModel
 
     public function kandang(): BelongsTo
     {
-        return $this->belongsTo(Kandang::class);
+        return $this->belongsTo(Coop::class);
     }
 
     public function livestock(): BelongsTo

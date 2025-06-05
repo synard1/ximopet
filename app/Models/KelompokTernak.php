@@ -21,7 +21,7 @@ class KelompokTernak extends BaseModel
     protected $fillable = [
         'transaksi_id',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'standar_bobot_id',
         'name',
         'breed',
@@ -46,7 +46,7 @@ class KelompokTernak extends BaseModel
 
     public function transaksiBeli()
     {
-        return $this->belongsTo(TransaksiBeli::class, 'transaksi_id','id');
+        return $this->belongsTo(TransaksiBeli::class, 'transaksi_id', 'id');
     }
 
     public function farm()
@@ -56,7 +56,7 @@ class KelompokTernak extends BaseModel
 
     public function kandang()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id', 'id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 
     public function standarBobot()
@@ -64,37 +64,39 @@ class KelompokTernak extends BaseModel
         return $this->belongsTo(StandarBobot::class, 'standar_bobot_id', 'id');
     }
 
-    public function historyTernaks(){
+    public function historyTernaks()
+    {
         return $this->hasMany(TernakHistory::class, 'kelompok_ternak_id', 'id');
     }
 
-    public function kematianTernak(){
+    public function kematianTernak()
+    {
         return $this->hasMany(KematianTernak::class, 'kelompok_ternak_id', 'id');
     }
 
     public function transaksiHarian()
     {
-        return $this->hasMany(TransaksiHarian::class, 'kelompok_ternak_id','id');
+        return $this->hasMany(TransaksiHarian::class, 'kelompok_ternak_id', 'id');
     }
 
     public function ternakAfkir()
     {
-        return $this->hasMany(TernakAfkir::class, 'kelompok_ternak_id','id');
+        return $this->hasMany(TernakAfkir::class, 'kelompok_ternak_id', 'id');
     }
 
     public function penjualanTernaks()
     {
-        return $this->hasMany(TernakJual::class, 'kelompok_ternak_id','id');
+        return $this->hasMany(TernakJual::class, 'kelompok_ternak_id', 'id');
     }
 
     public function transaksiJuals()
     {
-        return $this->hasMany(TransaksiJual::class, 'kelompok_ternak_id','id');
+        return $this->hasMany(TransaksiJual::class, 'kelompok_ternak_id', 'id');
     }
 
     public function konsumsiPakan()
     {
-        return $this->hasMany(KonsumsiPakan::class, 'kelompok_ternak_id','id');
+        return $this->hasMany(KonsumsiPakan::class, 'kelompok_ternak_id', 'id');
     }
 
     public function transaksiHarians()
@@ -107,8 +109,8 @@ class KelompokTernak extends BaseModel
         return $this->status === 'Locked';
     }
 
-    public function ternakDepletion(){
+    public function ternakDepletion()
+    {
         return $this->hasMany(TernakDepletion::class, 'ternak_id', 'id');
     }
-    
 }

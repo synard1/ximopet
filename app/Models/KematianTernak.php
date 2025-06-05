@@ -22,7 +22,7 @@ class KematianTernak extends BaseModel
         'history_ternak_id',
         'tanggal',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'stok_awal',
         'quantity',
         'stok_akhir',
@@ -39,7 +39,7 @@ class KematianTernak extends BaseModel
 
     public function transaksi()
     {
-        return $this->belongsTo(Transaksi::class, 'transaksi_id','id');
+        return $this->belongsTo(Transaksi::class, 'transaksi_id', 'id');
     }
 
     public function farm()
@@ -49,15 +49,16 @@ class KematianTernak extends BaseModel
 
     public function kandang()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id', 'id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 
-    public function historyTernaks(){
+    public function historyTernaks()
+    {
         return $this->hasMany(TernakHistory::class, 'kelompok_ternak_id', 'id');
     }
 
-    public function kelompokTernaks(){
+    public function kelompokTernaks()
+    {
         return $this->belongsTo(Ternak::class, 'kelompok_ternak_id', 'id');
     }
-    
 }

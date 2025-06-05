@@ -20,7 +20,7 @@ class Ternak extends BaseModel
     protected $fillable = [
         'transaksi_id',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'standar_bobot_id',
         'name',
         'breed',
@@ -44,12 +44,12 @@ class Ternak extends BaseModel
 
     public function transaksi()
     {
-        return $this->belongsTo(TransaksiBeli::class, 'transaksi_id','id');
+        return $this->belongsTo(TransaksiBeli::class, 'transaksi_id', 'id');
     }
 
     public function transaksiBeli()
     {
-        return $this->belongsTo(TransaksiBeli::class, 'transaksi_id','id');
+        return $this->belongsTo(TransaksiBeli::class, 'transaksi_id', 'id');
     }
 
     public function farm()
@@ -59,18 +59,21 @@ class Ternak extends BaseModel
 
     public function kandang()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id', 'id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 
-    public function kematianTernak(){
+    public function kematianTernak()
+    {
         return $this->hasMany(KematianTernak::class, 'kelompok_ternak_id', 'id');
     }
 
-    public function ternakDepletion(){
+    public function ternakDepletion()
+    {
         return $this->hasMany(TernakDepletion::class, 'ternak_id', 'id');
     }
 
-    public function jenisTernak(){
+    public function jenisTernak()
+    {
         return $this->belongsTo(Item::class, 'item_id', 'id');
     }
 
@@ -78,5 +81,4 @@ class Ternak extends BaseModel
     {
         return $this->status === 'Locked';
     }
-    
 }

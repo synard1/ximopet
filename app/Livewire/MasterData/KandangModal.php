@@ -13,7 +13,7 @@ use App\Models\Kandang;
 
 class KandangModal extends Component
 {
-    public $kandangs, $farms, $selectedFarm, $kandang_id, $kode_kandang, $nama, $kapasitas, $status = 'Aktif';
+    public $kandangs, $farms, $selectedFarm, $coop_id, $kode_kandang, $nama, $kapasitas, $status = 'Aktif';
     public $isOpen = 0;
     public $dynamicNumber, $currentUrl, $referer;
 
@@ -39,8 +39,9 @@ class KandangModal extends Component
     public function render()
     {
         $this->farms = Farm::where('status', 'Aktif')->get();
-        return view('livewire.master-data.kandang-modal', ['farms' => $this->farms,
-        'noFarmMessage' => $this->noFarmMessage, // Pass the message to the view
+        return view('livewire.master-data.kandang-modal', [
+            'farms' => $this->farms,
+            'noFarmMessage' => $this->noFarmMessage, // Pass the message to the view
         ]);
     }
 
@@ -55,7 +56,7 @@ class KandangModal extends Component
             // Check if kode_kandang already exists for the selected farm
             $existingKandang = Kandang::where('farm_id', $this->selectedFarm)
                 ->where('kode', $this->kode_kandang)
-                // ->where('id', '!=', $this->kandang_id) // Exclude current kandang when editing
+                // ->where('id', '!=', $this->coop_id) // Exclude current kandang when editing
                 ->first();
 
             if ($existingKandang) {
@@ -63,10 +64,10 @@ class KandangModal extends Component
                     'kode_kandang' => 'Kode kandang sudah digunakan di farm ini'
                 ]);
             }
-        
+
             // Wrap database operation in a transaction (if applicable)
             DB::beginTransaction();
-        
+
             // Prepare the data for creating/updating the kandang
             $data = [
                 'farm_id' => $this->selectedFarm,
@@ -76,13 +77,13 @@ class KandangModal extends Component
                 'status' => 'Aktif',
                 'user_id' => auth()->user()->id,
             ];
-        
-            $kandang = Kandang::where('id', $this->kandang_id)->first() ?? Kandang::create($data);
-        
+
+            $kandang = Kandang::where('id', $this->coop_id)->first() ?? Kandang::create($data);
+
             DB::commit();
-    
+
             // Emit success event if no errors occurred
-            $this->dispatch('success', 'Kandang '. $kandang->nama .' berhasil ditambahkan');
+            $this->dispatch('success', 'Kandang ' . $kandang->nama . ' berhasil ditambahkan');
 
             // Reset the form
             $this->resetForm();
@@ -91,10 +92,10 @@ class KandangModal extends Component
             $this->setErrorBag($e->validator->errors());
         } catch (\Exception $e) {
             DB::rollBack();
-    
+
             // Handle validation and general errors
             // $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ');
-            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. '.$e->getMessage());
+            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data. ' . $e->getMessage());
 
             // Optionally log the error: Log::error($e->getMessage());
         } finally {
@@ -129,7 +130,8 @@ class KandangModal extends Component
         $this->isOpen = false;
     }
 
-    private function resetInputFields(){
+    private function resetInputFields()
+    {
         $this->nama = ''; // Generate UUID for new contacts
     }
 }

@@ -55,7 +55,7 @@ return new class extends Migration
         Schema::create('inventory_locations', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('farm_id')->nullable();
-            $table->uuid('kandang_id')->nullable();
+            $table->uuid('coop_id')->nullable();
             $table->string('name');
             $table->string('code')->unique();
             $table->text('description')->nullable();
@@ -67,7 +67,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -93,21 +93,21 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('kelompok_ternak_id');
             $table->uuid('item_id');
-            
+
             $table->decimal('quantity', 15, 2)->default(0)->comment('Jumlah stok');
-            
+
             $table->string('status');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
-        
+
             // Foreign keys
             $table->foreign('item_id')->references('id')->on('items');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
-        
+
             // Indexes
             $table->index('kelompok_ternak_id');
             $table->index('item_id');
@@ -142,7 +142,6 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
-
         });
 
         Schema::create('stock_histories', function (Blueprint $table) {
@@ -174,7 +173,6 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
-
         });
 
         Schema::enableForeignKeyConstraints();
@@ -196,6 +194,5 @@ return new class extends Migration
         Schema::dropIfExists('stock_histories');
 
         Schema::enableForeignKeyConstraints();
-
     }
 };

@@ -42,7 +42,7 @@ class PenjualansDataTable extends DataTable
             ->editColumn('farm_id', function (TransaksiJual $transaksi) {
                 return $transaksi->kelompokTernak->farm->nama;
             })
-            ->editColumn('kandang_id', function (TransaksiJual $transaksi) {
+            ->editColumn('coop_id', function (TransaksiJual $transaksi) {
                 return $transaksi->kelompokTernak->kandang->nama;
             })
             ->editColumn('kelompok_ternak_id', function (TransaksiJual $transaksi) {
@@ -113,7 +113,7 @@ class PenjualansDataTable extends DataTable
                     });
                 }
             })
-            // ->filterColumn('kandang_id', function($query, $keyword) {
+            // ->filterColumn('coop_id', function($query, $keyword) {
             //     $query->whereHas('detail.kandang', function($q) use ($keyword) {
             //         $q->where('nama', 'like', "%{$keyword}%");
             //     });
@@ -211,7 +211,7 @@ class PenjualansDataTable extends DataTable
                 ->visible(false)
                 ->searchable(true),
             Column::computed('farm_id')->title('Farm')->visible(false),
-            Column::computed('kandang_id')->title('Kandang'),
+            Column::computed('coop_id')->title('Kandang'),
             Column::make('kelompok_ternak_id')->title('Batch DOC'),
             Column::computed('jumlah')
                 ->title('Jumlah (Ekor)')

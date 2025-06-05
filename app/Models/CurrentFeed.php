@@ -14,7 +14,7 @@ class CurrentFeed extends BaseModel
         'id',
         'livestock_id',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'unit_id',
         'feed_id',
         'quantity',
@@ -27,6 +27,4 @@ class CurrentFeed extends BaseModel
     {
         return $this->belongsTo(Feed::class, 'feed_id', 'id');
     }
-
 }
-

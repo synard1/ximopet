@@ -47,7 +47,7 @@ class MutationTestSeeder extends Seeder
             'id' => Str::uuid(),
             'name' => 'Livestock 1',
             'farm_id' => 1,
-            'kandang_id' => 1,
+            'coop_id' => 1,
             'created_by' => 1
         ]);
 
@@ -55,7 +55,7 @@ class MutationTestSeeder extends Seeder
             'id' => Str::uuid(),
             'name' => 'Livestock 2',
             'farm_id' => 1,
-            'kandang_id' => 1,
+            'coop_id' => 1,
             'created_by' => 1
         ]);
 

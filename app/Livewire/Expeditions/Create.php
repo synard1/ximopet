@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Expeditions;
 
-use App\Models\Expedition;
+use App\Models\Partner;
 use App\Models\LivestockPurchase;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -26,7 +26,7 @@ class Create extends Component
     public $updated_by; // Akan diisi saat update
 
     protected $rules = [
-        'code' => 'required|string|max:64|unique:expeditions,code',
+        'code' => 'required|string|max:64|unique:partners,code',
         'name' => 'required|string|max:255',
         'contact_person' => 'nullable|string|max:255',
         'phone_number' => 'nullable|string|max:20',
@@ -50,7 +50,7 @@ class Create extends Component
     public function render()
     {
         return view('livewire.expeditions.create', [
-            'data' => Expedition::orderBy('name')->paginate(10),
+            'data' => Partner::where('type', 'Expedition')->orderBy('name')->paginate(10),
         ]);
     }
 
@@ -77,7 +77,7 @@ class Create extends Component
     {
         $this->resetCreateForm();
         $this->modalId = $id;
-        $model = Expedition::findOrFail($id);
+        $model = Partner::where('type', 'Expedition')->findOrFail($id);
         $this->code = $model->code;
         $this->name = $model->name;
         $this->contact_person = $model->contact_person;
@@ -92,7 +92,8 @@ class Create extends Component
     {
         $this->validate();
 
-        Expedition::create([
+        Partner::create([
+            'type' => 'Expedition',
             'code' => $this->code,
             'name' => $this->name,
             'contact_person' => $this->contact_person,
@@ -111,7 +112,7 @@ class Create extends Component
     public function update()
     {
         $this->validate([
-            'code' => 'required|string|max:64|unique:expeditions,code,' . $this->modalId,
+            'code' => 'required|string|max:64|unique:partners,code,' . $this->modalId,
             'name' => 'required|string|max:255',
             'contact_person' => 'nullable|string|max:255',
             'phone_number' => 'nullable|string|max:20',
@@ -120,7 +121,7 @@ class Create extends Component
             'status' => 'required|in:active,inactive',
         ]);
 
-        $model = Expedition::findOrFail($this->modalId);
+        $model = Partner::where('type', 'Expedition')->findOrFail($this->modalId);
         $model->update([
             'code' => $this->code,
             'name' => $this->name,
@@ -144,11 +145,11 @@ class Create extends Component
             $isUsed = LivestockPurchase::where('expedition_id', $id)->exists();
 
             if ($isUsed) {
-                $this->dispatch('error', 'Ekspedisi tidak dapat dihapus karena masih digunakan dalam pembelian ternak.');
+                $this->dispatch('error', 'Ekspedisi tidak dapat dihapus karena sudah digunakan dalam pembelian ayam.');
                 return;
             }
 
-            Expedition::findOrFail($id)->delete();
+            Partner::where('type', 'Expedition')->findOrFail($id)->delete();
             $this->dispatch('success', 'Ekspedisi berhasil dihapus.');
         } catch (\Exception $e) {
             Log::error('Error deleting expedition:', ['id' => $id, 'error' => $e->getMessage()]);

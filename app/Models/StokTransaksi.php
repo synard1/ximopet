@@ -18,7 +18,7 @@ class StokTransaksi extends BaseModel
         'jenis',
         'tanggal',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'total_qty',
         'terpakai',
         'sisa',
@@ -34,26 +34,26 @@ class StokTransaksi extends BaseModel
 
     public function farms()
     {
-        return $this->belongsTo(Farm::class, 'farm_id','id');
+        return $this->belongsTo(Farm::class, 'farm_id', 'id');
     }
 
     public function kandangs()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id','id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 
     public function stokMutasi()
     {
-        return $this->hasMany(StokMutasi::class); 
+        return $this->hasMany(StokMutasi::class);
     }
 
     public function transaksiDetail()
     {
-        return $this->hasMany(TransaksiDetail::class); 
+        return $this->hasMany(TransaksiDetail::class);
     }
 
     public function kelompokTernak()
     {
-        return $this->belongsTo(KelompokTernak::class, 'kelompok_ternak_id','id');
+        return $this->belongsTo(KelompokTernak::class, 'kelompok_ternak_id', 'id');
     }
 }

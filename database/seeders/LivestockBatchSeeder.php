@@ -14,6 +14,7 @@ use App\Models\LivestockPurchaseItem;
 use App\Models\CurrentLivestock;
 use App\Models\Partner;
 use App\Models\User;
+use App\Models\Coop;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -44,17 +45,15 @@ class LivestockBatchSeeder extends Seeder
             );
 
             // Get or create a test kandang
-            $kandang = Kandang::firstOrCreate(
+            $kandang = Coop::firstOrCreate(
                 [
                     'farm_id' => $farm->id,
-                    'kode' => 'K-BATCH-TEST'
+                    'code' => 'K-BATCH-TEST'
                 ],
                 [
-                    'nama' => 'Kandang Batch Test',
-                    'jumlah' => 0,
-                    'berat' => 0,
-                    'kapasitas' => 5000, // Total capacity for both batches
-                    'status' => 'Digunakan',
+                    'name' => 'Kandang Batch Test',
+                    'capacity' => 5000, // Total capacity for both batches
+                    'status' => 'active',
                     'created_by' => 1,
                     'updated_by' => 1,
                 ]
@@ -107,18 +106,18 @@ class LivestockBatchSeeder extends Seeder
             // Create one Livestock record for all batches
             $livestock = Livestock::create([
                 'farm_id' => $farm->id,
-                'kandang_id' => $kandang->id,
+                'coop_id' => $kandang->id,
                 'name' => 'Test Livestock',
                 'livestock_strain_id' => $strain->id,
                 'livestock_strain_standard_id' => $strainStandard->id,
                 'livestock_strain_name' => $strain->name,
                 'start_date' => Carbon::now(),
-                'populasi_awal' => 0, // Will be updated with total
+                'initial_quantity' => 0, // Will be updated with total
                 'quantity_depletion' => 0,
                 'quantity_sales' => 0,
                 'quantity_mutated' => 0,
-                'berat_awal' => 0, // Will be updated with average
-                'harga' => 0, // Will be updated with average
+                'initial_weight' => 0, // Will be updated with average
+                'price' => 0, // Will be updated with average
                 'status' => 'active',
                 'created_by' => 1,
                 'updated_by' => 1,
@@ -129,17 +128,29 @@ class LivestockBatchSeeder extends Seeder
                 [
                     'name' => 'Batch 1',
                     'tanggal' => Carbon::now(),
-                    'jumlah' => 2000,
-                    'berat_awal' => 40,
-                    'harga' => $hargaPerEkor,
+                    'quantity' => 2000,
+                    'weight_value' => 40, // berat per ekor dalam gram
+                    'weight_type' => 'per_unit',
+                    'weight_per_unit' => 40, // berat per ekor dalam gram
+                    'weight_total' => 80000, // total berat dalam gram
+                    'price_value' => 15000,
+                    'price_type' => 'per_unit',
+                    'price_per_unit' => 15000, // harga per ekor dalam rupiah
+                    'price_total' => 30000000, // total harga dalam rupiah
                 ],
                 [
                     'name' => 'Batch 2',
                     'tanggal' => Carbon::now()->addDays(7),
-                    'jumlah' => 2500,
-                    'berat_awal' => 45,
-                    'harga' => 16000,
-                ]
+                    'quantity' => 2500,
+                    'weight_value' => 50, // total berat dalam gram
+                    'weight_type' => 'per_unit',
+                    'weight_per_unit' => 50, // berat per ekor dalam gram
+                    'weight_total' => 125000, // total berat dalam gram
+                    'price_value' => 15000,
+                    'price_type' => 'per_unit',
+                    'price_per_unit' => 15000, // harga per ekor dalam rupiah
+                    'price_total' => 37500000, // total harga dalam rupiah
+                ],
             ];
 
             $totalPopulasi = 0;
@@ -160,28 +171,40 @@ class LivestockBatchSeeder extends Seeder
                 $purchaseItem = LivestockPurchaseItem::create([
                     'livestock_purchase_id' => $purchase->id,
                     'livestock_id' => $livestock->id,
-                    'jumlah' => $batchData['jumlah'],
-                    'harga_per_ekor' => $batchData['harga'],
+                    'quantity' => $batchData['quantity'],
+                    'price_value' => $batchData['price_value'],
+                    'price_type' => $batchData['price_type'],
+                    'price_per_unit' => $batchData['price_per_unit'],
+                    'price_total' => $batchData['price_total'],
+                    'weight_value' => $batchData['weight_value'],
+                    'weight_type' => $batchData['weight_type'],
+                    'weight_per_unit' => $batchData['weight_per_unit'],
+                    'weight_total' => $batchData['weight_total'],
                     'created_by' => 1,
-                    'updated_by' => 1,
+                    'updated_by' =>  1,
                 ]);
 
                 // 3. Create LivestockBatch
                 $batch = LivestockBatch::create([
                     'livestock_id' => $livestock->id,
+                    'source_type' => 'purchase',
+                    'source_id' => $purchase->id,
                     'farm_id' => $farm->id,
-                    'kandang_id' => $kandang->id,
+                    'coop_id' => $kandang->id,
                     'livestock_strain_id' => $strain->id,
                     'livestock_strain_standard_id' => $strainStandard->id,
                     'name' => $batchData['name'],
                     'livestock_strain_name' => 'Broiler Test',
                     'start_date' => $batchData['tanggal'],
-                    'populasi_awal' => $batchData['jumlah'],
+                    'initial_quantity' => $batchData['quantity'],
                     'quantity_depletion' => 0,
                     'quantity_sales' => 0,
                     'quantity_mutated' => 0,
-                    'berat_awal' => $batchData['berat_awal'],
-                    'harga' => $batchData['harga'],
+                    'initial_weight' => $batchData['weight_per_unit'],
+                    'weight' => $batchData['weight_per_unit'],
+                    'weight_type' => $batchData['weight_type'],
+                    'weight_per_unit' => $batchData['weight_per_unit'],
+                    'weight_total' => $batchData['weight_total'],
                     'status' => 'active',
                     'livestock_purchase_item_id' => $purchaseItem->id,
                     'created_by' => 1,
@@ -202,23 +225,23 @@ class LivestockBatchSeeder extends Seeder
                 }
 
                 // Update totals for Livestock record
-                $totalPopulasi += $batchData['jumlah'];
-                $totalBerat += ($batchData['jumlah'] * $batchData['berat_awal']);
-                $totalHarga += ($batchData['jumlah'] * $batchData['harga']);
+                $totalPopulasi += $batchData['quantity'];
+                $totalBerat += ($batchData['quantity'] * $batchData['weight_per_unit']);
+                $totalHarga += ($batchData['quantity'] * $batchData['price_per_unit']);
             }
 
             // Update Livestock record with totals
             $livestock->update([
-                'populasi_awal' => $totalPopulasi,
-                'berat_awal' => $totalBerat / $totalPopulasi, // Average weight
-                'harga' => $totalHarga / $totalPopulasi, // Average price
+                'initial_quantity' => $totalPopulasi,
+                'initial_weight' => $totalBerat / $totalPopulasi, // Average weight
+                'price' => $totalHarga / $totalPopulasi, // Average price
             ]);
 
             // Create Current Livestock
             CurrentLivestock::create([
                 'livestock_id' => $livestock->id,
                 'farm_id' => $farm->id,
-                'kandang_id' => $kandang->id,
+                'coop_id' => $kandang->id,
                 'quantity' => $totalPopulasi,
                 'berat_total' => $totalBerat,
                 'avg_berat' => $totalBerat / $totalPopulasi,
@@ -231,9 +254,9 @@ class LivestockBatchSeeder extends Seeder
             // Update Kandang
             $kandang->update([
                 'livestock_id' => $livestock->id,
-                'jumlah' => $totalPopulasi,
-                'berat' => $totalBerat,
-                'status' => 'Digunakan',
+                'quantity' => $totalPopulasi,
+                'weight' => $totalBerat,
+                'status' => 'in_use',
                 'updated_by' => 1,
             ]);
 

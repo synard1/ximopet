@@ -20,7 +20,7 @@ use App\Http\Controllers\MasterData\SupplyController;
 use App\Http\Controllers\MasterData\FeedController;
 use App\Http\Controllers\MasterData\UnitController;
 use App\Http\Controllers\MasterData\WorkerController;
-
+use App\Http\Controllers\MasterData\CoopController;
 use App\Http\Controllers\ReportsController;
 use App\Models\Stok;
 use App\Http\Controllers\TransactionController;
@@ -40,6 +40,7 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\UserManagement\RoleController;
 use App\Http\Controllers\MasterData\PartnerController;
 use App\Http\Controllers\QaController;
+use App\Http\Livewire\AuditTrail;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -169,11 +170,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // Custom route for updating menu order
             Route::post('update-order', [MenuController::class, 'updateOrder'])->name('update-order');
         });
+
+        // Supply Data Integrity Check
+        Route::get('/supply/integrity-check', function () {
+            return view('pages.admin.data-integrity.supply-integrity-check');
+        })->name('supply.integrity-check');
+
+        // Supply Data Integrity Check
+        Route::get('/feed/integrity-check', function () {
+            return view('pages.admin.data-integrity.feed-integrity-check');
+        })->name('feed.integrity-check');
+
+        // Livestock Data Integrity Check
+        Route::get('/livestock/integrity-check', function () {
+            return view('pages.admin.data-integrity.livestock-integrity-check');
+        })->name('livestock.integrity-check');
     });
 
     // User Management Routes
     Route::name('user-management.')->group(function () {
-        Route::resource('administrator/users', UserManagementController::class);
+        Route::resource('/users', UserManagementController::class);
         Route::resource('/user/roles', RoleManagementController::class);
         Route::resource('/user/permissions', PermissionManagementController::class);
         Route::get('roles/data', [App\Http\Controllers\UserManagement\RoleController::class, 'data'])->name('roles.data');
@@ -194,7 +210,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Farm Management
         Route::resource('/master/farms', FarmController::class);
-        Route::resource('/master/kandangs', KandangController::class);
+        Route::resource('/master/coops', CoopController::class);
+        // Route::resource('/master/kandangs', KandangController::class);
 
         // Inventory Management
         Route::resource('/master/stocks', StokController::class);
@@ -203,9 +220,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('/master/units', UnitController::class);
 
         // Livestock Management
-        Route::resource('/master/livestocks', LivestockController::class);
+        // Route::resource('/master/livestocks', LivestockController::class);
         Route::get('/master/livestock-strains', [LivestockController::class, 'livestockStrainIndex'])->name('livestock-strains.index');
-        Route::resource('/master/livestock-standard', StandarBobotController::class);
+        Route::get('/master/livestock-standard', [LivestockController::class, 'livestockStandardIndex'])->name('livestock-standard.index');
+        // Route::resource('/master/livestock-standard', StandarBobotController::class);
         Route::resource('/master/ternaks', TernakController::class);
         Route::resource('/master/workers', WorkerController::class);
 
@@ -258,12 +276,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/stock/reduce', [StockController::class, 'reduceStock']);
         Route::post('/stock/transfer', [StockController::class, 'transferStock'])->name('transfer');
         Route::get('/stock/check-available', [StockController::class, 'checkAvailableStock'])->name('check-available');
-        Route::get('/stock/supply', [StockController::class, 'stockSupply'])->name('supply');
-        Route::get('/stock/feed', [StockController::class, 'stockPakan'])->name('feed');
+        // Route::get('/stock/supply', [StockController::class, 'stockSupply'])->name('supply');
+        // Route::get('/stock/feed', [StockController::class, 'stockPakan'])->name('feed');
     });
 
     // Livestock Management Routes
-    Route::name('livestock.')->group(function () {
+    Route::name('livestock.')->prefix('livestock')->group(function () {
+        Route::resource('/batch', LivestockController::class);
+        Route::get('/supply', [StockController::class, 'stockSupply'])->name('supply');
+        Route::get('/feed', [StockController::class, 'stockPakan'])->name('feed');
         Route::get('/livestock/recording', [TernakController::class, 'recordingIndex'])->name('recording.index');
         Route::get('/livestock/supply-recording', [LivestockController::class, 'supplyRecordingIndex'])->name('supply-recording');
         Route::get('/livestock/mutation', [LivestockController::class, 'mutationIndex'])->name('mutation');
@@ -271,7 +292,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/livestock/disposal', [TernakController::class, 'ternakAfkirIndex'])->name('disposal.index');
         Route::get('/livestock/sales', [TernakController::class, 'ternakJualIndex'])->name('sales.index');
         Route::get('/livestock/death', [TernakController::class, 'ternakMatiIndex'])->name('death.index');
-        Route::get('/livestock/{id}/detail', [LivestockController::class, 'showLivestockDetails'])->name('detail');
+        Route::get('/{id}/detail', [LivestockController::class, 'showLivestockDetails'])->name('detail');
         Route::resource('/livestock', TernakController::class);
         Route::delete('/livestock/recording/{id}', [TernakController::class, 'destroyRecording']);
     });
@@ -298,6 +319,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('roles', RoleController::class);
         Route::post('roles/backup', [RoleController::class, 'createBackup'])->name('roles.backup');
     });
+
+    // Supply Data Integrity Check
+    Route::get('/supply/integrity-check', function () {
+        return view('supply.integrity-check');
+    })->name('supply.integrity-check');
+
+    // Audit Trail Routes
+    Route::get('/audit-trail', function () {
+        return view('pages.admin.audit-trail.index');
+    })->name('audit-trail.index');
+    // Route::get('/audit-trail', AuditTrail::class)->name('audit-trail.index');
 });
 
 // Error Routes

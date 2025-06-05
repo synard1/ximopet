@@ -12,17 +12,13 @@ class FarmFactory extends Factory
     public function definition()
     {
         return [
-            'kode' => 'F' . str_pad($this->faker->unique()->numberBetween(1, 999), 3, '0', STR_PAD_LEFT),
-            'nama' => $this->faker->company . '-Farm',
-            'alamat' => $this->faker->address,
-            'telp' => $this->faker->phoneNumber,
-            'pic' => $this->faker->name,
-            'telp_pic' => $this->faker->phoneNumber,
-            'jumlah' => 0,
-            'kapasitas' => 1000000, // Adjust as needed
-            'status' => 'Aktif',
+            'code' => 'F' . str_pad($this->faker->unique()->numberBetween(1, 999), 3, '0', STR_PAD_LEFT),
+            'name' => $this->faker->company . '-Farm',
+            'address' => $this->faker->address,
+            'phone_number' => $this->faker->phoneNumber,
+            'contact_person' => $this->faker->name,
+            'status' => 'active',
             'created_by' => 3,
-
         ];
     }
 }

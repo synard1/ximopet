@@ -6,6 +6,7 @@
 
     @section('breadcrumbs')
     @endsection
+    @if(auth()->user()->can('read supply purchasing'))
     <div class="card" id="stokTableCard">
         <!--begin::Card header-->
         <div class="card-header border-0 pt-6">
@@ -14,10 +15,10 @@
             </div>
             <!--begin::Card title-->
 
-            @can('create transaction')
             <!--begin::Card toolbar-->
             <div class="card-toolbar" id="cardToolbar">
                 <!--begin::Toolbar-->
+                @if(auth()->user()->can('create supply purchasing'))
                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
                     <!--begin::Add user-->
                     <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('showCreateForm')">
@@ -27,10 +28,10 @@
                     <!--end::Add user-->
                 </div>
                 <!--end::Toolbar-->
+                @endif
             </div>
             <!--end::Card toolbar-->
 
-            @endcan
 
         </div>
         <!--end::Card header-->
@@ -50,6 +51,18 @@
         </div>
         <!--end::Card body-->
     </div>
+    @else
+    <div class="card">
+        <div class="card-body">
+            <div class="text-center">
+                <i class="fas fa-lock fa-3x text-danger mb-3"></i>
+                <h3 class="text-danger">Unauthorized Access</h3>
+                <p class="text-muted">You do not have permission to view supply purchasing data.</p>
+            </div>
+        </div>
+    </div>
+    @endif
+
 
     {{--
     <livewire:transaksi.pembelian-list /> --}}
@@ -295,4 +308,6 @@
             // });
     </script>
     @endpush
+    @livewire('qa-checklist-monitor', ['url' => request()->path()])
+    @livewire('admin-monitoring.permission-info')
 </x-default-layout>

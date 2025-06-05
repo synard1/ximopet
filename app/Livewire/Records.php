@@ -54,6 +54,7 @@ class Records extends Component
     public $mortality, $culling, $total_deplesi;
     public $recordingData = null;
     public $deplesiData = null;
+    public $hasChanged = false;
 
     public $initial_stock;
     public $final_stock;
@@ -66,6 +67,7 @@ class Records extends Component
     public $feedUsageId, $usages;
 
     public $isEditing = false;
+    public $showForm = false;
 
 
     protected $listeners = [
@@ -95,14 +97,24 @@ class Records extends Component
     // Fix the method signature to receive the ID directly
     public function setRecords($livestockId)
     {
+        $this->resetErrorBag();
         $this->livestockId = $livestockId;
         if ($this->livestockId) {
             $this->loadStockData();
             $this->initializeItemQuantities();
             $this->checkCurrentLivestockStock();
             $this->loadRecordingData();
+            $this->showForm = true;
+            $this->dispatch('show-records');
         }
         // $this->dispatch('success', $livestockId);
+    }
+
+    public function closeForm()
+    {
+        $this->showForm = false;
+        $this->dispatch('hide-records');
+        $this->resetErrorBag();
     }
 
 
@@ -596,10 +608,12 @@ class Records extends Component
             return;
         }
 
-        $ternak = CurrentLivestock::where('livestock_id', $this->livestockId)->first();
+        $ternak = CurrentLivestock::with('livestock')->where('livestock_id', $this->livestockId)->first();
         if (!$ternak) {
             return;
         }
+
+        // dd($ternak);
 
         $startDate = Carbon::parse($ternak->livestock->start_date);
         $today = Carbon::today();
@@ -607,9 +621,12 @@ class Records extends Component
         $records = collect();
         $currentDate = $startDate->copy();
         $stockAwal = $ternak->livestock->populasi_awal;
+
+        // dd($stockAwal);
+
         $totalPakanUsage = 0;
         // $standarData = $ternak->livestock->data ? $ternak->livestock->data[0]['livestock_breed_standard'] : [];
-        $data = json_decode($ternak->livestock->data, true); // Ubah string JSON ke array
+        $data = json_decode(json_encode($ternak->livestock->data), true); // Ubah string JSON ke array
         if (is_array($data) && isset($data[0]['livestock_breed_standard'])) {
             // dd($data[0]['livestock_breed_standard']);
             $standarData = $data[0]['livestock_breed_standard'];
@@ -708,17 +725,17 @@ class Records extends Component
     public function save()
     {
         // Add permission check
-        if ($this->isEditing) {
-            if (!Auth::user()->can('update records management')) {
-                $this->dispatch('error', 'You do not have permission to update records management.');
-                return;
-            }
-        } else {
-            if (!Auth::user()->can('create records management')) {
-                $this->dispatch('error', 'You do not have permission to create records management.');
-                return;
-            }
-        }
+        // if ($this->isEditing) {
+        //     if (!Auth::user()->can('update records management')) {
+        //         $this->dispatch('error', 'You do not have permission to update records management.');
+        //         return;
+        //     }
+        // } else {
+        //     if (!Auth::user()->can('create records management')) {
+        //         $this->dispatch('error', 'You do not have permission to create records management.');
+        //         return;
+        //     }
+        // }
 
         $this->validate();
 
@@ -887,7 +904,7 @@ class Records extends Component
                 // Farm and kandang information
                 'farm_id' => $ternak->livestock->farm_id,
                 'farm_name' => $ternak->livestock->farm->name ?? 'Unknown Farm',
-                'kandang_id' => $ternak->livestock->kandang_id,
+                'coop_id' => $ternak->livestock->coop_id,
                 'kandang_name' => $ternak->livestock->kandang->name ?? 'Unknown Kandang',
 
                 // Metadata
@@ -924,14 +941,14 @@ class Records extends Component
 
             if ($this->feedUsageId) {
                 $usage = FeedUsage::findOrFail($this->feedUsageId);
-                $hasChanged = $this->hasUsageChanged($usage, $this->usages);
+                $this->hasChanged = $this->hasUsageChanged($usage, $this->usages);
             }
 
 
             // dd($hasChanged);
 
             // --- Process feed usage with enhanced traceability ---
-            if (!empty($this->usages) || $hasChanged === true) {
+            if (!empty($this->usages) || $this->hasChanged === true) {
                 try {
                     // Validate the usage date against stock entry dates
                     $earliestStockDate = FeedStock::where('livestock_id', $this->livestockId)->min('date');
@@ -956,7 +973,7 @@ class Records extends Component
                 }
             } else {
 
-                dd('kosong');
+                // dd('kosong');
             }
 
             // --- Record depletion data with cause tracking ---
@@ -974,19 +991,20 @@ class Records extends Component
             // --- Calculate and save cost data with comprehensive breakdown ---
             $costService = app(LivestockCostService::class);
             $livestockCost = $costService->calculateForDate($this->livestockId, $this->date);
+            Log::info($livestockCost);
 
             // --- Recalculate historical data if needed ---
             // This ensures that any changes propagate to future days
-            $futureRecords = Recording::where('livestock_id', $this->livestockId)
-                ->where('tanggal', '>', $this->date)
-                ->orderBy('tanggal')
-                ->get();
+            // $futureRecords = Recording::where('livestock_id', $this->livestockId)
+            //     ->where('tanggal', '>', $this->date)
+            //     ->orderBy('tanggal')
+            //     ->get();
 
-            if ($futureRecords->isNotEmpty()) {
-                foreach ($futureRecords as $futureRecord) {
-                    $costService->calculateForDate($this->livestockId, $futureRecord->tanggal);
-                }
-            }
+            // if ($futureRecords->isNotEmpty()) {
+            //     foreach ($futureRecords as $futureRecord) {
+            //         $costService->calculateForDate($this->livestockId, $futureRecord->tanggal);
+            //     }
+            // }
 
             DB::commit(); // Commit all database changes
 
@@ -1010,7 +1028,8 @@ class Records extends Component
             $this->checkCurrentLivestockStock();
             $this->loadRecordingData();
 
-            $this->dispatch('success', 'Data berhasil disimpan dengan ' . count($this->usages) . ' jenis pakan');
+            // $this->dispatch('success', 'Data berhasil disimpan dengan ' . count($this->usages) . ' tipe pakan yang berbeda');
+            $this->dispatch('success', 'Data berhasil disimpan');
         } catch (ValidationException $e) {
             DB::rollBack();
             $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
@@ -1536,9 +1555,9 @@ class Records extends Component
         if ($this->feedUsageId) {
             // UPDATE - Handle existing feed usage
             $usage = FeedUsage::findOrFail($this->feedUsageId);
-            $hasChanged = $this->hasUsageChanged($usage, $this->usages);
+            $this->hasChanged = $this->hasUsageChanged($usage, $this->usages);
 
-            if (!$hasChanged) {
+            if (!$this->hasChanged) {
                 return $usage; // No changes, no need to update
             }
 
@@ -1741,7 +1760,7 @@ class Records extends Component
                     'livestock_name' => $livestock->name ?? 'Unknown',
                     'farm_id' => $livestock->farm_id ?? null,
                     'farm_name' => $livestock->farm->name ?? 'Unknown',
-                    'kandang_id' => $livestock->kandang_id ?? null,
+                    'coop_id' => $livestock->coop_id ?? null,
                     'kandang_name' => $livestock->kandang->name ?? 'Unknown',
                     'age_days' => $age,
                     'updated_at' => now()->toIso8601String(),
@@ -1871,7 +1890,7 @@ class Records extends Component
                 'name' => $livestock->name,
                 'farm_id' => $livestock->farm_id,
                 'farm_name' => $livestock->farm->name ?? 'Unknown Farm',
-                'kandang_id' => $livestock->kandang_id,
+                'coop_id' => $livestock->coop_id,
                 'kandang_name' => $livestock->kandang->name ?? 'Unknown Kandang',
                 'strain' => $livestock->strain ?? 'Unknown Strain',
                 'start_date' => $livestock->start_date,

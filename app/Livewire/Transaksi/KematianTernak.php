@@ -70,18 +70,18 @@ class KematianTernak extends Component
     public function store()
     {
         try {
-            $this->validate(); 
+            $this->validate();
             DB::beginTransaction();
 
             $ternak = KelompokTernak::where('farm_id', $this->selectedFarm)
-            ->where('kandang_id', $this->selectedKandang)->first();
+                ->where('coop_id', $this->selectedKandang)->first();
 
             // Prepare the data for creating/updating
             $data = [
                 'kelompok_ternak_id' => $ternak->id,
                 'tanggal' => $this->tanggal,
                 'farm_id' => $this->selectedFarm,
-                'kandang_id' => $this->selectedKandang,
+                'coop_id' => $this->selectedKandang,
                 'stok_awal' => $ternak->stok_akhir,
                 'quantity' => $this->jumlah,
                 'stok_akhir' => $ternak->stok_akhir - $this->jumlah,
@@ -104,7 +104,7 @@ class KematianTernak extends Component
             //     'kelompok_ternak_id' => $ternak->id,
             //     'parent_id' => $ternak->id,
             //     'farm_id' => $this->selectedFarm,
-            //     'kandang_id' => $this->selectedKandang,
+            //     'coop_id' => $this->selectedKandang,
             //     'tanggal' => $this->tanggal,
             //     'jenis' => 'Kematian',
             //     'perusahaan_nama' => $ternak->farm->nama ?? '',
@@ -126,8 +126,7 @@ class KematianTernak extends Component
             $this->reset();
         } catch (\Exception $e) {
             DB::rollBack();
-            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data.'. $e);
-
+            $this->dispatch('error', 'Terjadi kesalahan saat menyimpan data.' . $e);
         }
 
         // $this->reset();

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Auth;
 
 class AssignWorker extends Component
 {
-    public $showForm = false;
+    public $showFormAssignWorker = false;
     public $editMode = false;
     public $batchWorkerId;
     public $livestockId = null;
@@ -39,10 +39,11 @@ class AssignWorker extends Component
     public $existingBatchWorkers = [];
 
     protected $listeners = [
-        'showMapForm' => 'showForm',
-        'showEditMapForm' => 'showEditMapForm',
-        'cancelMap' => 'closeForm',
+        'showAssignWorkerForm' => 'showFormAssignWorker',
+        'showEditAssignWorkerForm' => 'showEditAssignWorkerForm',
+        'cancelAssignWorkerForm' => 'closeForm',
         'setLivestockId' => 'setLivestock',
+        'closeFormWorkerAssign' => 'closeFormWorkerAssign',
     ];
 
     protected $rules = [
@@ -81,10 +82,10 @@ class AssignWorker extends Component
         $this->resetForm();
     }
 
-    public function showForm()
+    public function showFormAssignWorker()
     {
         $this->resetForm();
-        $this->showForm = true;
+        $this->showFormAssignWorker = true;
         $this->editMode = false;
         $this->dispatch('hide-datatable');
     }
@@ -99,7 +100,7 @@ class AssignWorker extends Component
         $this->endDate = $batchWorker->end_date ? $batchWorker->end_date->format('Y-m-d') : null;
         $this->role = $batchWorker->role;
         $this->notes = $batchWorker->notes;
-        $this->showForm = true;
+        $this->showFormAssignWorker = true;
         $this->editMode = true;
         $this->dispatch('hide-datatable');
     }
@@ -125,8 +126,15 @@ class AssignWorker extends Component
     public function closeForm()
     {
         $this->resetForm();
-        $this->showForm = false;
+        $this->showFormAssignWorker = false;
         $this->dispatch('show-datatable');
+    }
+
+    public function closeFormWorkerAssign()
+    {
+        $this->resetForm();
+        $this->showFormAssignWorker = false;
+        $this->dispatch('hide-worker-assign-form');
     }
 
     public function setLivestock($livestockId)
@@ -145,7 +153,7 @@ class AssignWorker extends Component
             // Ambil data batch worker yang sudah ada
             $batchWorkers = BatchWorker::where('livestock_id', $livestockId)->orderBy('start_date')->get();
 
-            $this->showForm();
+            $this->showFormAssignWorker();
 
             $this->workersData = [];
             foreach ($batchWorkers as $bw) {
@@ -164,11 +172,19 @@ class AssignWorker extends Component
                 $this->addWorkerRow();
             }
 
-            $this->dispatch('success', 'Livestock berhasil dipilih');
+            // $this->dispatch('success', 'Livestock berhasil dipilih');
+            $this->showFormAssignWorker = true;
+            $this->dispatch('show-worker-assign-form');
         } catch (\Exception $e) {
             $this->dispatch('error', 'Livestock tidak ditemukan: ' . $e->getMessage());
             Log::error("[" . __CLASS__ . "::" . __FUNCTION__ . "] Error: " . $e->getMessage());
         }
+    }
+
+    public function hideWorkerAssignForm()
+    {
+        $this->showFormAssignWorker = false;
+        $this->dispatch('hide-worker-assign-form');
     }
 
     public function addWorkerRow()
@@ -365,6 +381,7 @@ class AssignWorker extends Component
 
             $this->dispatch('success', 'Pemetaan pekerja ke ternak berhasil disimpan.');
             $this->dispatch('workerLivestockMappingCreated');
+            $this->dispatch('hide-worker-assign-form');
             $this->closeForm();
         } catch (\Illuminate\Validation\ValidationException $e) {
             $this->dispatch('error', 'Validasi gagal: ' . collect($e->errors())->first()[0]);

@@ -22,7 +22,7 @@ class TransaksiBeli extends BaseModel
         'batch_number',
         'farm_id',
         'silo_id',
-        'kandang_id',
+        'coop_id',
         'total_qty',
         'total_berat',
         'harga',
@@ -42,31 +42,31 @@ class TransaksiBeli extends BaseModel
 
     public function itemCategory()
     {
-        return $this->belongsTo(ItemCategory::class, 'category_id','id');
+        return $this->belongsTo(ItemCategory::class, 'category_id', 'id');
     }
 
     public function transaksiDetails()
     {
-        return $this->hasMany(TransaksiBeliDetail::class,'transaksi_id','id');
+        return $this->hasMany(TransaksiBeliDetail::class, 'transaksi_id', 'id');
     }
 
     public function rekanans()
     {
-        return $this->belongsTo(Rekanan::class, 'rekanan_id','id');
+        return $this->belongsTo(Rekanan::class, 'rekanan_id', 'id');
     }
 
     public function farms()
     {
-        return $this->belongsTo(Farm::class, 'farm_id','id');
+        return $this->belongsTo(Farm::class, 'farm_id', 'id');
     }
 
     public function kandangs()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id','id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 
     public function ternak()
     {
-        return $this->hasOne(Ternak::class,'transaksi_id','id');
+        return $this->hasOne(Ternak::class, 'transaksi_id', 'id');
     }
 }

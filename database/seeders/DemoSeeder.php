@@ -8,6 +8,7 @@ use Faker\Generator;
 use App\Models\User;
 use App\Models\Rekanan;
 use App\Models\Farm;
+use App\Models\Coop;
 use App\Models\FarmOperator;
 use App\Models\Kandang;
 use App\Models\Item;
@@ -303,10 +304,10 @@ class DemoSeeder extends Seeder
             ]);
 
             // Create kandang
-            Kandang::factory()->create([
+            Coop::factory()->create([
                 'farm_id' => $farm->id,
-                'kode' => 'K00' . $farm->kode,
-                'nama' => 'Kandang-F' . $farm->kode,
+                'code' => 'K00' . $farm->kode,
+                'name' => 'Kandang-F' . $farm->kode,
             ]);
         });
     }
@@ -355,11 +356,11 @@ class DemoSeeder extends Seeder
 
             // Create two Kandang for each farm
             for ($i = 1; $i <= 2; $i++) {
-                Kandang::create([
+                Coop::create([
                     'farm_id'    => $farm->id,
-                    'kode'       => "K0{$i}-" . $data['kode'],
-                    'nama'       => "Kandang {$i} - " . $data['farmName'],
-                    'kapasitas'  => 20000,
+                    'code'       => "K0{$i}-" . $data['kode'],
+                    'name'       => "Kandang {$i} - " . $data['farmName'],
+                    'capacity'  => 20000,
                     'status'     => 'active',
                     'created_by' => $supervisor->id,
                 ]);
@@ -397,7 +398,7 @@ class DemoSeeder extends Seeder
             $farm->operators()->attach($operator);
 
             // Get the kandang for this farm
-            $kandang = Kandang::where('farm_id', $farm->id)->first();
+            $kandang = Coop::where('farm_id', $farm->id)->first();
 
             // Create DOC purchase
             $this->createDocPurchase($farm, $kandang, $warehouseLocation, $supervisor, $faker);
@@ -525,7 +526,7 @@ class DemoSeeder extends Seeder
                 'rekanan_id' => $supplier->id,
                 'batch_number' => $batchNumber,
                 'farm_id' => $farm->id,
-                'kandang_id' => $kandang->id,
+                'coop_id' => $kandang->id,
                 'total_qty' => $qty,
                 'total_berat' => $qty * 0.1, // Assuming 100g per DOC
                 'harga' => $harga,
@@ -578,7 +579,7 @@ class DemoSeeder extends Seeder
                 'jenis_transaksi' => 'Pembelian',
                 'tanggal' => $purchase->tanggal,
                 'farm_id' => $farm->id,
-                'kandang_id' => $kandang->id,
+                'coop_id' => $kandang->id,
                 'quantity' => $qty,
                 'berat_total' => $qty * 0.1,
                 'berat_rata' => 0.1, // DOC average weight
@@ -598,7 +599,7 @@ class DemoSeeder extends Seeder
             CurrentTernak::create([
                 'kelompok_ternak_id' => $ternak->id,
                 'farm_id' => $farm->id,
-                'kandang_id' => $kandang->id,
+                'coop_id' => $kandang->id,
                 'quantity' => $qty,
                 'berat_total' => $qty * 0.1,
                 'avg_berat' => 0.1,
@@ -643,7 +644,7 @@ class DemoSeeder extends Seeder
             'rekanan_id' => $supplier->id,
             'batch_number' => $batchNumber,
             'farm_id' => $farm->id,
-            'kandang_id' => $kandang->id,
+            'coop_id' => $kandang->id,
             'total_qty' => $qty,
             'total_berat' => $qty * ($item->is_feed ? 1 : 0.1), // Assume 1kg for feed, 100g for others
             'harga' => $harga,

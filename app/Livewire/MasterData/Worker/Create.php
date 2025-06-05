@@ -7,6 +7,7 @@ use Livewire\Component;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class Create extends Component
 {
@@ -36,6 +37,11 @@ class Create extends Component
 
     public function showCreateForm()
     {
+        if (!Auth::user()->can('create worker master data')) {
+            $this->addError('create', 'You do not have permission to create worker master data.');
+            return;
+        }
+
         $this->resetForm();
         $this->showForm = true;
         $this->dispatch('hide-datatable');
@@ -43,6 +49,11 @@ class Create extends Component
 
     public function showEditForm($id)
     {
+        if (!Auth::user()->can('update worker master data')) {
+            $this->addError('edit', 'You do not have permission to edit worker master data.');
+            return;
+        }
+
         $worker = Worker::with('batchWorkers')->findOrFail($id);
 
         $this->workerId = $worker->id;
@@ -71,6 +82,16 @@ class Create extends Component
 
     public function save()
     {
+        if (!Auth::user()->can('create worker master data') && !$this->edit_mode) {
+            $this->addError('create', 'You do not have permission to create worker master data.');
+            return;
+        }
+
+        if (!Auth::user()->can('update worker master data') && $this->edit_mode) {
+            $this->addError('edit', 'You do not have permission to edit worker master data.');
+            return;
+        }
+
         $this->validate();
 
         DB::beginTransaction();
@@ -127,6 +148,11 @@ class Create extends Component
 
     public function delete($id)
     {
+        if (!Auth::user()->can('delete worker master data')) {
+            $this->addError('delete', 'You do not have permission to delete worker master data.');
+            return;
+        }
+
         try {
             DB::beginTransaction();
 

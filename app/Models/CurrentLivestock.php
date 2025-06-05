@@ -15,7 +15,7 @@ class CurrentLivestock extends BaseModel
         'id',
         'livestock_id',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'quantity',
         'berat_total',
         'avg_berat',

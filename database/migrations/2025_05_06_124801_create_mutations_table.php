@@ -19,9 +19,9 @@ return new class extends Migration
 
             // Untuk Supply: gunakan farm_id dan pen_id bisa kosong
             $table->uuid('from_farm_id')->nullable();
-            $table->uuid('from_kandang_id')->nullable();
+            $table->uuid('from_coop_id')->nullable();
             $table->uuid('to_farm_id')->nullable();
-            $table->uuid('to_kandang_id')->nullable();
+            $table->uuid('to_coop_id')->nullable();
 
             $table->date('date');
             $table->text('notes')->nullable();

@@ -1,5 +1,5 @@
-@if(auth()->user()->can('edit livestock purchase') || auth()->user()->can('view livestock purchase') ||
-auth()->user()->can('delete livestock purchase'))
+@if(auth()->user()->can('edit livestock purchasing') || auth()->user()->can('view livestock purchasing') ||
+auth()->user()->can('delete livestock purchasing'))
 <a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click"
     data-kt-menu-placement="bottom-end">
     Actions
@@ -11,7 +11,7 @@ auth()->user()->can('delete livestock purchase'))
 
     <!--begin::Menu item-->
     <div class="menu-item px-3">
-        @can('edit livestock purchase')
+        @can('update livestock purchasing')
         <a href="#" class="menu-link px-3" onclick="Livewire.dispatch('showEditForm', [@js($transaksi->id)])">
             Edit
         </a>
@@ -21,7 +21,7 @@ auth()->user()->can('delete livestock purchase'))
 
     <!--begin::Menu item-->
     <div class="menu-item px-3">
-        @can('view livestock purchase')
+        @can('view livestock purchasing')
         <a href="#" class="menu-link px-3" data-kt-transaction-id="{{ $transaksi->id }}" data-kt-action="view_details">
             View
         </a>
@@ -29,7 +29,7 @@ auth()->user()->can('delete livestock purchase'))
     </div>
     <!--end::Menu item-->
 
-    @can('delete livestock purchase')
+    @can('delete livestock purchasing')
     <!--begin::Menu item-->
     <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" data-transaction-id="{{ $transaksi->id }}" data-kt-action="delete_row">

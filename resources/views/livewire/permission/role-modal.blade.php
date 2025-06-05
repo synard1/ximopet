@@ -33,7 +33,7 @@
                             <!--end::Label-->
                             <!--begin::Input-->
                             <input class="form-control form-control-solid" placeholder="Enter a role name" name="name"
-                                wire:model="name" />
+                                wire:model="name" readonly />
                             <!--end::Input-->
                             @error('name')
                             <span class="text-danger">{{ $message }}</span> @enderror

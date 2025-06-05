@@ -43,13 +43,15 @@ class Mutation extends Component
     public $default_unit_id = null;
     public $source_id, $source_name, $livestocks = [], $supplys = [];
     public $availableStock, $availableUnit;
+    public bool $withHistory = false;
 
     protected $listeners = [
         'showMutationForm' => 'showMutationForm',
         'showCreateForm' => 'showCreateForm',
         'cancel' => 'cancel',
-        'edit' => 'edit',
+        'editSupplyMutation' => 'editSupplyMutation',
         'addConversion' => 'addConversion',
+        'deleteSupplyMutation' => 'deleteSupplyMutation',
 
     ];
 
@@ -251,7 +253,52 @@ class Mutation extends Component
 
             $totalAvailable = $stocks->sum(fn($s) => $s->quantity_in - $s->quantity_used - $s->quantity_mutated);
             $this->items[$index]['available_stock'] = $totalAvailable;
+            $this->items[$index]['smallest_unit_name'] = $supply->payload['unit_details']['name'] ?? '';
         }
+    }
+
+    public function editSupplyMutation($id)
+    {
+        $this->loadFarms();
+        $mutation = MutationModel::with(['mutationItems.supply', 'fromFarm', 'toFarm'])->lockForUpdate()->findOrFail($id);
+
+        $this->mutationId = $mutation->id;
+        $this->tanggal = $mutation->date->format('Y-m-d');
+        $this->source_farm_id = $mutation->from_farm_id;
+        $this->destination_farm_id = $mutation->to_farm_id;
+        $this->notes = $mutation->notes;
+
+        $this->items = $mutation->mutationItems->map(function ($item) {
+            $supply = $item->supply;
+            $unitId = $item->unit_metadata['input_unit_id'] ?? null;
+            $conversionUnits = $supply->payload['conversion_units'] ?? [];
+            $defaultUnitId = $unitId;
+            $conversionRate = collect($conversionUnits)
+                ->where('unit_id', $defaultUnitId)
+                ->first()['value'] ?? 1;
+
+            return [
+                'item_id' => $supply->id,
+                'type' => 'supply',
+                'unit_id' => $defaultUnitId,
+                'quantity' => $item->quantity / $conversionRate,
+                // 'units' => [], // will be filled by handleItemSelected
+                // 'available_stock' => 0, // will be filled by handleItemSelected
+            ];
+        })->toArray();
+
+        $this->loadAvailableItems();
+
+        // Hydrate units and available_stock for each item
+        foreach ($this->items as $index => $item) {
+            $this->handleItemSelected($index);
+        }
+
+        // dd($this->items);
+
+        $this->edit_mode = true;
+        $this->showForm = true;
+        $this->dispatch('hide-datatable');
     }
 
     public function render()
@@ -263,6 +310,7 @@ class Mutation extends Component
 
     public function showCreateForm()
     {
+        $this->loadFarms();
         $this->resetForm();
         $this->showForm = true;
         $this->dispatch('hide-datatable');
@@ -290,6 +338,7 @@ class Mutation extends Component
 
     public function showMutationForm()
     {
+        $this->loadFarms();
         $this->showForm = true;
         $this->dispatch('hide-datatable');
     }
@@ -371,12 +420,12 @@ class Mutation extends Component
                 }
             }
 
-            $mutation = MutationService::supplyMutation([
+            $mutation = MutationService::supplyMutationWithHistoryControl([
                 'date' => $this->tanggal,
                 'source_farm_id' => $this->source_farm_id,
                 'destination_farm_id' => $this->destination_farm_id,
                 'notes' => $this->notes,
-            ], $this->items, $this->mutationId); // jika mutationId null, akan dianggap create baru
+            ], $this->items, $this->mutationId, $this->withHistory); // jika mutationId null, akan dianggap create baru
 
             // $this->transferStock($this->all());
 
@@ -537,7 +586,7 @@ class Mutation extends Component
             [
                 'quantity' => $total,
                 'farm_id' => $livestock->farm_id,
-                'kandang_id' => $livestock->kandang_id ?? null, // kalau ada
+                'coop_id' => $livestock->coop_id ?? null, // kalau ada
                 'unit_id' => $supply->payload['unit_id'],
                 'created_by' => auth()->id(),
             ]
@@ -573,7 +622,7 @@ class Mutation extends Component
         // dd($this->availableItems);
     }
 
-    public function delete_mutation($id)
+    public function deleteSupplyMutation($id)
     {
         Log::info('Method delete mutasi di Livewire terpanggil untuk ID:', ['id' => $id]);
 
@@ -585,7 +634,7 @@ class Mutation extends Component
                 foreach ($mutation->mutationItems as $item) {
                     // Check if the feed stock is being used
                     $supplyStock = SupplyStock::where('id', $item->stock_id)
-                        ->where('used', '>', 0)
+                        ->where('quantity_used', '>', 0)
                         ->first();
 
                     if ($supplyStock) {
@@ -599,10 +648,22 @@ class Mutation extends Component
             $mutation->mutationItems()->delete(); // Delete related items first
             $mutation->delete(); // Then delete the mutation
 
+            // Additionally, delete related SupplyStock records
+            SupplyStock::where('source_id', $id)->where('source_type', 'mutation')->delete();
+
             $this->dispatch('success', 'Data Mutasi berhasil dihapus.');
         } catch (\Exception $e) {
             Log::error('Error deleting mutation:', ['error' => $e->getMessage()]);
             $this->dispatch('error', 'Terjadi kesalahan saat menghapus mutasi.');
         }
+    }
+
+    private function loadFarms()
+    {
+        $this->dstFarms = Farm::all();
+        $this->farms = SupplyStock::distinct('farm_id')
+            ->with('farm:id,name')
+            ->get()
+            ->pluck('farm');
     }
 }

@@ -44,6 +44,8 @@ class AddUserModal extends Component
         'update_user' => 'updateUser',
         'edit' => 'edit',
         'new_user' => 'create',
+        'suspendUser' => 'suspendUser',
+        'cancelSuspension' => 'cancelSuspension',
     ];
 
     public function render()
@@ -179,6 +181,21 @@ class AddUserModal extends Component
                 return;
             }
 
+            // Check if the user is the creator of any LivestockPurchase, FeedPurchase, or SupplyPurchase
+            if (\App\Models\LivestockPurchase::where('created_by', $id)->exists() || \App\Models\FeedPurchase::where('created_by', $id)->exists() || \App\Models\SupplyPurchase::where('created_by', $id)->exists()) {
+                // Ask for confirmation before suspending the user
+                $this->dispatch('confirm', [
+                    'title' => 'Confirm Suspension',
+                    'text' => 'User cannot be deleted because they have created purchases. Do you want to suspend the user instead?',
+                    'confirmButtonText' => 'Yes, Suspend',
+                    'cancelButtonText' => 'No, Cancel',
+                    'onConfirmed' => 'suspendUser',
+                    'onCancelled' => 'cancelSuspension',
+                    'params' => ['id' => $id],
+                ]);
+                return;
+            }
+
             DB::table('farm_operators')->where('user_id', $id)->delete();
 
             // Delete the user record with the specified ID
@@ -186,13 +203,24 @@ class AddUserModal extends Component
 
             // Emit a success event with a message
             $this->dispatch('success', 'User successfully deleted');
-
         } catch (\Exception $e) {
             DB::rollBack();
-    
+
             // Handle validation and general errors
-            $this->dispatch('error', 'Terjadi kesalahan saat menghapus data. '.$e->getMessage());
+            $this->dispatch('error', 'Terjadi kesalahan saat menghapus data. ' . $e->getMessage());
         }
+    }
+
+    public function suspendUser($id)
+    {
+        $user = User::find($id);
+        $user->update(['status' => 'suspended']);
+        $this->dispatch('success', 'User suspended successfully');
+    }
+
+    public function cancelSuspension()
+    {
+        $this->dispatch('error', 'Suspension cancelled');
     }
 
     public function updateUser($id)

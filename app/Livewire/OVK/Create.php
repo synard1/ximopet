@@ -50,7 +50,7 @@ class Create extends Component
     public $requiredFieldsFilled = false;
     public $errorItems = [];
     public $usage_date;
-    public $kandang_id;
+    public $coop_id;
     public $notes;
     public $availableStock = 0;
     public $availableUnit = '';
@@ -256,7 +256,7 @@ class Create extends Component
                 [
                     'usage_date' => $this->date,
                     'farm_id' => $livestock->farm_id,
-                    'kandang_id' => $livestock->kandang_id,
+                    'coop_id' => $livestock->coop_id,
                     'livestock_id' => $this->livestock_id,
                     'notes' => $this->notes,
                     'created_by' => auth()->id(),
@@ -272,7 +272,7 @@ class Create extends Component
                 ],
                 [
                     'farm_id' => $livestock->farm_id,
-                    'kandang_id' => $livestock->kandang_id,
+                    'coop_id' => $livestock->coop_id,
                     'type' => 'ovk',
                     'notes' => $this->notes,
                     'created_by' => auth()->id(),

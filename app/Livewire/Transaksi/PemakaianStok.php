@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Http;
 class PemakaianStok extends Component
 {
     public $isOpenPemakaian = 0;
-    public $faktur, $tanggal, $suppliers, $supplier, $name =[], $quantity=[], $harga =[], $allItems, $farms, $kandangs, $selectedFarm, $selectedSupplier, $selectedKandang;
+    public $faktur, $tanggal, $suppliers, $supplier, $name = [], $quantity = [], $harga = [], $allItems, $farms, $kandangs, $selectedFarm, $selectedSupplier, $selectedKandang;
     public $items = [['name' => '', 'qty' => 1]]; // Initial empty item
 
 
@@ -31,7 +31,7 @@ class PemakaianStok extends Component
 
     public function render()
     {
-        $this->suppliers = Rekanan::where('jenis','Supplier')->get();
+        $this->suppliers = Rekanan::where('jenis', 'Supplier')->get();
         $this->allItems = Item::whereHas('itemCategory', function ($query) {
             $query->where('name', '!=', 'DOC');
         })->where('status', 'Aktif')->get();
@@ -44,7 +44,7 @@ class PemakaianStok extends Component
 
 
         return view('livewire.transaksi.pemakaian-stok', [
-            'suppliers'=> $this->suppliers,
+            'suppliers' => $this->suppliers,
             'allItems' => $this->allItems,
             'farms' => $this->farms,
             'kandangs' => $this->kandangs,
@@ -74,7 +74,6 @@ class PemakaianStok extends Component
     {
         $this->dispatch('success', 'Data Pemakaian Stok berhasil ditambahkan');
         $this->dispatch('closeFormPemakaian');
-
     }
 
     public function addItem()
@@ -134,7 +133,7 @@ class PemakaianStok extends Component
         //         $detail = TransaksiDetail::where('id', $transaksiDetail->parent_id)->first();
 
         //         // dd($transaksiDetail, $detail, $stokHistory->id);
-                
+
         //         if ($detail) {
         //             // Update TransaksiDetail
         //             $detail->terpakai -= $stokHistory->qty;
@@ -184,7 +183,7 @@ class PemakaianStok extends Component
             $ternakMati = new KematianTernak();
             $ternakMati->tanggal = $this->tanggal;
             $ternakMati->farm_id = $this->selectedFarm;
-            $ternakMati->kandang_id = $this->selectedKandang;
+            $ternakMati->coop_id = $this->selectedKandang;
             $ternakMati->jumlah = $this->quantity;
             $ternakMati->keterangan = $this->keterangan;
             $ternakMati->save();

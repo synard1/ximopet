@@ -39,6 +39,6 @@ class TernakDepletion extends BaseModel
 
     public function kandang()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id', 'id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 }

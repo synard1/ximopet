@@ -225,7 +225,7 @@ class Create extends Component
                 CurrentSupply::updateOrCreate(
                     [
                         'farm_id' => $farm->id,
-                        'kandang_id' => $farm->kandang_id,
+                        'coop_id' => $farm->coop_id,
                         'item_id' => $supply->id,
                         'unit_id' => $supply->payload['unit_id'],
                         'type'  => 'supply',

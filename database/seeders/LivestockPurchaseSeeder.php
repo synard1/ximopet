@@ -18,6 +18,7 @@ use App\Models\LivestockStrainStandard;
 use App\Models\LivestockPurchase;
 use App\Models\LivestockPurchaseItem;
 use App\Models\User;
+use App\Models\Coop;
 
 use App\Services\Livestock\LivestockStrainStandardService;
 
@@ -52,24 +53,24 @@ class LivestockPurchaseSeeder extends Seeder
             $farm = Farm::where('code', $farmCode)->where('status', 'active')->first();
             $farmId = optional($farm)->id;
 
-            $kandang1 = Kandang::where('farm_id', $farmId)->where('kode', "K01-{$farmCode}")->first();
-            $kandang2 = Kandang::where('farm_id', $farmId)->where('kode', "K02-{$farmCode}")->first();
+            $kandang1 = Coop::where('farm_id', $farmId)->where('code', "K01-{$farmCode}")->first();
+            $kandang2 = Coop::where('farm_id', $farmId)->where('code', "K02-{$farmCode}")->first();
 
             $kandang1Id = optional($kandang1)->id;
             $kandang2Id = optional($kandang2)->id;
 
             $data = [
                 [
-                    'kandang_id' => $kandang1Id,
+                    'coop_id' => $kandang1Id,
                     'tanggal' => '2025-03-01',
-                    'jumlah' => 10000,
-                    'name' => "Periode Maret - " . optional($kandang1)->nama,
+                    'quantity' => 10000,
+                    'name' => "Periode Maret - " . optional($kandang1)->name,
                 ],
                 [
-                    'kandang_id' => $kandang2Id,
+                    'coop_id' => $kandang2Id,
                     'tanggal' => '2025-03-03',
-                    'jumlah' => 8000,
-                    'name' => "Periode Maret - " . optional($kandang2)->nama,
+                    'quantity' => 8000,
+                    'name' => "Periode Maret - " . optional($kandang2)->name,
                 ],
             ];
 
@@ -83,18 +84,18 @@ class LivestockPurchaseSeeder extends Seeder
                     // 1. Create Livestock (parent record)
                     $livestock = Livestock::create([
                         'farm_id' => $farmId,
-                        'kandang_id' => $item['kandang_id'],
+                        'coop_id' => $item['coop_id'],
                         'name' => $item['name'],
                         'livestock_strain_id' => $strainId,
                         'livestock_strain_name' => $strain->name,
                         'livestock_strain_standard_id' => $livestockStrainStandardId,
                         'start_date' => Carbon::parse($item['tanggal']),
-                        'populasi_awal' => $item['jumlah'],
+                        'initial_quantity' => $item['quantity'],
                         'quantity_depletion' => 0,
                         'quantity_sales' => 0,
                         'quantity_mutated' => 0,
-                        'berat_awal' => 40,
-                        'harga' => $hargaPerEkor,
+                        'initial_weight' => 40,
+                        'price' => $hargaPerEkor,
                         'status' => 'active',
                         'created_by' => $userId,
                         'updated_by' => $userId,
@@ -114,8 +115,18 @@ class LivestockPurchaseSeeder extends Seeder
                         $purchaseItem = LivestockPurchaseItem::create([
                             'livestock_purchase_id' => optional($purchase)->id,
                             'livestock_id' => optional($livestock)->id,
-                            'jumlah' => $item['jumlah'],
-                            'harga_per_ekor' => $hargaPerEkor,
+                            'quantity' => $item['quantity'],
+                            'price_value' => $hargaPerEkor,
+                            'price_type' => 'per_unit',
+                            'price_per_unit' => $hargaPerEkor,
+                            'price_total' => $item['quantity'] * $hargaPerEkor,
+                            'tax_amount' => 0,
+                            'tax_percentage' => 0,
+                            'weight_value' => 40,
+                            'weight_type' => 'per_unit',
+                            'weight_per_unit' => 40,
+                            'weight_total' => $item['quantity'] * 40,
+                            'notes' => '',
                             'created_by' => $userId,
                             'updated_by' => $userId,
                         ]);
@@ -123,19 +134,24 @@ class LivestockPurchaseSeeder extends Seeder
                         // 4. Create LivestockBatch
                         $batch = LivestockBatch::create([
                             'livestock_id' => $livestock->id,
+                            'source_type' => 'purchase',
+                            'source_id' => optional($purchase)->id,
                             'farm_id' => $farmId,
-                            'kandang_id' => $item['kandang_id'],
+                            'coop_id' => $item['coop_id'],
                             'livestock_strain_id' => $strainId,
                             'livestock_strain_standard_id' => $livestockStrainStandardId,
                             'name' => $item['name'],
                             'livestock_strain_name' => $strain->name,
                             'start_date' => Carbon::parse($item['tanggal']),
-                            'populasi_awal' => $item['jumlah'],
+                            'initial_quantity' => $item['quantity'],
                             'quantity_depletion' => 0,
                             'quantity_sales' => 0,
                             'quantity_mutated' => 0,
-                            'berat_awal' => 40,
-                            'harga' => $hargaPerEkor,
+                            'initial_weight' => 40,
+                            'weight' => 40,
+                            'weight_type' => 'per_unit',
+                            'weight_per_unit' => 40,
+                            'weight_total' => $item['quantity'] * 40,
                             'status' => 'active',
                             'livestock_purchase_item_id' => optional($purchaseItem)->id,
                             'created_by' => $userId,
@@ -159,9 +175,9 @@ class LivestockPurchaseSeeder extends Seeder
                         CurrentLivestock::create([
                             'livestock_id' => optional($livestock)->id,
                             'farm_id' => $farmId,
-                            'kandang_id' => $item['kandang_id'],
-                            'quantity' => $item['jumlah'],
-                            'berat_total' => $item['jumlah'] * 40,
+                            'coop_id' => $item['coop_id'],
+                            'quantity' => $item['quantity'],
+                            'berat_total' => $item['quantity'] * 40,
                             'avg_berat' => 40,
                             'age' => 0,
                             'status' => 'active',
@@ -170,14 +186,14 @@ class LivestockPurchaseSeeder extends Seeder
                         ]);
 
                         // 6. Update Kandang
-                        if ($item['kandang_id']) {
-                            $kandang = Kandang::find($item['kandang_id']);
+                        if ($item['coop_id']) {
+                            $kandang = Coop::find($item['coop_id']);
                             if ($kandang) {
                                 $kandang->update([
                                     'livestock_id' => optional($livestock)->id,
-                                    'jumlah' => $item['jumlah'],
-                                    'berat' => $item['jumlah'] * 40,
-                                    'status' => 'Digunakan',
+                                    'quantity' => $item['quantity'],
+                                    'weight' => $item['quantity'] * 40,
+                                    'status' => 'in_use',
                                     'updated_by' => $userId,
                                 ]);
                             }

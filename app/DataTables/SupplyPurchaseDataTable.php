@@ -20,10 +20,11 @@ class SupplyPurchaseDataTable extends DataTable
      * @param QueryBuilder $query Results from query() method.
      */
 
-    private function formatRupiah($amount) {
+    private function formatRupiah($amount)
+    {
         // Convert the number to a string with two decimal places
         $formattedAmount = number_format($amount, 2, ',', '.');
-    
+
         // Add the currency symbol and return the formatted number
         return "Rp " . $formattedAmount;
     }
@@ -43,7 +44,7 @@ class SupplyPurchaseDataTable extends DataTable
                 return $firstPurchase?->farm?->name ?? '-';
                 // return $transaction->supplyPurchases->livestok ?? '';
             })
-            ->editColumn('kandang_id', function (SupplyPurchaseBatch $transaction) {
+            ->editColumn('coop_id', function (SupplyPurchaseBatch $transaction) {
                 $firstPurchase = $transaction->supplyPurchases->first();
                 return $firstPurchase?->livestok?->kandang?->nama ?? '-';
             })
@@ -51,13 +52,13 @@ class SupplyPurchaseDataTable extends DataTable
                 $total = $transaction->supplyPurchases->sum(function ($purchase) {
                     return $purchase->quantity * $purchase->price_per_unit;
                 });
-            
+
                 return $this->formatRupiah($total);
             })
             ->addColumn('action', function (SupplyPurchaseBatch $transaction) {
                 return view('pages.transaction.supply-purchases._actions', compact('transaction'));
             })
-                    
+
             ->setRowId('id')
             ->rawColumns(['action']);
     }
@@ -94,10 +95,10 @@ class SupplyPurchaseDataTable extends DataTable
                 'searching'       =>  true,
                 // 'responsive'       =>  true,
                 'lengthMenu' => [
-                        [ 10, 25, 50, -1 ],
-                        [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+                    [10, 25, 50, -1],
+                    ['10 rows', '25 rows', '50 rows', 'Show all']
                 ],
-                'buttons'      => ['export', 'print', 'reload','colvis'],
+                'buttons'      => ['export', 'print', 'reload', 'colvis'],
             ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaction/supply-purchases/_draw-scripts.js')) . "}");
     }
@@ -109,9 +110,9 @@ class SupplyPurchaseDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex', 'No.')
-            ->title('No.')
-            ->addClass('text-center')
-            ->width(50),
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
             Column::make('date')->title('Tanggal Pembelian')->searchable(true),
             // Column::make('no_sj')->title('No. SJ')->searchable(false),
             Column::make('invoice_number')->title('Invoice')->searchable(true),

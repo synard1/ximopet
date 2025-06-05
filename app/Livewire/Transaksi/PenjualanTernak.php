@@ -50,10 +50,10 @@ class PenjualanTernak extends Component
     public $data;
     public $kt_daterangepicker_1;
 
-    
+
     // Form fields
     public $tanggal_beli, $faktur, $tanggal, $tanggal_harian, $tipe_transaksi, $ternak_jual, $harga, $status;
-    public $partner_id, $farm_id, $kandang_id, $harga_beli, $harga_jual, $qty, $total_berat, $umur, $hpp;
+    public $partner_id, $farm_id, $coop_id, $harga_beli, $harga_jual, $qty, $total_berat, $umur, $hpp;
 
     // Dynamic data
     public $partners = [];
@@ -80,7 +80,7 @@ class PenjualanTernak extends Component
         // 'status' => 'required|string',
         'partner_id' => 'required|exists:master_rekanan,id',
         'farm_id' => 'required|exists:farms,id',
-        'kandang_id' => 'required|exists:master_kandangs,id',
+        'coop_id' => 'required|exists:coops,id',
         // 'harga_beli' => 'required|numeric',
         'harga_jual' => 'required|numeric',
         // 'qty' => 'required|numeric',
@@ -136,10 +136,10 @@ class PenjualanTernak extends Component
 
         DB::beginTransaction();
         try {
-            // $kelompokTernak = KelompokTernak::where('kandang_id',$this->kandang_id)->where('status','Digunakan')->first();
+            // $kelompokTernak = KelompokTernak::where('coop_id',$this->coop_id)->where('status','Digunakan')->first();
             // $transaksiBeli = TransaksiBeli::where('kelompok_ternak_id',$kelompokTernak->id)->first();
             // $transaksiHarian = TransaksiHarian::where('kelompok_ternak_id',$kelompokTernak->id)->where('tanggal',$this->tanggal_harian)->first();
-            
+
             // $transaksiJual = TransaksiJual::create([
             //     'transaksi_id' => $transaksiHarian->id,
             //     'tipe_transaksi' => 'Harian',
@@ -156,7 +156,7 @@ class PenjualanTernak extends Component
             //     'transaksi_jual_id' => $transaksiJual->id,
             //     'partner_id' => $this->partner_id,
             //     'farm_id' => $this->farm_id,
-            //     'kandang_id' => $this->kandang_id,
+            //     'coop_id' => $this->coop_id,
             //     'harga_beli' => $this->harga_beli,
             //     'harga_jual' => $this->harga_jual,
             //     'qty' => $this->ternak_jual,
@@ -165,13 +165,13 @@ class PenjualanTernak extends Component
             //     'hpp' => $this->hpp,
             // ]);
 
-            $ternak = CurrentTernak::where('farm_id',$this->farm_id)->where('kandang_id',$this->kandang_id)->where('status','Aktif')->first();
-            $transaksiHarian = TransaksiHarian::where('kelompok_ternak_id',$ternak->kelompok_ternak_id)->where('tanggal',$this->tanggal_harian)->first();
+            $ternak = CurrentTernak::where('farm_id', $this->farm_id)->where('coop_id', $this->coop_id)->where('status', 'Aktif')->first();
+            $transaksiHarian = TransaksiHarian::where('kelompok_ternak_id', $ternak->kelompok_ternak_id)->where('tanggal', $this->tanggal_harian)->first();
 
             // Check If Ternak quantity is sufficient
-            if($ternak->quantity < 0){
+            if ($ternak->quantity < 0) {
                 DB::rollback();
-                $this->dispatch('error', 'Stok ternak terbatas. Stok Saat ini : '. $ternak->quantity);
+                $this->dispatch('error', 'Stok ternak terbatas. Stok Saat ini : ' . $ternak->quantity);
                 $this->dispatch('hideModal');
                 return;
             }
@@ -182,21 +182,20 @@ class PenjualanTernak extends Component
             // $this->dispatch('refreshDatatable');
             // $this->dispatch('success', 'Penjualan berhasil ditambahkan');
 
-            if($transaksiHarian){
+            if ($transaksiHarian) {
                 $dataTernakJual = $this->ternakService->ternakJual($validatedData, $transaksiHarian);
                 DB::commit();
                 $this->dispatch('hideModal');
                 $this->dispatch('refreshDatatable');
                 $this->dispatch('success', 'Penjualan berhasil ditambahkan');
-             }else{
+            } else {
                 DB::rollback();
                 $this->dispatch('error', 'Belum ada data transaksi harian pada tanggal tersebut');
                 $this->dispatch('hideModal');
-             }
+            }
         } catch (\Exception $e) {
             DB::rollback();
             $this->dispatch('error', 'Gagal mengubah transaksi: ' . $e->getMessage());
-
         }
     }
 
@@ -209,7 +208,7 @@ class PenjualanTernak extends Component
         $this->transaksiHarian = TransaksiHarian::findOrFail($this->transaksiJual->transaksi_id);
         $this->transaksiJualDetail = $this->transaksiJual->detail; // Assuming there's a 'detail' relationship
         $this->dataTernak = KelompokTernak::findOrFail($this->transaksiJual->kelompok_ternak_id);
-        $this->ternakJual = TernakJual::where('kelompok_ternak_id',$this->transaksiJual->kelompok_ternak_id)->where('transaksi_jual_id',$this->transaksiJual->id)->first();
+        $this->ternakJual = TernakJual::where('kelompok_ternak_id', $this->transaksiJual->kelompok_ternak_id)->where('transaksi_jual_id', $this->transaksiJual->id)->first();
 
         // dd($this->transaksiHarian);
 
@@ -227,7 +226,7 @@ class PenjualanTernak extends Component
         $this->faktur = $this->transaksiJual->faktur;
         $this->ternak_jual = $this->transaksiJual->jumlah;
         $this->farm_id = $this->transaksiBeli->farm_id;
-        $this->kandang_id = $this->transaksiBeli->kandang_id;
+        $this->coop_id = $this->transaksiBeli->coop_id;
         $this->harga_jual = $this->transaksiJual->harga;
         $this->tanggal_beli = $this->dataTernak->start_date->format('d-m-Y');
         $this->tanggal_harian = $this->transaksiHarian->tanggal->format('Y-m-d');
@@ -278,7 +277,6 @@ class PenjualanTernak extends Component
             $this->dispatch('hideModal');
             $this->dispatch('refreshDatatable');
             $this->dispatch('success', 'Data berhasil diperbarui');
-
         } catch (\Exception $e) {
             DB::rollback();
             $this->dispatch('error', 'Gagal mengubah transaksi: ' . $e->getMessage());
@@ -308,7 +306,7 @@ class PenjualanTernak extends Component
         $this->status = null;
         $this->partner_id = null;
         $this->farm_id = null;
-        $this->kandang_id = null;
+        $this->coop_id = null;
         $this->harga_beli = null;
         $this->harga_jual = null;
         $this->qty = null;
@@ -319,7 +317,7 @@ class PenjualanTernak extends Component
 
     public function loadPartners()
     {
-        $this->partners = Partner::where('type','Customer')->where('status','active')->get();
+        $this->partners = Partner::where('type', 'Customer')->where('status', 'active')->get();
     }
 
     public function loadFarms()
@@ -331,9 +329,9 @@ class PenjualanTernak extends Component
     public function loadKandangs()
     {
         $farmIds = FarmOperator::where('user_id', auth()->id())->pluck('farm_id')->toArray();
-        $this->kandangs = Kandang::whereIn('farm_id', $farmIds)->where('status', 'Digunakan')->get(['id', 'farm_id','kode','nama','jumlah','kapasitas','livestock_id','status']);
+        $this->kandangs = Kandang::whereIn('farm_id', $farmIds)->where('status', 'Digunakan')->get(['id', 'farm_id', 'kode', 'nama', 'jumlah', 'kapasitas', 'livestock_id', 'status']);
 
-        $this->livestocks  = Livestock::whereIn('farm_id', $farmIds)->get(['id','farm_id','kandang_id','name','start_date','populasi_awal','harga','status']);
+        $this->livestocks  = Livestock::whereIn('farm_id', $farmIds)->get(['id', 'farm_id', 'coop_id', 'name', 'start_date', 'populasi_awal', 'harga', 'status']);
     }
 
     public function updatedKandangId($value)
@@ -342,12 +340,12 @@ class PenjualanTernak extends Component
             return;
         }
 
-        $selectedTernak = $this->livestocks->firstWhere('kandang_id', $value);
+        $selectedTernak = $this->livestocks->firstWhere('coop_id', $value);
 
         if ($selectedTernak) {
             $this->tanggal_beli = $selectedTernak->start_date->format('Y-m-d');
             $this->harga_beli = $selectedTernak->hpp;
-            
+
             // Calculate age in days
             $startDate = Carbon::parse($selectedTernak->start_date);
             $this->umur = $startDate->diffInDays(Carbon::now());
@@ -365,7 +363,7 @@ class PenjualanTernak extends Component
     {
         $penjualan = TransaksiJual::findOrFail($this->penjualanId);
         $this->farm_id = $penjualan->farm_id;
-        $this->kandang_id = $penjualan->kandang_id;
+        $this->coop_id = $penjualan->coop_id;
         // Load other fields
     }
 
@@ -379,7 +377,7 @@ class PenjualanTernak extends Component
         $this->status = $transaksi->status;
         $this->partner_id = $transaksi->partner_id;
         $this->farm_id = $transaksi->farm_id;
-        $this->kandang_id = $transaksi->kandang_id;
+        $this->coop_id = $transaksi->coop_id;
         $this->harga_beli = $transaksi->harga_beli;
         $this->harga_jual = $transaksi->harga_jual;
         $this->qty = $transaksi->qty;
@@ -397,7 +395,7 @@ class PenjualanTernak extends Component
             'status' => $this->status,
             'partner_id' => $this->partner_id,
             'farm_id' => $this->farm_id,
-            'kandang_id' => $this->kandang_id,
+            'coop_id' => $this->coop_id,
             'harga_beli' => $this->harga_beli,
             'harga_jual' => $this->harga_jual,
             'qty' => $this->qty,
@@ -409,8 +407,18 @@ class PenjualanTernak extends Component
     public function resetForm()
     {
         $this->reset([
-            'tanggal', 'tanggal_harian', 'partner_id', 'faktur', 'ternak_jual', 'harga_jual', 'total_berat',
-            'farm_id', 'kandang_id', 'tanggal_beli', 'harga_beli', 'umur'
+            'tanggal',
+            'tanggal_harian',
+            'partner_id',
+            'faktur',
+            'ternak_jual',
+            'harga_jual',
+            'total_berat',
+            'farm_id',
+            'coop_id',
+            'tanggal_beli',
+            'harga_beli',
+            'umur'
         ]);
         $this->resetErrorBag();
         $this->resetValidation();

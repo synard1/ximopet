@@ -12,7 +12,7 @@ class Menu extends Component
     public $isOpen = 0;
     public $rand = 0;
     public $farms, $noFarmMessage = ''; // Add a property to store the message
-    public $kandangs, $selectedFarm, $kandang_id, $kode_kandang, $nama, $alamat, $telp, $pic, $telp_pic, $status = 'Aktif';
+    public $kandangs, $selectedFarm, $coop_id, $kode_kandang, $nama, $alamat, $telp, $pic, $telp_pic, $status = 'Aktif';
     public $dynamicNumber, $currentUrl, $referer;
 
 

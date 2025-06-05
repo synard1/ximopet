@@ -4,6 +4,9 @@ namespace App\Livewire\MasterData\Supply;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 use App\Models\Supply;
@@ -37,7 +40,13 @@ class Create extends Component
         'edit' => 'edit',
         'addConversion' => 'addConversion',
         'deleteSupply' => 'deleteSupply',
+    ];
 
+    protected $rules = [
+        'code' => 'required',
+        'name' => 'required',
+        'type' => 'required', // Contoh dengan 'in'
+        'unit_id' => 'required', // Contoh dengan 'in'
     ];
 
     public function mount()
@@ -96,7 +105,7 @@ class Create extends Component
         $this->validate([
             'code' => 'required',
             'name' => 'required',
-            'type' => 'required', // Contoh dengan 'in'
+            'type' => 'required', // Contoh dengan aturan tambahan
             // validasi tambahan lain
         ]);
 
@@ -160,6 +169,11 @@ class Create extends Component
 
     public function showCreateForm()
     {
+        if (!Auth::user()->can('create supply master data')) {
+            $this->addError('create', 'You do not have permission to create supply master data.');
+            return;
+        }
+
         $this->resetForm();
         $this->showForm = true;
         $this->dispatch('hide-datatable');
@@ -179,6 +193,11 @@ class Create extends Component
 
     public function showEditForm($id)
     {
+        if (!Auth::user()->can('update supply master data')) {
+            $this->addError('edit', 'You do not have permission to edit supply master data.');
+            return;
+        }
+
         $supply = Supply::with('conversionUnits.unit')->findOrFail($id);
 
         $this->supplyId = $supply->id;
@@ -196,6 +215,16 @@ class Create extends Component
 
     public function save()
     {
+        if (!Auth::user()->can('create supply master data') && !$this->edit_mode) {
+            $this->addError('create', 'You do not have permission to create supply master data.');
+            return;
+        }
+
+        if (!Auth::user()->can('update supply master data') && $this->edit_mode) {
+            $this->addError('edit', 'You do not have permission to edit supply master data.');
+            return;
+        }
+
         $this->validate([
             'code' => 'required',
             'name' => 'required',
@@ -274,6 +303,11 @@ class Create extends Component
 
     public function deleteSupply($id)
     {
+        if (!Auth::user()->can('delete supply master data')) {
+            $this->addError('delete', 'You do not have permission to delete supply master data.');
+            return;
+        }
+
         $supply = Supply::findOrFail($id);
 
         if ($supply->supplyPurchase->count() > 0) {

@@ -1,11 +1,13 @@
 <x-default-layout>
 
     @section('title')
-        Data Pembelian Pakan
+    Data Pembelian Pakan
     @endsection
 
     @section('breadcrumbs')
     @endsection
+
+    @if(auth()->user()->can('read feed purchasing'))
     <div class="card" id="stokTableCard">
         <!--begin::Card header-->
         <div class="card-header border-0 pt-6">
@@ -14,24 +16,24 @@
             </div>
             <!--begin::Card title-->
 
-            @can('create transaction')
             <!--begin::Card toolbar-->
             <div class="card-toolbar" id="cardToolbar">
                 <!--begin::Toolbar-->
                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
-                    <!--begin::Add user-->
+
+                    @if(auth()->user()->can('create feed purchasing'))
+                    <!--begin::Add feed purchasing-->
                     <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('showCreateForm')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}
                         Tambah Data Pembelian
                     </button>
-                    <!--end::Add user-->
+                    <!--end::Add feed purchasing-->
+                    @endif
                 </div>
                 <!--end::Toolbar-->
             </div>
             <!--end::Card toolbar-->
-                
-            @endcan
-            
+
         </div>
         <!--end::Card header-->
 
@@ -46,18 +48,30 @@
             </div>
             <livewire:feed-purchases.create />
 
-                
+
         </div>
         <!--end::Card body-->
     </div>
+    @else
+    <div class="card">
+        <div class="card-body">
+            <div class="text-center">
+                <i class="fas fa-lock fa-3x text-danger mb-3"></i>
+                <h3 class="text-danger">Unauthorized Access</h3>
+                <p class="text-muted">You do not have permission to view feed purchasing data.</p>
+            </div>
+        </div>
+    </div>
+    @endif
 
-    {{-- <livewire:transaksi.pembelian-list /> --}}
-    @include('pages.transaksi.pembelian-stok._modal_pembelian_details')
+    {{--
+    <livewire:transaksi.pembelian-list /> --}}
+    @include('pages.transaction.feed-purchases._modal_pembelian_details')
 
     @push('scripts')
-        {{ $dataTable->scripts() }}
-        <script>
-            document.querySelectorAll('[data-kt-button="create_new"]').forEach(function (element) {
+    {{ $dataTable->scripts() }}
+    <script>
+        document.querySelectorAll('[data-kt-button="create_new"]').forEach(function (element) {
 			element.addEventListener('click', function () {
 				// Simulate delete request -- for demo purpose only
 				Swal.fire({
@@ -157,6 +171,10 @@
             //         });
             //     });
             // });
-        </script>
+    </script>
     @endpush
+
+    @livewire('qa-checklist-monitor', ['url' => request()->path()])
+    @livewire('admin-monitoring.permission-info')
+
 </x-default-layout>

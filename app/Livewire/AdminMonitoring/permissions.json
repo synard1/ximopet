@@ -17,17 +17,17 @@
                 "delete operator assignment": true
             }
         },
-        "/master/kandangs": {
+        "/master/coops": {
             "roles": {
                 "Admin": true,
                 "Supervisor": true,
                 "Operator": true
             },
             "permissions": {
-                "read kandang management": true,
-                "create kandang management": true,
-                "update kandang management": true,
-                "delete kandang management": true
+                "read coop master data": true,
+                "create coop master data": true,
+                "update coop master data": true,
+                "delete coop master data": true
             }
         },
         "/master/suppliers": {
@@ -60,10 +60,10 @@
                 "Supervisor": true
             },
             "permissions": {
-                "read expedition": true,
-                "create expedition": true,
-                "update expedition": true,
-                "delete expedition": true
+                "read expedition master data": true,
+                "create expedition master data": true,
+                "update expedition master data": true,
+                "delete expedition master data": true
             }
         },
         "/master/feeds": {
@@ -72,10 +72,10 @@
                 "Supervisor": true
             },
             "permissions": {
-                "read feed": true,
-                "create feed": true,
-                "update feed": true,
-                "delete feed": true
+                "read feed master data": true,
+                "create feed master data": true,
+                "update feed master data": true,
+                "delete feed master data": true
             }
         },
         "/master/supplies": {
@@ -84,23 +84,24 @@
                 "Supervisor": true
             },
             "permissions": {
-                "read supply": true,
-                "create supply": true,
-                "update supply": true,
-                "delete supply": true
+                "read supply master data": true,
+                "create supply master data": true,
+                "update supply master data": true,
+                "delete supply master data": true
             }
         },
-        "/master/pekerjas": {
+        "/master/units": {
             "roles": {
                 "Admin": true,
                 "Supervisor": true
             },
             "permissions": {
-                "read pekerja": true,
-                "create pekerja": true,
-                "update pekerja": true,
-                "delete pekerja": true
+                "read unit master data": true,
+                "create unit master data": true,
+                "update unit master data": true,
+                "delete unit master data": true
             }
+
         },
         "/master/workers": {
             "roles": {
@@ -108,10 +109,10 @@
                 "Supervisor": true
             },
             "permissions": {
-                "read worker": true,
-                "create worker": true,
-                "update worker": true,
-                "delete worker": true
+                "read worker master data": true,
+                "create worker master data": true,
+                "update worker master data": true,
+                "delete worker master data": true
             }
 
         },
@@ -138,7 +139,49 @@
                 "update livestock strain": true,
                 "delete livestock strain": true
             }
-
+        },
+        "/transaction/supply": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true,
+                "Operator": true
+            },
+            "permissions": {
+                "read supply purchasing": true,
+                "create supply purchasing": true,
+                "update supply purchasing": true,
+                "delete supply purchasing": true
+            }
+        },
+        "/transaction/feed": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true,
+                "Operator": true
+            },
+            "permissions": {
+                "read feed purchasing": true,
+                "create feed purchasing": true,
+                "update feed purchasing": true,
+                "delete feed purchasing": true
+            }
+        },
+        "/livestock": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true,
+                "Operator": true
+            },
+            "permissions": {
+                "read livestock records": true,
+                "create livestock records": true,
+                "update livestock records": true,
+                "delete livestock records": true,
+                "read worker assignment": true,
+                "create worker assignment": true,
+                "update worker assignment": true,
+                "delete worker assignment": true
+            }
         }
     }
 }

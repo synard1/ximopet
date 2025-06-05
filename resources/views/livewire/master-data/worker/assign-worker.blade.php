@@ -1,5 +1,6 @@
-<div id="assign-worker-container" class="card shadow-lg rounded-lg overflow-hidden">
-    <div class="card-body p-6 bg-white">
+<div>
+    @if($showFormAssignWorker)
+    {{-- <div class="card-body p-6 bg-white" id="assign-worker-container" style="display: none;"> --}}
         {{-- Livestock Selection Section --}}
         <div class="mb-4">
             <label class="form-label fw-bold">Livestock (Batch)</label>
@@ -44,6 +45,39 @@
                     </tbody>
                 </table>
             </div>
+            @if (!auth()->user()->can('create worker assignment') && !auth()->user()->can('update worker assignment'))
+            <button wire:click="closeFormWorkerAssign" class="btn btn-danger rounded-lg px-6 py-2">Kembali ke
+                Tabel</button>
+            @endif
+        </div>
+        @else
+        <div class="mb-4">
+            <div class="d-flex align-items-center mb-3">
+                <i class="bi bi-info-circle-fill text-info me-2"></i>
+                <h6 class="mb-0">Daftar Penugasan Pekerja</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-nowrap">Pekerja</th>
+                            <th class="text-nowrap">Tanggal Mulai</th>
+                            <th class="text-nowrap">Tanggal Berakhir</th>
+                            <th class="text-nowrap">Peran</th>
+                            <th class="text-nowrap">Catatan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" class="text-center">Tidak ada data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            @if (!auth()->user()->can('create worker assignment') && !auth()->user()->can('update worker assignment'))
+            <button wire:click="closeFormWorkerAssign" class="btn btn-danger rounded-lg px-6 py-2">Kembali ke
+                Tabel</button>
+            @endif
         </div>
         @endif
 
@@ -131,9 +165,12 @@
 
             {{-- Action Buttons --}}
             <div class="d-flex gap-2 mt-3">
-                <button type="button" class="btn btn-outline-primary" wire:click="addWorkerRow">
+                <button type="button" class="btn btn-primary" wire:click="addWorkerRow">
                     <i class="bi bi-plus-circle me-1"></i> Tambah Pekerja
                 </button>
+                <button wire:click="closeFormWorkerAssign" class="btn btn-danger rounded-lg px-6 py-2">Kembali ke
+                    Tabel</button>
+
                 <button class="btn btn-success" wire:click="save">
                     <i class="bi bi-save me-1"></i> Simpan
                 </button>
@@ -207,5 +244,5 @@
         </div>
         <div class="modal-backdrop fade show"></div>
         @endif
+        @endif
     </div>
-</div>

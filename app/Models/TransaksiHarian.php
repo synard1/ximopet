@@ -17,7 +17,7 @@ class TransaksiHarian extends BaseModel
         'tanggal',
         'kelompok_ternak_id',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'notes',
         'created_by',
         'updated_by',
@@ -37,7 +37,7 @@ class TransaksiHarian extends BaseModel
 
     public function kandang()
     {
-        return $this->belongsTo('App\Models\Kandang', 'kandang_id');
+        return $this->belongsTo('App\Models\Kandang', 'coop_id');
     }
 
     public function createdBy()
@@ -52,7 +52,7 @@ class TransaksiHarian extends BaseModel
 
     public function details()
     {
-        return $this->hasMany(TransaksiHarianDetail::class, 'transaksi_id','id');
+        return $this->hasMany(TransaksiHarianDetail::class, 'transaksi_id', 'id');
     }
 
     public function ternakAfkir()
@@ -77,6 +77,6 @@ class TransaksiHarian extends BaseModel
 
     public function kelompokTernak()
     {
-        return $this->belongsTo(Ternak::class,'kelompok_ternak_id','id');
+        return $this->belongsTo(Ternak::class, 'kelompok_ternak_id', 'id');
     }
 }

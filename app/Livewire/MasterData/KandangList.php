@@ -14,7 +14,7 @@ class KandangList extends Component
 {
     public $kandangs, $farms, $selectedFarm, $kode, $nama, $kapasitas, $status;
 
-    public $kandang_id = null; // Initialize with null instead of empty string
+    public $coop_id = null; // Initialize with null instead of empty string
     public $isOpen = 0;
     public $noFarmMessage = ''; // Add a property to store the message
 
@@ -67,7 +67,7 @@ class KandangList extends Component
 
     public function store()
     {
-        if ($this->kandang_id) {
+        if ($this->coop_id) {
             if (!Auth::user()->can('update kandang management')) {
                 $this->dispatch('error', 'You do not have permission to update kandang.');
                 return;
@@ -81,14 +81,14 @@ class KandangList extends Component
 
         $this->validate();
 
-        $kandang = Kandang::find($this->kandang_id);
+        $kandang = Kandang::find($this->coop_id);
 
         if ($kandang && $this->kapasitas < $kandang->jumlah) {
             $this->dispatch('error', __('Kapasitas tidak boleh kurang dari jumlah ternak saat ini'));
             return;
         }
 
-        Kandang::updateOrCreate(['id' => $this->kandang_id], [
+        Kandang::updateOrCreate(['id' => $this->coop_id], [
             'kode' => $this->kode,
             'nama' => $this->nama,
             'kapasitas' => $this->kapasitas,
@@ -96,7 +96,7 @@ class KandangList extends Component
             'created_by' => auth()->user()->id,
         ]);
 
-        if ($this->kandang_id) {
+        if ($this->coop_id) {
             $this->dispatch('success', __('Data Kandang Berhasil Diubah'));
         } else {
             $this->dispatch('success', __('Data Kandang Berhasil Dibuat'));
@@ -114,7 +114,7 @@ class KandangList extends Component
         }
 
         $kandang = Kandang::where('id', $id)->first();
-        $this->kandang_id = $id;
+        $this->coop_id = $id;
         $this->kode = $kandang->kode;
         $this->nama = $kandang->nama;
         $this->kapasitas = $kandang->kapasitas;
@@ -168,7 +168,7 @@ class KandangList extends Component
         // $this->kode = Str::uuid(); // Generate UUID for new kandangs
         $this->kode = ''; // Generate UUID for new kandangs
         $this->nama = '';
-        $this->kandang_id = '';
+        $this->coop_id = '';
     }
 
     protected $rules = [
@@ -178,7 +178,7 @@ class KandangList extends Component
 
     public function updatingKode()
     {
-        if ($this->kandang_id) {
+        if ($this->coop_id) {
             $this->resetErrorBag('kode'); // Clear error if it's an edit
         }
     }

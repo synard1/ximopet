@@ -44,16 +44,16 @@ class TransaksiJual extends BaseModel
 
     public function rekanans()
     {
-        return $this->belongsTo(Rekanan::class, 'rekanan_id','id');
+        return $this->belongsTo(Rekanan::class, 'rekanan_id', 'id');
     }
 
     public function farms()
     {
-        return $this->belongsTo(Farm::class, 'farm_id','id');
+        return $this->belongsTo(Farm::class, 'farm_id', 'id');
     }
 
     public function kandangs()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id','id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 }

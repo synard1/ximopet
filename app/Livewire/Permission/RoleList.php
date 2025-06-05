@@ -34,6 +34,7 @@ class RoleList extends Component
     public $selectedBackupFile = '';
     public $backupComparison = null;
     public $showComparison = false;
+    public $isImporting = false;
 
     protected $listeners = [
         'refreshDatatable' => '$refresh',
@@ -261,12 +262,20 @@ class RoleList extends Component
     public function importPermissions()
     {
         Log::info('Starting import process', ['type' => $this->importType]);
-        if ($this->importType === 'backup') {
-            $this->validate(['selectedBackupFile' => 'required']);
-            $this->importFromBackup();
-        } else {
-            $this->validate(['file' => 'required|file|mimes:json|max:10240']);
-            $this->importFromFile();
+        $this->isImporting = true;
+
+        try {
+            if ($this->importType === 'backup') {
+                $this->validate(['selectedBackupFile' => 'required']);
+                $this->importFromBackup();
+            } else {
+                $this->validate(['file' => 'required|file|mimes:json|max:10240']);
+                $this->importFromFile();
+            }
+        } catch (\Exception $e) {
+            // Handle the exception
+        } finally {
+            $this->isImporting = false;
         }
     }
 

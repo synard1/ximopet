@@ -19,7 +19,7 @@ return new class extends Migration
             $table->uuid('rekanan_id')->nullable()->comment('ID rekanan/supplier');
             $table->uuid('kelompok_ternak_id')->nullable();
             $table->uuid('farm_id')->nullable();
-            $table->uuid('kandang_id')->nullable();
+            $table->uuid('coop_id')->nullable();
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -28,7 +28,7 @@ return new class extends Migration
 
             $table->foreign('rekanan_id')->references('id')->on('partners');
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -54,7 +54,6 @@ return new class extends Migration
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('transaksi_id')->references('id')->on('transaksi_harians');
             $table->foreign('parent_id')->references('id')->on('transaksi_beli_details');
-
         });
 
         Schema::enableForeignKeyConstraints();

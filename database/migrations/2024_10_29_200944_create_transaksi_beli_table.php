@@ -21,7 +21,7 @@ return new class extends Migration
             $table->uuid('rekanan_id')->nullable()->comment('ID rekanan/supplier');
             $table->string('batch_number')->nullable();
             $table->uuid('farm_id')->nullable()->comment('ID farm tempat pembelian');
-            $table->uuid('kandang_id')->nullable()->comment('ID kandang terkait');
+            $table->uuid('coop_id')->nullable()->comment('ID kandang terkait');
             $table->decimal('total_qty', 15, 2)->nullable()->comment('Total kuantitas pembelian');
             $table->decimal('total_berat', 15, 2)->nullable()->comment('Total berat pembelian dalam kg');
             $table->decimal('harga', 15, 2)->nullable()->comment('Harga per unit');
@@ -39,14 +39,13 @@ return new class extends Migration
 
             $table->foreign('rekanan_id')->references('id')->on('partners');
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('ternak_id')->references('id')->on('ternaks');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
 
         Schema::enableForeignKeyConstraints();
-
     }
 
     /**
@@ -59,6 +58,5 @@ return new class extends Migration
         Schema::dropIfExists('transaksi_beli');
 
         Schema::enableForeignKeyConstraints();
-
     }
 };

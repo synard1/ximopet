@@ -56,7 +56,7 @@ class SalesTransaction extends BaseModel
 
     public function kandang(): BelongsTo
     {
-        return $this->belongsTo(Kandang::class);
+        return $this->belongsTo(Coop::class);
     }
 
     public function livestock(): BelongsTo

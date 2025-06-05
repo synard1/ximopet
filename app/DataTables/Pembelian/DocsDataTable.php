@@ -45,8 +45,8 @@ class DocsDataTable extends DataTable
             ->editColumn('farm_id', function (Transaksi $transaksi) {
                 return $transaksi->farms->nama ?? '';
             })
-            ->editColumn('kandang_id', function (Transaksi $transaksi) {
-                return $transaksi->kandangs->nama ?? '';
+            ->editColumn('coop_id', function (Transaksi $transaksi) {
+                return $transaksi->coops->nama ?? '';
             })
             ->editColumn('kelompok_ternak_id', function (Transaksi $transaksi) {
                 return $transaksi->kelompokTernak->name ?? '';
@@ -72,8 +72,8 @@ class DocsDataTable extends DataTable
                     $q->where('nama', 'like', "%{$keyword}%");
                 });
             })
-            ->filterColumn('kandang_id', function ($query, $keyword) {
-                $query->whereHas('kandangs', function ($q) use ($keyword) {
+            ->filterColumn('coop_id', function ($query, $keyword) {
+                $query->whereHas('coops', function ($q) use ($keyword) {
                     $q->where('nama', 'like', "%{$keyword}%");
                 });
             })
@@ -157,7 +157,7 @@ class DocsDataTable extends DataTable
             Column::make('sub_total')->searchable(true),
             Column::make('kelompok_ternak_id')->visible(true)->title('Kelompok Ternak'),
             Column::make('farm_id')->visible(false)->title('Farm'),
-            Column::make('kandang_id')->visible(false)->title('Kandang'),
+            Column::make('coop_id')->visible(false)->title('Kandang'),
             Column::make('created_at')->title('Created Date')
                 ->visible(false)
                 // ->addClass('text-nowrap')

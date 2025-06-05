@@ -49,7 +49,7 @@ class LivestockMutationDataTable extends DataTable
             // ->editColumn('farm_id', function (KematianTernak $ternak) {
             //     return $ternak->farm->nama;
             // })
-            // ->editColumn('kandang_id', function (KematianTernak $ternak) {
+            // ->editColumn('coop_id', function (KematianTernak $ternak) {
             //     return $ternak->kandang->nama;
             // })
             ->editColumn('created_at', function (LivestockMutation $ternak) {
@@ -65,7 +65,7 @@ class LivestockMutationDataTable extends DataTable
             //         $q->where('nama', 'like', "%{$keyword}%");
             //     });
             // })
-            // ->filterColumn('kandang_id', function($query, $keyword) {
+            // ->filterColumn('coop_id', function($query, $keyword) {
             //     $query->whereHas('kandang', function($q) use ($keyword) {
             //         $q->where('nama', 'like', "%{$keyword}%");
             //     });
@@ -97,42 +97,42 @@ class LivestockMutationDataTable extends DataTable
      * Optional method if you want to use the html builder.
      */
     public function html(): HtmlBuilder
-{
-    return $this->builder()
-        ->setTableId('livestockMutation-table')
-        ->columns($this->getColumns())
-        ->minifiedAjax()
-        ->dom('Bfrtip')
-        ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
-        ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
-        ->orderBy(1)
-        ->parameters([
-            'scrollX'      =>  true,
-            'searching'    =>  true,
-            'responsive'   =>  false,
-            'lengthMenu' => [
-                [10, 25, 50, -1],
-                ['10 rows', '25 rows', '50 rows', 'Show all']
-            ],
-            // 'buttons'      => [
-            //     [
-            //         'text' => '<i class="fa fa-plus"></i> Add New',
-            //         'className' => 'btn btn-primary',
-            //         'attr' => [
-            //             'data-kt-action' => 'new_kternak'
-            //         ]
-            //     ],
-            //     // ['extend' => 'excel', 'className' => 'btn btn-success', 'text' => '<i class="fa fa-file-excel"></i> Excel'],
-            //     ['extend' => 'print', 'className' => 'btn btn-info', 'text' => '<i class="fa fa-print"></i> Print'],
-            //     ['extend' => 'colvis', 'className' => 'btn btn-warning', 'text' => '<i class="fa fa-columns"></i> Columns']
-            // ],
-            'language' => [
-                'search' => 'Search:',
-                'searchPlaceholder' => 'Enter search term...'
-            ],
-        ])
-        ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaksi/kematian-ternak/_draw-scripts.js')) . "}");
-}
+    {
+        return $this->builder()
+            ->setTableId('livestockMutation-table')
+            ->columns($this->getColumns())
+            ->minifiedAjax()
+            ->dom('Bfrtip')
+            ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
+            ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
+            ->orderBy(1)
+            ->parameters([
+                'scrollX'      =>  true,
+                'searching'    =>  true,
+                'responsive'   =>  false,
+                'lengthMenu' => [
+                    [10, 25, 50, -1],
+                    ['10 rows', '25 rows', '50 rows', 'Show all']
+                ],
+                // 'buttons'      => [
+                //     [
+                //         'text' => '<i class="fa fa-plus"></i> Add New',
+                //         'className' => 'btn btn-primary',
+                //         'attr' => [
+                //             'data-kt-action' => 'new_kternak'
+                //         ]
+                //     ],
+                //     // ['extend' => 'excel', 'className' => 'btn btn-success', 'text' => '<i class="fa fa-file-excel"></i> Excel'],
+                //     ['extend' => 'print', 'className' => 'btn btn-info', 'text' => '<i class="fa fa-print"></i> Print'],
+                //     ['extend' => 'colvis', 'className' => 'btn btn-warning', 'text' => '<i class="fa fa-columns"></i> Columns']
+                // ],
+                'language' => [
+                    'search' => 'Search:',
+                    'searchPlaceholder' => 'Enter search term...'
+                ],
+            ])
+            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaksi/kematian-ternak/_draw-scripts.js')) . "}");
+    }
 
     /**
      * Get the dataTable columns definition.
@@ -141,9 +141,9 @@ class LivestockMutationDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex', 'No.')
-            ->title('No.')
-            ->addClass('text-center')
-            ->width(50),
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
             Column::make('id')->visible(false),
             Column::make('tanggal')->title('Tanggal'),
             Column::make('from_livestock_id')->title('Asal'),
@@ -151,7 +151,7 @@ class LivestockMutationDataTable extends DataTable
             Column::computed('jumlah')->title('Jumlah Ekor'),
             Column::make('berat')->title('Berat (Kg)'),
             // Column::computed('farm_id')->title('Farm')->visible(false),
-            // Column::computed('kandang_id')->title('Kandang')->visible(false),
+            // Column::computed('coop_id')->title('Kandang')->visible(false),
             // Column::make('total_berat'),
             // Column::make('penyebab')->visible(false),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),

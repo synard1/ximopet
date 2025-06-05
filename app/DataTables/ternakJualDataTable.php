@@ -48,14 +48,14 @@ class ternakJualDataTable extends DataTable
             ->editColumn('farm_id', function (TernakJual $ternak) {
                 return $ternak->kelompokTernaks->transaksiBeli->farms->nama;
             })
-            ->editColumn('kandang_id', function (TernakJual $ternak) {
-                return $ternak->kelompokTernaks->transaksiBeli->kandangs->nama;
+            ->editColumn('coop_id', function (TernakJual $ternak) {
+                return $ternak->kelompokTernaks->transaksiBeli->coops->nama;
             })
             ->editColumn('created_at', function (TernakJual $ternak) {
                 return $ternak->created_at->format('d M Y, h:i a');
             })
-            ->filterColumn('kelompok_ternak_id', function($query, $keyword) {
-                $query->whereHas('kelompokTernaks', function($q) use ($keyword) {
+            ->filterColumn('kelompok_ternak_id', function ($query, $keyword) {
+                $query->whereHas('kelompokTernaks', function ($q) use ($keyword) {
                     $q->where('name', 'like', "%{$keyword}%");
                 });
             })
@@ -64,7 +64,7 @@ class ternakJualDataTable extends DataTable
             //         $q->where('nama', 'like', "%{$keyword}%");
             //     });
             // })
-            // ->filterColumn('kandang_id', function($query, $keyword) {
+            // ->filterColumn('coop_id', function($query, $keyword) {
             //     $query->whereHas('kandang', function($q) use ($keyword) {
             //         $q->where('nama', 'like', "%{$keyword}%");
             //     });
@@ -86,7 +86,7 @@ class ternakJualDataTable extends DataTable
     {
         if (auth()->user()->hasRole('Operator')) {
             return $model->newQuery()->whereHas('kelompokTernaks.transaksiBeli.farms', function ($query) {
-                $query->whereHas('farmOperators', function($q) {
+                $query->whereHas('farmOperators', function ($q) {
                     $q->where('user_id', auth()->id());
                 });
             });
@@ -98,42 +98,42 @@ class ternakJualDataTable extends DataTable
      * Optional method if you want to use the html builder.
      */
     public function html(): HtmlBuilder
-{
-    return $this->builder()
-        ->setTableId('ternakAfkir-table')
-        ->columns($this->getColumns())
-        ->minifiedAjax()
-        ->dom('Bfrtip')
-        ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
-        ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
-        ->orderBy(1)
-        ->parameters([
-            'scrollX'      =>  true,
-            'searching'    =>  true,
-            'responsive'   =>  false,
-            'lengthMenu' => [
-                [10, 25, 50, -1],
-                ['10 rows', '25 rows', '50 rows', 'Show all']
-            ],
-            // 'buttons'      => [
-            //     [
-            //         'text' => '<i class="fa fa-plus"></i> Add New',
-            //         'className' => 'btn btn-primary',
-            //         'attr' => [
-            //             'data-kt-action' => 'new_kternak'
-            //         ]
-            //     ],
-            //     // ['extend' => 'excel', 'className' => 'btn btn-success', 'text' => '<i class="fa fa-file-excel"></i> Excel'],
-            //     ['extend' => 'print', 'className' => 'btn btn-info', 'text' => '<i class="fa fa-print"></i> Print'],
-            //     ['extend' => 'colvis', 'className' => 'btn btn-warning', 'text' => '<i class="fa fa-columns"></i> Columns']
-            // ],
-            'language' => [
-                'search' => 'Search:',
-                'searchPlaceholder' => 'Enter search term...'
-            ],
-        ])
-        ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/ternak/afkir/_draw-scripts.js')) . "}");
-}
+    {
+        return $this->builder()
+            ->setTableId('ternakAfkir-table')
+            ->columns($this->getColumns())
+            ->minifiedAjax()
+            ->dom('Bfrtip')
+            ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
+            ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
+            ->orderBy(1)
+            ->parameters([
+                'scrollX'      =>  true,
+                'searching'    =>  true,
+                'responsive'   =>  false,
+                'lengthMenu' => [
+                    [10, 25, 50, -1],
+                    ['10 rows', '25 rows', '50 rows', 'Show all']
+                ],
+                // 'buttons'      => [
+                //     [
+                //         'text' => '<i class="fa fa-plus"></i> Add New',
+                //         'className' => 'btn btn-primary',
+                //         'attr' => [
+                //             'data-kt-action' => 'new_kternak'
+                //         ]
+                //     ],
+                //     // ['extend' => 'excel', 'className' => 'btn btn-success', 'text' => '<i class="fa fa-file-excel"></i> Excel'],
+                //     ['extend' => 'print', 'className' => 'btn btn-info', 'text' => '<i class="fa fa-print"></i> Print'],
+                //     ['extend' => 'colvis', 'className' => 'btn btn-warning', 'text' => '<i class="fa fa-columns"></i> Columns']
+                // ],
+                'language' => [
+                    'search' => 'Search:',
+                    'searchPlaceholder' => 'Enter search term...'
+                ],
+            ])
+            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/ternak/afkir/_draw-scripts.js')) . "}");
+    }
 
     /**
      * Get the dataTable columns definition.
@@ -145,7 +145,7 @@ class ternakJualDataTable extends DataTable
             Column::make('tanggal'),
             Column::make('kelompok_ternak_id'),
             Column::computed('farm_id')->title('Farm')->visible(false),
-            Column::computed('kandang_id')->title('Kandang')->visible(false),
+            Column::computed('coop_id')->title('Kandang')->visible(false),
             Column::make('quantity'),
             Column::make('total_berat'),
             Column::make('umur')->title('Umur Ternak'),

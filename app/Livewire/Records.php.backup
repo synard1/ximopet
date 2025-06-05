@@ -730,7 +730,7 @@ class Records extends Component
 
     //     // dd($validatedData);
     //     // $validatedData['rekanan_id'] = $this->supplierSelect;
-    //     // $validatedData['kandang_id'] = $this->selectedKandang;
+    //     // $validatedData['coop_id'] = $this->selectedKandang;
 
     //     // Validate that final stock matches the calculation
     //     // $calculatedFinalStock = $this->stock_end - $this->mortality - $this->culling - $this->sales_quantity;

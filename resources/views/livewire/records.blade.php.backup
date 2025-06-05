@@ -1,0 +1,87 @@
+<div class="card-body p-6 bg-white" id="livewireRecordsContainer" style="display: none;">
+    <h2 class="text-xl font-bold mb-6 text-gray-800">📋 Manajemen Recording Ayam</h2>
+
+    {{--
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs nav-pills flex-row border-0 flex-md-column me-5 mb-3 mb-md-0 fs-6 min-w-lg-200px">
+        <li class="nav-item w-100 me-0 mb-md-2">
+            <a class="nav-link w-100 active btn btn-flex btn-active-light-success" data-bs-toggle="tab"
+                href="#tabTambahData">
+                <span class="svg-icon fs-2"><svg>...</svg></span>
+                <span class="d-flex flex-column align-items-start">
+                    <span class="fs-4 fw-bold">Tambah Data</span>
+                    <span class="fs-7">Input recording baru</span>
+                </span>
+            </a>
+        </li>
+        <li class="nav-item w-100 me-0 mb-md-2">
+            <a class="nav-link w-100 btn btn-flex btn-active-light-info" data-bs-toggle="tab" href="#tabViewData">
+                <span class="svg-icon fs-2"><svg>...</svg></span>
+                <span class="d-flex flex-column align-items-start">
+                    <span class="fs-4 fw-bold">View Data</span>
+                    <span class="fs-7">Lihat data recording</span>
+                </span>
+            </a>
+        </li>
+    </ul> --}}
+
+    <!-- Tab Content -->
+    <div class="tab-content w-100">
+        <!-- Tab Tambah Data -->
+        <div class="tab-pane fade show active" id="tabTambahData">
+            @include('pages.recording.form2')
+        </div>
+
+        <!-- Tab View Data -->
+        <div class="tab-pane fade" id="tabViewData">
+            @include('pages.recording.table')
+        </div>
+    </div>
+    @push('styles')
+    <style>
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: #007bff;
+        }
+
+        .error-text {
+            font-size: 12px;
+            color: red;
+        }
+
+        .section-header {
+            font-size: 16px;
+            font-weight: bold;
+            color: #007bff;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .table-header,
+        .table-cell {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+    </style>
+    @endpush
+</div>

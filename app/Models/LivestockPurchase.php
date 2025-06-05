@@ -43,6 +43,23 @@ class LivestockPurchase extends BaseModel
 
     public function expedition()
     {
-        return $this->belongsTo(Expedition::class, 'expedition_id');
+        return $this->belongsTo(Partner::class, 'expedition_id');
+    }
+
+    public function calculateConvertedQuantity()
+    {
+        // Jika tidak ada converted_unit, return quantity apa adanya
+        if (!$this->converted_unit || !$this->unit_id) {
+            return (float) $this->quantity;
+        }
+        // Ambil rasio konversi dari unit ke converted_unit
+        $conversion = \App\Models\UnitConversion::where('unit_id', $this->unit_id)
+            ->where('conversion_unit_id', $this->converted_unit)
+            ->first();
+        if ($conversion && $conversion->conversion_value) {
+            return (float) $this->quantity * (float) $conversion->conversion_value;
+        }
+        // Jika tidak ada data konversi, fallback ke quantity
+        return (float) $this->quantity;
     }
 }

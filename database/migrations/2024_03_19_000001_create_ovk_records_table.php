@@ -14,7 +14,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->date('usage_date');
             $table->foreignUuid('farm_id');
-            $table->foreignUuid('kandang_id')->nullable();
+            $table->foreignUuid('coop_id')->nullable();
             $table->foreignUuid('livestock_id')->nullable();
             $table->text('notes')->nullable();
             $table->json('metadata')->nullable();
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('livestock_id')->references('id')->on('livestocks');
 
             $table->foreign('created_by')->references('id')->on('users');

@@ -5,7 +5,6 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h1 class="modal-title fs-5" id="kt_modal_pembelian_details_title">Modal title</h1>
-                {{-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> --}}
             </div>
             <div class="modal-body">
                 <table id="detailsTable" class="display" style="width:100%">
@@ -15,6 +14,7 @@
                             <th>Nama</th>
                             <th>Jumlah</th>
                             <th>Terpakai</th>
+                            <th>Mutasi</th>
                             <th>Sisa</th>
                             <th>Satuan</th>
                             <th>Harga</th>
@@ -22,26 +22,25 @@
                         </tr>
                     </thead>
                 </table>
+                @if(auth()->user()->can('update feed purchasing'))
                 <p>* Hanya <b>Jumlah</b> dan <b>Harga</b> yang bisa di ubah secara langsung</br>
                     * Data hanya bisa diubah jika belum memiliki data transaksi</br>
                     * Klik pada kolom data yang akan di ubah untuk membuka fungsi ubah secara langsung</p>
-
+                @endif
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                    onclick="closeDetails()">Close</button>
-                {{-- <button type="button" class="btn btn-primary">Understood</button> --}}
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"">Close</button>
             </div>
         </div>
     </div>
 </div>
 @push('styles')
-    <link href="https://cdn.datatables.net/2.1.2/css/dataTables.dataTables.css" rel="stylesheet" type="text/css" />
-@endpush
+<link href=" https://cdn.datatables.net/2.1.2/css/dataTables.dataTables.css" rel="stylesheet" type="text/css" />
+                @endpush
 
-@push('scripts')
-    <script>
-        function getDetails(param) {
+                @push('scripts')
+                <script>
+                    function getDetails(param) {
             // console.log(param);
             // Get the Sanctum token from the session
             const token = '{{ Session::get('auth_token') }}';
@@ -68,12 +67,17 @@
                         data: 'name'
                     },
                     {
-                        data: 'qty',
+                        data: 'quantity',
                         className: 'editable text-center', // Add text-end class for right alignment
                         // render: $.fn.dataTable.render.number(',', '.', 2)
                     },
                     {
-                        data: 'terpakai',
+                        data: 'total_terpakai',
+                        className: 'text-center', // Add text-end class for right alignment
+                        // render: $.fn.dataTable.render.number(',', '.', 0)
+                    },
+                    {
+                        data: 'mutated',
                         className: 'text-center', // Add text-end class for right alignment
                         // render: $.fn.dataTable.render.number(',', '.', 0)
                     },
@@ -83,7 +87,7 @@
                         // render: $.fn.dataTable.render.number(',', '.', 0)
                     },
                     {
-                        data: 'satuan_besar'
+                        data: 'unit'
                     },
                     {
                         data: 'price_per_unit',
@@ -100,6 +104,7 @@
 
             // Enable inline editing
             // Make cells editable (using a simple approach for now)
+            @if(auth()->user()->can('update feed purchasing'))
             table.on('click', 'tbody td.editable', function() {
                 var cell = $(this);
                 var originalValueText = cell.text();
@@ -139,8 +144,8 @@
 
 
                     if (!isNaN(newValue) && newValue !== originalValue) {
-                        // Check if we're editing the 'qty' column
-                        if (columnData.data === 'qty') {
+                        // Check if we're editing the 'quantity' column
+                        if (columnData.data === 'quantity') {
                             // Get the 'terpakai' value from the row data
                             var terpakai = parseFloat(rowData.terpakai);
 
@@ -198,50 +203,8 @@
                     }
                 });
 
-                // Handle saving the edit
-                // input.blur(function() {
-                //     var newValue = parseFloat(input.val());
-
-                //     if (!isNaN(newValue) && newValue !== originalValue) { 
-                //         var columnIndex = table.cell(cell).index().column;
-                //         var columnData = table.settings().init().columns[columnIndex];
-
-                //         // Send AJAX request to update the data
-                //         $.ajax({
-                //             url: '/api/v1/stocks',
-                //             method: 'POST',
-                //             headers: {
-                //                 'Authorization': 'Bearer ' + '{{ session('auth_token') }}',
-                //                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                //             },
-                //             data: {
-                //                 type: 'edit',
-                //                 id: rowData.id,
-                //                 column: columnData.data,
-                //                 value: newValue
-                //             },
-                //             success: function(response) {
-                //                 cell.text(newValue);
-                //                 toastr.success(response.message);
-                //                 table.ajax.reload();
-                //             },
-                //             error: function(xhr, status, error) {
-                //                 table.ajax.reload();
-                //                 if (xhr.status === 401) {
-                //                     toastr.error('Unauthorized. Please log in again.');
-                //                 } else {
-                //                     toastr.error('Error updating value: ' + xhr.responseJSON.message);
-                //                 }
-                //             }
-                //         });
-                //     } else if (isNaN(newValue) || newValue === '') {
-                //         alert('Error: Value cannot be blank');
-                //         table.ajax.reload();
-                //     } else {
-                //         table.ajax.reload();
-                //     }
-                // });
-            });
+                });
+            @endif
         }
 
         function closeDetails() {
@@ -249,5 +212,5 @@
             table.destroy();
             window.LaravelDataTables['pembelianStoks-table'].ajax.reload();
         }
-    </script>
-@endpush
+                </script>
+                @endpush

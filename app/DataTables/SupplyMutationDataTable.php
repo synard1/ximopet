@@ -103,7 +103,7 @@ class SupplyMutationDataTable extends DataTable
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             // ->orderBy(1)
-            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/feed/_mutation_draw-scripts.js')) . "}");
+            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/supply/_mutation_draw-scripts.js')) . "}");
     }
 
     /**

@@ -36,7 +36,7 @@ class TernakAfkir extends BaseModel
 
     public function transaksi()
     {
-        return $this->belongsTo(Transaksi::class, 'transaksi_id','id');
+        return $this->belongsTo(Transaksi::class, 'transaksi_id', 'id');
     }
 
     public function farm()
@@ -46,15 +46,16 @@ class TernakAfkir extends BaseModel
 
     public function kandang()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id', 'id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 
-    public function historyTernaks(){
+    public function historyTernaks()
+    {
         return $this->hasMany(TernakHistory::class, 'kelompok_ternak_id', 'id');
     }
 
-    public function kelompokTernaks(){
+    public function kelompokTernaks()
+    {
         return $this->belongsTo(KelompokTernak::class, 'kelompok_ternak_id', 'id');
     }
-    
 }

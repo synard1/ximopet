@@ -23,10 +23,11 @@
                         </tr>
                     </thead>
                 </table>
+                @if(auth()->user()->can('update supply purchasing'))
                 <p>* Hanya <b>Jumlah</b> dan <b>Harga</b> yang bisa di ubah secara langsung</br>
                     * Data hanya bisa diubah jika belum memiliki data transaksi</br>
                     * Klik pada kolom data yang akan di ubah untuk membuka fungsi ubah secara langsung</p>
-
+                @endif
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
@@ -104,6 +105,8 @@
                 ]
             });
 
+
+            @if(auth()->user()->can('update supply purchasing'))
             // Enable inline editing
             // Make cells editable (using a simple approach for now)
             table.on('click', 'tbody td.editable', function() {
@@ -248,6 +251,7 @@
                 //     }
                 // });
             });
+            @endif
         }
 
         function closeDetails() {

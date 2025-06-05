@@ -31,5 +31,12 @@ class BaseModel extends Model
                 $model->updated_by = Auth::id();
             }
         });
+
+        // Set updated_by on update 
+        static::updated(function ($model) {
+            if (Auth::id()) {
+                $model->updated_by = Auth::id();
+            }
+        });
     }
 }

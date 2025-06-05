@@ -17,7 +17,7 @@ class StokMutasi extends BaseModel
         'id',
         'transaksi_detail_id',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'tanggal',
         'jenis',
         'item_id',
@@ -39,31 +39,31 @@ class StokMutasi extends BaseModel
 
     public function rekanans()
     {
-        return $this->belongsTo(Rekanan::class, 'rekanan_id','id');
+        return $this->belongsTo(Rekanan::class, 'rekanan_id', 'id');
     }
 
     public function farms()
     {
-        return $this->belongsTo(Farm::class, 'farm_id','id');
+        return $this->belongsTo(Farm::class, 'farm_id', 'id');
     }
 
     public function kandangs()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id','id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 
     public function items()
     {
-        return $this->belongsTo(Item::class, 'item_id','id');
+        return $this->belongsTo(Item::class, 'item_id', 'id');
     }
 
     public function stokTransaksi()
     {
-        return $this->belongsTo(StokTransaksi::class); 
+        return $this->belongsTo(StokTransaksi::class);
     }
 
     public function TransaksiDetail()
     {
-        return $this->belongsTo(TransaksiDetail::class, 'transaksi_detail_id','id');
+        return $this->belongsTo(TransaksiDetail::class, 'transaksi_detail_id', 'id');
     }
 }

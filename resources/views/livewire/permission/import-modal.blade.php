@@ -12,14 +12,14 @@
 
                 <div class="modal-body">
                     @if($importErrors)
-                        <div class="alert alert-danger">
-                            <ul class="mb-0">
-                                @foreach($importErrors as $error)
-                                <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                        @endif
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            @foreach($importErrors as $error)
+                            <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
 
                     @if($importStatus)
                     <div class="alert alert-info">
@@ -253,9 +253,9 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" wire:click="importPermissions" @if($importProgress> 0
-                        && $importProgress < 100) disabled @endif>
-                            Import
+                    <button type="button" class="btn btn-primary" wire:click="importPermissions" @if($isImporting)
+                        disabled @endif>
+                        @if($isImporting) Importing... @else Import @endif
                     </button>
                 </div>
             </div>

@@ -132,26 +132,6 @@ class Create extends Component
         $this->default_unit_id = $unit->id;
     }
 
-    // public function validateConversionDefaults()
-    // {
-    //     $fields = ['is_default_purchase', 'is_default_mutation', 'is_default_sale', 'is_smallest'];
-
-    //     foreach ($fields as $field) {
-    //         $count = collect($this->conversion_units)->filter(fn($item) => $item[$field] ?? false)->count();
-
-    //         if ($count > 1) {
-    //             throw ValidationException::withMessages([
-    //                 'conversion_units' => "Hanya boleh ada satu satuan dengan '$field'.",
-    //             ]);
-    //         }
-
-    //         if ($count === 0) {
-    //             throw ValidationException::withMessages([
-    //                 'conversion_units' => "Harus ada satu satuan yang ditandai sebagai '$field'.",
-    //             ]);
-    //         }
-    //     }
-    // }
 
     protected function validateConversionDefaults()
     {
@@ -166,30 +146,6 @@ class Create extends Component
         }
     }
 
-
-
-    // public function toggleDefault($index, $field)
-    // {
-    //     foreach ($this->conversion_units as $i => $unit) {
-    //         $this->conversion_units[$i][$field] = ($i === $index);
-    //     }
-    // }
-
-    // public function toggleDefault($field, $index)
-    // {
-    //     foreach ($this->conversion_units as $i => &$unit) {
-    //         $unit[$field] = $i === $index;
-    //     }
-    // }
-
-    // public function toggleDefault($field, $index)
-    // {
-    //     foreach ($this->conversion_units as $i => &$unit) {
-    //         $unit[$field] = $i === $index;
-    //     }
-
-    //     unset($unit); // hindari referensi tidak sengaja
-    // }
 
     public function toggleDefault($field, $index)
     {
@@ -271,6 +227,16 @@ class Create extends Component
 
         $this->validateConversionDefaults();
 
+        if (!auth()->user()->can('create feed master data') && !$this->edit_mode) {
+            $this->addError('create', 'You do not have permission to create feed master data.');
+            return;
+        }
+
+        if (!auth()->user()->can('update feed master data') && $this->edit_mode) {
+            $this->addError('update', 'You do not have permission to update feed master data.');
+            return;
+        }
+
         DB::transaction(function () {
             // Buat payload yang akan disimpan ke field `payload`
             $payload = [
@@ -330,67 +296,17 @@ class Create extends Component
             }
         });
 
-        // DB::transaction(function () {
-        //     $payload = [
-        //         'unit_id' => $this->unit_id,
-        //         'unit_details' => \App\Models\Unit::find($this->unit_id)?->only('id', 'name', 'description'),
-        //         'conversion_units' => collect($this->conversion_units)->map(function ($conv) {
-        //             return [
-        //                 'unit_id' => $conv['unit_id'],
-        //                 'value' => $conv['value'],
-        //                 'is_default_purchase' => $conv['is_default_purchase'] ?? false,
-        //                 'is_default_mutation' => $conv['is_default_mutation'] ?? false,
-        //                 'is_default_sale' => $conv['is_default_sale'] ?? false,
-        //                 'is_smallest' => $conv['is_smallest'] ?? false,
-        //             ];
-        //         })->toArray(),
-        //     ];
-
-        //     // Cek mode edit
-        //     if ($this->edit_mode && $this->feedId) {
-        //         // Update data
-        //         $feed = Feed::findOrFail($this->feedId);
-        //         $feed->update([
-        //             'code' => $this->code,
-        //             'name' => $this->name,
-        //             'payload' => $payload,
-        //         ]);
-
-        //         // Hapus semua konversi lama
-        //         UnitConversion::where('type', 'Feed')->where('item_id', $feed->id)->delete();
-        //     } else {
-        //         // Tambah data baru
-        //         $feed = Feed::create([
-        //             'code' => $this->code,
-        //             'name' => $this->name,
-        //             'payload' => $payload,
-        //             'created_by' => auth()->id(),
-        //         ]);
-        //     }
-
-        //     // Simpan ulang konversi unit
-        //     foreach ($this->conversion_units as $conversion) {
-        //         UnitConversion::create([
-        //             'type' => 'Feed',
-        //             'item_id' => $feed->id,
-        //             'unit_id' => $this->unit_id,
-        //             'conversion_unit_id' => $conversion['unit_id'],
-        //             'conversion_value' => $conversion['value'],
-        //             'default_purchase' => $conversion['is_default_purchase'],
-        //             'default_mutation' => $conversion['is_default_mutation'],
-        //             'default_sale' => $conversion['is_default_sale'],
-        //             'smallest' => $conversion['is_smallest'],
-        //             'created_by' => auth()->id(),
-        //         ]);
-        //     }
-        // });
-
         $this->dispatch('success', 'Data Pakan berhasil ' . ($this->edit_mode ? 'diperbarui' : 'disimpan'));
         $this->close();
     }
 
     public function deleteFeed($feedId)
     {
+        if (!auth()->user()->can('delete feed master data')) {
+            $this->addError('delete', 'You do not have permission to delete feed master data.');
+            return;
+        }
+
         try {
             // Check if feed has unit conversions
             $hasUnitConversions = DB::table('unit_conversions')

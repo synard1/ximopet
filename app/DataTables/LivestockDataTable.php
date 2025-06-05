@@ -83,7 +83,7 @@ class LivestockDataTable extends DataTable
 
             // })
             ->editColumn('name', function (Livestock $livestock) {
-                if (auth()->user()->can('read records management')) {
+                if (auth()->user()->can('read livestock records')) {
                     return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_livestock" data-kt-livestock-id="' . $livestock->id . '">' . $livestock->name . '</a>';
                 } else {
                     return $livestock->name;

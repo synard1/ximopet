@@ -4,7 +4,7 @@ namespace App\Livewire\MasterData;
 
 use Livewire\Component;
 use App\Models\Farm;
-use App\Models\Kandang;
+use App\Models\Coop;
 use App\Models\Livestock;
 use App\Models\LivestockPurchase;
 use App\Models\CurrentLivestock;
@@ -15,12 +15,10 @@ use Illuminate\Support\Facades\Log;
 class KandangForm extends Component
 {
     public $farm_id;
-    public $kandang_id;
-    public $kode;
+    public $coop_id;
     public $code;
     public $name;
-    public $nama;
-    public $kapasitas;
+    public $capacity;
     public $status = 'active';
     public $farms;
     public $isOpen = false;
@@ -36,16 +34,16 @@ class KandangForm extends Component
 
     protected $rules = [
         'farm_id' => 'required',
-        'kode' => 'required|unique:master_kandangs,kode',
-        'nama' => 'required|string|max:255',
-        'kapasitas' => 'required|numeric|min:1',
-        'status' => 'required|in:active,Nonaktif'
+        'code' => 'required|unique:coops,code',
+        'name' => 'required|string|max:255',
+        'capacity' => 'required|numeric|min:1',
+        'status' => 'required|in:active,inactive'
     ];
 
     public function mount()
     {
-        if (!Auth::user()->can('create kandang management')) {
-            $this->dispatch('error', 'You do not have permission to create kandang.');
+        if (!Auth::user()->can('create coop master data')) {
+            $this->dispatch('error', 'You do not have permission to create coop.');
             return;
         }
 
@@ -76,24 +74,24 @@ class KandangForm extends Component
 
     private function resetForm()
     {
-        $this->reset(['kandang_id', 'code', 'name', 'kapasitas', 'status']);
+        $this->reset(['coop_id', 'code', 'name', 'capacity', 'status']);
         $this->resetErrorBag();
         $this->resetValidation();
     }
 
     public function store()
     {
-        if (!Auth::user()->can('create kandang management')) {
-            $this->dispatch('error', 'You do not have permission to create kandang.');
+        if (!Auth::user()->can('create coop master data')) {
+            $this->dispatch('error', 'You do not have permission to create coop.');
             return;
         }
 
         // Define rules dynamically based on whether it's an edit operation
         $rules = [
             'farm_id' => 'required',
-            'nama' => 'required|string|max:255',
-            'kapasitas' => 'required|integer|min:1',
-            'status' => 'required|in:active,Nonaktif'
+            'name' => 'required|string|max:255',
+            'capacity' => 'required|integer|min:1',
+            'status' => 'required|in:active,inactive'
         ];
 
         try {
@@ -101,11 +99,11 @@ class KandangForm extends Component
 
             if ($this->isEdit) {
                 // Get total current livestock in kandang
-                $totalLivestock = Livestock::where('kandang_id', $this->kandang_id)
+                $totalLivestock = Livestock::where('coop_id', $this->coop_id)
                     ->where('status', 'active')
                     ->sum('populasi_awal');
 
-                $totalCurrentLivestock = CurrentLivestock::where('kandang_id', $this->kandang_id)
+                $totalCurrentLivestock = CurrentLivestock::where('coop_id', $this->coop_id)
                     ->where('status', 'active')
                     ->sum('quantity');
 
@@ -125,12 +123,12 @@ class KandangForm extends Component
             ];
 
             if ($this->isEdit) {
-                $kandang = Kandang::findOrFail($this->kandang_id);
-                $kandang->update($data);
+                $coop = Coop::findOrFail($this->coop_id);
+                $coop->update($data);
                 $message = 'Kandang berhasil diperbarui';
             } else {
                 $data['created_by'] = Auth::id();
-                $kandang = Kandang::create($data);
+                $coop = Coop::create($data);
                 $message = 'Kandang berhasil ditambahkan';
             }
 
@@ -149,7 +147,7 @@ class KandangForm extends Component
     public function closeModal()
     {
         $this->isOpen = false;
-        $this->reset(['farm_id', 'kode', 'nama', 'kapasitas', 'status']);
+        $this->reset(['farm_id', 'code', 'name', 'capacity', 'status']);
         $this->resetValidation();
         $this->dispatch('hideModal');
     }
@@ -157,13 +155,13 @@ class KandangForm extends Component
     public function editKandang($id)
     {
         $this->isEdit = true;
-        $kandang = Kandang::findOrFail($id);
-        $this->kandang_id = $id;
-        $this->farm_id = $kandang->farm_id;
-        $this->kode = $kandang->kode;
-        $this->nama = $kandang->nama;
-        $this->kapasitas = intval($kandang->kapasitas);
-        $this->status = $kandang->status;
+        $coop = Coop::findOrFail($id);
+        $this->coop_id = $id;
+        $this->farm_id = $coop->farm_id;
+        $this->code = $coop->code;
+        $this->name = $coop->name;
+        $this->capacity = intval($coop->capacity);
+        $this->status = $coop->status;
 
         $this->openModal();
     }
@@ -172,27 +170,27 @@ class KandangForm extends Component
     {
         try {
             // Check if kandang has any livestock purchase data
-            $hasLivestockPurchase = Livestock::where('kandang_id', $id)->exists();
+            $hasLivestockPurchase = Livestock::where('coop_id', $id)->exists();
 
             if ($hasLivestockPurchase) {
-                $this->dispatch('error', 'Kandang tidak dapat dihapus karena memiliki data pembelian ayam');
+                $this->dispatch('error', 'Coop tidak dapat dihapus karena memiliki data pembelian ayam');
                 return;
             }
 
             DB::beginTransaction();
 
             // Delete kandang
-            $kandang = Kandang::findOrFail($id);
-            $kandang->delete();
+            $coop = Coop::findOrFail($id);
+            $coop->delete();
 
             DB::commit();
 
-            $this->dispatch('success', 'Kandang berhasil dihapus');
+            $this->dispatch('success', 'Coop berhasil dihapus');
             $this->dispatch('refreshDatatable');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error deleting kandang: ' . $e->getMessage());
-            $this->dispatch('error', 'Terjadi kesalahan saat menghapus kandang');
+            Log::error('Error deleting coop: ' . $e->getMessage());
+            $this->dispatch('error', 'Terjadi kesalahan saat menghapus coop');
         }
     }
 }

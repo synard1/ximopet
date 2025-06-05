@@ -21,10 +21,11 @@ class TransaksiHarianDataTable extends DataTable
      * @param QueryBuilder $query Results from query() method.
      */
 
-    private function formatRupiah($amount) {
+    private function formatRupiah($amount)
+    {
         // Convert the number to a string with two decimal places
         // $formattedAmount = number_format($amount, 2, ',', '.');
-    
+
         // Add the currency symbol and return the formatted number
         return "Rp " . $amount;
     }
@@ -51,7 +52,7 @@ class TransaksiHarianDataTable extends DataTable
             ->filter(function ($query) use ($request) {
                 if ($request->has('search') && $request->get('search')['value'] != '') {
                     $searchTerm = $request->get('search')['value'];
-            
+
                     $query->where(function ($q) use ($searchTerm) {
                         $q->whereHas('details', function ($subquery) use ($searchTerm) {
                             // Handle d-m-Y format
@@ -65,14 +66,14 @@ class TransaksiHarianDataTable extends DataTable
                                     ->orWhereDate('tanggal', $formattedDate);
                             });
                         })
-                        ->orWhereHas('farm', function ($subquery) use ($searchTerm) {
-                            $subquery->where('nama', 'like', "%$searchTerm%");
-                            // Add more 'orWhere' conditions on 'farms' columns if needed
-                        })
-                        ->orWhereHas('kandang', function ($subquery) use ($searchTerm) {
-                            $subquery->where('nama', 'like', "%$searchTerm%");
-                            // Add more 'orWhere' conditions on 'farms' columns if needed
-                        });
+                            ->orWhereHas('farm', function ($subquery) use ($searchTerm) {
+                                $subquery->where('nama', 'like', "%$searchTerm%");
+                                // Add more 'orWhere' conditions on 'farms' columns if needed
+                            })
+                            ->orWhereHas('kandang', function ($subquery) use ($searchTerm) {
+                                $subquery->where('nama', 'like', "%$searchTerm%");
+                                // Add more 'orWhere' conditions on 'farms' columns if needed
+                            });
                         // Add more 'orWhereHas' conditions for other relationships if needed
                     });
                 }
@@ -81,13 +82,12 @@ class TransaksiHarianDataTable extends DataTable
                 // $tanggal = Carbon::parse($stokMutasi->tanggal);
                 // $tanggal->format('d-m-Y');
                 // return $tanggal;
-                    return $transaksi->tanggal->format('d-m-Y');
-
+                return $transaksi->tanggal->format('d-m-Y');
             })
             ->editColumn('farm_id', function (Transaksi $transaksi) {
                 return $transaksi->farm->nama ?? 'N/A';
             })
-            ->editColumn('kandang_id', function (Transaksi $transaksi) {
+            ->editColumn('coop_id', function (Transaksi $transaksi) {
                 return $transaksi->kandang->nama ?? 'N/A';
             })
             ->editColumn('id', function (Transaksi $transaksi) {
@@ -136,7 +136,7 @@ class TransaksiHarianDataTable extends DataTable
             // })
             ->setRowId('id')
             ->rawColumns(['action']);
-            // ->make(true);
+        // ->make(true);
     }
 
 
@@ -167,7 +167,6 @@ class TransaksiHarianDataTable extends DataTable
         }
 
         return $query;
-
     }
 
     /**
@@ -195,10 +194,10 @@ class TransaksiHarianDataTable extends DataTable
                 // 'scrollX'      =>  true,
                 'searching'     => true,
                 'lengthMenu' => [
-                        [ 10, 25, 50, -1 ],
-                        [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+                    [10, 25, 50, -1],
+                    ['10 rows', '25 rows', '50 rows', 'Show all']
                 ],
-                'buttons'      => ['export', 'print', 'reload','colvis'],
+                'buttons'      => ['export', 'print', 'reload', 'colvis'],
             ])
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaksi/harian/_draw-scripts.js')) . "}");
     }
@@ -211,11 +210,11 @@ class TransaksiHarianDataTable extends DataTable
         return [
             // Column::make('id')->searchable(false),
             Column::computed('DT_RowIndex', 'No.')
-            ->title('No.')
-            ->addClass('text-center')
-            ->width(50),
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
             Column::make('farm_id')->title('Farm'),
-            Column::make('kandang_id')->title('Kandang'),
+            Column::make('coop_id')->title('Kandang'),
             // Column::computed('tanggal_pembelian')->title('Tanggal Pembelian')->searchable(true),
             Column::make('tanggal')->title('Tanggal Pemakaian'),
             // Column::computed('jenis')->title('Jenis')->searchable(true),
@@ -233,7 +232,7 @@ class TransaksiHarianDataTable extends DataTable
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
+            // ->width(60)
         ];
     }
 

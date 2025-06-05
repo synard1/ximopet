@@ -18,7 +18,7 @@ class TransaksiJualDetail extends BaseModel
         'transaksi_jual_id',
         'rekanan_id',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'harga_beli',
         'harga_jual',
         'qty',
@@ -30,10 +30,9 @@ class TransaksiJualDetail extends BaseModel
         'updated_by',
     ];
 
-    protected $casts = [
-    ];
+    protected $casts = [];
 
-        // Define relationships
+    // Define relationships
     public function transaksiJual()
     {
         return $this->belongsTo(TransaksiJual::class);
@@ -51,7 +50,7 @@ class TransaksiJualDetail extends BaseModel
 
     public function kandang()
     {
-        return $this->belongsTo(Kandang::class);
+        return $this->belongsTo(Coop::class);
     }
 
     public function createdBy()

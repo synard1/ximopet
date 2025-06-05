@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-        Master Data Pakan
+    Master Data Pakan
     @endsection
     <div class="card">
         <!--begin::Card body-->
@@ -11,29 +11,29 @@
                     <li class="nav-item">
                         <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_pane_4">Data Pakan</a>
                     </li>
-                    @if(auth()->user()->hasRole(['Supervisor']))
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_5">Pemetaan Lokasi</a>
-                        </li>
-                    @endif
+                    {{-- @if(auth()->user()->hasRole(['Supervisor']))
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_5">Pemetaan Lokasi</a>
+                    </li>
+                    @endif --}}
                 </ul>
-                
+
                 <div class="tab-content" id="myTabContent">
                     <div class="tab-pane fade show active" id="kt_tab_pane_4" role="tabpanel">
                         @include('pages.masterdata.stok._table')
                     </div>
-        
-                    @if(auth()->user()->hasRole(['Supervisor']))
-                        <div class="tab-pane fade" id="kt_tab_pane_5" role="tabpanel">
-                            @include('pages.masterdata.stok._pemetaan_lokasi_table')
-                        </div>
-                    @endif
+
+                    {{-- @if(auth()->user()->hasRole(['Supervisor']))
+                    <div class="tab-pane fade" id="kt_tab_pane_5" role="tabpanel">
+                        @include('pages.masterdata.stok._pemetaan_lokasi_table')
+                    </div>
+                    @endif --}}
                 </div>
             </div>
             <livewire:master-data.feed.mutation />
         </div>
         <!--end::Card body-->
-        
+
     </div>
     {{-- @include('pages.masterdata.stok._modal_stok_details') --}}
     @include('pages.masterdata.stock._modal_feedstock_details')
@@ -41,9 +41,9 @@
 
 
     @push('scripts')
-        {{ $dataTable->scripts() }}
-        <script>
-            let farmsData;
+    {{ $dataTable->scripts() }}
+    <script>
+        let farmsData;
             $(document).ready(function () {
                 $('.nav-link').on('shown.bs.tab', function(e) {
                     if (e.target.href.includes('#kt_tab_pane_4')) {
@@ -216,7 +216,6 @@
                     console.log('Farm select element not found');
                 }
             }
-        </script>
+    </script>
     @endpush
 </x-default-layout>
-

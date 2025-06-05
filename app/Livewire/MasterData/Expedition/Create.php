@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 use App\Models\Partner;
 use Ramsey\Uuid\Uuid; // Import the UUID library
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 class Create extends Component
 {
@@ -17,8 +18,6 @@ class Create extends Component
     public $expedition_id = null; // Initialize with null instead of empty string
     public $isOpen = 0;
 
-    // protected $listeners = ['edit','create']; // Add the listener
-
     protected $listeners = [
         'delete_expedition' => 'deleteExpedition',
         'editExpedition' => 'editExpedition',
@@ -27,9 +26,12 @@ class Create extends Component
         'showEditModal' => 'editShowModal',
     ];
 
-
     public function render()
     {
+        if (!Auth::user()->can('read expedition master data')) {
+            abort(403);
+        }
+
         $this->expeditions = Partner::all();
         return view('livewire.master-data.expedition.create', [
             'expeditions' => $this->expeditions,
@@ -41,13 +43,24 @@ class Create extends Component
 
     public function create()
     {
+        if (!Auth::user()->can('create expedition master data')) {
+            abort(403);
+        }
+
         $this->resetInputFields();
-        // $this->kode = (string) Uuid::uuid4(); // Generate and cast to string
         $this->openModal();
     }
 
     public function save()
     {
+        if (!Auth::user()->can('create expedition master data') && !$this->expedition_id) {
+            abort(403);
+        }
+
+        if (!Auth::user()->can('update expedition master data') && $this->expedition_id) {
+            abort(403);
+        }
+
         $data = [
             'type' => "Expedition",
             'code' => $this->code,
@@ -59,7 +72,6 @@ class Create extends Component
             'status' => 'active',
         ];
 
-        // dd($data);
         $this->validate();
         Partner::updateOrCreate(['id' => $this->expedition_id], [
             'type' => "Expedition",
@@ -80,14 +92,16 @@ class Create extends Component
             $this->closeModalExpedition();
         }
 
-        // session()->flash('message', 
-        // $this->ekspedisi_id ? 'Rekanan updated successfully.' : 'Rekanan created successfully.');
         $this->closeModal();
         $this->resetInputFields();
     }
 
     public function editExpedition($id)
     {
+        if (!Auth::user()->can('update expedition master data')) {
+            abort(403);
+        }
+
         $expedition = Partner::where('id', $id)->where('type', 'Expedition')->first();
         $this->expedition_id = $id;
         $this->code = $expedition->code;
@@ -97,22 +111,21 @@ class Create extends Component
         $this->contact_person = $expedition->contact_person;
         $this->email = $expedition->email;
 
-        // session()->flash('message', 'test edit');
-
-
         $this->openModal();
     }
 
     public function deleteExpedition($id)
     {
+        if (!Auth::user()->can('delete expedition master data')) {
+            abort(403);
+        }
+
         $expedition = Partner::findOrFail($id);
 
         if ($expedition->livestockPurchasesAsVendor()->exists() || $expedition->livestockPurchasesAsExpedition()->exists()) {
             $this->dispatch('error', 'Expedisi tidak dapat dihapus karena memiliki transaksi terkait.');
             return;
         }
-
-        // dd($expedition);
 
         $expedition->delete();
 
@@ -170,6 +183,10 @@ class Create extends Component
 
     public function createShowModal()
     {
+        if (!Auth::user()->can('create expedition master data')) {
+            abort(403);
+        }
+
         $this->resetInputFields();
         $this->showForm = true;
         $this->dispatch('hide-datatable');

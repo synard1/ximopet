@@ -18,7 +18,7 @@ class TransaksiTernak extends BaseModel
         'jenis_transaksi',
         'tanggal',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'quantity',
         'berat_total',
         'berat_rata',
@@ -50,7 +50,7 @@ class TransaksiTernak extends BaseModel
 
     public function kandang()
     {
-        return $this->belongsTo(Kandang::class);
+        return $this->belongsTo(Coop::class);
     }
 
     public function farmTujuan()
@@ -60,7 +60,7 @@ class TransaksiTernak extends BaseModel
 
     public function kandangTujuan()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_tujuan_id');
+        return $this->belongsTo(Coop::class, 'kandang_tujuan_id');
     }
 
     public function pembeli()

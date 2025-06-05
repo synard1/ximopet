@@ -18,23 +18,22 @@ class Livestock extends BaseModel
 
     protected $fillable = [
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'name',
         'livestock_strain_id',
         'livestock_strain_standard_id',
         'livestock_strain_name',
         'start_date',
         'end_date',
-        'populasi_awal',
+        'initial_quantity',
         'quantity_depletion',
         'quantity_sales',
         'quantity_mutated',
-        'berat_awal',
-        'harga',
-        'pic',
+        'initial_weight',
+        'price',
+        'notes',
         'status',
         'data',
-        'keterangan',
         'created_by',
         'updated_by',
     ];
@@ -50,9 +49,14 @@ class Livestock extends BaseModel
         return $this->belongsTo(Farm::class, 'farm_id', 'id');
     }
 
+    public function coop()
+    {
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
+    }
+
     public function kandang()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id', 'id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 
     public function batches()

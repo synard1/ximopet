@@ -18,7 +18,7 @@ class Transaksi extends BaseModel
         'tanggal',
         'rekanan_id',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'harga',
         'total_qty',
         'total_berat',
@@ -40,22 +40,22 @@ class Transaksi extends BaseModel
 
     public function rekanans()
     {
-        return $this->belongsTo(Rekanan::class, 'rekanan_id','id');
+        return $this->belongsTo(Rekanan::class, 'rekanan_id', 'id');
     }
 
     public function farms()
     {
-        return $this->belongsTo(Farm::class, 'farm_id','id');
+        return $this->belongsTo(Farm::class, 'farm_id', 'id');
     }
 
     public function kandangs()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id','id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 
     public function items()
     {
-        return $this->belongsTo(Item::class, 'item_id','id');
+        return $this->belongsTo(Item::class, 'item_id', 'id');
     }
 
     public function transaksiDetail()

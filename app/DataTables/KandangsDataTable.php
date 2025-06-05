@@ -9,7 +9,7 @@ use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 
-class KandangsDataTable extends DataTable
+class CoopsDataTable extends DataTable
 {
     /**
      * Build the DataTable class.
@@ -85,7 +85,7 @@ class KandangsDataTable extends DataTable
     public function html(): HtmlBuilder
     {
         return $this->builder()
-            ->setTableId('kandangs-table')
+            ->setTableId('coops-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('Bfrtip')
@@ -128,6 +128,6 @@ class KandangsDataTable extends DataTable
      */
     protected function filename(): string
     {
-        return 'Kandangs_' . date('YmdHis');
+        return 'Coops_' . date('YmdHis');
     }
 }

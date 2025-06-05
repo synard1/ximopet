@@ -6,12 +6,12 @@
 
     @section('breadcrumbs')
     @endsection
+    @if(auth()->user()->can('read feed master data'))
     <div class="card">
         <!--begin::Card header-->
         <div class="card-header border-0 pt-6">
             <!--begin::Card title-->
             <div class="card-title">
-                {{--
                 <!--begin::Search-->
                 <div class="d-flex align-items-center position-relative my-1">
                     {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
@@ -19,7 +19,7 @@
                         class="form-control form-control-solid w-250px ps-13" placeholder="Cari Supplier"
                         id="mySearchInput" />
                 </div>
-                <!--end::Search--> --}}
+                <!--end::Search-->
             </div>
             <!--begin::Card title-->
 
@@ -28,10 +28,12 @@
                 <!--begin::Toolbar-->
                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
                     <!--begin::Add user-->
+                    @if(auth()->user()->can('create feed master data'))
                     <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('showCreateForm')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}
                         Tambah Data Pembelian
                     </button>
+                    @endif
                     <!--end::Add user-->
                 </div>
                 <!--end::Toolbar-->
@@ -55,6 +57,17 @@
         <!--end::Card body-->
 
     </div>
+    @else
+    <div class="card">
+        <div class="card-body">
+            <div class="text-center">
+                <i class="fas fa-lock fa-3x text-danger mb-3"></i>
+                <h3 class="text-danger">Unauthorized Access</h3>
+                <p class="text-muted">You do not have permission to view feed master data.</p>
+            </div>
+        </div>
+    </div>
+    @endif
 
     @push('scripts')
     {{ $dataTable->scripts() }}

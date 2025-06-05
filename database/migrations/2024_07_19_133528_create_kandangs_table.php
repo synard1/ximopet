@@ -44,8 +44,7 @@ return new class extends Migration
         Schema::disableForeignKeyConstraints();
 
         Schema::dropIfExists('master_kandangs');
-        
-        Schema::enableForeignKeyConstraints();
 
+        Schema::enableForeignKeyConstraints();
     }
 };

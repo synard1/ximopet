@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" {!! printHtmlAttributes('html') !!}>
 <!--begin::Head-->
+
 <head>
-    <base href=""/>
+    <base href="" />
     <title>{{ config('app.name', 'Laravel') }} | {{ config('app.info') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta charset="utf-8"/>
-    <meta name="description" content=""/>
-    <meta name="keywords" content=""/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <meta property="og:locale" content="en_US"/>
-    <meta property="og:type" content="article"/>
-    <meta property="og:title" content=""/>
-    <link rel="canonical" href="{{ url()->current() }}"/>
+    <meta charset="utf-8" />
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="" />
+    <link rel="canonical" href="{{ url()->current() }}" />
 
     {!! includeFavicon() !!}
 
@@ -22,19 +23,22 @@
 
     <!--begin::Global Stylesheets Bundle(used by all pages)-->
     @foreach(getGlobalAssets('css') as $path)
-        {!! sprintf('<link rel="stylesheet" href="%s">', asset($path)) !!}
+    {!! sprintf('
+    <link rel="stylesheet" href="%s">', asset($path)) !!}
     @endforeach
     <!--end::Global Stylesheets Bundle-->
 
     <!--begin::Vendor Stylesheets(used by this page)-->
     @foreach(getVendors('css') as $path)
-        {!! sprintf('<link rel="stylesheet" href="%s">', asset($path)) !!}
+    {!! sprintf('
+    <link rel="stylesheet" href="%s">', asset($path)) !!}
     @endforeach
     <!--end::Vendor Stylesheets-->
 
     <!--begin::Custom Stylesheets(optional)-->
     @foreach(getCustomCss() as $path)
-        {!! sprintf('<link rel="stylesheet" href="%s">', asset($path)) !!}
+    {!! sprintf('
+    <link rel="stylesheet" href="%s">', asset($path)) !!}
     @endforeach
     <!--end::Custom Stylesheets-->
 
@@ -46,47 +50,58 @@
 
 <!--begin::Body-->
 @php
-    $currentRoute = Route::current();
-    $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
+$currentRoute = Route::current();
+$isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
 @endphp
 
-    {{-- @if($isAuthRoute)
-    <body  id="kt_body"  class="app-blank" >
+{{-- @if($isAuthRoute)
+
+<body id="kt_body" class="app-blank">
 
     @else
-    <body id="kt_app_body" data-kt-app-page-loading-enabled="true" data-kt-app-page-loading="on" data-kt-app-header-fixed="true" data-kt-app-header-fixed-mobile="true" data-kt-app-header-stacked="true" data-kt-app-header-primary-enabled="true" data-kt-app-sidebar-enabled="true" data-kt-app-sidebar-fixed="true" data-kt-app-sidebar-push-toolbar="true" data-kt-app-sidebar-push-footer="true" data-kt-app-toolbar-enabled="true" class="app-default">
-    @endif --}}
-    <body id="kt_app_body" data-kt-app-page-loading-enabled="true" data-kt-app-page-loading="on" data-kt-app-header-fixed="true" data-kt-app-header-fixed-mobile="true" data-kt-app-header-stacked="true" data-kt-app-header-primary-enabled="true" data-kt-app-sidebar-enabled="true" data-kt-app-sidebar-fixed="true" data-kt-app-sidebar-push-toolbar="true" data-kt-app-sidebar-push-footer="true" data-kt-app-toolbar-enabled="true" class="app-default">
+
+    <body id="kt_app_body" data-kt-app-page-loading-enabled="true" data-kt-app-page-loading="on"
+        data-kt-app-header-fixed="true" data-kt-app-header-fixed-mobile="true" data-kt-app-header-stacked="true"
+        data-kt-app-header-primary-enabled="true" data-kt-app-sidebar-enabled="true" data-kt-app-sidebar-fixed="true"
+        data-kt-app-sidebar-push-toolbar="true" data-kt-app-sidebar-push-footer="true"
+        data-kt-app-toolbar-enabled="true" class="app-default">
+        @endif --}}
+
+        <body id="kt_app_body" data-kt-app-page-loading-enabled="true" data-kt-app-page-loading="on"
+            data-kt-app-header-fixed="true" data-kt-app-header-fixed-mobile="true" data-kt-app-header-stacked="true"
+            data-kt-app-header-primary-enabled="true" data-kt-app-sidebar-enabled="true"
+            data-kt-app-sidebar-fixed="true" data-kt-app-sidebar-push-toolbar="true"
+            data-kt-app-sidebar-push-footer="true" data-kt-app-toolbar-enabled="true" class="app-default">
 
 
 
-@include('partials/theme-mode/_init')
+            @include('partials/theme-mode/_init')
 
-@yield('content')
+            @yield('content')
 
-<!--begin::Javascript-->
-<!--begin::Global Javascript Bundle(mandatory for all pages)-->
-@foreach(getGlobalAssets() as $path)
-    {!! sprintf('<script src="%s"></script>', asset($path)) !!}
-@endforeach
-<!--end::Global Javascript Bundle-->
+            <!--begin::Javascript-->
+            <!--begin::Global Javascript Bundle(mandatory for all pages)-->
+            @foreach(getGlobalAssets() as $path)
+            {!! sprintf('<script src="%s"></script>', asset($path)) !!}
+            @endforeach
+            <!--end::Global Javascript Bundle-->
 
-<!--begin::Vendors Javascript(used by this page)-->
-@foreach(getVendors('js') as $path)
-    {!! sprintf('<script src="%s"></script>', asset($path)) !!}
-@endforeach
-<!--end::Vendors Javascript-->
+            <!--begin::Vendors Javascript(used by this page)-->
+            @foreach(getVendors('js') as $path)
+            {!! sprintf('<script src="%s"></script>', asset($path)) !!}
+            @endforeach
+            <!--end::Vendors Javascript-->
 
-<!--begin::Custom Javascript(optional)-->
-@foreach(getCustomJs() as $path)
-    {!! sprintf('<script src="%s"></script>', asset($path)) !!}
-@endforeach
-<!--end::Custom Javascript-->
-@stack('scripts')
-<!--end::Javascript-->
+            <!--begin::Custom Javascript(optional)-->
+            @foreach(getCustomJs() as $path)
+            {!! sprintf('<script src="%s"></script>', asset($path)) !!}
+            @endforeach
+            <!--end::Custom Javascript-->
+            @stack('scripts')
+            <!--end::Javascript-->
 
-<script>
-    document.addEventListener('livewire:init', () => {
+            <script>
+                document.addEventListener('livewire:init', () => {
         Livewire.on('success', (message) => {
             toastr.success(message);
 
@@ -106,6 +121,61 @@
 
         Livewire.on('info', (message) => {
             toastr.info(message);
+        });
+
+        Livewire.on('confirm', (params = {}) => {
+            // Support both array and object format for params (for Livewire compatibility)
+            let p = {};
+            if (Array.isArray(params)) {
+                // If params is an array, convert to object with expected keys
+                // [title, text, confirmButtonText, cancelButtonText, onConfirmed, onCancelled, params]
+                [
+                    'title',
+                    'text', 
+                    'confirmButtonText',
+                    'cancelButtonText',
+                    'onConfirmed',
+                    'onCancelled',
+                    'params'
+                ].forEach((key, i) => {
+                    if (typeof params[i] !== 'undefined') p[key] = params[i];
+                });
+            } else if (typeof params === 'object' && params !== null) {
+                p = params;
+            }
+
+            console.log(p);
+
+            // Fallbacks for missing values
+            p.title = p.title || 'Konfirmasi';
+            p.text = p.text || '';
+            p.confirmButtonText = p.confirmButtonText || 'Ya';
+            p.cancelButtonText = p.cancelButtonText || 'Batal';
+
+            // Handle params object
+            if (p.params && typeof p.params === 'object') {
+                p.params = JSON.parse(JSON.stringify(p.params));
+            }
+
+            Swal.fire({
+                title: p.title.title,
+                text: p.title.text,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: p.confirmButtonText,
+                cancelButtonText: p.cancelButtonText,
+                customClass: {
+                    confirmButton: 'btn btn-primary',
+                    cancelButton: 'btn btn-secondary'
+                }
+            }).then((result) => {
+                console.log(result.isConfirmed);
+                if (result.isConfirmed) {
+                    Livewire.dispatch(p.title.onConfirmed, p.title.params);
+                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                    Livewire.dispatch(p.onCancelled);
+                }
+            });
         });
 
         Livewire.on('swal', (message, icon, confirmButtonText) => {
@@ -153,24 +223,24 @@
 
      // Define global JavaScript variables
     window.AuthToken = "{{ session('auth_token') }}";
-</script>
+            </script>
 
-@livewireScripts
-<!-- Check if Livewire is running -->
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
+            @livewireScripts
+            <!-- Check if Livewire is running -->
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
         if (typeof Livewire !== 'undefined') {
             console.log('Livewire is running');
         } else {
             console.log('Livewire is not defined');
         }
     });
-</script>
-<script type="text/javascript">
-    // Define global JavaScript variables
+            </script>
+            <script type="text/javascript">
+                // Define global JavaScript variables
     window.AuthToken = "{{ session('auth_token') }}";
-</script>
-</body>
-<!--end::Body-->
+            </script>
+        </body>
+        <!--end::Body-->
 
 </html>

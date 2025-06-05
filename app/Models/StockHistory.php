@@ -42,48 +42,51 @@ class StockHistory extends BaseModel
 
     public function rekanans()
     {
-        return $this->belongsTo(Rekanan::class, 'rekanan_id','id');
+        return $this->belongsTo(Rekanan::class, 'rekanan_id', 'id');
     }
 
     public function farms()
     {
-        return $this->belongsTo(Farm::class, 'farm_id','id');
+        return $this->belongsTo(Farm::class, 'farm_id', 'id');
     }
 
     public function kandangs()
     {
-        return $this->belongsTo(Kandang::class, 'kandang_id','id');
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
     }
 
     public function items()
     {
-        return $this->belongsTo(Item::class, 'item_id','id');
+        return $this->belongsTo(Item::class, 'item_id', 'id');
     }
 
     public function transaksi()
     {
-        return $this->belongsTo(Transaksi::class); 
+        return $this->belongsTo(Transaksi::class);
     }
 
     public function transaksiBeli()
     {
-        return $this->belongsTo(TransaksiBeli::class,'transaksi_id','id'); 
+        return $this->belongsTo(TransaksiBeli::class, 'transaksi_id', 'id');
     }
 
     public function transaksiDetail()
     {
-        return $this->belongsTo(TransaksiDetail::class, 'transaksi_detail_id','id');
+        return $this->belongsTo(TransaksiDetail::class, 'transaksi_detail_id', 'id');
     }
 
-    public function inventoryLocation(){
-        return $this->belongsTo(InventoryLocation::class, 'location_id','id');
+    public function inventoryLocation()
+    {
+        return $this->belongsTo(InventoryLocation::class, 'location_id', 'id');
     }
 
-    public function kelompokTernak(){
-        return $this->belongsTo(KelompokTernak::class, 'kelompok_ternak_id','id');
+    public function kelompokTernak()
+    {
+        return $this->belongsTo(KelompokTernak::class, 'kelompok_ternak_id', 'id');
     }
 
-    public function transaksiHarianDetail(){
-        return $this->hasMany(TransaksiHarianDetail::class,'stock_history_id','id');
+    public function transaksiHarianDetail()
+    {
+        return $this->hasMany(TransaksiHarianDetail::class, 'stock_history_id', 'id');
     }
 }

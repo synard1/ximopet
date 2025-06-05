@@ -14,7 +14,6 @@
             </div>
             <!--begin::Card title-->
 
-            @can('create livestock purchase')
             <!--begin::Card toolbar-->
             <div class="card-toolbar" id="cardToolbar">
                 <!--begin::Toolbar-->
@@ -29,8 +28,6 @@
                 <!--end::Toolbar-->
             </div>
             <!--end::Card toolbar-->
-
-            @endcan
 
         </div>
         <!--end::Card header-->

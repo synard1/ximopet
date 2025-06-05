@@ -21,10 +21,11 @@ class PemakaianStoksDataTable extends DataTable
      * @param QueryBuilder $query Results from query() method.
      */
 
-    private function formatRupiah($amount) {
+    private function formatRupiah($amount)
+    {
         // Convert the number to a string with two decimal places
         // $formattedAmount = number_format($amount, 2, ',', '.');
-    
+
         // Add the currency symbol and return the formatted number
         return "Rp " . $amount;
     }
@@ -50,7 +51,7 @@ class PemakaianStoksDataTable extends DataTable
             // ->filter(function ($query) use ($request) {
             //     if ($request->has('search') && $request->get('search')['value'] != '') {
             //         $searchTerm = $request->get('search')['value'];
-            
+
             //         $query->where(function ($q) use ($searchTerm) {
             //             $q->whereHas('TransaksiDetail', function ($subquery) use ($searchTerm) {
             //                 $subquery->where('tanggal', 'like', "%$searchTerm%");
@@ -60,7 +61,7 @@ class PemakaianStoksDataTable extends DataTable
             //             //     $subquery->where('nama', 'like', "%$searchTerm%");
             //             //     // Add more 'orWhere' conditions on 'farms' columns if needed
             //             // })
-            //             // ->orWhereHas('kandangs', function ($subquery) use ($searchTerm) {
+            //             // ->orWhereHas('coops', function ($subquery) use ($searchTerm) {
             //             //     $subquery->where('nama', 'like', "%$searchTerm%");
             //             //     // Add more 'orWhere' conditions on 'farms' columns if needed
             //             // });
@@ -72,14 +73,13 @@ class PemakaianStoksDataTable extends DataTable
                 // $tanggal = Carbon::parse($stokMutasi->tanggal);
                 // $tanggal->format('d-m-Y');
                 // return $tanggal;
-                    return $transaksi->tanggal->format('d-m-Y');
-
+                return $transaksi->tanggal->format('d-m-Y');
             })
             ->editColumn('farm_id', function (Transaksi $transaksi) {
                 return $transaksi->farms->nama ?? 'N/A';
             })
-            ->editColumn('kandang_id', function (Transaksi $transaksi) {
-                return $transaksi->kandangs->nama ?? 'N/A';
+            ->editColumn('coop_id', function (Transaksi $transaksi) {
+                return $transaksi->coops->nama ?? 'N/A';
             })
             ->editColumn('id', function (Transaksi $transaksi) {
                 // return $stokMutasi->id;
@@ -127,7 +127,7 @@ class PemakaianStoksDataTable extends DataTable
             // })
             ->setRowId('id')
             ->rawColumns(['']);
-            // ->make(true);
+        // ->make(true);
     }
 
 
@@ -139,13 +139,12 @@ class PemakaianStoksDataTable extends DataTable
         $query = $model->newQuery();
 
         // return $model->newQuery();
-        $query = $model::with(['farms','rekanans','items','transaksiDetail','stokHistory'])
-            ->where('jenis','Pemakaian')
+        $query = $model::with(['farms', 'rekanans', 'items', 'transaksiDetail', 'stokHistory'])
+            ->where('jenis', 'Pemakaian')
             // ->orderBy('tanggal', 'DESC')
             ->newQuery();
 
         return $query;
-
     }
 
     // public function query(StokMutasi $model): QueryBuilder
@@ -205,7 +204,7 @@ class PemakaianStoksDataTable extends DataTable
         return [
             Column::make('id')->searchable(false),
             Column::make('farm_id')->title('Farm'),
-            Column::make('kandang_id')->title('Kandang'),
+            Column::make('coop_id')->title('Kandang'),
             // Column::computed('tanggal_pembelian')->title('Tanggal Pembelian')->searchable(true),
             Column::make('tanggal')->title('Tanggal Pemakaian'),
             // Column::make('rekanan_id')->title('Nama Supplier')->searchable(true),
@@ -223,7 +222,7 @@ class PemakaianStoksDataTable extends DataTable
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
+            // ->width(60)
         ];
     }
 

@@ -15,24 +15,28 @@ class LivestockBatch extends BaseModel
 
     protected $fillable = [
         'livestock_id',
+        'source_type',
+        'source_id',
         'farm_id',
-        'kandang_id',
+        'coop_id',
         'livestock_strain_id',
         'livestock_strain_standard_id',
         'name',
         'livestock_strain_name',
         'start_date',
         'end_date',
-        'populasi_awal',
+        'initial_quantity',
         'quantity_depletion',
         'quantity_sales',
         'quantity_mutated',
-        'berat_awal',
-        'harga',
-        'pic',
+        'initial_weight', // konversi nilai dari weight / initial_quantity jika weight_type = total
+        'weight',
+        'weight_type',
+        'weight_per_unit',
+        'weight_total',
         'data',
         'status',
-        'keterangan',
+        'notes',
         'created_by',
         'updated_by',
         'livestock_purchase_item_id',
@@ -81,7 +85,7 @@ class LivestockBatch extends BaseModel
 
     public function kandang()
     {
-        return $this->belongsTo(Kandang::class);
+        return $this->belongsTo(Coop::class);
     }
 
     public function livestockStrain()

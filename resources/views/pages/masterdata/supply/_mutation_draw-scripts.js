@@ -82,7 +82,7 @@ document
                 },
             }).then((result) => {
                 if (result.isConfirmed) {
-                    Livewire.dispatch("delete_mutation", [
+                    Livewire.dispatch("deleteSupplyMutation", [
                         this.getAttribute("data-transaction-id"),
                     ]);
                 }

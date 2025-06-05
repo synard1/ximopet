@@ -63,12 +63,12 @@ class AuthenticatedSessionController extends Controller
             return redirect()->intended(RouteServiceProvider::HOME);
         } catch (\Exception $e) {
             // Log failed login attempt
-            LoginLogService::log(
-                null,
-                'failed',
-                'form',
-                ['email' => $request->email, 'error' => $e->getMessage()]
-            );
+            // LoginLogService::log(
+            //     null,
+            //     'failed',
+            //     'form',
+            //     ['email' => $request->email, 'error' => $e->getMessage()]
+            // );
 
             throw $e;
         }

@@ -220,7 +220,7 @@ class Create extends Component
                     [
                         'livestock_id' => $livestock->id,
                         'farm_id' => $livestock->farm_id,
-                        'kandang_id' => $livestock->kandang_id,
+                        'coop_id' => $livestock->coop_id,
                         'item_id' => $feed->id,
                         'unit_id' => $feed->payload['unit_id'],
                         'type' => 'feed',
@@ -389,7 +389,7 @@ class Create extends Component
     //                 [
     //                     'livestock_id' => $livestock->id,
     //                     'farm_id' => $livestock->farm_id,
-    //                     'kandang_id' => $livestock->kandang_id,
+    //                     'coop_id' => $livestock->coop_id,
     //                     'item_id' => $feed->id,
     //                     'unit_id' => $feed->payload['unit_id'],
     //                 ],

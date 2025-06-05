@@ -28,31 +28,6 @@
     <div class="card-body py-4">
         <!--begin::Table-->
         <div class="table-responsive">
-            <form id="filter-form" class="mb-5">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label for="farm_id" class="form-label">Farm</label>
-                        <select class="form-select" id="farm_id" name="farm_id">
-                            <option value="">Pilih Farm</option>
-                            @foreach($farms as $farm)
-                            <option value="{{ $farm->id }}">{{ $farm->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="supply_id" class="form-label">Nama Pakan</label>
-                        <select class="form-select" id="supply_id" name="supply_id">
-                            <option value="">Pilih Pakan</option>
-                            @foreach($supplies as $supply)
-                            <option value="{{ $supply->id }}">{{ $supply->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-3 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary">Filter</button>
-                    </div>
-                </div>
-            </form>
             {{ $dataTable->table() }}
         </div>
         <!--end::Table-->

@@ -374,6 +374,12 @@ class LivestockCostService
             'version' => '1.24' // Increment version for this change
         ];
 
+        // dd([
+        //     'summaryStats' => $summaryStats,
+        //     'tanggal' => $tanggal,
+        //     'livestockId' => $livestockId
+        // ]);
+
         // Save to LivestockCost
         $livestockCost = LivestockCost::updateOrCreate(
             [
@@ -421,6 +427,8 @@ class LivestockCostService
                 ]
             ]
         );
+
+        // dd($livestockCost);
 
         return $livestockCost;
     }

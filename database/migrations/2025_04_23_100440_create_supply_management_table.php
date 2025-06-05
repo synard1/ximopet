@@ -86,7 +86,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('livestock_id')->nullable();
             $table->uuid('farm_id')->nullable();
-            $table->uuid('kandang_id')->nullable();
+            $table->uuid('coop_id')->nullable();
             $table->uuid('supply_id');
             $table->uuid('supply_purchase_id');
             $table->date('date');
@@ -173,7 +173,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('livestock_id')->nullable();
             $table->uuid('farm_id')->constrained()->onDelete('cascade');
-            $table->uuid('kandang_id')->nullable();
+            $table->uuid('coop_id')->nullable();
             $table->uuid('item_id');
             $table->uuid('unit_id');
             $table->string('type');
@@ -186,7 +186,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('kandang_id')->references('id')->on('master_kandangs');
+            $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });

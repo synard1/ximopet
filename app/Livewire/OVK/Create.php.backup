@@ -14,7 +14,7 @@ class Create extends Component
 {
     public $supply_id;
     public $farm_id;
-    public $kandang_id;
+    public $coop_id;
     public $quantity;
     public $unit_id;
     public $usage_date;
@@ -24,7 +24,7 @@ class Create extends Component
     protected $rules = [
         'supply_id' => 'required|exists:supplies,id',
         'farm_id' => 'required|exists:farms,id',
-        'kandang_id' => 'required|exists:kandangs,id',
+        'coop_id' => 'required|exists:kandangs,id',
         'quantity' => 'required|numeric|min:0',
         'unit_id' => 'required|exists:units,id',
         'usage_date' => 'required|date',
@@ -62,7 +62,7 @@ class Create extends Component
             OVKRecord::create([
                 'supply_id' => $this->supply_id,
                 'farm_id' => $this->farm_id,
-                'kandang_id' => $this->kandang_id,
+                'coop_id' => $this->coop_id,
                 'quantity' => $this->quantity,
                 'unit_id' => $this->unit_id,
                 'usage_date' => $this->usage_date,
