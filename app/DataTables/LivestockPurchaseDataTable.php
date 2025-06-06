@@ -26,22 +26,25 @@ class LivestockPurchaseDataTable extends DataTable
             })
             ->editColumn('farm_id', function (Transaksi $transaksi) {
                 $detail = $transaksi->details->first();
-                if ($detail && $detail->livestock && $detail->livestock->farm) {
-                    return $detail->livestock->farm->name;
-                }
-                return 'N/A';
+                return $detail && $detail->livestock && $detail->livestock->farm
+                    ? $detail->livestock->farm->name
+                    : 'N/A';
             })
             ->editColumn('coop_id', function (Transaksi $transaksi) {
                 $detail = $transaksi->details->first();
-                if ($detail && $detail->livestock && $detail->livestock->coop) {
-                    return $detail->livestock->coop->name;
-                }
-                // Fallback: cek batch jika ada
-                $batch = $detail->livestockBatches->first() ?? null;
-                if ($batch && $batch->coop_id) {
-                    return optional(\App\Models\Coop::find($batch->coop_id))->name ?? 'N/A';
-                }
-                return 'N/A';
+                return $detail && $detail->livestock && $detail->livestock->coop
+                    ? $detail->livestock->coop->name
+                    : 'N/A';
+            })
+            ->filterColumn('farm_id', function ($query, $keyword) {
+                $query->whereHas('details.livestock.farm', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('coop_id', function ($query, $keyword) {
+                $query->whereHas('details.livestock.coop', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
             })
             ->editColumn('tanggal', function (Transaksi $transaksi) {
                 return $transaksi->tanggal->format('d-m-Y');
@@ -98,10 +101,7 @@ class LivestockPurchaseDataTable extends DataTable
         //         $q->where('nama', 'like', "%{$keyword}%");
         //     });
         // })
-        // ->filterColumn('coop_id', function ($query, $keyword) {
-        //     $query->whereHas('coops', function ($q) use ($keyword) {
-        //         $q->where('nama', 'like', "%{$keyword}%");
-        //     });
+
         // })
         // ->filterColumn('kelompok_ternak_id', function ($query, $keyword) {
         //     $query->whereHas('kelompokTernak', function ($q) use ($keyword) {
@@ -116,19 +116,9 @@ class LivestockPurchaseDataTable extends DataTable
      */
     public function query(Transaksi $model): QueryBuilder
     {
-        $query = $model->newQuery();
-
-        // return $model->newQuery();
-        $query = $model::with('details.livestock.farm')
-            // ->where('jenis', 'DOC')
-            // ->whereHas('details', function ($query) {
-            //     // $query->where('jenis_barang', 'DOC');
-            // })
-            // ->where('user_id',auth()->user()->id)
-            ->orderBy('tanggal', 'ASC')
-            ->newQuery();
-
-        return $query;
+        return $model->newQuery()
+            ->with(['details.livestock.farm', 'details.livestock.coop', 'vendor'])
+            ->orderBy('tanggal', 'ASC');
     }
 
     /**
@@ -137,7 +127,7 @@ class LivestockPurchaseDataTable extends DataTable
     public function html(): HtmlBuilder
     {
         return $this->builder()
-            ->setTableId('docs-table')
+            ->setTableId('livestock-purchases-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('Bfrtip')
@@ -166,11 +156,11 @@ class LivestockPurchaseDataTable extends DataTable
     {
         return [
             Column::make('DT_RowIndex')->title('No')->searchable(false),
-            Column::make('id')->title('ID')->searchable(false)->visible(env('APP_ENV') === 'local')->visible(false),
+            Column::make('id')->title('ID')->searchable(true)->visible(env('APP_ENV') === 'local'),
             Column::make('invoice_number')->searchable(true),
             Column::make('tanggal')->title('Tanggal Pembelian')->searchable(true),
-            Column::computed('farm_id')->title('Farm')->searchable(true)->visible(false),
-            Column::computed('coop_id')->title('Kandang')->searchable(true)->visible(false),
+            Column::computed('farm_id')->title('Farm')->searchable(true)->visible(true),
+            Column::computed('coop_id')->title('Kandang')->searchable(true)->visible(true),
             Column::make('vendor_id')->title('Supplier')->searchable(true)->visible(true),
             Column::make('expedition_id')->title('Ekspedisi')->searchable(true)->visible(false),
             Column::make('details.jumlah')->title('Jumlah')->searchable(false),

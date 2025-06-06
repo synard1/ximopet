@@ -20,9 +20,6 @@ class Livestock extends BaseModel
         'farm_id',
         'coop_id',
         'name',
-        'livestock_strain_id',
-        'livestock_strain_standard_id',
-        'livestock_strain_name',
         'start_date',
         'end_date',
         'initial_quantity',
@@ -86,7 +83,7 @@ class Livestock extends BaseModel
 
     public function isLocked()
     {
-        return $this->status === 'Locked';
+        return $this->status === 'locked';
     }
 
     // Helper method to get total current population

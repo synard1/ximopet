@@ -159,7 +159,7 @@ class LivestockDataTable extends DataTable
         return [
             Column::make('name'),
             Column::make('start_date'),
-            Column::make('populasi_awal'),
+            Column::make('initial_quantity'),
             Column::computed('umur'),
             Column::computed('jumlah_mati')
                 ->title(trans('content.ternak', [], 'id') . ' Mati')

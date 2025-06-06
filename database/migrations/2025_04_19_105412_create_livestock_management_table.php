@@ -12,12 +12,9 @@ return new class extends Migration {
         // Livestock (master ternak)
         Schema::create('livestocks', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('livestock_strain_id')->nullable(); // Add this!
-            $table->uuid('livestock_strain_standard_id')->nullable();
             $table->uuid('farm_id');
             $table->uuid('coop_id');
             $table->string('name'); //name for batch code / periode
-            $table->string('livestock_strain_name'); //jenis
             $table->dateTime('start_date'); //tanggal mulai
             $table->dateTime('end_date')->nullable();
             $table->integer('initial_quantity'); //jumlah awal
@@ -39,10 +36,6 @@ return new class extends Migration {
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('coop_id')->references('id')->on('coops');
-            $table->foreign('livestock_strain_id')->references('id')->on('livestock_strains'); // Add this!
-            $table->foreign('livestock_strain_standard_id')->references('id')->on('livestock_strain_standards'); // Add this!
-
-
             $table->index(['id', 'start_date']);
         });
 
@@ -103,8 +96,11 @@ return new class extends Migration {
 
         Schema::create('livestock_purchase_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->date('tanggal');
             $table->foreignUuid('livestock_purchase_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('livestock_strain_id')->constrained('livestock_strains');
+            $table->foreignUuid('livestock_strain_standard_id')->nullable()->constrained('livestock_strain_standards');
 
             // Quantity information
             $table->integer('quantity');

@@ -14,6 +14,9 @@ class LivestockPurchaseItem extends BaseModel
     protected $fillable = [
         'livestock_purchase_id',
         'livestock_id',
+        'tanggal',
+        'livestock_strain_id',
+        'livestock_strain_standard_id',
         'quantity',
         'price_value',
         'price_type',
@@ -31,6 +34,7 @@ class LivestockPurchaseItem extends BaseModel
     ];
 
     protected $casts = [
+        'tanggal' => 'datetime',
         'price_value' => 'decimal:2',
         'price_per_unit' => 'decimal:2',
         'price_total' => 'decimal:2',
