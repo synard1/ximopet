@@ -99,8 +99,8 @@ class CoopsDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('DT_RowIndex')->title('No')->addClass('text-nowrap')->searchable(false)->visible(false),
-            Column::make('code')->searchable(false),
+            Column::make('DT_RowIndex')->title('No')->addClass('text-nowrap')->searchable(false)->visible(true),
+            Column::make('code')->searchable(true),
             Column::computed('farm')->searchable(true),
             Column::make('name'),
             Column::make('status')->title('Status')->addClass('text-nowrap'),

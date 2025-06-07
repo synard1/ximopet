@@ -20,6 +20,7 @@ class FarmsDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+            ->addIndexColumn()
             ->rawColumns(['farm', 'name'])
             ->editColumn('name', function (Farm $farm) {
                 return '<a href="#" class="farm-detail" data-farm-id="' . $farm->id . '">' . $farm->name . '</a>';
@@ -79,7 +80,8 @@ class FarmsDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('code')->searchable(false),
+            Column::make('DT_RowIndex')->title('#')->searchable(false)->orderable(false),
+            Column::make('code')->searchable(true),
             Column::make('name'),
             Column::make('address')->visible(false),
             Column::make('phone_number')->visible(false),

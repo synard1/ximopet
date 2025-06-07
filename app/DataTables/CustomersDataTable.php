@@ -19,6 +19,7 @@ class CustomersDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+            ->addIndexColumn()
             ->rawColumns(['customer'])
             // ->editColumn('customer', function (Customer $customer) {
             //     return view('pages/apps.customer-management.customers.columns._customer', compact('customer'));
@@ -63,10 +64,11 @@ class CustomersDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('code')->searchable(false),
+            Column::make('DT_RowIndex')->title('#')->addClass('text-nowrap')->searchable(false)->orderable(false),
+            Column::make('code')->searchable(true),
             Column::make('name'),
-            Column::make('address'),
-            Column::make('phone_number'),
+            Column::make('address')->visible(false),
+            Column::make('phone_number')->visible(false),
             Column::make('contact_person'),
             Column::make('email'),
             Column::make('status'),

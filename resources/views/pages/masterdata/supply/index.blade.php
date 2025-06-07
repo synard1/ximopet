@@ -13,6 +13,7 @@
         <div class="card-header border-0 pt-6">
             <!--begin::Card title-->
             <div class="card-title">
+                {{--
                 <!--begin::Search-->
                 <div class="d-flex align-items-center position-relative my-1">
                     {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
@@ -20,7 +21,7 @@
                         class="form-control form-control-solid w-250px ps-13" placeholder="Cari Supplier"
                         id="mySearchInput" />
                 </div>
-                <!--end::Search-->
+                <!--end::Search--> --}}
             </div>
             <!--begin::Card title-->
 

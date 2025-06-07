@@ -46,7 +46,7 @@ class FeedPurchaseDataTable extends DataTable
             })
             ->editColumn('coop_id', function (FeedPurchaseBatch $transaction) {
                 $firstPurchase = $transaction->feedPurchases->first();
-                return $firstPurchase?->livestok?->kandang?->nama ?? '-';
+                return $firstPurchase?->livestok?->coop?->name ?? '-';
             })
             ->editColumn('total', function (FeedPurchaseBatch $transaction) {
                 $total = $transaction->feedPurchases->sum(function ($purchase) {

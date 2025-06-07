@@ -28,7 +28,7 @@ class SupplyDataTable extends DataTable
                 return $supply->created_at->format('d M Y, h:i a');
             })
             ->addColumn('action', function (Supply $supply) {
-                return view('pages/masterdata.supply._actions', compact('supply'));
+                return view('pages.masterdata.supply._actions', compact('supply'));
             })
             ->setRowId('id');
     }
@@ -52,6 +52,7 @@ class SupplyDataTable extends DataTable
             ->setTableId('supplys-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
+            ->dom('Bfrtip')
             // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
@@ -66,20 +67,20 @@ class SupplyDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex', 'No.')
-            ->title('No.')
-            ->addClass('text-center')
-            ->width(50),
-            Column::make('code')->searchable(false)->visible(false),
-            Column::make('name'),
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
+            Column::make('code')->searchable(true),
+            Column::make('name')->searchable(true),
             // Column::make('unit'),
-            Column::make('status'),
+            Column::make('status')->searchable(true),
             Column::make('created_at')->title('Created Date')->visible(false)->addClass('text-nowrap')->searchable(false),
             Column::computed('action')
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                
-                // ->width(60)
+
+            // ->width(60)
         ];
     }
 

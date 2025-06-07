@@ -19,6 +19,7 @@ class SuppliersDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+            ->addIndexColumn()
             ->rawColumns(['supplier'])
             // ->editColumn('supplier', function (Supplier $supplier) {
             //     return view('pages/apps.supplier-management.suppliers.columns._supplier', compact('supplier'));
@@ -64,12 +65,13 @@ class SuppliersDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('code')->searchable(false),
+            Column::make('DT_RowIndex')->title('#')->addClass('text-nowrap')->searchable(false)->orderable(false),
+            Column::make('code')->searchable(true),
             Column::make('name'),
-            Column::make('address'),
-            Column::make('phone_number'),
-            Column::make('contact_person'),
-            Column::make('email'),
+            Column::make('address')->visible(false),
+            Column::make('phone_number')->visible(false),
+            Column::make('contact_person')->visible(false),
+            Column::make('email')->visible(false),
             Column::make('status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
             Column::computed('action')

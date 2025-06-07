@@ -19,6 +19,7 @@ class ExpeditionDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+            ->addIndexColumn()
             ->rawColumns(['expedition'])
             // ->editColumn('supplier', function (Supplier $supplier) {
             //     return view('pages/apps.supplier-management.suppliers.columns._supplier', compact('supplier'));
@@ -63,12 +64,13 @@ class ExpeditionDataTable extends DataTable
     public function getColumns(): array
     {
         return [
+            Column::make('DT_RowIndex')->title('#')->addClass('text-nowrap')->searchable(false)->orderable(false),
             Column::make('code')->title('Kode'),
             Column::make('name')->title('Nama'),
-            Column::make('address')->title('Alamat'),
-            Column::make('phone_number')->title('Telp'),
-            Column::make('contact_person')->title('Kontak Person'),
-            Column::make('email')->title('Email'),
+            Column::make('address')->title('Alamat')->visible(false),
+            Column::make('phone_number')->title('Telp')->visible(false),
+            Column::make('contact_person')->title('Kontak Person')->visible(false),
+            Column::make('email')->title('Email')->visible(false),
             Column::make('status')->title('Status'),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
             Column::computed('action')

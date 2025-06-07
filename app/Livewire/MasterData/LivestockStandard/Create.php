@@ -1,20 +1,20 @@
-    <?php
+<?php
 
-    namespace App\Livewire\MasterData\LivestockStandard;
+namespace App\Livewire\MasterData\LivestockStandard;
 
-    use Livewire\Component;
+use Livewire\Component;
 use App\Models\LivestockStrain;
-    use App\Models\LivestockStrainStandard;
+use App\Models\LivestockStrainStandard;
 
-    class Create extends Component
-    {
+class Create extends Component
+{
     public $standards = [];
     public $strainId;
     public $strain_id = '';
     public $strain_name = '';
     public $description = '';
     public $isEditing = false;
-        public $showForm = false;
+    public $showForm = false;
     public $strainStandardId;
     public $livestockStrain = [];
 
@@ -33,14 +33,14 @@ use App\Models\LivestockStrain;
         'standards.*.standar_data.fcr.target' => 'required|numeric|min:0',
     ];
 
-        protected $listeners = [
+    protected $listeners = [
         'editStrainStandard' => 'loadStrainStandard',
         'removeStandard' => 'removeStandard',
         'resetInputBobot' => 'resetInputBobot',
         'delete_strain' => 'deleteStrain',
         'deleteStrainStandard' => 'deleteStrainStandard',
         'confirmDeleteStrainStandard' => 'confirmDeleteStrainStandard',
-            'showCreateForm' => 'showCreateForm',
+        'showCreateForm' => 'showCreateForm',
         'closeForm' => 'closeForm',
     ];
 
@@ -78,8 +78,8 @@ use App\Models\LivestockStrain;
         }
 
         $this->isEditing = true;
-            $this->showForm = true;
-            $this->dispatch('hide-datatable');
+        $this->showForm = true;
+        $this->dispatch('hide-datatable');
         // dd($this->strainStandardId);
     }
 
@@ -170,7 +170,7 @@ use App\Models\LivestockStrain;
     public function saveStandard($index)
     {
         // Validate the standard data
-            $this->validate([
+        $this->validate([
             "standards.{$index}.umur" => 'required|numeric|min:0',
             "standards.{$index}.standar_data.bobot.min" => 'required|numeric|min:0',
             "standards.{$index}.standar_data.bobot.max" => 'required|numeric|min:0',
@@ -187,8 +187,8 @@ use App\Models\LivestockStrain;
         $umur = (int)$this->standards[$index]['umur']; // Cast to integer
         if (!isset($umur)) { // Check if umur is not set
             session()->flash("message-{$index}", 'Umur cannot be empty.');
-                return;
-            }
+            return;
+        }
 
         // Retrieve the existing StrainStandard
         $strainStandard = LivestockStrainStandard::findOrFail($this->strainStandardId);
@@ -262,10 +262,10 @@ use App\Models\LivestockStrain;
     public function resetInputStandard()
     {
         $this->resetForm();
-        }
+    }
 
-        public function deleteStrain($strainId)
-        {
+    public function deleteStrain($strainId)
+    {
         $strain = LivestockStrain::findOrFail($strainId);
         $strain->delete();
         $this->dispatch('success', 'Strain deleted successfully');
@@ -279,8 +279,8 @@ use App\Models\LivestockStrain;
         $livestock = $strainStandard->livestocks;
         if ($livestock->count() > 0) {
             $this->dispatch('error', 'Strain Standard cannot be deleted because it has associated livestock.');
-                return;
-            }
+            return;
+        }
 
         // Check if standard_data is not empty
         if ($strainStandard->standar_data) {
@@ -315,5 +315,5 @@ use App\Models\LivestockStrain;
         $this->resetInputStandard();
         $this->showForm = false;
         $this->dispatch('show-datatable');
-        }
     }
+}

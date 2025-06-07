@@ -52,6 +52,7 @@ class UnitsDataTable extends DataTable
             ->setTableId('units-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
+            ->dom('Bfrtip')
             // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
@@ -69,11 +70,11 @@ class UnitsDataTable extends DataTable
                 ->title('No.')
                 ->addClass('text-center')
                 ->width(50),
-            Column::make('code')->searchable(false)->visible(false),
-            Column::make('type'),
-            Column::make('symbol'),
-            Column::make('name'),
-            Column::make('status'),
+            Column::make('code')->searchable(true),
+            Column::make('type')->searchable(true),
+            Column::make('symbol')->searchable(true),
+            Column::make('name')->searchable(true),
+            Column::make('status')->searchable(true),
             Column::make('created_at')->title('Created Date')->visible(false)->addClass('text-nowrap')->searchable(false),
             Column::computed('action')
                 // ->addClass('text-end text-nowrap')

@@ -52,10 +52,17 @@ class WorkersDataTable extends DataTable
             ->setTableId('workers-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
+            ->dom('Bfrtip')
             // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             ->orderBy(1)
+            ->searchDelay(1000)
+            ->pageLength(10)
+            ->searching(true)
+            ->info(false)
+            ->paging(true)
+            ->ordering(true)
             ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/masterdata/worker/_draw-scripts.js')) . "}");
     }
 
@@ -66,18 +73,18 @@ class WorkersDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex', 'No.')
-            ->title('No.')
-            ->addClass('text-center')
-            ->width(50),
-            Column::make('name'),
-            Column::make('status'),
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
+            Column::make('name')->searchable(true),
+            Column::make('status')->searchable(true),
             Column::make('created_at')->title('Created Date')->visible(false)->addClass('text-nowrap')->searchable(false),
             Column::computed('action')
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                
-                // ->width(60)
+
+            // ->width(60)
         ];
     }
 
