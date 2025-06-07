@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-    Master Data Jenis Pakan
+    Master Data Supply
     @endsection
 
     @section('breadcrumbs')
