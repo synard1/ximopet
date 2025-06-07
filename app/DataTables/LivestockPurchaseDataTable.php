@@ -26,15 +26,11 @@ class LivestockPurchaseDataTable extends DataTable
             })
             ->editColumn('farm_id', function (Transaksi $transaksi) {
                 $detail = $transaksi->details->first();
-                return $detail && $detail->livestock && $detail->livestock->farm
-                    ? $detail->livestock->farm->name
-                    : 'N/A';
+                return $detail?->livestock?->farm?->name ?? '-';
             })
             ->editColumn('coop_id', function (Transaksi $transaksi) {
                 $detail = $transaksi->details->first();
-                return $detail && $detail->livestock && $detail->livestock->coop
-                    ? $detail->livestock->coop->name
-                    : 'N/A';
+                return $detail?->livestock?->coop?->name ?? 'N/A';
             })
             ->filterColumn('farm_id', function ($query, $keyword) {
                 $query->whereHas('details.livestock.farm', function ($q) use ($keyword) {

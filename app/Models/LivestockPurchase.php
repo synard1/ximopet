@@ -36,6 +36,11 @@ class LivestockPurchase extends BaseModel
         return $this->hasMany(Livestock::class, 'purchase_id', 'id');
     }
 
+    public function livestockBatches()
+    {
+        return $this->hasMany(LivestockBatch::class, 'source_id', 'id');
+    }
+
     public function vendor()
     {
         return $this->belongsTo(Partner::class, 'vendor_id');

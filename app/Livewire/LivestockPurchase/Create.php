@@ -545,6 +545,22 @@ class Create extends Component
             foreach ($this->items as $idx => $item) {
                 try {
                     $kandang = Coop::findOrFail($this->coop_id);
+
+                    // Validasi status kandang dan tanggal
+                    if ($kandang->status === 'in_use') {
+                        // Cek apakah ada data livestock dengan tanggal berbeda
+                        $existingLivestock = Livestock::where('coop_id', $kandang->id)
+                            ->where('status', 'active')
+                            ->whereDate('start_date', '!=', $this->date)
+                            ->first();
+
+                        if ($existingLivestock) {
+                            throw ValidationException::withMessages([
+                                'items' => "Kandang {$kandang->name} sudah digunakan dengan tanggal yang berbeda ({$existingLivestock->start_date->format('d-m-Y')}). Tidak dapat menambahkan data dengan tanggal {$this->date}."
+                            ]);
+                        }
+                    }
+
                     $this->validateKandangCapacity($item, $kandang);
                 } catch (ValidationException $e) {
                     $this->errorItems[$idx] = $e->validator->errors()->first();
@@ -633,14 +649,14 @@ class Create extends Component
 
                 // --- Refactor proses simpan item ---
                 $criteria = [
-                    'tanggal' => $this->date,
                     'livestock_purchase_id' => $purchase->id,
-                    'livestock_strain_id' => $item['livestock_strain_id'] ?? null,
+                    'livestock_id' => $livestock->id,
                 ];
                 $purchaseItem = LivestockPurchaseItem::where($criteria)->first();
                 if ($purchaseItem) {
                     $purchaseItem->update([
-                        'livestock_id' => $livestock->id,
+                        'tanggal' => $this->date,
+                        'livestock_strain_id' => $item['livestock_strain_id'],
                         'livestock_strain_standard_id' => $item['livestock_strain_standard_id'] ?? null,
                         'quantity' => $item['quantity'],
                         'price_value' => $item['price_value'],
@@ -657,8 +673,11 @@ class Create extends Component
                     ]);
                     $newItemIds[] = $purchaseItem->id;
                 } else {
-                    $purchaseItem = LivestockPurchaseItem::create(array_merge($criteria, [
+                    $purchaseItem = LivestockPurchaseItem::create([
+                        'tanggal' => $this->date,
+                        'livestock_purchase_id' => $purchase->id,
                         'livestock_id' => $livestock->id,
+                        'livestock_strain_id' => $item['livestock_strain_id'],
                         'livestock_strain_standard_id' => $item['livestock_strain_standard_id'] ?? null,
                         'quantity' => $item['quantity'],
                         'price_value' => $item['price_value'],
@@ -673,7 +692,7 @@ class Create extends Component
                         'notes' => $item['notes'] ?? null,
                         'created_by' => auth()->id(),
                         'updated_by' => auth()->id(),
-                    ]));
+                    ]);
                     $newItemIds[] = $purchaseItem->id;
                 }
 
@@ -762,9 +781,8 @@ class Create extends Component
             $shouldExist = [];
             foreach ($this->items as $item) {
                 $shouldExist[] = [
-                    'tanggal' => $this->date,
                     'livestock_purchase_id' => $purchase->id,
-                    'livestock_strain_id' => $item['livestock_strain_id'] ?? null,
+                    'livestock_id' => $livestock->id,
                 ];
             }
 
@@ -776,9 +794,8 @@ class Create extends Component
                 $found = false;
                 foreach ($shouldExist as $criteria) {
                     if (
-                        $dbItem->tanggal == $criteria['tanggal'] &&
                         $dbItem->livestock_purchase_id == $criteria['livestock_purchase_id'] &&
-                        $dbItem->livestock_strain_id == $criteria['livestock_strain_id']
+                        $dbItem->livestock_id == $criteria['livestock_id']
                     ) {
                         $found = true;
                         break;

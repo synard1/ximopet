@@ -7,33 +7,7 @@
     @section('breadcrumbs')
     @endsection
     <div class="card">
-        {{--
-        <!--begin::Card header-->
-        <div class="card-header border-0 pt-6">
-            <!--begin::Card title-->
-            <div class="card-title">
-            </div>
-            <!--begin::Card title-->
 
-            <!--begin::Card toolbar-->
-            <div class="card-toolbar" id="cardToolbar">
-                <!--begin::Toolbar-->
-                <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
-                    @if (auth()->user()->can('create farm management'))
-                    <!--begin::Add user-->
-                    <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('create')">
-                        {!! getIcon('plus', 'fs-2', '', 'i') !!}
-                        Tambah Data
-                    </button>
-                    <!--end::Add user-->
-                    @endif
-                </div>
-                <!--end::Toolbar-->
-            </div>
-            <!--end::Card toolbar-->
-
-        </div>
-        <!--end::Card header--> --}}
 
         <div class="card-body py-4">
             <ul class="nav nav-tabs nav-line-tabs mb-5 fs-6">
@@ -66,6 +40,22 @@
                                         placeholder="Cari Operator" id="mySearchInput2" />
                                 </div> --}}
                             </div>
+                            <!--begin::Card toolbar-->
+                            <div class="card-toolbar flex-row-fluid justify-content-end gap-5">
+                                <div class="w-100 mw-150px">
+                                    <!--begin::Select2-->
+                                    <select class="form-select form-select-solid" data-control="select2"
+                                        data-hide-search="true" data-placeholder="Status"
+                                        data-kt-farm-status-filter="status">
+                                        <option></option>
+                                        <option value="all">Semua</option>
+                                        <option value="active">Aktif</option>
+                                        <option value="inactive">Tidak Aktif</option>
+                                    </select>
+                                    <!--end::Select2-->
+                                </div>
+                            </div>
+                            <!--end::Card toolbar-->
                             <!--begin::Toolbar-->
                             <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
                                 @if (auth()->user()->can('create farm management'))
@@ -81,9 +71,8 @@
                         </div>
                         <div class="card-body py-4">
                             <div class="table-responsive">
-                                {!! $dataTable->table(['class' => 'table table-striped table-row-bordered gy-5 gs-7'],
-                                true)
-                                !!}
+                                {!! $dataTable->table(['class' => 'table table-striped table-row-bordered gy-5
+                                gs-7'],true)!!}
                             </div>
                         </div>
                     </div>
@@ -219,6 +208,47 @@
         {{ $dataTable->scripts() }}
         <script>
             $(document).ready(function() {
+                // Class definition
+                var KTFarmManagement = function () {
+                    // Shared variables
+                    var table;
+                    var datatable;
+
+                    // Handle status filter dropdown
+                    var handleStatusFilter = () => {
+                        // Ambil instance DataTable dari Yajra
+                        var table = window.LaravelDataTables['farms-table'];
+
+                        // Filter status
+                        const filterStatus = document.querySelector('[data-kt-farm-status-filter="status"]');
+                        $(filterStatus).on('change', function(e) {
+                            let value = e.target.value;
+                            if (value === 'all') value = '';
+                            // Ganti angka 3 dengan index kolom status (mulai dari 0)
+                            table.column(6).search(value).draw();
+                        });
+                    }
+
+
+                    // Public methods
+                    return {
+                        init: function () {
+                            table = document.querySelector('#farms-table');
+
+                            if (!table) {
+                                return;
+                            }
+
+                            handleStatusFilter();
+                        }
+                    };
+                }();
+
+                // On document ready
+                KTUtil.onDOMContentLoaded(function () {
+                    KTFarmManagement.init();
+                });
+
                 $('.nav-link').on('shown.bs.tab', function(e) {
                     if (e.target.href.includes('#kt_tab_operator')) {
                         var table = new DataTable('#operatorsTable');

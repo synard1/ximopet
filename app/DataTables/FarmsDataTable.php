@@ -87,7 +87,7 @@ class FarmsDataTable extends DataTable
             Column::make('phone_number')->visible(false),
             Column::make('contact_person')->visible(false),
             // Column::computed('capacity'),
-            Column::make('status'),
+            Column::make('status')->searchable(true),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false),
             Column::computed('action')
                 ->exportable(false)
