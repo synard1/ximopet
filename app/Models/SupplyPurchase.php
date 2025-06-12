@@ -29,6 +29,11 @@ class SupplyPurchase extends BaseModel
 
     protected $casts = [];
 
+    public function livestock()
+    {
+        return $this->belongsTo(Livestock::class, 'livestock_id', 'id');
+    }
+
     public function farm()
     {
         return $this->belongsTo(Farm::class, 'farm_id', 'id');
