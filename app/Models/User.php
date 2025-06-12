@@ -92,4 +92,96 @@ class User extends Authenticatable implements MustVerifyEmail
 
         return null; // see the note above in Gate::before about why null must be returned here.
     }
+
+    /**
+     * Temp Auth relationships
+     */
+
+    /**
+     * Hak autorisasi yang dimiliki user ini
+     */
+    public function tempAuthAuthorizers()
+    {
+        return $this->hasMany(TempAuthAuthorizer::class);
+    }
+
+    /**
+     * Hak autorisasi yang diberikan oleh user ini ke user lain
+     */
+    public function givenTempAuthAuthorizers()
+    {
+        return $this->hasMany(TempAuthAuthorizer::class, 'authorized_by');
+    }
+
+    /**
+     * Log autorisasi temporer yang diterima user ini
+     */
+    public function tempAuthLogs()
+    {
+        return $this->hasMany(TempAuthLog::class);
+    }
+
+    /**
+     * Log autorisasi temporer yang diberikan oleh user ini
+     */
+    public function givenTempAuthLogs()
+    {
+        return $this->hasMany(TempAuthLog::class, 'authorizer_user_id');
+    }
+
+    /**
+     * Helper methods untuk temp authorization
+     */
+
+    /**
+     * Check apakah user dapat memberikan autorisasi temporer
+     */
+    public function canGrantTempAuthorization(): bool
+    {
+        // Check by role
+        $authorizedRoles = config('temp_auth.user.authorized_roles', []);
+        if ($this->hasAnyRole($authorizedRoles)) {
+            return true;
+        }
+
+        // Check by permission
+        $authorizedPermissions = config('temp_auth.user.authorized_permissions', []);
+        if ($this->hasAnyPermission($authorizedPermissions)) {
+            return true;
+        }
+
+        // Check by database field (if configured)
+        $dbField = config('temp_auth.user.database_field');
+        if ($dbField && isset($this->attributes[$dbField])) {
+            return (bool) $this->attributes[$dbField];
+        }
+
+        // Check by explicit authorizer record
+        return $this->tempAuthAuthorizers()->active()->exists();
+    }
+
+    /**
+     * Get active temp auth authorizer record
+     */
+    public function getActiveTempAuthAuthorizer()
+    {
+        return $this->tempAuthAuthorizers()->active()->first();
+    }
+
+    /**
+     * Check apakah user bisa memberikan autorisasi untuk komponen tertentu
+     */
+    public function canAuthorizeTempAccessFor(string $component): bool
+    {
+        if (!$this->canGrantTempAuthorization()) {
+            return false;
+        }
+
+        $authorizer = $this->getActiveTempAuthAuthorizer();
+        if ($authorizer) {
+            return $authorizer->canAuthorizeComponent($component);
+        }
+
+        return true; // Jika authorization via role/permission, allow semua komponen
+    }
 }
