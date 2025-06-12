@@ -7,6 +7,7 @@ use App\Models\Mutation;
 use App\Models\MutationItem;
 use App\Models\LivestockPurchase;
 use App\Models\LivestockUsage;
+use App\Models\CurrentLivestock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\DataAuditTrail;
@@ -16,10 +17,20 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\LivestockBatch;
 use App\Models\LivestockPurchaseItem;
 
+/**
+ * LivestockDataIntegrityService
+ * 
+ * Service untuk mengecek dan memperbaiki integritas data livestock
+ * termasuk relasi dengan CurrentLivestock
+ * 
+ * @version 2.0.0
+ * @author System
+ * @since 2025-01-19
+ */
 class LivestockDataIntegrityService
 {
     protected $logs = [];
-    protected $version = '1.1.0';
+    protected $version = '2.0.0';
 
     public function previewInvalidLivestockData()
     {
@@ -35,7 +46,7 @@ class LivestockDataIntegrityService
             $invalidBatches = LivestockBatch::where(function ($query) {
                 $query->where('source_type', 'purchase')
                     ->whereNotExists(function ($subQuery) {
-                            $subQuery->select(DB::raw(1))
+                        $subQuery->select(DB::raw(1))
                             ->from('livestock_purchases')
                             ->whereColumn('livestock_purchases.id', 'livestock_batches.source_id')
                             ->whereNull('livestock_purchases.deleted_at');
@@ -150,11 +161,11 @@ class LivestockDataIntegrityService
                 ->get();
 
             foreach ($batchesWithMismatchedIds as $batch) {
-                    $this->logs[] = [
+                $this->logs[] = [
                     'type' => 'mismatched_source_ids',
                     'message' => "Livestock batch ID {$batch->id} has mismatched source_id and livestock_purchase_item_id",
                     'data' => $batch->toArray(),
-                        'reasons' => [
+                    'reasons' => [
                         "Source ID ({$batch->source_id}) does not match the livestock_purchase_id associated with livestock_purchase_item_id ({$batch->livestock_purchase_item_id})"
                     ]
                 ];
@@ -173,7 +184,7 @@ class LivestockDataIntegrityService
                 ->get();
 
             foreach ($mutationsWithoutBatch as $mutation) {
-                    $this->logs[] = [
+                $this->logs[] = [
                     'type' => 'missing_batch',
                     'message' => "Mutation record with ID {$mutation->id} does not have a corresponding livestock batch.",
                     'data' => $mutation->toArray(),
@@ -183,8 +194,8 @@ class LivestockDataIntegrityService
 
             // Check for quantity mismatches
             $batchesWithPurchase = LivestockBatch::where('source_type', 'purchase')
-                    ->whereNull('deleted_at')
-                    ->get();
+                ->whereNull('deleted_at')
+                ->get();
 
             foreach ($batchesWithPurchase as $batch) {
                 $purchase = LivestockPurchase::where('id', $batch->source_id)->whereNull('deleted_at')->first();
@@ -203,11 +214,39 @@ class LivestockDataIntegrityService
                 }
             }
 
+            // Check for missing CurrentLivestock records
+            $livestocksWithoutCurrent = Livestock::whereDoesntHave('currentLivestock')
+                ->whereNull('deleted_at')
+                ->get();
+
+            foreach ($livestocksWithoutCurrent as $livestock) {
+                $this->logs[] = [
+                    'type' => 'missing_current_livestock',
+                    'message' => "Livestock ID {$livestock->id} does not have a corresponding CurrentLivestock record.",
+                    'data' => $livestock->toArray(),
+                    'reasons' => ["No CurrentLivestock record found for this livestock."]
+                ];
+            }
+
+            // Check for orphaned CurrentLivestock records
+            $orphanedCurrentLivestock = CurrentLivestock::whereDoesntHave('livestock')
+                ->get();
+
+            foreach ($orphanedCurrentLivestock as $current) {
+                $this->logs[] = [
+                    'type' => 'orphaned_current_livestock',
+                    'message' => "CurrentLivestock ID {$current->id} references non-existent livestock ID {$current->livestock_id}.",
+                    'data' => $current->toArray(),
+                    'reasons' => ["CurrentLivestock record references deleted or non-existent livestock."]
+                ];
+            }
+
             return [
                 'success' => true,
                 'logs' => $this->logs,
                 'invalid_batches_count' => $invalidBatches->count(),
-                'invalid_stocks_count' => $invalidBatches->count()
+                'invalid_stocks_count' => $invalidBatches->count(),
+                'missing_current_livestock_count' => $livestocksWithoutCurrent->count()
             ];
         } catch (\Exception $e) {
             Log::error('Error in LivestockDataIntegrityService preview: ' . $e->getMessage());
@@ -216,7 +255,8 @@ class LivestockDataIntegrityService
                 'error' => $e->getMessage(),
                 'logs' => $this->logs,
                 'invalid_batches_count' => 0,
-                'invalid_stocks_count' => 0
+                'invalid_stocks_count' => 0,
+                'missing_current_livestock_count' => 0
             ];
         }
     }
@@ -234,7 +274,7 @@ class LivestockDataIntegrityService
             $invalidBatches = LivestockBatch::where(function ($query) {
                 $query->where('source_type', 'purchase')
                     ->whereNotExists(function ($subQuery) {
-                            $subQuery->select(DB::raw(1))
+                        $subQuery->select(DB::raw(1))
                             ->from('livestock_purchases')
                             ->whereColumn('livestock_purchases.id', 'livestock_batches.source_id')
                             ->whereNull('livestock_purchases.deleted_at');
@@ -354,8 +394,24 @@ class LivestockDataIntegrityService
         $livestock->update([
             'quantity' => $totalQuantity,
             'weight' => $avgWeight,
-                'updated_by' => auth()->id()
+            'updated_by' => auth()->id()
         ]);
+
+        // Update or create CurrentLivestock record
+        $currentLivestock = CurrentLivestock::updateOrCreate(
+            [
+                'livestock_id' => $livestockId,
+            ],
+            [
+                'farm_id' => $livestock->farm_id,
+                'coop_id' => $livestock->coop_id,
+                'quantity' => $totalQuantity,
+                'weight_total' => $totalWeight,
+                'weight_avg' => $avgWeight,
+                'status' => 'active',
+                'updated_by' => auth()->id(),
+            ]
+        );
 
         $this->logs[] = [
             'type' => 'recalculation',
@@ -363,7 +419,9 @@ class LivestockDataIntegrityService
             'data' => [
                 'total_quantity' => $totalQuantity,
                 'total_weight' => $totalWeight,
-                'avg_weight' => $avgWeight
+                'avg_weight' => $avgWeight,
+                'current_livestock_updated' => true,
+                'current_livestock_id' => $currentLivestock->id
             ]
         ];
     }
@@ -564,8 +622,8 @@ class LivestockDataIntegrityService
     {
         $fixedCount = 0;
         $batchesWithMutation = LivestockBatch::where('source_type', 'mutation')
-                ->whereNull('deleted_at')
-                ->get();
+            ->whereNull('deleted_at')
+            ->get();
 
         foreach ($batchesWithMutation as $batch) {
             $mutation = Mutation::where('id', $batch->source_id)->whereNull('deleted_at')->first();
@@ -688,8 +746,8 @@ class LivestockDataIntegrityService
 
         // Preview mutation quantity mismatch fixes
         $batchesWithMutation = LivestockBatch::where('source_type', 'mutation')
-                ->whereNull('deleted_at')
-                ->get();
+            ->whereNull('deleted_at')
+            ->get();
 
         foreach ($batchesWithMutation as $batch) {
             $mutation = Mutation::where('id', $batch->source_id)->whereNull('deleted_at')->first();
@@ -710,11 +768,164 @@ class LivestockDataIntegrityService
             }
         }
 
+        // Preview missing CurrentLivestock fixes
+        $livestocksWithoutCurrent = Livestock::whereDoesntHave('currentLivestock')
+            ->whereNull('deleted_at')
+            ->get();
+
+        foreach ($livestocksWithoutCurrent as $livestock) {
+            $totalQuantity = LivestockBatch::where('livestock_id', $livestock->id)
+                ->whereNull('deleted_at')
+                ->sum('initial_quantity') ?? 0;
+
+            $previewData[] = [
+                'type' => 'missing_current_livestock',
+                'id' => $livestock->id,
+                'before' => [
+                    'current_livestock_exists' => false,
+                    'livestock_name' => $livestock->name ?? 'Unknown',
+                ],
+                'after' => [
+                    'current_livestock_exists' => true,
+                    'calculated_quantity' => $totalQuantity,
+                ],
+                'message' => "Livestock ID {$livestock->id}: CurrentLivestock record will be created with quantity {$totalQuantity}"
+            ];
+        }
+
+        // Preview orphaned CurrentLivestock removal
+        $orphanedCurrentLivestock = CurrentLivestock::whereDoesntHave('livestock')->get();
+
+        foreach ($orphanedCurrentLivestock as $current) {
+            $previewData[] = [
+                'type' => 'orphaned_current_livestock',
+                'id' => $current->id,
+                'before' => [
+                    'livestock_id' => $current->livestock_id,
+                    'quantity' => $current->quantity,
+                    'exists' => true,
+                ],
+                'after' => [
+                    'exists' => false,
+                    'action' => 'deleted',
+                ],
+                'message' => "CurrentLivestock ID {$current->id}: orphaned record will be removed"
+            ];
+        }
+
         return [
             'success' => true,
             'preview_data' => $previewData,
             'total_changes' => count($previewData)
         ];
+    }
+
+    /**
+     * Preview changes specifically for CurrentLivestock records
+     */
+    public function previewCurrentLivestockChanges()
+    {
+        $preview = [];
+
+        try {
+            Log::info('Starting CurrentLivestock changes preview');
+
+            // Preview missing CurrentLivestock records that would be created
+            $livestocksWithoutCurrent = Livestock::whereDoesntHave('currentLivestock')
+                ->whereNull('deleted_at')
+                ->with(['farm', 'coop'])
+                ->get();
+
+            Log::info('Found livestock without CurrentLivestock for preview', ['count' => $livestocksWithoutCurrent->count()]);
+
+            foreach ($livestocksWithoutCurrent as $livestock) {
+                // Calculate what would be the values - menggunakan logika yang sama seperti fix
+                $batches = LivestockBatch::where('livestock_id', $livestock->id)
+                    ->whereNull('deleted_at')
+                    ->get();
+
+                $totalQuantity = $batches->sum('initial_quantity') ?? 0;
+                $totalWeightSum = $batches->sum(function ($batch) {
+                    return ($batch->initial_quantity ?? 0) * ($batch->weight ?? 0);
+                }) ?? 0;
+                $avgWeight = $totalQuantity > 0 ? $totalWeightSum / $totalQuantity : 0;
+
+                $preview[] = [
+                    'type' => 'create_current_livestock',
+                    'action' => 'CREATE',
+                    'model' => 'CurrentLivestock',
+                    'livestock_id' => $livestock->id,
+                    'livestock_name' => $livestock->name ?? 'Unknown',
+                    'farm_name' => $livestock->farm->name ?? 'Unknown',
+                    'coop_name' => $livestock->coop->name ?? 'Unknown',
+                    'changes' => [
+                        'before' => [
+                            'status' => 'missing',
+                            'quantity' => 0,
+                            'weight_total' => 0,
+                            'weight_avg' => 0
+                        ],
+                        'after' => [
+                            'status' => 'active',
+                            'quantity' => $totalQuantity,
+                            'weight_total' => round($totalWeightSum, 2),
+                            'weight_avg' => round($avgWeight, 2)
+                        ]
+                    ],
+                    'description' => "Will create CurrentLivestock record with calculated totals from {$batches->count()} batches",
+                    'impact' => 'low' // Creating missing data
+                ];
+            }
+
+            // Preview orphaned CurrentLivestock records that would be removed
+            $orphanedCurrentLivestock = CurrentLivestock::whereDoesntHave('livestock')->get();
+
+            foreach ($orphanedCurrentLivestock as $current) {
+                $preview[] = [
+                    'type' => 'remove_orphaned_current_livestock',
+                    'action' => 'DELETE',
+                    'model' => 'CurrentLivestock',
+                    'current_livestock_id' => $current->id,
+                    'livestock_id' => $current->livestock_id,
+                    'changes' => [
+                        'before' => [
+                            'status' => $current->status ?? 'unknown',
+                            'quantity' => $current->quantity ?? 0,
+                            'weight_total' => $current->weight_total ?? 0,
+                            'weight_avg' => $current->weight_avg ?? 0
+                        ],
+                        'after' => [
+                            'status' => 'deleted',
+                            'quantity' => 0,
+                            'weight_total' => 0,
+                            'weight_avg' => 0
+                        ]
+                    ],
+                    'description' => "Will remove orphaned CurrentLivestock (references non-existent livestock ID: {$current->livestock_id})",
+                    'impact' => 'medium' // Removing orphaned data
+                ];
+            }
+
+            return [
+                'success' => true,
+                'preview' => $preview,
+                'summary' => [
+                    'missing_current_livestock' => $livestocksWithoutCurrent->count(),
+                    'orphaned_current_livestock' => $orphanedCurrentLivestock->count(),
+                    'total_changes' => count($preview)
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error previewing CurrentLivestock changes: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'preview' => [],
+                'summary' => []
+            ];
+        }
     }
 
     /**
@@ -1013,5 +1224,128 @@ class LivestockDataIntegrityService
             'preview_data' => $previewData,
             'total_changes' => count($previewData)
         ];
+    }
+
+    /**
+     * Fix missing CurrentLivestock records
+     */
+    public function fixMissingCurrentLivestock()
+    {
+        $fixedCount = 0;
+        $removedCount = 0;
+
+        try {
+            Log::info('Starting CurrentLivestock integrity fix');
+
+            // Find livestock without CurrentLivestock - menggunakan query yang sama seperti di preview
+            $livestocksWithoutCurrent = Livestock::whereDoesntHave('currentLivestock')
+                ->whereNull('deleted_at')
+                ->get();
+
+            Log::info('Found livestock without CurrentLivestock', ['count' => $livestocksWithoutCurrent->count()]);
+
+            foreach ($livestocksWithoutCurrent as $livestock) {
+                Log::info('Processing livestock without CurrentLivestock', ['livestock_id' => $livestock->id]);
+
+                // Calculate totals from batches - menggunakan sum dengan callback yang benar
+                $batches = LivestockBatch::where('livestock_id', $livestock->id)
+                    ->whereNull('deleted_at')
+                    ->get();
+
+                $totalQuantity = $batches->sum('initial_quantity') ?? 0;
+                $totalWeightSum = $batches->sum(function ($batch) {
+                    return ($batch->initial_quantity ?? 0) * ($batch->weight ?? 0);
+                }) ?? 0;
+                $avgWeight = $totalQuantity > 0 ? $totalWeightSum / $totalQuantity : 0;
+
+                Log::info('Calculated totals for livestock', [
+                    'livestock_id' => $livestock->id,
+                    'total_quantity' => $totalQuantity,
+                    'total_weight_sum' => $totalWeightSum,
+                    'avg_weight' => $avgWeight,
+                    'batch_count' => $batches->count()
+                ]);
+
+                // Create CurrentLivestock record
+                $currentLivestock = CurrentLivestock::create([
+                    'livestock_id' => $livestock->id,
+                    'farm_id' => $livestock->farm_id,
+                    'coop_id' => $livestock->coop_id,
+                    'quantity' => $totalQuantity,
+                    'weight_total' => $totalWeightSum,
+                    'weight_avg' => $avgWeight,
+                    'status' => 'active',
+                    'created_by' => auth()->id() ?? 1, // Fallback ke user ID 1 jika tidak ada auth
+                    'updated_by' => auth()->id() ?? 1,
+                ]);
+
+                Log::info('Created CurrentLivestock record', ['current_livestock_id' => $currentLivestock->id]);
+
+                $this->logs[] = [
+                    'type' => 'fix_missing_current_livestock',
+                    'message' => "Created missing CurrentLivestock for Livestock ID {$livestock->id} with quantity {$totalQuantity}",
+                    'data' => [
+                        'id' => $currentLivestock->id,
+                        'model_type' => get_class($currentLivestock),
+                        'livestock_id' => $livestock->id,
+                        'livestock_name' => $livestock->name ?? 'Unknown',
+                        'current_livestock' => $currentLivestock->toArray(),
+                        'calculated_totals' => [
+                            'quantity' => $totalQuantity,
+                            'weight_total' => $totalWeightSum,
+                            'weight_avg' => $avgWeight,
+                            'batch_count' => $batches->count()
+                        ]
+                    ],
+                ];
+                $fixedCount++;
+            }
+
+            // Remove orphaned CurrentLivestock records
+            $orphanedCurrentLivestock = CurrentLivestock::whereDoesntHave('livestock')->get();
+
+            Log::info('Found orphaned CurrentLivestock records', ['count' => $orphanedCurrentLivestock->count()]);
+
+            foreach ($orphanedCurrentLivestock as $current) {
+                $before = $current->toArray();
+                $current->delete();
+
+                Log::info('Removed orphaned CurrentLivestock', ['current_livestock_id' => $current->id]);
+
+                $this->logs[] = [
+                    'type' => 'remove_orphaned_current_livestock',
+                    'message' => "Removed orphaned CurrentLivestock ID {$current->id} (referenced non-existent livestock ID {$current->livestock_id})",
+                    'data' => [
+                        'id' => $current->id,
+                        'model_type' => get_class($current),
+                        'removed_data' => $before,
+                    ],
+                ];
+                $removedCount++;
+            }
+
+            Log::info('CurrentLivestock fix completed', [
+                'fixed_count' => $fixedCount,
+                'removed_count' => $removedCount
+            ]);
+
+            return [
+                'success' => true,
+                'logs' => $this->logs,
+                'fixed_count' => $fixedCount,
+                'removed_count' => $removedCount
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error fixing missing CurrentLivestock: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'logs' => $this->logs,
+                'fixed_count' => $fixedCount,
+                'removed_count' => $removedCount
+            ];
+        }
     }
 }

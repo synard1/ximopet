@@ -15,54 +15,249 @@ use App\Models\LivestockPurchaseItem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class LivestockCostService
 {
 
+    /**
+     * Calculate livestock cost for a specific date
+     * Following the business flow: livestock entry → mortality recording → livestock placement → feeding (including day 1)
+     * 
+     * @param string $livestockId
+     * @param string $tanggal
+     * @return \App\Models\LivestockCost
+     */
     public function calculateForDate($livestockId, $tanggal)
     {
         $tanggal = Carbon::parse($tanggal)->format('Y-m-d');
+
+        Log::info("🔄 Starting livestock cost calculation", [
+            'livestock_id' => $livestockId,
+            'date' => $tanggal
+        ]);
+
+        // Get or create recording for this date
         $recording = Recording::where('livestock_id', $livestockId)
             ->whereDate('tanggal', $tanggal)
             ->first();
 
         $livestock = Livestock::findOrFail($livestockId);
 
-        // Initialize default values for when there's no recording
-        $stockAwal = 0;
-        $stockAkhir = 0;
-        $deplesiQty = 0;
-        $salesQty = 0;
-
-        // If no recording exists, create a temporary one
-        if (!$recording) {
-            // Calculate age based on livestock start date
+        // Initialize values from recording or calculate defaults
+        if ($recording) {
+            $stockAwal = $recording->stock_awal;
+            $stockAkhir = $recording->stock_akhir;
+            $deplesiQty = ($recording->payload['mortality'] ?? 0) + ($recording->payload['culling'] ?? 0);
+            $salesQty = $recording->payload['sales_quantity'] ?? 0;
+        } else {
+            // Calculate for days without explicit recording
             $startDate = Carbon::parse($livestock->start_date);
             $recordDate = Carbon::parse($tanggal);
             $age = $startDate->diffInDays($recordDate);
 
-            $recording = Recording::create([
+            // Get previous day's stock_akhir or use initial quantity
+            $previousDate = $recordDate->copy()->subDay()->format('Y-m-d');
+            $previousRecording = Recording::where('livestock_id', $livestockId)
+                ->whereDate('tanggal', $previousDate)
+                ->first();
+
+            $stockAwal = $previousRecording ? $previousRecording->stock_akhir : $livestock->initial_quantity;
+            $stockAkhir = $stockAwal; // No depletion if no recording
+            $deplesiQty = 0;
+            $salesQty = 0;
+
+            // Create minimal recording if needed for cost calculation
+            $recording = Recording::firstOrCreate([
                 'livestock_id' => $livestockId,
                 'tanggal' => $tanggal,
+            ], [
                 'age' => $age,
-                'stock_awal' => 0,
-                'stock_akhir' => 0,
+                'stock_awal' => $stockAwal,
+                'stock_akhir' => $stockAkhir,
                 'payload' => [
                     'mortality' => 0,
                     'culling' => 0,
                     'sales_quantity' => 0
                 ],
-                'created_by' => auth()->id(),
-                'updated_by' => auth()->id(),
+                'created_by' => auth()->id() ?? 1,
+                'updated_by' => auth()->id() ?? 1,
             ]);
-        } else {
-            $stockAwal = $recording->stock_awal;
-            $stockAkhir = $recording->stock_akhir;
-            $deplesiQty = ($recording->payload['mortality'] ?? 0) + ($recording->payload['culling'] ?? 0);
-            $salesQty = $recording->payload['sales_quantity'] ?? 0;
         }
 
-        // Feed cost - enhanced with proper unit conversion
+        // Get initial purchase data - FIXED: use correct field names
+        $initialPurchaseItem = LivestockPurchaseItem::where('livestock_id', $livestockId)
+            ->orderBy('created_at', 'asc')
+            ->first();
+
+        if (!$initialPurchaseItem) {
+            Log::warning("⚠️ No initial purchase item found for livestock", ['livestock_id' => $livestockId]);
+            throw new \Exception("Initial purchase data not found for livestock ID: {$livestockId}");
+        }
+
+        // FIXED: Use correct field names from LivestockPurchaseItem
+        $initialPricePerUnit = floatval($initialPurchaseItem->price_per_unit ?? 0);
+        $initialQuantity = floatval($initialPurchaseItem->quantity ?? 0);
+        $initialTotalCost = floatval($initialPurchaseItem->price_total ?? 0);
+
+        Log::info("📦 Initial purchase data", [
+            'price_per_unit' => $initialPricePerUnit,
+            'quantity' => $initialQuantity,
+            'total_cost' => $initialTotalCost,
+            'date' => $initialPurchaseItem->created_at
+        ]);
+
+        // Calculate feed costs for this date
+        $feedResult = $this->calculateFeedCosts($livestockId, $tanggal);
+        $feedCost = $feedResult['total_cost'];
+        $feedDetails = $feedResult['details'];
+
+        // Calculate OVK costs for this date
+        $ovkResult = $this->calculateOVKCosts($livestockId, $tanggal, $livestock);
+        $ovkCost = $ovkResult['total_cost'];
+        $ovkDetails = $ovkResult['details'];
+
+        // Get previous day's cumulative data for accurate deplesi calculation
+        $previousCostData = $this->getPreviousDayCostData($livestockId, $tanggal);
+
+        // Calculate deplesi cost based on business flow
+        // Deplesi cost = number of depleted chickens × (initial price + accumulated costs per chicken up to previous day)
+        $cumulativeCostPerChickenPreviousDay = $previousCostData['cumulative_cost_per_chicken'];
+        $deplesiCost = $deplesiQty * $cumulativeCostPerChickenPreviousDay;
+
+        // Total added cost for today (Feed + OVK + Deplesi)
+        $totalDailyAddedCost = $feedCost + $ovkCost + $deplesiCost;
+
+        // Calculate cumulative costs
+        $cumulativeData = $this->calculateCumulativeCosts(
+            $livestockId,
+            $tanggal,
+            $feedCost,
+            $ovkCost,
+            $deplesiCost,
+            $initialPricePerUnit,
+            $initialQuantity
+        );
+
+        // Calculate per-chicken costs
+        $dailyAddedCostPerChicken = $stockAkhir > 0 ? round($totalDailyAddedCost / $stockAkhir, 2) : 0;
+        $cumulativeCostPerChicken = $stockAkhir > 0 ?
+            round($cumulativeData['total_cumulative_added_cost'] / $stockAkhir, 2) : 0;
+        $totalCostPerChicken = $initialPricePerUnit + $cumulativeCostPerChicken;
+
+        // Calculate OVK cost per chicken
+        $ovkCostPerChicken = $stockAkhir > 0 ? round($ovkCost / $stockAkhir, 2) : 0;
+
+        // Prepare summary statistics
+        $summaryStats = [
+            'livestock_id' => $livestockId,
+            'date' => $tanggal,
+            'initial_price_per_unit' => round($initialPricePerUnit, 2),
+            'initial_quantity' => $initialQuantity,
+            'initial_total_cost' => round($initialTotalCost, 2),
+
+            // Daily costs
+            'daily_feed_cost' => round($feedCost, 2),
+            'daily_ovk_cost' => round($ovkCost, 2),
+            'daily_deplesi_cost' => round($deplesiCost, 2),
+            'total_daily_added_cost' => round($totalDailyAddedCost, 2),
+            'daily_added_cost_per_chicken' => $dailyAddedCostPerChicken,
+
+            // Cumulative costs
+            'cumulative_feed_cost' => round($cumulativeData['cumulative_feed_cost'], 2),
+            'cumulative_ovk_cost' => round($cumulativeData['cumulative_ovk_cost'], 2),
+            'cumulative_deplesi_cost' => round($cumulativeData['cumulative_deplesi_cost'], 2),
+            'total_cumulative_added_cost' => round($cumulativeData['total_cumulative_added_cost'], 2),
+            'cumulative_added_cost_per_chicken' => $cumulativeCostPerChicken,
+
+            // Final costs (including initial price)
+            'total_cost_per_chicken' => round($totalCostPerChicken, 2),
+            'total_flock_value' => round($totalCostPerChicken * $stockAkhir, 2),
+
+            // Stock information
+            'stock_awal' => $stockAwal,
+            'stock_akhir' => $stockAkhir,
+            'deplesi_qty' => $deplesiQty,
+            'sales_qty' => $salesQty,
+            'ovk_cost_per_chicken' => $ovkCostPerChicken,
+
+            // Calculation metadata
+            'calculation_method' => 'business_flow_v2.0',
+            'version' => '2.0',
+            'timestamp' => now()->toIso8601String(),
+        ];
+
+        Log::info("💰 Cost calculation summary", $summaryStats);
+
+        // Save to LivestockCost with corrected structure
+        $livestockCost = LivestockCost::updateOrCreate(
+            [
+                'livestock_id' => $livestockId,
+                'tanggal' => $tanggal,
+            ],
+            [
+                'recording_id' => $recording->id,
+                'total_cost' => $totalDailyAddedCost, // Daily added cost
+                'cost_per_ayam' => $totalCostPerChicken, // FIXED: Total cost per chicken (including initial price)
+                'cost_breakdown' => [
+                    // Daily costs
+                    'pakan' => $feedCost,
+                    'ovk' => $ovkCost,
+                    'deplesi' => $deplesiCost,
+                    'daily_total' => $totalDailyAddedCost,
+
+                    // Per chicken costs
+                    'ovk_per_ayam' => $ovkCostPerChicken,
+                    'daily_added_cost_per_chicken' => $dailyAddedCostPerChicken,
+                    'cumulative_cost_per_chicken' => $totalCostPerChicken,
+
+                    // Stock data
+                    'deplesi_ekor' => $deplesiQty,
+                    'jual_ekor' => $salesQty,
+                    'stock_awal' => $stockAwal,
+                    'stock_akhir' => $stockAkhir,
+
+                    // Detailed breakdowns
+                    'feed_detail' => $feedDetails,
+                    'ovk_detail' => $ovkDetails,
+
+                    // Summary and metadata
+                    'summary' => $summaryStats,
+                    'prev_cost' => [
+                        'total_added_cost' => $previousCostData['total_added_cost'],
+                        'cumulative_cost_per_chicken' => $cumulativeCostPerChickenPreviousDay,
+                    ],
+                    'calculations' => [
+                        'method' => 'business_flow_accurate',
+                        'version' => '2.0',
+                        'timestamp' => now()->toIso8601String(),
+                    ],
+                    'initial_purchase_item_details' => [
+                        'found' => true,
+                        'livestock_purchase_item_id' => $initialPurchaseItem->id,
+                        'price_per_unit' => $initialPricePerUnit,
+                        'quantity' => $initialQuantity,
+                        'price_total' => $initialTotalCost,
+                        'created_at' => $initialPurchaseItem->created_at,
+                    ]
+                ]
+            ]
+        );
+
+        Log::info("✅ Livestock cost calculation completed", [
+            'livestock_cost_id' => $livestockCost->id,
+            'total_cost' => $livestockCost->total_cost,
+            'cost_per_ayam' => $livestockCost->cost_per_ayam
+        ]);
+
+        return $livestockCost;
+    }
+
+    /**
+     * Calculate feed costs for a specific date
+     */
+    private function calculateFeedCosts($livestockId, $tanggal)
+    {
         $feedUsageDetails = FeedUsageDetail::whereHas('feedUsage', function ($query) use ($livestockId, $tanggal) {
             $query->where('livestock_id', $livestockId)
                 ->whereDate('usage_date', $tanggal);
@@ -72,19 +267,18 @@ class LivestockCostService
             'feedUsage'
         ])->get();
 
-        $feedCost = 0;
+        $totalFeedCost = 0;
         $feedDetails = [];
 
         foreach ($feedUsageDetails as $detail) {
-            // Get feed and purchase information
             $feed = $detail->feedStock?->feed;
             $purchase = $detail->feedStock?->feedPurchase;
 
             if (!$feed || !$purchase) {
-                continue; // Skip if feed or purchase data is missing
+                continue;
             }
 
-            $namaPakan = $feed->name ?? 'Unknown Feed';
+            $feedName = $feed->name ?? 'Unknown Feed';
             $feedId = $feed->id;
 
             // Get unit conversion information
@@ -93,10 +287,10 @@ class LivestockCostService
             $convertedUnitId = $purchase->converted_unit;
 
             $purchaseUnit = $purchase->unit?->name ?? 'Unknown';
-            $smallestUnitName = null;
+            $smallestUnitName = 'Unknown';
             $conversionRate = 1;
 
-            // Find conversion information
+            // Calculate conversion rate and unit names
             if (!empty($conversionUnits)) {
                 $purchaseUnitData = $conversionUnits->firstWhere('unit_id', $purchaseUnitId);
                 $smallestUnitData = $conversionUnits->firstWhere('unit_id', $convertedUnitId) ??
@@ -107,7 +301,6 @@ class LivestockCostService
                     $smallestUnitValue = floatval($smallestUnitData['value']);
                     $conversionRate = $purchaseUnitValue / $smallestUnitValue;
 
-                    // Get the smallest unit name from the unit model if available
                     if ($convertedUnitId) {
                         $smallestUnit = \App\Models\Unit::find($convertedUnitId);
                         $smallestUnitName = $smallestUnit?->name ?? 'Unknown';
@@ -117,23 +310,17 @@ class LivestockCostService
                 }
             }
 
-            // Get the price per smallest unit
+            // Calculate cost
             $pricePerSmallestUnit = $purchase->price_per_converted_unit ??
                 ($purchase->price_per_unit / $conversionRate);
-
-            // Get quantity in smallest unit (already in smallest unit in FeedUsageDetail)
             $qtyInSmallestUnit = $detail->quantity_taken;
-
-            // Calculate cost using the price per smallest unit
             $subtotal = $qtyInSmallestUnit * $pricePerSmallestUnit;
-
-            // Convert to purchase unit for display
             $qtyInPurchaseUnit = $qtyInSmallestUnit / $conversionRate;
 
-            $feedCost += $subtotal;
+            $totalFeedCost += $subtotal;
 
-            // Add comprehensive information to feed details
-            $key = $namaPakan . ' (' . $feedId . ')';
+            // Aggregate by feed type
+            $key = $feedName . ' (' . $feedId . ')';
             if (isset($feedDetails[$key])) {
                 $feedDetails[$key]['jumlah_smallest_unit'] += $qtyInSmallestUnit;
                 $feedDetails[$key]['jumlah_purchase_unit'] += $qtyInPurchaseUnit;
@@ -141,7 +328,7 @@ class LivestockCostService
             } else {
                 $feedDetails[$key] = [
                     'feed_id' => $feedId,
-                    'feed_name' => $namaPakan,
+                    'feed_name' => $feedName,
                     'jumlah_smallest_unit' => $qtyInSmallestUnit,
                     'smallest_unit' => $smallestUnitName,
                     'jumlah_purchase_unit' => $qtyInPurchaseUnit,
@@ -150,23 +337,28 @@ class LivestockCostService
                     'price_per_smallest_unit' => $pricePerSmallestUnit,
                     'price_per_purchase_unit' => $purchase->price_per_unit,
                     'subtotal' => $subtotal,
-                    'usage_details' => [
-                        'usage_date' => $detail->feedUsage->usage_date,
-                        'usage_id' => $detail->feedUsage->id,
-                        'stock_id' => $detail->feed_stock_id
-                    ]
                 ];
             }
         }
 
-        // Calculate OVK costs
-        $ovkCost = 0;
-        $ovkDetails = [];
+        return [
+            'total_cost' => $totalFeedCost,
+            'details' => $feedDetails
+        ];
+    }
 
+    /**
+     * Calculate OVK costs for a specific date
+     */
+    private function calculateOVKCosts($livestockId, $tanggal, $livestock)
+    {
         $ovkRecords = OVKRecord::where('livestock_id', $livestockId)
             ->whereDate('usage_date', $tanggal)
             ->with(['items.supply', 'items.unit'])
             ->get();
+
+        $totalOvkCost = 0;
+        $ovkDetails = [];
 
         foreach ($ovkRecords as $ovkRecord) {
             foreach ($ovkRecord->items as $item) {
@@ -184,255 +376,107 @@ class LivestockCostService
 
                 if (!$latestPurchase) continue;
 
-                // Get unit conversion information
-                $conversionUnits = collect($supply->payload['conversion_units'] ?? []);
-                $purchaseUnitId = $latestPurchase->supplyPurchase?->unit_id;
-                $convertedUnitId = $latestPurchase->supplyPurchase?->converted_unit;
+                // Calculate cost (simplified for now, can be enhanced with unit conversion)
+                $pricePerUnit = floatval($latestPurchase->supplyPurchase?->price_per_unit ?? 0);
+                $quantity = floatval($item->quantity);
+                $subtotal = $quantity * $pricePerUnit;
 
-                $purchaseUnit = $latestPurchase->supplyPurchase?->unit?->name ?? 'Unknown';
-                $smallestUnitName = null;
-                $conversionRate = 1;
+                $totalOvkCost += $subtotal;
 
-                // Find conversion information
-                if (!empty($conversionUnits)) {
-                    $purchaseUnitData = $conversionUnits->firstWhere('unit_id', $purchaseUnitId);
-                    $smallestUnitData = $conversionUnits->firstWhere('unit_id', $convertedUnitId) ??
-                        $conversionUnits->firstWhere('is_smallest', true);
-
-                    if ($purchaseUnitData && $smallestUnitData) {
-                        $purchaseUnitValue = floatval($purchaseUnitData['value']);
-                        $smallestUnitValue = floatval($smallestUnitData['value']);
-                        $conversionRate = $purchaseUnitValue / $smallestUnitValue;
-
-                        // Get the smallest unit name
-                        if ($convertedUnitId) {
-                            $smallestUnit = \App\Models\Unit::find($convertedUnitId);
-                            $smallestUnitName = $smallestUnit?->name ?? 'Unknown';
-                        } else {
-                            $smallestUnitName = $smallestUnitData['unit_name'] ?? 'Unknown';
-                        }
-                    }
-                }
-
-                // Get the price per smallest unit
-                $pricePerPurchaseUnit = floatval($latestPurchase->supplyPurchase?->price_per_unit ?? 0);
-                $pricePerSmallestUnit = $pricePerPurchaseUnit / $conversionRate;
-
-                // Convert quantity to smallest unit
-                $qtyInSmallestUnit = floatval($item->quantity);
-                if ($unit->id !== $convertedUnitId) {
-                    // If the input unit is not the smallest unit, convert it
-                    $inputUnitData = $conversionUnits->firstWhere('unit_id', $unit->id);
-                    if ($inputUnitData) {
-                        $inputUnitValue = floatval($inputUnitData['value']);
-                        $qtyInSmallestUnit = ($qtyInSmallestUnit * $inputUnitValue) / $smallestUnitValue;
-                    }
-                }
-
-                // Calculate cost using the price per smallest unit
-                $subtotal = $qtyInSmallestUnit * $pricePerSmallestUnit;
-
-                // Convert back to purchase unit for display
-                $qtyInPurchaseUnit = $qtyInSmallestUnit / $conversionRate;
-
-                $ovkCost += $subtotal;
-
-                // Add to OVK details with comprehensive information
+                // Aggregate by supply type
                 $key = $supply->name . ' (' . $supply->id . ')';
                 if (isset($ovkDetails[$key])) {
-                    $ovkDetails[$key]['quantity_smallest_unit'] += $qtyInSmallestUnit;
-                    $ovkDetails[$key]['quantity_purchase_unit'] += $qtyInPurchaseUnit;
+                    $ovkDetails[$key]['quantity'] += $quantity;
                     $ovkDetails[$key]['subtotal'] += $subtotal;
                 } else {
                     $ovkDetails[$key] = [
                         'supply_id' => $supply->id,
                         'supply_name' => $supply->name,
-                        'quantity_smallest_unit' => $qtyInSmallestUnit,
-                        'smallest_unit' => $smallestUnitName,
-                        'quantity_purchase_unit' => $qtyInPurchaseUnit,
-                        'purchase_unit' => $purchaseUnit,
-                        'conversion_rate' => $conversionRate,
-                        'price_per_smallest_unit' => $pricePerSmallestUnit,
-                        'price_per_purchase_unit' => $pricePerPurchaseUnit,
+                        'quantity' => $quantity,
+                        'unit' => $unit->name,
+                        'price_per_unit' => $pricePerUnit,
                         'subtotal' => $subtotal,
-                        'usage_details' => [
-                            'usage_date' => $ovkRecord->usage_date,
-                            'record_id' => $ovkRecord->id,
-                            'original_quantity' => $item->quantity,
-                            'original_unit' => $unit->name,
-                            'input_unit_id' => $unit->id,
-                            'smallest_unit_id' => $convertedUnitId,
-                            'conversion_calculation' => [
-                                'input_unit_value' => $inputUnitData['value'] ?? 1,
-                                'smallest_unit_value' => $smallestUnitValue ?? 1,
-                                'conversion_rate' => $conversionRate
-                            ]
-                        ]
                     ];
                 }
             }
         }
 
-        // Get previous costs with breakdown
-        $prevCosts = LivestockCost::where('livestock_id', $livestockId)
-            ->whereDate('tanggal', '<', $tanggal)
-            ->orderBy('tanggal', 'desc')
-            ->get();
-
-        $totalPakanKumulatif = 0;
-        $totalDeplesiKumulatif = 0;
-        $totalOvkKumulatif = 0;
-        // $totalStockAwalKumulatif = $stockAwal; // Start with today's stock awal - not needed for this approach
-
-        // Get the initial purchase price per chicken
-        $initialPurchaseItem = \App\Models\LivestockPurchaseItem::where('livestock_id', $livestockId)
-            ->orderBy('created_at', 'asc')
-            ->first();
-        $initialChickenPrice = floatval($initialPurchaseItem->harga_per_ekor ?? 0);
-
-        // Initialize deplesiCost before the if/else block
-        $deplesiCost = 0;
-        $prevCumulativeCostPerAyam = 0; // Initialize previous cumulative cost per ayam
-
-        // Get the most recent cost for deplesi calculation and cumulative sums
-        $latestCost = $prevCosts->first();
-        if ($latestCost) {
-            // For subsequent days, use the previous day's cumulative cost per ayam for deplesi calculation
-            // The previous day's cumulative cost per ayam is stored in the 'cost_per_ayam' field in records <= v1.15,
-            // and in 'summary.total_cumulative_cost_per_chicken' in records >= v1.18.
-            // For v1.16 and v1.17, it was incorrectly stored in cost_per_ayam (which was daily added cost).
-            // Let's rely on final_chicken_price from previous day as cumulative cost per ayam.
-            $prevCumulativeCostPerAyam = $latestCost->summary['final_chicken_price'] ?? $latestCost->cost_per_ayam; // Fallback to cost_per_ayam if final_chicken_price not in summary (pre v1.16)
-
-            $deplesiCost = $deplesiQty * $prevCumulativeCostPerAyam;
-
-            // Accumulate ADDED costs (Feed, Deplesi, OVK) from previous records
-            // Note: Accumulate based on stored values in breakdown to be accurate regardless of past calculation logic versions
-            foreach ($prevCosts as $prev) {
-                $breakdown = $prev->cost_breakdown;
-                $totalPakanKumulatif += $breakdown['pakan'] ?? 0;
-                $totalDeplesiKumulatif += $breakdown['deplesi'] ?? 0; // Use stored deplesi cost
-                $totalOvkKumulatif += $breakdown['ovk'] ?? 0;
-            }
-        } else { // This is the first day
-            // If this is the first day of recording, prevCostPerAyam for deplesi is the initial purchase price
-            $prevCumulativeCostPerAyam = $initialChickenPrice;
-
-            // On the first day, deplesi cost is calculated based on the initial purchase price
-            $deplesiCost = $deplesiQty * $initialChickenPrice;
-        }
-
-        // Calculate total costs for today (Feed + Deplesi + OVK)
-        $totalAddedCostHariIni = $feedCost + $deplesiCost + $ovkCost;
-
-        // Total cumulative ADDED costs until today
-        $totalCumulativeAddedCostsUntilToday = $totalPakanKumulatif + $totalDeplesiKumulatif + $totalOvkKumulatif + $totalAddedCostHariIni;
-
-        // Calculate total cumulative Feed and OVK costs until today
-        $totalCumulativeFeedCostUntilToday = $totalPakanKumulatif + $feedCost;
-        $totalCumulativeOvkCostUntilToday = $totalOvkKumulatif + $ovkCost;
-
-        // Calculate total cumulative cost (Initial Stock * Initial Price) + Total Cumulative Added Costs
-        // This represents the total value of the flock including initial purchase cost and added costs.
-        $initialStockQty = floatval($initialPurchaseItem->jumlah ?? 0);
-        $totalCumulativeCostUntilToday = ($initialStockQty * $initialChickenPrice) + $totalCumulativeAddedCostsUntilToday;
-
-        // Calculate daily added cost per chicken
-        $dailyAddedCostPerChicken = $stockAkhir > 0 ? round($totalAddedCostHariIni / $stockAkhir, 2) : 0;
-
-        // Calculate cumulative ADDED cost per chicken (Total Cumulative Added Costs / Stock Akhir) - Excluding initial price
-        $cumulativeAddedCostPerChickenExcludingInitial = $stockAkhir > 0 ? round($totalCumulativeAddedCostsUntilToday / $stockAkhir, 2) : 0;
-
-        // Calculate total cumulative cost per chicken (Initial Price + Cumulative Added Cost Per Chicken) - Including initial price
-        $totalCumulativeCostPerChickenIncludingInitial = $initialChickenPrice + $cumulativeAddedCostPerChickenExcludingInitial;
-
-        // Calculate OVK cost per chicken (just for today's OVK cost divided by today's stock akhir)
-        $ovkCostPerChicken = $stockAkhir > 0 ? round($ovkCost / $stockAkhir, 2) : 0;
-
-        // Final chicken price: This is the total cumulative cost per chicken (including initial price)
-        $finalChickenPrice = $totalCumulativeCostPerChickenIncludingInitial;
-
-        // Calculate summary statistics
-        $summaryStats = [
-            'total_feed_cost' => $feedCost, // Daily Feed Cost
-            'total_deplesi_cost' => $deplesiCost, // Daily Deplesi Cost
-            'total_ovk_cost' => $ovkCost, // Daily OVK Cost
-            'ovk_cost_per_chicken' => $ovkCostPerChicken,
-            'total_added_cost_hari_ini' => $totalAddedCostHariIni, // Renamed for clarity
-            'daily_added_cost_per_chicken' => $dailyAddedCostPerChicken, // This is daily ADDED cost per chicken
-            'stock_awal' => $stockAwal,
-            'stock_akhir' => $stockAkhir,
-            'deplesi_qty' => $deplesiQty,
-            'sales_qty' => $salesQty,
-            'initial_chicken_price' => round($initialChickenPrice, 2),
-            'final_chicken_price' => round($finalChickenPrice, 2), // Total cumulative cost per chicken (including initial price)
-            'total_cumulative_feed_cost' => round($totalCumulativeFeedCostUntilToday, 2),
-            'total_cumulative_ovk_cost' => round($totalCumulativeOvkCostUntilToday, 2),
-            'cumulative_added_cost_per_chicken_excluding_initial' => round($cumulativeAddedCostPerChickenExcludingInitial, 2), // Cumulative ADDED cost per chicken (excluding initial price)
-            'total_cumulative_cost_per_chicken_including_initial' => round($totalCumulativeCostPerChickenIncludingInitial, 2), // Total cumulative cost per chicken (including initial price)
-            'total_cumulative_cost_per_chicken' => round($cumulativeAddedCostPerChickenExcludingInitial, 2), // Cumulative ADDED cost per chicken (excluding initial price) - Renamed to match user request
-            'version' => '1.24' // Increment version for this change
+        return [
+            'total_cost' => $totalOvkCost,
+            'details' => $ovkDetails
         ];
-
-        // dd([
-        //     'summaryStats' => $summaryStats,
-        //     'tanggal' => $tanggal,
-        //     'livestockId' => $livestockId
-        // ]);
-
-        // Save to LivestockCost
-        $livestockCost = LivestockCost::updateOrCreate(
-            [
-                'livestock_id' => $livestockId,
-                'tanggal' => $tanggal,
-            ],
-            [
-                'recording_id' => $recording->id,
-                'total_cost' => $totalAddedCostHariIni, // Store total ADDED cost for the day
-                'cost_per_ayam' => $dailyAddedCostPerChicken, // Store daily ADDED cost per chicken
-                'cost_breakdown' => [
-                    'pakan'         => $feedCost, // Daily Feed Cost
-                    'deplesi'       => $deplesiCost, // Daily Deplesi Cost
-                    'ovk'           => $ovkCost, // Daily OVK Cost
-                    'ovk_per_ayam'  => $ovkCostPerChicken,
-                    'daily_added_cost_per_chicken' => $dailyAddedCostPerChicken, // Store daily ADDED cost per chicken in breakdown
-                    'deplesi_ekor'  => $deplesiQty,
-                    'jual_ekor'     => $salesQty,
-                    'stock_awal'    => $stockAwal,
-                    'stock_akhir'   => $stockAkhir,
-                    'feed_detail'   => $feedDetails,
-                    'ovk_detail'    => $ovkDetails,
-                    'summary'       => $summaryStats, // Store full summary in breakdown for completeness
-                    'prev_cost'     => [
-                        // Store relevant previous day's cost data
-                        'total_added_cost' => $latestCost ? $latestCost->total_cost : 0, // Total added cost of prev day
-                        'pakan' => $latestCost ? ($latestCost->cost_breakdown['pakan'] ?? 0) : 0,
-                        'deplesi' => $latestCost ? ($latestCost->cost_breakdown['deplesi'] ?? 0) : 0,
-                        'ovk' => $latestCost ? ($latestCost->cost_breakdown['ovk'] ?? 0) : 0,
-                        // Store the cumulative cost per ayam of the previous day for deplesi calculation consistency
-                        // In v1.21 onwards, prev_cumulative_cost_per_ayam should be used from summary
-                        'cumulative_cost_per_ayam' => $prevCumulativeCostPerAyam, // Use the value fetched earlier
-                    ],
-                    'calculations'  => [
-                        'method'    => 'cumulative_cost',
-                        'version'   => '1.24',
-                        'timestamp' => now()->toIso8601String(),
-                    ],
-                    'initial_purchase_item_details' => [
-                        'found' => $initialPurchaseItem !== null,
-                        'livestock_purchase_item_id' => $initialPurchaseItem->id ?? null,
-                        'harga_per_ekor' => $initialPurchaseItem->harga_per_ekor ?? null,
-                        'created_at' => $initialPurchaseItem->created_at ?? null,
-                    ]
-                ]
-            ]
-        );
-
-        // dd($livestockCost);
-
-        return $livestockCost;
     }
 
+    /**
+     * Get previous day's cost data for accurate deplesi calculation
+     */
+    private function getPreviousDayCostData($livestockId, $tanggal)
+    {
+        $previousDate = Carbon::parse($tanggal)->subDay()->format('Y-m-d');
+        $previousCost = LivestockCost::where('livestock_id', $livestockId)
+            ->whereDate('tanggal', $previousDate)
+            ->first();
+
+        if ($previousCost) {
+            return [
+                'total_added_cost' => $previousCost->total_cost ?? 0,
+                'cumulative_cost_per_chicken' => $previousCost->cost_per_ayam ?? 0,
+            ];
+        }
+
+        // If no previous cost, use initial purchase price
+        $initialPurchaseItem = LivestockPurchaseItem::where('livestock_id', $livestockId)
+            ->orderBy('created_at', 'asc')
+            ->first();
+
+        $initialPricePerUnit = floatval($initialPurchaseItem->price_per_unit ?? 0);
+
+        return [
+            'total_added_cost' => 0,
+            'cumulative_cost_per_chicken' => $initialPricePerUnit,
+        ];
+    }
+
+    /**
+     * Calculate cumulative costs across all previous days
+     */
+    private function calculateCumulativeCosts($livestockId, $tanggal, $feedCost, $ovkCost, $deplesiCost, $initialPricePerUnit, $initialQuantity)
+    {
+        // Get all previous costs
+        $previousCosts = LivestockCost::where('livestock_id', $livestockId)
+            ->whereDate('tanggal', '<', $tanggal)
+            ->orderBy('tanggal', 'asc')
+            ->get();
+
+        $cumulativeFeedCost = 0;
+        $cumulativeOvkCost = 0;
+        $cumulativeDeplesiCost = 0;
+
+        foreach ($previousCosts as $cost) {
+            $breakdown = $cost->cost_breakdown ?? [];
+            $cumulativeFeedCost += $breakdown['pakan'] ?? 0;
+            $cumulativeOvkCost += $breakdown['ovk'] ?? 0;
+            $cumulativeDeplesiCost += $breakdown['deplesi'] ?? 0;
+        }
+
+        // Add today's costs
+        $cumulativeFeedCost += $feedCost;
+        $cumulativeOvkCost += $ovkCost;
+        $cumulativeDeplesiCost += $deplesiCost;
+
+        $totalCumulativeAddedCost = $cumulativeFeedCost + $cumulativeOvkCost + $cumulativeDeplesiCost;
+
+        return [
+            'cumulative_feed_cost' => $cumulativeFeedCost,
+            'cumulative_ovk_cost' => $cumulativeOvkCost,
+            'cumulative_deplesi_cost' => $cumulativeDeplesiCost,
+            'total_cumulative_added_cost' => $totalCumulativeAddedCost,
+        ];
+    }
+
+    /**
+     * Recalculate costs for a range of dates
+     */
     public function recalculateRange($livestockId, $startDate = null, $endDate = null)
     {
         $query = Recording::where('livestock_id', $livestockId);
@@ -442,62 +486,17 @@ class LivestockCostService
 
         $recordings = $query->orderBy('tanggal')->get();
 
+        Log::info("🔄 Recalculating livestock costs for range", [
+            'livestock_id' => $livestockId,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'recordings_count' => $recordings->count()
+        ]);
+
         foreach ($recordings as $record) {
             $this->calculateForDate($livestockId, $record->tanggal);
         }
+
+        Log::info("✅ Completed recalculating livestock costs for range");
     }
-
-    // public function calculateAndSave(array $data): void
-    // {
-    //     $livestockId = $data['livestock_id'];
-    //     $tanggal = Carbon::parse($data['tanggal'])->format('Y-m-d');
-    //     $stockAkhir = $data['stock_akhir'];
-    //     $mortality = $data['mortality'] ?? 0;
-    //     $culling = $data['culling'] ?? 0;
-    //     $salesQuantity = $data['sales_quantity'] ?? 0;
-    //     $stockData = $data['stock'] ?? [];
-
-    //     $feedCost = 0;
-    //     foreach ($stockData as $item) {
-    //         $feed = Feed::find($item['item_id']);
-    //         $feedCost += $feed ? ($feed->harga * $item['qty']) : 0;
-    //     }
-
-    //     // Hitung deplesi cost berdasarkan data kemarin
-    //     $yesterday = Carbon::parse($tanggal)->subDay()->format('Y-m-d');
-    //     $costYesterday = LivestockCost::where('livestock_id', $livestockId)
-    //                         ->whereDate('tanggal', $yesterday)
-    //                         ->first();
-
-    //     $costPerAyamSebelumnya = $costYesterday ? $costYesterday->cost_per_ayam : 0;
-    //     $deplesiHariIni = $mortality + $culling;
-    //     $deplesiCost = $deplesiHariIni * $costPerAyamSebelumnya;
-
-    //     $totalCost = $feedCost + $deplesiCost;
-
-    //     $jumlahAyamAktif = $stockAkhir;
-    //     $costPerAyam = $jumlahAyamAktif > 0 ? round($totalCost / $jumlahAyamAktif, 2) : 0;
-
-    //     $recording = Recording::where('livestock_id', $livestockId)
-    //                     ->whereDate('tanggal', $tanggal)
-    //                     ->first();
-
-    //     // Simpan ke LivestockCost
-    //     LivestockCost::updateOrCreate(
-    //         [
-    //             'livestock_id' => $livestockId,
-    //             'tanggal' => $tanggal,
-    //         ],
-    //         [
-    //             'recording_id' => $recording?->id,
-    //             'total_cost' => $totalCost,
-    //             'cost_per_ayam' => $costPerAyam,
-    //             'cost_breakdown' => [
-    //                 'pakan' => $feedCost,
-    //                 'deplesi' => $deplesiCost,
-    //                 'jual_ekor' => $salesQuantity,
-    //             ]
-    //         ]
-    //     );
-    // }
 }

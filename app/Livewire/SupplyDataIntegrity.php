@@ -20,6 +20,24 @@ class SupplyDataIntegrity extends Component
     public $showAuditTrail = false;
     public $selectedAuditModelType = null;
     public $selectedAuditModelId = null;
+    public $selectedCategories = [];
+    public $availableCategories = [
+        'stock_integrity' => 'Stock Integrity',
+        'current_supply_integrity' => 'CurrentSupply Integrity',
+        'purchase_integrity' => 'Purchase Integrity',
+        'mutation_integrity' => 'Mutation Integrity',
+        'usage_integrity' => 'Usage Integrity',
+        'status_integrity' => 'Status Integrity',
+        'master_data_integrity' => 'Master Data Integrity',
+        'relationship_integrity' => 'Relationship Integrity'
+    ];
+    public $showCategorySelector = false;
+
+    public function mount()
+    {
+        // Select all categories by default
+        $this->selectedCategories = array_keys($this->availableCategories);
+    }
 
     public function previewInvalidData()
     {
@@ -30,7 +48,7 @@ class SupplyDataIntegrity extends Component
 
         try {
             $service = new SupplyDataIntegrityService();
-            $result = $service->previewInvalidSupplyData();
+            $result = $service->previewInvalidSupplyData($this->selectedCategories);
 
             if ($result['success']) {
                 $this->logs = $result['logs'];
@@ -44,6 +62,7 @@ class SupplyDataIntegrity extends Component
             }
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
+            Log::error('Error in SupplyDataIntegrity::previewInvalidData: ' . $e->getMessage());
         }
 
         $this->isRunning = false;
@@ -69,6 +88,7 @@ class SupplyDataIntegrity extends Component
             }
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
+            Log::error('Error in SupplyDataIntegrity::runIntegrityCheck: ' . $e->getMessage());
         }
 
         $this->isRunning = false;
@@ -76,7 +96,7 @@ class SupplyDataIntegrity extends Component
 
     public function restoreRecord($type, $sourceId)
     {
-        $service = new \App\Services\SupplyDataIntegrityService();
+        $service = new SupplyDataIntegrityService();
         $restored = $service->restoreRelatedRecord($type, $sourceId);
         $this->logs = array_merge($this->logs, $service->getLogs());
         if ($restored) {
@@ -89,13 +109,13 @@ class SupplyDataIntegrity extends Component
 
     public function canRestore($type, $sourceId)
     {
-        $service = new \App\Services\SupplyDataIntegrityService();
+        $service = new SupplyDataIntegrityService();
         return $service->canRestore($type, $sourceId);
     }
 
     public function restoreStock($type, $sourceId)
     {
-        $service = new \App\Services\SupplyDataIntegrityService();
+        $service = new SupplyDataIntegrityService();
         $restored = $service->restoreMissingStock($type, $sourceId);
         $this->logs = array_merge($this->logs, $service->getLogs());
         if ($restored) {
@@ -108,7 +128,7 @@ class SupplyDataIntegrity extends Component
 
     public function fixAllQuantityMismatch()
     {
-        $service = new \App\Services\SupplyDataIntegrityService();
+        $service = new SupplyDataIntegrityService();
         $result = $service->fixQuantityMismatchStocks();
         $this->logs = array_merge($this->logs, $result['logs']);
         if ($result['fixed_count'] > 0) {
@@ -121,7 +141,7 @@ class SupplyDataIntegrity extends Component
 
     public function fixAllConversionMismatch()
     {
-        $service = new \App\Services\SupplyDataIntegrityService();
+        $service = new SupplyDataIntegrityService();
         $result = $service->fixConversionMismatchPurchases();
         $this->logs = array_merge($this->logs, $result['logs']);
         if ($result['fixed_count'] > 0) {
@@ -134,7 +154,7 @@ class SupplyDataIntegrity extends Component
 
     public function fixAllMutationQuantityMismatch()
     {
-        $service = new \App\Services\SupplyDataIntegrityService();
+        $service = new SupplyDataIntegrityService();
         $result = $service->fixMutationQuantityMismatchStocks();
         $this->logs = array_merge($this->logs, $result['logs']);
         if ($result['fixed_count'] > 0) {
@@ -142,6 +162,32 @@ class SupplyDataIntegrity extends Component
             $this->dispatch('fixedMutationQuantityMismatch');
         } else {
             $this->error = 'No mutation quantity mismatch found or nothing to fix.';
+        }
+    }
+
+    public function fixAllCurrentSupplyMismatch()
+    {
+        $service = new SupplyDataIntegrityService();
+        $result = $service->fixCurrentSupplyMismatch();
+        $this->logs = array_merge($this->logs, $result['logs']);
+        if ($result['fixed_count'] > 0) {
+            $this->error = null;
+            $this->dispatch('fixedCurrentSupplyMismatch');
+        } else {
+            $this->error = 'No current supply mismatch found or nothing to fix.';
+        }
+    }
+
+    public function createMissingCurrentSupplyRecords()
+    {
+        $service = new SupplyDataIntegrityService();
+        $result = $service->createMissingCurrentSupplyRecords();
+        $this->logs = array_merge($this->logs, $result['logs']);
+        if ($result['created_count'] > 0) {
+            $this->error = null;
+            $this->dispatch('createdMissingCurrentSupply');
+        } else {
+            $this->error = 'No missing current supply records found or nothing to create.';
         }
     }
 
@@ -168,6 +214,7 @@ class SupplyDataIntegrity extends Component
             }
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
+            Log::error('Error in SupplyDataIntegrity::previewChanges: ' . $e->getMessage());
         }
 
         $this->isRunning = false;
@@ -191,11 +238,15 @@ class SupplyDataIntegrity extends Component
             $result = $service->fixMutationQuantityMismatchStocks();
             $this->logs = array_merge($this->logs, $result['logs']);
 
+            $result = $service->fixCurrentSupplyMismatch();
+            $this->logs = array_merge($this->logs, $result['logs']);
+
             $this->showPreview = false;
             $this->previewData = [];
             $this->dispatch('changesApplied');
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
+            Log::error('Error in SupplyDataIntegrity::applyChanges: ' . $e->getMessage());
         }
 
         $this->isRunning = false;
@@ -210,7 +261,7 @@ class SupplyDataIntegrity extends Component
             ->where('model_id', $modelId)
             ->orderByDesc('created_at')
             ->get();
-        Log::info('AuditTrailResult', ['count' => count($this->auditTrails), 'ids' => $this->auditTrails->pluck('id')->toArray()]);
+        Log::info('AuditTrailResult', ['count' => $this->auditTrails->count(), 'ids' => $this->auditTrails->pluck('id')]);
         $this->showAuditTrail = true;
     }
 
@@ -224,7 +275,7 @@ class SupplyDataIntegrity extends Component
 
     public function rollbackAudit($auditId)
     {
-        $service = new \App\Services\SupplyDataIntegrityService();
+        $service = new SupplyDataIntegrityService();
         $service->rollback($auditId);
         $this->logs = array_merge($this->logs, $service->getLogs());
         $this->dispatch('rollbackSuccess');
@@ -232,6 +283,21 @@ class SupplyDataIntegrity extends Component
         if ($this->selectedAuditModelType && $this->selectedAuditModelId) {
             $this->loadAuditTrail($this->selectedAuditModelType, $this->selectedAuditModelId);
         }
+    }
+
+    public function toggleCategorySelector()
+    {
+        $this->showCategorySelector = !$this->showCategorySelector;
+    }
+
+    public function selectAllCategories()
+    {
+        $this->selectedCategories = array_keys($this->availableCategories);
+    }
+
+    public function deselectAllCategories()
+    {
+        $this->selectedCategories = [];
     }
 
     public function render()

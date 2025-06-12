@@ -420,7 +420,7 @@ class Records extends Component
             ->select('quantity as stock_akhir', 'livestock_id')
             ->with([
                 'livestock' => function ($query) {
-                    $query->select('id', 'name', 'start_date', 'populasi_awal')
+                    $query->select('id', 'name', 'start_date', 'initial_quantity')
                         ->with(['livestockDepletion' => function ($q) {
                             $q->where('tanggal', '<=', now())
                                 ->select('livestock_id', 'jenis', 'jumlah', 'tanggal');
@@ -438,7 +438,7 @@ class Records extends Component
             $totalDeplesi = $totalMati + $totalAfkir;
 
             $this->currentLivestockStock = [
-                'stock_awal' => $currentLivestock->livestock->populasi_awal ?? 0,
+                'stock_awal' => $currentLivestock->livestock->initial_quantity ?? 0,
                 'stock_akhir' => $currentLivestock->stock_akhir ?? 0,
                 'start_date' => $currentLivestock->livestock->start_date ?? null,
                 'name' => $currentLivestock->livestock->name ?? 'Unknown',
@@ -448,7 +448,7 @@ class Records extends Component
             ];
 
             // Auto-fill the stock fields
-            $this->stock_start = $currentLivestock->livestock->populasi_awal ?? 0;
+            $this->stock_start = $currentLivestock->livestock->initial_quantity ?? 0;
             $this->stock_end = $currentLivestock->stock_akhir ?? 0;
 
             // Set depletion values with proper terminology
@@ -620,7 +620,7 @@ class Records extends Component
 
         $records = collect();
         $currentDate = $startDate->copy();
-        $stockAwal = $ternak->livestock->populasi_awal;
+        $stockAwal = $ternak->livestock->initial_quantity;
 
         // dd($stockAwal);
 
@@ -789,12 +789,12 @@ class Records extends Component
                 ->toArray();
 
             // --- Validate livestock and data structure with enhanced checks ---
-            $ternak = CurrentLivestock::with(['livestock.kandang', 'livestock.farm'])->where('livestock_id', $this->livestockId)->first();
+            $ternak = CurrentLivestock::with(['livestock.coop', 'livestock.farm'])->where('livestock_id', $this->livestockId)->first();
             if (!$ternak || !$ternak->livestock) {
                 throw new \Exception("Livestock record not found or invalid");
             }
 
-            $populasiAwal = $ternak->livestock->populasi_awal;
+            $populasiAwal = $ternak->livestock->initial_quantity;
             $livestockStartDate = Carbon::parse($ternak->livestock->start_date);
             $recordDate = Carbon::parse($this->date);
 
@@ -838,7 +838,7 @@ class Records extends Component
                 ->whereDate('tanggal', $previousDate)
                 ->first();
 
-            $stockAwalHariIni = $previousRecording ? $previousRecording->stock_akhir : $ternak->livestock->populasi_awal;
+            $stockAwalHariIni = $previousRecording ? $previousRecording->stock_akhir : $ternak->livestock->initial_quantity;
 
             // Calculate stock_akhir and depletion totals
             $totalDeplesiHariIni = (int)($this->mortality ?? 0) + (int)($this->culling ?? 0) + (int)($this->sales_quantity ?? 0);
@@ -905,7 +905,7 @@ class Records extends Component
                 'farm_id' => $ternak->livestock->farm_id,
                 'farm_name' => $ternak->livestock->farm->name ?? 'Unknown Farm',
                 'coop_id' => $ternak->livestock->coop_id,
-                'kandang_name' => $ternak->livestock->kandang->name ?? 'Unknown Kandang',
+                'coop_name' => $ternak->livestock->coop->name ?? 'Unknown Coop',
 
                 // Metadata
                 'recorded_at' => now()->toIso8601String(),
@@ -925,8 +925,11 @@ class Records extends Component
                 'kenaikan_berat' => $weightGain,
                 'pakan_jenis' => implode(', ', array_column($this->usages, 'feed_name')),
                 'pakan_harian' => array_sum(array_column($this->usages, 'quantity')),
+                'feed_id' => implode(', ', array_column($this->usages, 'feed_id')),
                 'payload' => $detailedPayload,
             ];
+
+            // dd($recordingInput);
 
             // Save recording data
             try {
@@ -1785,6 +1788,7 @@ class Records extends Component
 
     /**
      * Update current livestock quantity with historical tracking
+     * This method now follows the consistent formula and updates Livestock quantity_depletion
      * 
      * @return void
      */
@@ -1794,62 +1798,97 @@ class Records extends Component
             return;
         }
 
+        $livestock = Livestock::find($this->livestockId);
         $currentLivestock = CurrentLivestock::where('livestock_id', $this->livestockId)->first();
-        if (!$currentLivestock) {
+
+        if (!$livestock || !$currentLivestock) {
+            Log::warning('⚠️ Livestock or CurrentLivestock not found', [
+                'livestock_id' => $this->livestockId,
+                'livestock_exists' => $livestock ? 'yes' : 'no',
+                'current_livestock_exists' => $currentLivestock ? 'yes' : 'no'
+            ]);
             return;
         }
 
-        DB::transaction(function () use ($currentLivestock) {
-            // Get all depletion records for this livestock
-            $allDeplesi = LivestockDepletion::where('livestock_id', $this->livestockId)->get();
+        DB::transaction(function () use ($livestock, $currentLivestock) {
+            // Calculate total depletion from LivestockDepletion records
+            $totalDeplesi = LivestockDepletion::where('livestock_id', $this->livestockId)->sum('jumlah');
 
-            // Get all sales records
-            $allSales = LivestockSalesItem::where('livestock_id', $this->livestockId)->get();
+            // Get all sales records (if LivestockSalesItem exists)
+            $totalSales = 0;
+            if (class_exists('App\Models\LivestockSalesItem')) {
+                $totalSales = \App\Models\LivestockSalesItem::where('livestock_id', $this->livestockId)->sum('quantity');
+            }
 
-            // Calculate total depletion and sales
-            $totalDeplesi = $allDeplesi->sum('jumlah');
-            $totalSales = $allSales->sum('quantity');
+            // Update quantity_depletion in Livestock table first
+            $oldLivestockQuantityDepletion = $livestock->quantity_depletion ?? 0;
+            $livestock->update([
+                'quantity_depletion' => $totalDeplesi,
+                'quantity_sales' => $totalSales,
+                'updated_by' => auth()->id()
+            ]);
+
+            // Calculate real-time quantity using consistent formula
+            // Formula: initial_quantity - quantity_depletion - quantity_sales - quantity_mutated
+            $calculatedQuantity = $livestock->initial_quantity
+                - $totalDeplesi
+                - $totalSales
+                - ($livestock->quantity_mutated ?? 0);
+
+            // Ensure quantity doesn't go negative
+            $calculatedQuantity = max(0, $calculatedQuantity);
 
             // Store the old quantity for history
             $oldQuantity = $currentLivestock->quantity;
 
-            // Update current quantity
-            $currentLivestock->quantity = $currentLivestock->livestock->populasi_awal - $totalDeplesi - $totalSales;
+            // Update CurrentLivestock with comprehensive metadata
+            $currentLivestock->update([
+                'quantity' => $calculatedQuantity,
+                'metadata' => array_merge($currentLivestock->metadata ?? [], [
+                    'last_updated' => now()->toIso8601String(),
+                    'updated_by' => auth()->id(),
+                    'updated_by_name' => auth()->user()->name ?? 'Unknown User',
+                    'previous_quantity' => $oldQuantity,
+                    'quantity_change' => $calculatedQuantity - $oldQuantity,
+                    'calculation_source' => 'livewire_records_consistent_formula',
+                    'formula_breakdown' => [
+                        'initial_quantity' => $livestock->initial_quantity,
+                        'quantity_depletion' => $totalDeplesi,
+                        'quantity_sales' => $totalSales,
+                        'quantity_mutated' => $livestock->quantity_mutated ?? 0,
+                        'calculated_quantity' => $calculatedQuantity
+                    ],
+                    'percentages' => [
+                        'depletion_percentage' => $livestock->initial_quantity > 0
+                            ? round(($totalDeplesi / $livestock->initial_quantity) * 100, 2)
+                            : 0,
+                        'sales_percentage' => $livestock->initial_quantity > 0
+                            ? round(($totalSales / $livestock->initial_quantity) * 100, 2)
+                            : 0,
+                        'remaining_percentage' => $livestock->initial_quantity > 0
+                            ? round(($calculatedQuantity / $livestock->initial_quantity) * 100, 2)
+                            : 0
+                    ]
+                ]),
+                'updated_by' => auth()->id()
+            ]);
 
-            // Ensure quantity doesn't go negative
-            $currentLivestock->quantity = max(0, $currentLivestock->quantity);
-
-            // Add historical metadata
-            $currentLivestock->metadata = [
-                'last_updated' => now()->toIso8601String(),
-                'updated_by' => auth()->id(),
-                'updated_by_name' => auth()->user()->name ?? 'Unknown User',
-                'previous_quantity' => $oldQuantity,
-                'change' => $currentLivestock->quantity - $oldQuantity,
-                'initial_population' => $currentLivestock->livestock->populasi_awal,
-                'total_depletion' => $totalDeplesi,
-                'total_sales' => $totalSales,
-                'mortality_percentage' => $currentLivestock->livestock->populasi_awal > 0
-                    ? ($allDeplesi->where('jenis', 'Mati')->sum('jumlah') / $currentLivestock->livestock->populasi_awal) * 100
-                    : 0,
-                'culling_percentage' => $currentLivestock->livestock->populasi_awal > 0
-                    ? ($allDeplesi->where('jenis', 'Afkir')->sum('jumlah') / $currentLivestock->livestock->populasi_awal) * 100
-                    : 0,
-                'sales_percentage' => $currentLivestock->livestock->populasi_awal > 0
-                    ? ($totalSales / $currentLivestock->livestock->populasi_awal) * 100
-                    : 0,
-            ];
-
-            $currentLivestock->save();
-
-            Log::info("Updated current livestock quantity", [
+            Log::info("📊 Updated livestock quantities (consistent formula)", [
                 'livestock_id' => $this->livestockId,
-                'old_quantity' => $oldQuantity,
-                'new_quantity' => $currentLivestock->quantity,
-                'change' => $currentLivestock->quantity - $oldQuantity,
-                'initial_population' => $currentLivestock->livestock->populasi_awal,
-                'total_depletion' => $totalDeplesi,
-                'total_sales' => $totalSales,
+                'livestock_name' => $livestock->name,
+                'old_livestock_quantity_depletion' => $oldLivestockQuantityDepletion,
+                'new_livestock_quantity_depletion' => $totalDeplesi,
+                'old_current_quantity' => $oldQuantity,
+                'new_current_quantity' => $calculatedQuantity,
+                'quantity_change' => $calculatedQuantity - $oldQuantity,
+                'formula' => sprintf(
+                    '%d - %d - %d - %d = %d',
+                    $livestock->initial_quantity,
+                    $totalDeplesi,
+                    $totalSales,
+                    $livestock->quantity_mutated ?? 0,
+                    $calculatedQuantity
+                )
             ]);
         });
     }
@@ -1908,6 +1947,7 @@ class Records extends Component
                 'tanggal' => $data['tanggal']
             ],
             [
+                'feed_id' => $data['feed_id'],
                 'age' => $data['age'],
                 'stock_awal' => $data['stock_awal'],
                 'stock_akhir' => $data['stock_akhir'],

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CurrentSupply;
 use App\Models\SupplyMutation;
 use App\Models\SupplyPurchase;
 use App\Models\SupplyPurchaseBatch;
@@ -17,7 +18,7 @@ class SupplyController extends Controller
     public function getSupplyPurchaseBatchDetail($batchId)
     {
         $supplyPurchases = SupplyPurchase::with([
-            'supplyItem:id,code,name,payload',
+            'supplyItem:id,code,name,data',
             'supplyStocks',
             'unit'
         ])
@@ -30,7 +31,7 @@ class SupplyController extends Controller
             $supplyItem = optional($item->supplyItem);
 
             // Get proper conversion units from supply payload
-            $conversionUnits = collect($supplyItem->payload['conversion_units'] ?? []);
+            $conversionUnits = collect($supplyItem->data['conversion_units'] ?? []);
 
             // Get the purchase unit and converted (smallest) unit information
             $purchaseUnitId = $item->unit_id;
@@ -94,7 +95,7 @@ class SupplyController extends Controller
                     'converted_quantity' => $convertedQuantity,
                     'sisa' => round($sisaPurchaseUnits, 2),
                     'unit' => $item->unit->name ?? '-',
-                    'unit_conversion' => $smallestUnit['label'] ?? ($supplyItem->payload['unit_details']['name'] ?? '-'),
+                    'unit_conversion' => $smallestUnit['label'] ?? ($supplyItem->data['unit_details']['name'] ?? '-'),
                     'conversion' => $purchaseUnitValue / $smallestUnitValue,
                     'price_per_unit' => floatval($item->price_per_unit),
                     'total' => config('xolution.ALLOW_ROUNDUP_PRICE')
@@ -141,7 +142,7 @@ class SupplyController extends Controller
                     'converted_quantity' => $convertedQuantity,
                     'sisa' => round($sisaPurchaseUnits, 2),
                     'unit' => $item->unit->name ?? '-',
-                    'unit_conversion' => $supplyItem->payload['unit_details']['name'] ?? '-',
+                    'unit_conversion' => $supplyItem->data['unit_details']['name'] ?? '-',
                     'conversion' => $conversionFactor,
                     'price_per_unit' => floatval($item->price_per_unit),
                     'total' => config('xolution.ALLOW_ROUNDUP_PRICE')
@@ -365,6 +366,8 @@ class SupplyController extends Controller
                 'supplyStocks'
             ])->findOrFail($id);
 
+            Log::info("Fetched SupplyPurchase", ['id' => $id, 'supplyPurchase' => $supplyPurchase]);
+
             $supplyItem = $supplyPurchase->supplyItem;
             $conversion = floatval($supplyItem->conversion) ?: 1;
 
@@ -372,6 +375,7 @@ class SupplyController extends Controller
             $supplyStock = SupplyStock::where('source_id', $supplyPurchase->id)->first();
 
             if (!$supplyStock) {
+                Log::error("Stock record not found for this purchase", ['id' => $id]);
                 return response()->json([
                     'message' => 'Stock record not found for this purchase',
                     'status' => 'error'
@@ -383,12 +387,18 @@ class SupplyController extends Controller
             $mutatedQty = $supplyStock->quantity_mutated ?? 0;
             $totalUsed = $usedQty + $mutatedQty;
 
-            if ($column === 'qty') {
+            Log::info("Calculated quantities", ['usedQty' => $usedQty, 'mutatedQty' => $mutatedQty, 'totalUsed' => $totalUsed]);
+
+            $originalQuantity = $supplyPurchase->quantity;
+            $originalPricePerUnit = $supplyPurchase->price_per_unit;
+
+            if ($column === 'quantity') {
                 // Convert the new quantity value using the conversion factor
                 $convertedQuantity = $value * $conversion;
 
                 // Check if new quantity is less than what's already used/mutated
                 if ($convertedQuantity < $totalUsed) {
+                    Log::warning("New quantity is less than used/mutated", ['convertedQuantity' => $convertedQuantity, 'totalUsed' => $totalUsed]);
                     return response()->json([
                         'message' => 'Jumlah baru lebih kecil dari jumlah yang sudah terpakai atau dimutasi',
                         'status' => 'error'
@@ -401,9 +411,10 @@ class SupplyController extends Controller
                 // Update SupplyStock
                 $supplyStock->update([
                     'quantity_in' => $convertedQuantity,
-                    'available' => $available,
                     'updated_by' => $user_id,
                 ]);
+
+                Log::info("Updated SupplyStock", ['supplyStock' => $supplyStock]);
 
                 // Update SupplyPurchase with all necessary fields
                 $supplyPurchase->update([
@@ -412,7 +423,19 @@ class SupplyController extends Controller
                     'price_per_converted_unit' => $supplyPurchase->price_per_unit / $conversion,
                     'updated_by' => $user_id,
                 ]);
-            } else if ($column === 'harga') {
+
+                Log::info("Updated SupplyPurchase", ['supplyPurchase' => $supplyPurchase]);
+
+                // Update CurrentSupply quantity
+                $currentSupply = CurrentSupply::where('item_id', $supplyPurchase->supply_id)->first();
+                if ($currentSupply) {
+                    $currentSupply->update([
+                        'quantity' => $available,
+                        'updated_by' => $user_id,
+                    ]);
+                    Log::info("Updated CurrentSupply", ['currentSupply' => $currentSupply]);
+                }
+            } else if ($column === 'price_per_unit') {
                 // Update price_per_unit and calculate price_per_converted_unit
                 $pricePerUnit = floatval($value);
                 $pricePerConvertedUnit = $pricePerUnit / $conversion;
@@ -424,46 +447,40 @@ class SupplyController extends Controller
                     'updated_by' => $user_id,
                 ]);
 
+                Log::info("Updated price fields in SupplyPurchase", ['pricePerUnit' => $pricePerUnit, 'pricePerConvertedUnit' => $pricePerConvertedUnit]);
+
                 // Update the amount in SupplyStock
                 $amount = $supplyPurchase->quantity * $pricePerUnit;
                 $supplyStock->update([
-                    'amount' => $amount,
+                    'quantity_in' => $amount,
                     'updated_by' => $user_id,
                 ]);
+
+                Log::info("Updated SupplyStock amount", ['amount' => $amount]);
             }
 
-            // Recalculate totals for the batch
-            $batch = SupplyPurchaseBatch::with('supplyPurchases.supplyItem')
-                ->findOrFail($supplyPurchase->supply_purchase_batch_id);
-
-            $totalQty = $batch->supplyPurchases->sum(function ($purchase) {
-                return $purchase->quantity;
-            });
-
-            $totalAmount = $batch->supplyPurchases->sum(function ($purchase) {
-                return $purchase->price_per_unit * $purchase->quantity;
-            });
-
-            // Update the batch with new totals
-            $batch->update([
-                'total_qty' => $totalQty,
-                'total_amount' => $totalAmount,
-                'updated_by' => $user_id,
-            ]);
+            // Check if any actual changes were made
+            $updateSuccessful = ($column === 'quantity' && $originalQuantity != $value) ||
+                ($column === 'price_per_unit' && $originalPricePerUnit != $value);
 
             DB::commit();
 
-            return response()->json([
-                'message' => 'Berhasil Update Data',
-                'status' => 'success'
-            ]);
+            if ($updateSuccessful) {
+                Log::info("Update successful", ['updateSuccessful' => $updateSuccessful]);
+                return response()->json([
+                    'message' => 'Berhasil Update Data',
+                    'status' => 'success'
+                ]);
+            } else {
+                Log::info("Update failed: No changes made", ['updateSuccessful' => $updateSuccessful]);
+                return response()->json([
+                    'message' => 'Gagal melakukan update: Tidak ada perubahan data',
+                    'status' => 'error'
+                ], 400);
+            }
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Error in stockEdit: " . $e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            Log::error("Error in stockEdit", ['error' => $e->getMessage()]);
 
             return response()->json([
                 'message' => 'Gagal melakukan update: ' . $e->getMessage(),

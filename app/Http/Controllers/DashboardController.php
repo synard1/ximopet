@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\CurrentStock;
 use App\Models\CurrentTernak;
+use App\Models\CurrentLivestock;
+use App\Models\CurrentSupply;
 use App\Models\User;
 use App\Models\Farm;
 use App\Models\Rekanan;
-use App\Models\Kandang;
+use App\Models\Coop;
 use App\Models\TransaksiJual;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -28,29 +30,31 @@ class DashboardController extends Controller
         });
 
         $farm = Cache::remember('dashboard:farm_list_' . ($isOperator ? implode('-', $farmIds) : 'all'), now()->addMinutes(30), function () use ($farmIds) {
-            return Farm::whereIn('status', ['Aktif', 'Digunakan'])
+            return Farm::whereIn('status', ['active', 'in_use'])
                 ->when($farmIds, fn($q) => $q->whereIn('id', $farmIds))
                 ->get();
         });
 
         $kandang = Cache::remember('dashboard:kandang_list_' . ($isOperator ? implode('-', $farmIds) : 'all'), now()->addMinutes(30), function () use ($farmIds) {
-            return Kandang::whereIn('status', ['Aktif', 'Digunakan'])
+            return Coop::whereIn('status', ['active', 'in_use'])
                 ->when($farmIds, fn($q) => $q->whereIn('farm_id', $farmIds))
                 ->get();
         });
 
         $ternak = Cache::remember('dashboard:ternak_list_' . ($isOperator ? implode('-', $farmIds) : 'all'), now()->addMinutes(15), function () use ($farmIds) {
-            return CurrentTernak::where('status', 'Aktif')
+            return CurrentLivestock::where('status', 'active')
                 ->when($farmIds, fn($q) => $q->whereIn('farm_id', $farmIds))
                 ->get();
         });
 
         $currentStocks = Cache::remember('dashboard:current_stocks', now()->addMinutes(10), function () {
-            return CurrentStock::whereHas('item', function ($query) {
-                $query->where('category_id', '9db8c901-b60a-4611-b5c1-01f264e1187a');
-            })
-                ->where('quantity', '>', 0)
-                ->with('item')
+            // return CurrentSupply::whereHas('supply', function ($query) {
+            //     $query->where('category_id', '9db8c901-b60a-4611-b5c1-01f264e1187a');
+            // })
+            //     ->where('quantity', '>', 0)
+            //     ->with('supply')
+            //     ->get();
+            return CurrentSupply::where('quantity', '>', 0)
                 ->get();
         });
 
@@ -91,7 +95,7 @@ class DashboardController extends Controller
             });
         }
 
-        return view('pages/dashboards.index', compact(
+        return view('pages.dashboards.index', compact(
             'userList',
             'farm',
             'kandang',

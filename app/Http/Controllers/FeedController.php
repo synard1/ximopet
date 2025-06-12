@@ -26,7 +26,7 @@ class FeedController extends Controller
     public function getFeedPurchaseBatchDetail($batchId)
     {
         $feedPurchases = FeedPurchase::with([
-            'feedItem:id,code,name,payload',
+            'feedItem:id,code,name,data',
             'feedStocks',
             'unit'
         ])
@@ -37,7 +37,7 @@ class FeedController extends Controller
             $feedItem = optional($item->feedItem);
 
             // Get proper conversion units from feed payload
-            $conversionUnits = collect($feedItem->payload['conversion_units'] ?? []);
+            $conversionUnits = collect($feedItem->data['conversion_units'] ?? []);
 
             // Get the purchase unit and converted (smallest) unit information
             $purchaseUnitId = $item->unit_id;
