@@ -17,6 +17,8 @@ const showLoadingSpinner = () => {
     }, 3000);
 };
 
+let lastStatusSelect = null;
+
 // Add click event listener to delete buttons
 document
     .querySelectorAll('[data-kt-action="delete_row"]')
@@ -265,6 +267,92 @@ document
                 });
         });
     });
+
+// Add click event listener to update status buttons
+document
+    .querySelectorAll('[data-kt-action="update_status"]')
+    .forEach(function (element) {
+        element.addEventListener("change", function (e) {
+            if (this.disabled) return;
+            const purchaseId = this.getAttribute("data-kt-transaction-id");
+            const status = this.value;
+            const current = this.getAttribute("data-current");
+
+            if (status === "cancelled" || status === "completed") {
+                lastStatusSelect = this;
+                document.getElementById("statusIdInput").value = purchaseId;
+                document.getElementById("statusValueInput").value = status;
+                document.getElementById("notesInput").value = "";
+                $("#notesModal").modal("show");
+                this.value = current;
+            } else {
+                // Show immediate feedback notification if available
+                if (
+                    typeof window.LivestockPurchaseDataTableNotifications !==
+                        "undefined" &&
+                    typeof window.LivestockPurchaseDataTableNotifications
+                        .showStatusChangeNotification === "function"
+                ) {
+                    window.LivestockPurchaseDataTableNotifications.showStatusChangeNotification(
+                        {
+                            transactionId: purchaseId,
+                            oldStatus: current,
+                            newStatus: status,
+                            type: "info",
+                            title: "Status Change Processing",
+                            message: `Updating status from ${current} to ${status}...`,
+                        }
+                    );
+                }
+
+                Livewire.dispatch("updateStatusLivestockPurchase", {
+                    purchaseId: purchaseId,
+                    status: status,
+                    notes: "",
+                });
+            }
+        });
+    });
+
+// Submit modal catatan
+document.getElementById("notesForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const id = document.getElementById("statusIdInput").value;
+    const status = document.getElementById("statusValueInput").value;
+    const notes = document.getElementById("notesInput").value;
+    if (!notes) {
+        alert("Catatan wajib diisi!");
+        return;
+    }
+
+    // Show immediate feedback notification if available
+    if (
+        typeof window.LivestockPurchaseDataTableNotifications !== "undefined" &&
+        typeof window.LivestockPurchaseDataTableNotifications
+            .showStatusChangeNotification === "function"
+    ) {
+        window.LivestockPurchaseDataTableNotifications.showStatusChangeNotification(
+            {
+                transactionId: id,
+                oldStatus: lastStatusSelect
+                    ? lastStatusSelect.getAttribute("data-current")
+                    : "unknown",
+                newStatus: status,
+                type: "warning",
+                title: "Status Change Processing",
+                message: `Updating status to ${status} with notes...`,
+            }
+        );
+    }
+
+    Livewire.dispatch("updateStatusLivestockPurchase", {
+        purchaseId: id,
+        status: status,
+        notes: notes,
+    });
+    $("#notesModal").modal("hide");
+    lastStatusSelect = null;
+});
 
 // // Listen for 'success' event emitted by Livewire
 // Livewire.on('success', (message) => {

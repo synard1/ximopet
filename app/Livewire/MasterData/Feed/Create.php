@@ -2,6 +2,7 @@
 
 namespace App\Livewire\MasterData\Feed;
 
+use App\Traits\HasTempAuthorization;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -12,6 +13,8 @@ use App\Models\UnitConversion;
 
 class Create extends Component
 {
+    use HasTempAuthorization;
+
     public $feedId;
     public $code, $name, $category, $type, $description, $volume;
     public $invoice_number;
@@ -29,6 +32,7 @@ class Create extends Component
     public $unit_id;
     public $conversion_units = [];
     public $default_unit_id = null;
+    public $tempAuthEnabled = false;
 
     protected $listeners = [
         'showEditForm' => 'showEditForm',
@@ -154,6 +158,26 @@ class Create extends Component
         }
     }
 
+    public function isReadonly()
+    {
+        if ($this->tempAuthEnabled) {
+            return false;
+        }
+
+        return in_array($this->status, ['arrived', 'completed']);
+    }
+
+    public function isDisabled()
+    {
+        // If temp auth is enabled, not disabled
+        if ($this->tempAuthEnabled) {
+            return false;
+        }
+
+        // Check local conditions
+        return in_array($this->status, ['arrived', 'completed']);
+    }
+
 
 
 
@@ -195,9 +219,9 @@ class Create extends Component
         $this->code = $feed->code;
         $this->name = $feed->name;
         $this->type = "Feed";
-        $this->unit_id = $feed->payload['unit_id'];
+        $this->unit_id = $feed->data['unit_id'];
         $this->description = $feed->description;
-        $this->conversion_units = $feed->payload['conversion_units'] ?? [];
+        $this->conversion_units = $feed->data['conversion_units'] ?? [];
 
 
         // $this->conversion_units = $feed->conversionUnits->map(function ($item) {

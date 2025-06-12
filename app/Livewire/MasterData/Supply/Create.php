@@ -204,9 +204,9 @@ class Create extends Component
         $this->code = $supply->code;
         $this->name = $supply->name;
         $this->type = $supply->supplyCategory->name;
-        $this->unit_id = $supply->payload['unit_id'];
+        $this->unit_id = $supply->data['unit_id'];
         $this->description = $supply->description;
-        $this->conversion_units = $supply->payload['conversion_units'] ?? [];
+        $this->conversion_units = $supply->data['conversion_units'] ?? [];
 
         $this->showForm = true;
         $this->edit_mode = true;
@@ -234,8 +234,8 @@ class Create extends Component
         $this->validateConversionDefaults();
 
         DB::transaction(function () {
-            // Buat payload yang akan disimpan ke field `payload`
-            $payload = [
+            // Buat data yang akan disimpan ke field `data`
+            $data = [
                 'unit_id' => $this->unit_id,
                 'unit_details' => Unit::find($this->unit_id)?->only('id', 'name', 'description'),
                 'conversion_units' => collect($this->conversion_units)->map(function ($conv) {
@@ -266,7 +266,7 @@ class Create extends Component
             $supply->fill([
                 'code' => $this->code,
                 'name' => $this->name,
-                'payload' => $payload,
+                'data' => $data,
                 'supply_category_id' => $supplyCategory->id,
             ])->save();
 

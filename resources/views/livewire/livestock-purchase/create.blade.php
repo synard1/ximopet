@@ -1,45 +1,73 @@
-<div x-data="{ errors: [] }" x-on:validation-errors.window="errors = $event.detail.errors">
-    <template x-if="errors.length > 0">
-        <div class="alert alert-danger mb-3" x-show="errors.length > 0">
-            <ul class="mb-0">
-                <template x-for="error in errors" :key="error">
-                    <li x-text="error"></li>
-                </template>
-            </ul>
-            <button type="button" class="btn-close float-end" aria-label="Close" @click="errors = []"></button>
-        </div>
-    </template>
-
+<div>
     @if ($showForm)
+
+    <!-- Readonly/Locked Status Alert -->
+    {{-- @if($this->isReadonly() && !$tempAuthEnabled) --}}
+    @if(in_array($status, ['in_coop', 'complete']) && !$tempAuthEnabled)
+    <div class="alert alert-warning d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center">
+            <i class="ki-outline ki-lock fs-2 me-3 text-warning"></i>
+            <div>
+                <div class="fw-bold">Form dalam Mode Read-Only</div>
+                <div class="text-muted small">Status: {{ ucfirst($status) }} - Data tidak dapat diubah tanpa autorisasi
+                </div>
+            </div>
+        </div>
+        <!-- Debug Button - Always show -->
+        <button type="button" class="btn btn-sm btn-warning" wire:click="requestTempAuth"
+            onclick="console.log('Debug button clicked')">
+            <i class="ki-outline ki-shield-search fs-4 me-1"></i>
+            Minta Autorisasi (Debug)
+        </button>
+
+        @if($this->canRequestTempAuth())
+        <button type="button" class="btn btn-sm btn-success" wire:click="requestTempAuth"
+            onclick="console.log('Normal button clicked')">
+            <i class="ki-outline ki-shield-search fs-4 me-1"></i>
+            Minta Autorisasi (Normal)
+        </button>
+        @else
+        <div class="text-muted small">
+            <div>Tidak memiliki akses untuk autorisasi</div>
+            <div>User roles: {{ auth()->user()->roles->pluck('name')->implode(', ') }}</div>
+            <div>Config roles: {{ json_encode(config('temp_auth.allowed_roles', [])) }}</div>
+        </div>
+        @endif
+    </div>
+    @endif
+
     <form wire:submit.prevent="save" class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="card p-4 shadow-sm rounded overflow-auto" style="max-height: 400px;">
                 <h5 class="fw-semibold text-primary">Informasi Pembelian</h5>
                 <x-input.group label="Tanggal">
                     <input wire:model="date" id="date" class="form-control form-control-solid" placeholder="Tanggal"
-                        @if($edit_mode) readonly required @endif @if($edit_mode) style="pointer-events: none;" @endif
-                        x-data x-init="flatpickr($el, {
-                            enableTime: true,
-                            dateFormat: 'Y-m-d',
-                            defaultDate: '{{ $date }}',
-                        })">
+                        @if($this->isReadonly()) readonly required @endif
+                    @if($this->isReadonly()) style="pointer-events: none;" @endif
+                    x-data x-init="flatpickr($el, {
+                    enableTime: true,
+                    dateFormat: 'Y-m-d',
+                    defaultDate: '{{ $date }}',
+                    })">
                     <x-input.error for="date" />
                 </x-input.group>
 
                 <x-input.group label="Nama Batch">
                     <input type="text" wire:model="batch_name" class="form-control"
-                        placeholder="Masukkan nama batch atau kosongkan untuk otomatis" @if($edit_mode) readonly @endif>
+                        placeholder="Masukkan nama batch atau kosongkan untuk otomatis" @if($this->isReadonly())
+                    readonly @endif>
                     <x-input.error for="batch_name" />
                 </x-input.group>
 
                 <x-input.group label="Nomor Invoice">
                     <input type="text" wire:model="invoice_number" class="form-control"
-                        placeholder="Masukkan nomor invoice" @if($edit_mode) readonly required @endif>
+                        placeholder="Masukkan nomor invoice" @if($this->isReadonly()) readonly required @endif>
                     <x-input.error for="invoice_number" />
                 </x-input.group>
 
                 <x-input.group label="Supplier">
-                    <select wire:model="supplier_id" class="form-select" @if($edit_mode) disabled required @endif>
+                    <select wire:model="supplier_id" class="form-select" @if($this->isDisabled()) disabled required
+                        @endif>
                         <option value="">-- Pilih Supplier --</option>
                         @foreach ($vendors as $vendor)
                         <option value="{{ $vendor->id }}" @if($supplier_id==$vendor->id) selected @endif>
@@ -51,7 +79,7 @@
                 </x-input.group>
 
                 <x-input.group label="Ekspedisi">
-                    <select wire:model="expedition_id" class="form-select">
+                    <select wire:model="expedition_id" class="form-select" @if($this->isDisabled()) disabled @endif>
                         <option value="">-- Pilih Ekspedisi --</option>
                         @foreach ($expeditions as $expedition)
                         <option value="{{ $expedition->id }}">{{ $expedition->name }}</option>
@@ -61,7 +89,8 @@
                 </x-input.group>
 
                 <x-input.group label="Farm">
-                    <select wire:model.live="farm_id" class="form-select" @if($edit_mode) disabled required @endif>
+                    <select wire:model.live="farm_id" class="form-select" @if($this->isDisabled()) disabled required
+                        @endif>
                         <option value="">-- Pilih Farm --</option>
                         @foreach ($farms as $farm)
                         <option value="{{ $farm->id }}" @if($farm_id==$farm->id) selected @endif>
@@ -73,11 +102,9 @@
                 </x-input.group>
 
                 <x-input.group label="Kandang">
-                    <select wire:model="coop_id" class="form-select" @if(!$farm_id || $edit_mode) disabled required
-                        @endif>
-                        {{ print_r($coop_id); }}
-
-                        <option value="">-- Pilih Kandang {{ print_r($coop_id); }} --</option>
+                    <select wire:model="coop_id" class="form-select" @if(!$farm_id || $this->isDisabled()) disabled
+                        required @endif>
+                        <option value="">-- Pilih Kandang --</option>
                         @foreach ($coops as $coop)
                         <option value="{{ $coop->id }}" @if($coop_id==$coop->id) selected @endif>
                             {{ $coop->name }} (Sisa Kapasitas: {{ $coop->capacity - $coop->quantity }})
@@ -89,7 +116,7 @@
 
                 <x-input.group label="Biaya Ekspedisi">
                     <input type="number" step="0.01" wire:model="expedition_fee" class="form-control"
-                        placeholder="Masukkan biaya ekspedisi">
+                        placeholder="Masukkan biaya ekspedisi" @if($this->isReadonly()) readonly @endif>
                     <x-input.error for="expedition_fee" />
                 </x-input.group>
             </div>
@@ -108,7 +135,8 @@
             <div class="row">
                 <div class="col-md-6">
                     <x-input.group label="Jenis Strains">
-                        <select class="form-select" wire:model="items.{{ $index }}.livestock_strain_id">
+                        <select class="form-select" wire:model="items.{{ $index }}.livestock_strain_id"
+                            @if($this->isDisabled()) disabled @endif>
                             <option value="">-- Pilih Strains --</option>
                             @foreach ($strains as $strain)
                             <option value="{{ $strain->id }}">{{ $strain->name }}</option>
@@ -118,7 +146,8 @@
                     </x-input.group>
 
                     <x-input.group label="Standar Strains">
-                        <select class="form-select" wire:model="items.{{ $index }}.livestock_strain_standard_id">
+                        <select class="form-select" wire:model="items.{{ $index }}.livestock_strain_standard_id"
+                            @if($this->isDisabled()) disabled @endif>
                             <option value="">-- Pilih Standar Strains --</option>
                             @foreach ($standardStrains as $standardStrain)
                             <option value="{{ $standardStrain->id }}">{{ $standardStrain->livestock_strain_name }}
@@ -130,20 +159,22 @@
 
                     <x-input.group label="Jumlah">
                         <input type="number" step="1" wire:model="items.{{ $index }}.quantity" class="form-control"
-                            placeholder="Masukkan jumlah" />
+                            placeholder="Masukkan jumlah" @if($this->isReadonly()) readonly @endif />
                         <x-input.error for="items.{{ $index }}.quantity" />
                     </x-input.group>
 
                     <x-input.group label="Harga">
                         <input type="number" step="0.01" wire:model="items.{{ $index }}.price_value"
-                            class="form-control" placeholder="Masukkan harga" />
+                            class="form-control" placeholder="Masukkan harga" @if($this->isReadonly()) readonly @endif
+                        />
                         <x-input.error for="items.{{ $index }}.price_value" />
                     </x-input.group>
                 </div>
 
                 <div class="col-md-6">
                     <x-input.group label="Tipe Harga">
-                        <select class="form-select" wire:model="items.{{ $index }}.price_type">
+                        <select class="form-select" wire:model="items.{{ $index }}.price_type" @if($this->isDisabled())
+                            disabled @endif>
                             <option value="">-- Pilih Tipe Harga --</option>
                             <option value="per_unit">Harga per Ekor</option>
                             <option value="total">Harga Total</option>
@@ -153,12 +184,14 @@
 
                     <x-input.group label="Berat">
                         <input type="number" step="0.01" wire:model="items.{{ $index }}.weight_value"
-                            class="form-control" placeholder="Berat dalam satuan gram" />
+                            class="form-control" placeholder="Berat dalam satuan gram" @if($this->isReadonly()) readonly
+                        @endif />
                         <x-input.error for="items.{{ $index }}.weight_value" />
                     </x-input.group>
 
                     <x-input.group label="Tipe Berat">
-                        <select class="form-select" wire:model="items.{{ $index }}.weight_type">
+                        <select class="form-select" wire:model="items.{{ $index }}.weight_type" @if($this->isDisabled())
+                            disabled @endif>
                             <option value="">-- Pilih Tipe Berat --</option>
                             <option value="per_unit">Berat per Ekor</option>
                             <option value="total">Berat Total</option>
@@ -168,40 +201,53 @@
 
                     <x-input.group label="Catatan">
                         <input type="text" wire:model="items.{{ $index }}.notes" class="form-control"
-                            placeholder="Catatan tambahan..." />
+                            placeholder="Catatan tambahan..." @if($this->isReadonly()) readonly @endif />
                         <x-input.error for="items.{{ $index }}.notes" />
                     </x-input.group>
                 </div>
             </div>
 
+            @if(!$this->isDisabled())
             <div class="col-md-1 d-flex align-items-end justify-content-end">
                 <button type="button" wire:click="removeItem({{ $index }})" class="btn btn-outline-danger btn-sm">
                     <i class="bi bi-x-circle"></i>
                 </button>
             </div>
+            @endif
         </div>
         @endforeach
 
-        @if (count($items) < $maxItems) <div class="mb-4">
-            <button type="button" wire:click="addItem" class="btn btn-success">
-                <i class="bi bi-plus-circle me-1"></i> Tambah Livestock
-            </button>
-</div>
-@endif
-<div class="d-flex justify-content-end">
-    <button type="button" class="btn btn-secondary" wire:click="cancel">Cancel</button>
-    @can('create livestock purchasing')
-    <button type="submit" class="btn btn-warning text-white">
-        <i class="bi bi-save me-1"></i> Simpan Pembelian
-    </button>
-    @endcan
-</div>
-</form>
-@endif
+        @if (count($items) < $maxItems && !$this->isDisabled())
+            <div class="mb-4">
+                <button type="button" wire:click="addItem" class="btn btn-success">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Livestock
+                </button>
+            </div>
+            @endif
 
-@if (session()->has('error'))
-<div class="alert alert-danger mt-3">
-    {{ session('error') }}
-</div>
-@endif
+            <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-secondary" wire:click="cancel">Cancel</button>
+                @if(!$this->isDisabled())
+                @can('create livestock purchasing')
+                <button type="submit" class="btn btn-warning text-white">
+                    <i class="bi bi-save me-1"></i> Simpan Pembelian
+                </button>
+                @endcan
+                @endif
+            </div>
+    </form>
+    @endif
+
+    @if (session()->has('error'))
+    <div class="alert alert-danger mt-3">
+        {{ session('error') }}
+    </div>
+    @endif
+
+    @if (in_array($this->status, ['in_coop', 'complete']))
+    <div class="alert alert-info mt-3">
+        <strong>Catatan:</strong> Form ini hanya dalam mode read-only.
+    </div>
+    @endif
+
 </div>

@@ -1,5 +1,5 @@
-@if(auth()->user()->can('edit livestock purchasing') || auth()->user()->can('view livestock purchasing') ||
-auth()->user()->can('delete livestock purchasing'))
+@if(!in_array($transaksi->status, ['cancelled', 'completed']) && (auth()->user()->can('edit livestock purchasing') ||
+auth()->user()->can('view livestock purchasing') || auth()->user()->can('delete livestock purchasing')))
 <a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click"
     data-kt-menu-placement="bottom-end">
     Actions
