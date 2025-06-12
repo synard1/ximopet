@@ -12,6 +12,32 @@ class FeedPurchase extends BaseModel
 {
     use HasFactory, SoftDeletes, HasUuids;
 
+    // Status Constants
+    const STATUS_DRAFT = 'draft';
+    const STATUS_PENDING = 'pending';
+    const STATUS_CONFIRMED = 'confirmed';
+    const STATUS_IN_TRANSIT = 'in_transit';
+    const STATUS_IN_USE = 'in_use';
+    const STATUS_ARRIVED = 'arrived';
+    const STATUS_CANCELLED = 'cancelled';
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_READY = 'ready'; // New status for when quantity stock is ready to be used
+    const STATUS_EXHAUSTED = 'exhausted'; // New status for when quantity is fully used
+
+    // Status Labels
+    const STATUS_LABELS = [
+        self::STATUS_DRAFT => 'Draft',
+        self::STATUS_PENDING => 'Pending',
+        self::STATUS_CONFIRMED => 'Confirmed',
+        self::STATUS_IN_TRANSIT => 'In Transit',
+        self::STATUS_IN_USE => 'In Use',
+        self::STATUS_ARRIVED => 'Arrived',
+        self::STATUS_CANCELLED => 'Cancelled',
+        self::STATUS_COMPLETED => 'Completed',
+        self::STATUS_READY => 'Ready',
+        self::STATUS_EXHAUSTED => 'Exhausted' // Label for the new status
+    ];
+
     protected $fillable = [
         'id',
         'livestock_id',
@@ -31,7 +57,79 @@ class FeedPurchase extends BaseModel
         'date' => 'date',
     ];
 
-    public function livestok()
+    // Helper Methods
+    public function isDraft()
+    {
+        return $this->status === self::STATUS_DRAFT;
+    }
+
+    public function isPending()
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    public function isConfirmed()
+    {
+        return $this->status === self::STATUS_CONFIRMED;
+    }
+
+    public function isInTransit()
+    {
+        return $this->status === self::STATUS_IN_TRANSIT;
+    }
+
+    public function isInUse()
+    {
+        return $this->status === self::STATUS_IN_USE;
+    }
+
+    public function isArrived()
+    {
+        return $this->status === self::STATUS_ARRIVED;
+    }
+
+    public function isCancelled()
+    {
+        return $this->status === self::STATUS_CANCELLED;
+    }
+
+    public function isCompleted()
+    {
+        return $this->status === self::STATUS_COMPLETED;
+    }
+
+    public function isReady()
+    {
+        return $this->status === self::STATUS_READY;
+    }
+
+    public function isExhausted() // New method to check if the status is exhausted
+    {
+        return $this->status === self::STATUS_EXHAUSTED;
+    }
+
+    public function canBeEdited()
+    {
+        return in_array($this->status, [
+            self::STATUS_DRAFT,
+            self::STATUS_PENDING
+        ]);
+    }
+
+    public function canBeCancelled()
+    {
+        return !in_array($this->status, [
+            self::STATUS_CANCELLED,
+            self::STATUS_COMPLETED
+        ]);
+    }
+
+    public function getStatusLabel()
+    {
+        return self::STATUS_LABELS[$this->status] ?? 'Unknown';
+    }
+
+    public function livestock()
     {
         return $this->belongsTo(Livestock::class, 'livestock_id', 'id');
     }
@@ -82,5 +180,23 @@ class FeedPurchase extends BaseModel
         }
         // Jika tidak ada data konversi, fallback ke quantity
         return (float) $this->quantity;
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($feedPurchase) {
+            // Update CurrentFeed quantity when FeedPurchase is deleted
+            $currentFeed = CurrentFeed::where('livestock_id', $feedPurchase->livestock_id)
+                ->where('feed_id', $feedPurchase->feed_id)
+                ->first();
+
+            if ($currentFeed) {
+                // Decrease the quantity based on the deleted feed purchase
+                $currentFeed->quantity -= $feedPurchase->converted_quantity;
+                $currentFeed->save();
+            }
+        });
     }
 }

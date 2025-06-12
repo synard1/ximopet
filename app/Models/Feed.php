@@ -16,14 +16,15 @@ class Feed extends BaseModel
         'id',
         'code',
         'name',
-        'payload',
+        'data',
+        'description',
         'status',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
-        'payload' => 'array',
+        'data' => 'array',
     ];
 
     protected function status(): Attribute

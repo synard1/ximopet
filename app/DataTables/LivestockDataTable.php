@@ -56,6 +56,9 @@ class LivestockDataTable extends DataTable
                 // $jumlah = TernakAfkir::where('kelompok_ternak_id',$livestock->id)->sum('jumlah');
                 return $deplesi;
             })
+            ->editColumn('status', function (Livestock $livestock) {
+                return $livestock->getStatusLabel();
+            })
             // ->editColumn('jumlah_terjual', function (Livestock $livestock) {
             //     $jumlah = TernakJual::where('kelompok_ternak_id',$livestock->id)->sum('quantity');
             //     return $jumlah  ?? '0';

@@ -37,7 +37,7 @@ class TransaksiHarian extends BaseModel
 
     public function kandang()
     {
-        return $this->belongsTo('App\Models\Kandang', 'coop_id');
+        return $this->belongsTo(Coop::class, 'coop_id');
     }
 
     public function createdBy()

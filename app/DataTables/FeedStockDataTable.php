@@ -35,16 +35,26 @@ class FeedStockDataTable extends DataTable
             })
 
             ->editColumn('unit', function (FeedStock $stock) {
-                $unit = Unit::findOrFail($stock->feed->payload['unit_id']);
+                $unit = Unit::findOrFail($stock->feed->data['unit_id']);
                 return $unit->name;
             })
 
             ->editColumn('quantity', function (FeedStock $stock) {
                 $quantity = $stock->total_in - $stock->total_used - $stock->total_mutated;
-                return $quantity;
+                return number_format($quantity, 2);
             })
             ->addColumn('action', function (FeedStock $transaction) {
                 return view('pages.masterdata.stock._feedstock_actions', compact('transaction'));
+            })
+            ->filterColumn('livestock_id', function ($query, $keyword) {
+                $query->whereHas('livestock', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('feed_id', function ($query, $keyword) {
+                $query->whereHas('feed', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
             })
             // ->editColumn('created_at', function (FeedStock $stok) {
             //     return $stok->created_at->format('d M Y, h:i a');
@@ -82,7 +92,7 @@ class FeedStockDataTable extends DataTable
             ->setTableId('stoks-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            // ->dom('Bfrtip')
+            ->dom('Bfrtip')
             // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
             // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
@@ -98,12 +108,12 @@ class FeedStockDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex', 'No.')
-            ->title('No.')
-            ->addClass('text-center')
-            ->width(50),
-            Column::make('livestock_id')->title('Batch Ayam')->searchable(false),
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
+            Column::make('livestock_id')->title('Batch Ayam')->searchable(true),
             // Column::computed('farm')->searchable(true),
-            Column::make('feed_id')->title('Nama Pakan'),
+            Column::make('feed_id')->title('Nama Pakan')->searchable(true),
             Column::computed('quantity')->title('Jumlah')
                 ->visible(true),
             Column::computed('unit')
@@ -121,7 +131,7 @@ class FeedStockDataTable extends DataTable
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
+            // ->width(60)
         ];
     }
 

@@ -30,6 +30,11 @@ class Farm extends BaseModel
     {
         return $this->hasMany(Coop::class);
     }
+
+    public function coops()
+    {
+        return $this->hasMany(Coop::class);
+    }
     public function storages()
     {
         return $this->hasMany(InventoryLocation::class);
@@ -58,5 +63,10 @@ class Farm extends BaseModel
     public function inventoryLocations()
     {
         return $this->hasMany(InventoryLocation::class);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
     }
 }

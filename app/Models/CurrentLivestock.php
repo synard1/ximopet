@@ -17,22 +17,31 @@ class CurrentLivestock extends BaseModel
         'farm_id',
         'coop_id',
         'quantity',
-        'berat_total',
-        'avg_berat',
-        'age',
-        'metadata',
+        'weight_total',
+        'weight_avg',
+        'data',
         'status',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
-        'metadata' => 'array',
+        'data' => 'array',
     ];
 
     public function livestock()
     {
         return $this->belongsTo(Livestock::class, 'livestock_id');
+    }
+
+    public function farm()
+    {
+        return $this->belongsTo(Farm::class, 'farm_id');
+    }
+
+    public function coop()
+    {
+        return $this->belongsTo(Coop::class, 'coop_id');
     }
 
     public function item()

@@ -3,65 +3,52 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use App\Models\BaseModel;
 
 class Kandang extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $table = 'master_kandangs';
+    protected $table = 'coops';
 
     protected $fillable = [
         'farm_id',
-        'kode',
-        'nama',
-        'jumlah',
-        'berat',
-        'kapasitas',
-        'status',
+        'code',
+        'name',
+        'capacity',
+        'notes',
         'livestock_id',
+        'quantity',
+        'weight',
+        'status',
         'created_by',
         'updated_by',
     ];
 
     public function farm()
     {
-        return $this->belongsTo(Farm::class, 'farm_id');
+        return $this->belongsTo(Farm::class);
     }
 
-    public function livestock()
+    public function livestocks()
     {
-        return $this->belongsTo(Livestock::class, 'livestock_id');
+        return $this->hasMany(Livestock::class);
     }
 
-    public function livestockBatches()
+    public function livestockBatch()
     {
         return $this->hasMany(LivestockBatch::class);
     }
 
-    // Helper method to get current total population
-    public function getCurrentPopulation()
+    public function createdBy()
     {
-        return $this->livestockBatches()
-            ->where('status', 'active')
-            ->sum('populasi_awal');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
-    // Helper method to get current total weight
-    public function getCurrentWeight()
+    public function updatedBy()
     {
-        return $this->livestockBatches()
-            ->where('status', 'active')
-            ->sum('berat_awal');
-    }
-
-    // Helper method to check if kandang has available capacity
-    public function hasAvailableCapacity($newBatchPopulation)
-    {
-        $currentPopulation = $this->getCurrentPopulation();
-        return ($currentPopulation + $newBatchPopulation) <= $this->kapasitas;
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

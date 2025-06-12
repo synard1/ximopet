@@ -17,13 +17,14 @@ class Supply extends BaseModel
         'supply_category_id',
         'code',
         'name',
-        'payload',
+        'data',
+        'description',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
-        'payload' => 'array',
+        'data' => 'array',
     ];
 
     protected function status(): Attribute

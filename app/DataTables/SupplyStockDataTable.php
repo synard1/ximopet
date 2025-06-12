@@ -35,7 +35,7 @@ class SupplyStockDataTable extends DataTable
             })
 
             ->editColumn('unit', function (SupplyStock $supply) {
-                $unit = Unit::findOrFail($supply->supply->payload['unit_id']);
+                $unit = Unit::findOrFail($supply->supply->data['unit_id']);
                 return $unit->name;
             })
 

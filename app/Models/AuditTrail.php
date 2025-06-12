@@ -18,13 +18,16 @@ class AuditTrail extends BaseModel
      */
     protected $fillable = [
         'user_id',
+        'module',
         'action',
+        'old_data',
+        'new_data',
+        'ip_address',
+        'user_agent',
         'model_type',
         'model_name',
         'model_id',
         'model_ids',
-        'ip_address',
-        'user_agent',
         'reason',
         'related_records',
         'additional_info',
@@ -43,6 +46,8 @@ class AuditTrail extends BaseModel
         'additional_info' => 'array',
         'user_info' => 'array',
         'timestamp' => 'datetime',
+        'old_data' => 'array',
+        'new_data' => 'array'
     ];
 
     /**
