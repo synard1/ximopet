@@ -30,7 +30,8 @@ return new class extends Migration
             $table->foreignUuid('supply_category_id')->constrained()->cascadeOnDelete();
             $table->string('code');
             $table->string('name');
-            $table->json('payload')->nullable();
+            $table->json('data')->nullable();
+            $table->text('description')->nullable();
             $table->string('status')->default('active')->index();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -45,11 +46,14 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('invoice_number');
             $table->string('do_number')->nullable(); // delivery order number / surat jalan
+            $table->foreignUuid('farm_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('supplier_id')->constrained('partners')->onDelete('cascade');
             $table->foreignUuid('expedition_id')->nullable()->constrained('expeditions')->onDelete('set null');
             $table->dateTime('date');
             $table->decimal('expedition_fee', 12, 2)->default(0); // tarif ekspedisi
-            $table->json('payload')->nullable(); // simpan kebutuhan data mendatang
+            $table->json('data')->nullable(); // simpan kebutuhan data mendatang
+            $table->text('notes')->nullable();
+            $table->string('status')->default('draft')->index();
 
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -84,11 +88,11 @@ return new class extends Migration
 
         Schema::create('supply_stocks', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('livestock_id')->nullable();
-            $table->uuid('farm_id')->nullable();
-            $table->uuid('coop_id')->nullable();
-            $table->uuid('supply_id');
-            $table->uuid('supply_purchase_id');
+            $table->foreignUuid('livestock_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignUuid('farm_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignUuid('coop_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignUuid('supply_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('supply_purchase_id')->constrained()->onDelete('cascade');
             $table->date('date');
             $table->string('source_type');
             $table->uuid('source_id');

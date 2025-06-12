@@ -82,9 +82,12 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->date('tanggal');
             $table->string('invoice_number');
-            $table->foreignUuid('vendor_id')->constrained('partners')->onDelete('cascade');
-            $table->foreignUuid('expedition_id')->nullable()->constrained('partners');
+            $table->foreignUuid('supplier_id')->constrained('partners')->onDelete('cascade');
+            $table->foreignUuid('farm_id')->constrained('farms')->onDelete('cascade');
+            $table->foreignUuid('coop_id')->constrained('coops')->onDelete('cascade');
+            $table->foreignUuid('expedition_id')->nullable()->constrained('partners')->default(null);
             $table->decimal('expedition_fee', 15, 2)->nullable();
+            $table->json('data')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -98,7 +101,7 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->date('tanggal');
             $table->foreignUuid('livestock_purchase_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('livestock_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignUuid('livestock_strain_id')->constrained('livestock_strains');
             $table->foreignUuid('livestock_strain_standard_id')->nullable()->constrained('livestock_strain_standards');
 
@@ -121,6 +124,7 @@ return new class extends Migration {
 
             // Additional information
             $table->text('notes')->nullable(); // Catatan tambahan jika ada
+            $table->json('data')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -184,7 +188,7 @@ return new class extends Migration {
             $table->foreignUuid('livestock_sales_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
             $table->date('tanggal');
-            $table->integer('jumlah');
+            $table->integer('quantity');
             $table->decimal('berat_total', 10, 2)->nullable();
             $table->decimal('harga_satuan', 12, 2);
             $table->unsignedBigInteger('created_by')->nullable();
@@ -231,6 +235,7 @@ return new class extends Migration {
             $table->date('tanggal');
             $table->string('jenis'); // Mati / Afkir
             $table->integer('jumlah');
+            $table->json('data')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -265,10 +270,9 @@ return new class extends Migration {
             $table->uuid('farm_id');
             $table->uuid('coop_id');
             $table->integer('quantity');          // Jumlah saat ini
-            $table->decimal('berat_total', 10, 2); // Estimasi berat total
-            $table->decimal('avg_berat', 10, 2);   // Rata-rata berat per ekor
-            $table->integer('age');
-            $table->json('metadata')->nullable();
+            $table->decimal('weight_total', 10, 2); // Estimasi berat total
+            $table->decimal('weight_avg', 10, 2);   // Rata-rata berat per ekor
+            $table->json('data')->nullable();
             $table->string('status');              // active, sold, dead, culled
 
             $table->unsignedBigInteger('created_by');

@@ -44,31 +44,6 @@ return new class extends Migration
             $table->foreign('standar_bobot_id')->references('id')->on('standar_bobots')->onDelete('cascade');
         });
 
-        // Schema::create('kelompok_ternak', function (Blueprint $table) {
-        //     $table->uuid('id')->primary();
-        //     $table->uuid('transaksi_id')->nullable();
-        //     $table->uuid('standar_bobot_id')->nullable();
-        //     $table->string('name'); //name for batch code / periode
-        //     $table->string('breed'); //jenis
-        //     $table->dateTime('start_date'); //tanggal mulai
-        //     $table->integer('populasi_awal'); //jumlah awal
-        //     $table->decimal('berat_awal', 10, 2)->default(0); //berat beli rata - rata
-        //     $table->decimal('harga', 10, 2);        // Harga per unit saat beli
-        //     $table->string('pic')->nullable();
-        //     $table->json('data')->nullable();
-        //     $table->string('status'); //status
-        //     $table->string('keterangan')->nullable(); //keterangan
-        //     $table->unsignedBigInteger('created_by');
-        //     $table->unsignedBigInteger('updated_by')->nullable();
-
-        //     $table->timestamps();
-        //     $table->softDeletes();
-
-        //     $table->foreign('created_by')->references('id')->on('users');
-        //     $table->foreign('updated_by')->references('id')->on('users');
-        //     $table->foreign('transaksi_id')->references('id')->on('transaksi_beli')->onDelete('cascade');
-        //     $table->foreign('standar_bobot_id')->references('id')->on('standar_bobots')->onDelete('cascade');
-        // });
 
         // Tambah tabel baru untuk tracking transaksi ternak
         Schema::create('transaksi_ternak', function (Blueprint $table) {

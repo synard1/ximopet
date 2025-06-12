@@ -18,7 +18,8 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('code');
             $table->string('name');
-            $table->json('payload')->nullable();
+            $table->json('data')->nullable();
+            $table->text('description')->nullable();
             $table->string('status')->default('active')->index();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -38,7 +39,9 @@ return new class extends Migration
             $table->foreignUuid('expedition_id')->nullable()->constrained('expeditions')->onDelete('set null');
             $table->date('date');
             $table->decimal('expedition_fee', 12, 2)->default(0); // tarif ekspedisi
-            $table->json('payload')->nullable(); // simpan kebutuhan data mendatang
+            $table->json('data')->nullable(); // simpan kebutuhan data mendatang
+            $table->text('notes')->nullable();
+            $table->string('status')->default('draft')->index();
 
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
