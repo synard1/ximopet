@@ -64,9 +64,9 @@
                                 </div>
                                 <!--end::Items-->
                             </div>
-                            <!--end::Col--> 
+                            <!--end::Col-->
                             @endcan
-                            
+
                             <!--begin::Col-->
                             <div class="col-6">
                                 <!--begin::Items-->
@@ -201,7 +201,8 @@
                             <!--begin::Symbol-->
                             <div class="symbol symbol-40px me-4">
                                 <span class="symbol-label">
-                                    <img src="/assets/media/icons/custom/barn.png" class="replaced-svg" style="width:24px; height:24px;">
+                                    <img src="/assets/media/icons/custom/barn.png" class="replaced-svg"
+                                        style="width:24px; height:24px;">
                                 </span>
                             </div>
                             <!--end::Symbol-->
@@ -211,7 +212,8 @@
                                 <a href="/data/farms" class="text-gray-800 fw-bold text-hover-primary fs-6">Farm</a>
                                 <!--end::Title-->
                                 <!--begin::Desc-->
-                                {{-- <span class="text-gray-500 fw-semibold fs-7 d-block text-start ps-0">234 Ships</span> --}}
+                                {{-- <span class="text-gray-500 fw-semibold fs-7 d-block text-start ps-0">234
+                                    Ships</span> --}}
                                 <!--end::Desc-->
                             </div>
                             <!--end::Content-->
@@ -219,9 +221,10 @@
                         <!--end::Section-->
                         <!--begin::Wrapper-->
                         <div class="text-gray-500 fw-bold fs-7 text-end">
-                        <!--begin::Number-->
-                        <span class="text-gray-800 fw-bold fs-6 d-block">{{ $farm->count(); }}</span>
-                        <!--end::Number--></div>
+                            <!--begin::Number-->
+                            <span class="text-gray-800 fw-bold fs-6 d-block">{{ $farm->count(); }}</span>
+                            <!--end::Number-->
+                        </div>
                         <!--end::Wrapper-->
                     </div>
                     <!--end::Item-->
@@ -235,17 +238,20 @@
                             <!--begin::Symbol-->
                             <div class="symbol symbol-40px me-4">
                                 <span class="symbol-label">
-                                    <img src="/assets/media/icons/custom/livestock-pen.png" class="replaced-svg" style="width:24px; height:24px;">
+                                    <img src="/assets/media/icons/custom/livestock-pen.png" class="replaced-svg"
+                                        style="width:24px; height:24px;">
                                 </span>
                             </div>
                             <!--end::Symbol-->
                             <!--begin::Content-->
                             <div class="me-5">
                                 <!--begin::Title-->
-                                <a href="/data/kandangs" class="text-gray-800 fw-bold text-hover-primary fs-6">Kandang</a>
+                                <a href="/data/kandangs"
+                                    class="text-gray-800 fw-bold text-hover-primary fs-6">Kandang</a>
                                 <!--end::Title-->
                                 <!--begin::Desc-->
-                                {{-- <span class="text-gray-500 fw-semibold fs-7 d-block text-start ps-0">1,460 Trucks</span> --}}
+                                {{-- <span class="text-gray-500 fw-semibold fs-7 d-block text-start ps-0">1,460
+                                    Trucks</span> --}}
                                 <!--end::Desc-->
                             </div>
                             <!--end::Content-->
@@ -253,9 +259,10 @@
                         <!--end::Section-->
                         <!--begin::Wrapper-->
                         <div class="text-gray-500 fw-bold fs-7 text-end">
-                        <!--begin::Number-->
-                        <span class="text-gray-800 fw-bold fs-6 d-block">{{ $kandang->count(); }}</span>
-                        <!--end::Number--></div>
+                            <!--begin::Number-->
+                            <span class="text-gray-800 fw-bold fs-6 d-block">{{ $kandang->count(); }}</span>
+                            <!--end::Number-->
+                        </div>
                         <!--end::Wrapper-->
                     </div>
                     <!--end::Item-->
@@ -269,17 +276,20 @@
                             <!--begin::Symbol-->
                             <div class="symbol symbol-40px me-4">
                                 <span class="symbol-label">
-                                    <img src="/assets/media/icons/custom/chicken.png" class="replaced-svg" style="width:24px; height:24px;">
+                                    <img src="/assets/media/icons/custom/chicken.png" class="replaced-svg"
+                                        style="width:24px; height:24px;">
                                 </span>
                             </div>
                             <!--end::Symbol-->
                             <!--begin::Content-->
                             <div class="me-5">
                                 <!--begin::Title-->
-                                <a href="/data/ternaks" class="text-gray-800 fw-bold text-hover-primary fs-6">{{ trans('content.ternak',[],'id'); }}</a>
+                                <a href="/data/ternaks" class="text-gray-800 fw-bold text-hover-primary fs-6">{{
+                                    trans('content.ternak',[],'id'); }}</a>
                                 <!--end::Title-->
                                 <!--begin::Desc-->
-                                {{-- <span class="text-gray-500 fw-semibold fs-7 d-block text-start ps-0">8 Aircrafts</span> --}}
+                                {{-- <span class="text-gray-500 fw-semibold fs-7 d-block text-start ps-0">8
+                                    Aircrafts</span> --}}
                                 <!--end::Desc-->
                             </div>
                             <!--end::Content-->
@@ -287,10 +297,12 @@
                         <!--end::Section-->
                         <!--begin::Wrapper-->
                         <div class="text-gray-500 fw-bold fs-7 text-end">
-                        <!--begin::Number-->
-                        <span class="text-gray-800 fw-bold fs-6 d-block">{{ number_format($ternak->sum('quantity'), 0, ',', '.') }}
-                        </span>
-                        <!--end::Number--></div>
+                            <!--begin::Number-->
+                            <span class="text-gray-800 fw-bold fs-6 d-block">{{ number_format($ternak->sum('quantity'),
+                                0, ',', '.') }}
+                            </span>
+                            <!--end::Number-->
+                        </div>
                         <!--end::Wrapper-->
                     </div>
                     <!--end::Item-->
@@ -304,7 +316,8 @@
                             <!--begin::Symbol-->
                             <div class="symbol symbol-40px me-4">
                                 <span class="symbol-label">
-                                    <img src="/assets/media/icons/custom/feed.png" class="replaced-svg" style="width:24px; height:24px;">
+                                    <img src="/assets/media/icons/custom/feed.png" class="replaced-svg"
+                                        style="width:24px; height:24px;">
                                 </span>
                             </div>
                             <!--end::Symbol-->
@@ -314,7 +327,8 @@
                                 <a href="/data/stoks" class="text-gray-800 fw-bold text-hover-primary fs-6">Pakan</a>
                                 <!--end::Title-->
                                 <!--begin::Desc-->
-                                {{-- <span class="text-gray-500 fw-semibold fs-7 d-block text-start ps-0">36 Trains</span> --}}
+                                {{-- <span class="text-gray-500 fw-semibold fs-7 d-block text-start ps-0">36
+                                    Trains</span> --}}
                                 <!--end::Desc-->
                             </div>
                             <!--end::Content-->
@@ -322,9 +336,11 @@
                         <!--end::Section-->
                         <!--begin::Wrapper-->
                         <div class="text-gray-500 fw-bold fs-7 text-end">
-                        <!--begin::Number-->
-                        <span class="text-gray-800 fw-bold fs-6 d-block">{{ number_format($currentStocks->sum('quantity'), 0, ',', '.') }}</span>
-                        <!--end::Number--></div>
+                            <!--begin::Number-->
+                            <span class="text-gray-800 fw-bold fs-6 d-block">{{
+                                number_format($currentStocks->sum('quantity'), 0, ',', '.') }}</span>
+                            <!--end::Number-->
+                        </div>
                         <!--end::Wrapper-->
                     </div>
                     <!--end::Item-->
@@ -404,7 +420,8 @@
                                 @foreach($lastTransactions as $transaction)
                                 <tr>
                                     <td>
-                                        <a href="#" class="text-gray-800 text-hover-primary">{{ strtoupper(substr(strrchr($transaction->id, '-'), 1)) }}</a>
+                                        <a href="#" class="text-gray-800 text-hover-primary">{{
+                                            strtoupper(substr(strrchr($transaction->id, '-'), 1)) }}</a>
                                     </td>
                                     <td>{{ $transaction->created_at->format('d M Y, H:i') }}</td>
                                     <td>{{ $transaction->farm_name ?? 'N/A' }}</td>
@@ -412,10 +429,14 @@
                                     <td>{{ $transaction->item_name }}</td>
                                     <td>{{ number_format($transaction->qty, 0, ',', '.') }}</td>
                                     <td>
-                                        <span class="badge badge-light-{{ $transaction->status_color }} py-3 px-4 fs-7">{{ $transaction->status }}</span>
+                                        <span
+                                            class="badge badge-light-{{ $transaction->status_color }} py-3 px-4 fs-7">{{
+                                            $transaction->status }}</span>
                                     </td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-icon btn-light btn-active-light-primary toggle h-25px w-25px" data-bs-toggle="tooltip" data-bs-placement="top" title="Lihat Detail">
+                                        <button type="button"
+                                            class="btn btn-sm btn-icon btn-light btn-active-light-primary toggle h-25px w-25px"
+                                            data-bs-toggle="tooltip" data-bs-placement="top" title="Lihat Detail">
                                             <i class="ki-outline ki-arrow-right fs-2"></i>
                                         </button>
                                     </td>
@@ -446,9 +467,8 @@
     <!--end::Row--> --}}
 
     @push('scripts')
-<script>
-
-var chartData = @json($chartData);
+    <script>
+        var chartData = @json($chartData);
 
 // console.table(chartData);
 
@@ -463,6 +483,6 @@ var chartData = @json($chartData);
 
 // console.log(chartData);
 
-</script>
-@endpush
+    </script>
+    @endpush
 </x-default-layout>

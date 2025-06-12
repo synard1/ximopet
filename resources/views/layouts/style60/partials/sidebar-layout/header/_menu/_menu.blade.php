@@ -56,9 +56,10 @@ $menuItems = [
         //['route' => '/transaksi/harian', 'label' => 'Harian', 'icon' => 'ki-calendar', 'active' => request()->is('transaksi/harian')],
     ],
     'Reports' => [
-        ['route' => '/reports/harian', 'label' => 'Harian', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/harian')],
-        ['route' => '/reports/daily-cost', 'label' => 'Harian Biaya', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/daily-cost')],
-        ['route' => '/reports/performa', 'label' => 'Performa', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/performa')],
+		['route' => '/report/smart-analytics', 'label' => 'Smart Analytics', 'icon' => 'ki-chart-pie-4', 'active' => request()->is('report/smart-analytics')],
+        ['route' => '/report/daily', 'label' => 'Harian', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/harian')],
+        ['route' => '/report/daily-cost', 'label' => 'Harian Biaya', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/daily-cost')],
+        ['route' => '/report/performance', 'label' => 'Performa', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/performa')],
         ['route' => '/reports/penjualan', 'label' => 'Penjualan', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/penjualan')],
         ['route' => '/reports/feed/purchase', 'label' => 'Pembelian Pakan', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/feed/purchase')],
         ['route' => '/reports/performa-mitra', 'label' => 'Performa Kemitraan', 'icon' => 'ki-chart-line-up', 'active' => request()->is('reports/performa-mitra')],

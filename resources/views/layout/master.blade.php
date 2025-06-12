@@ -6,6 +6,9 @@
     <base href="" />
     <title>{{ config('app.name', 'Laravel') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @auth
+    <meta name="user-id" content="{{ auth()->id() }}">
+    @endauth
     <meta charset="utf-8" />
     <meta name="description" content="" />
     <meta name="keywords" content="" />
@@ -73,6 +76,36 @@
     @endforeach
     <!--end::Custom Javascript-->
     @stack('scripts')
+
+    <!--begin::Laravel User Setup-->
+    {{-- <script>
+        // Set Laravel user info for Echo private channels BEFORE loading Echo
+        window.Laravel = window.Laravel || {};
+        @auth
+        window.Laravel.user = {
+            id: {{ auth()->id() }},
+            name: "{{ auth()->user()->name }}",
+            email: "{{ auth()->user()->email }}"
+        };
+        console.log('✅ Laravel user info set:', window.Laravel.user);
+        @else
+        window.Laravel.user = null;
+        console.log('👤 No authenticated user');
+        @endauth
+    </script> --}}
+    <!--end::Laravel User Setup-->
+
+    <!--begin::Browser Notification System-->
+    {{-- <script src="{{ asset('assets/js/browser-notification.js') }}"></script> --}}
+    <!--end::Browser Notification System-->
+
+    <!--begin::Laravel Echo Setup-->
+    {{-- <script src="{{ asset('assets/js/echo-setup.js') }}"></script> --}}
+    <!--end::Laravel Echo Setup-->
+
+    <!--begin::Laravel Echo App Bundle-->
+    {{-- <script src="{{ asset('assets/js/app.bundle.js') }}"></script> --}}
+    <!--end::Laravel Echo App Bundle-->
     <!--end::Javascript-->
 
     <script>
