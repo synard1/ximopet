@@ -339,8 +339,7 @@ window.NotificationSystem = {
 
     // Test bridge connection
     testBridgeConnection: function () {
-        const bridgeUrl =
-            "http://demo51.local/testing/notification_bridge.php?action=status";
+        const bridgeUrl = "/testing/notification_bridge.php?action=status";
         console.log("🌉 Testing bridge connection at:", bridgeUrl);
 
         return fetch(bridgeUrl, {
@@ -382,7 +381,7 @@ window.NotificationSystem = {
         if (!this.bridgeActive) return;
 
         // Only get notifications after our last timestamp
-        const url = `http://demo51.local/testing/notification_bridge.php?since=${this.lastTimestamp}`;
+        const url = `/testing/notification_bridge.php?since=${this.lastTimestamp}`;
         console.log("📨 Polling for notifications:", url);
 
         fetch(url, {
