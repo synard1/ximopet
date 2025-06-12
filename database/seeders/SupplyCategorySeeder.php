@@ -14,6 +14,8 @@ class SupplyCategorySeeder extends Seeder
             'Vitamin',
             'Kimia',
             'Disinfektan',
+            'Vaksin',
+            'Antibiotik',
             'Nutrisi Tambahan',
             'OVK',  // Obat, Vitamin, dan Kimia
             'Lain - Lain',

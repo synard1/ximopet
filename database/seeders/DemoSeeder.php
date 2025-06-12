@@ -162,7 +162,7 @@ class DemoSeeder extends Seeder
             $feed = Feed::create([
                 'code' => $type['code'],
                 'name' => $type['name'],
-                'payload' => [
+                'data' => [
                     'unit_id' => $unitKg->id,
                     'unit_details' => [
                         'id' => $unitKg->id,

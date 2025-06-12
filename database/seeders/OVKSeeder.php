@@ -140,7 +140,7 @@ class OVKSeeder extends Seeder
                 'supply_category_id' => $ovkCategory->id,
                 'code' => $data['code'],
                 'name' => $data['name'],
-                'payload' => [
+                'data' => [
                     'unit_id' => $baseUnit->id,
                     'unit_details' => [
                         'id' => $baseUnit->id,

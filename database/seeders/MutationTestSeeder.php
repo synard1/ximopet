@@ -29,7 +29,7 @@ class MutationTestSeeder extends Seeder
             'id' => Str::uuid(),
             'name' => 'Pakan Test',
             'type' => 'feed',
-            'payload' => [
+            'data' => [
                 'unit_id' => $unit->id,
                 'conversion_units' => [
                     [
