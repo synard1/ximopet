@@ -51,3 +51,15 @@ Breadcrumbs::for('user-management.permissions.index', function (BreadcrumbTrail 
     $trail->parent('user-management');
     $trail->push('Permissions', route('user-management.permissions.index'));
 });
+
+// Home > Dashboard > Reports
+Breadcrumbs::for('reports', function (BreadcrumbTrail $trail) {
+    $trail->parent('home');
+    $trail->push('Reports', '#');
+});
+
+// Home > Dashboard > Reports > Smart Analytics
+Breadcrumbs::for('smart-analytics', function (BreadcrumbTrail $trail) {
+    $trail->parent('reports');
+    $trail->push('Smart Analytics', route('report.smart-analytics'));
+});

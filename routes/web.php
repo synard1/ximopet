@@ -41,6 +41,7 @@ use App\Http\Controllers\UserManagement\RoleController;
 use App\Http\Controllers\MasterData\PartnerController;
 use App\Http\Controllers\QaController;
 use App\Http\Livewire\AuditTrail;
+use App\Http\Controllers\PurchaseReportsController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -305,6 +306,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Report Routes
     Route::name('report.')->group(function () {
         Route::get('/report/daily', [ReportsController::class, 'indexHarian'])->name('daily');
+        Route::post('/report/daily/export', [ReportsController::class, 'exportHarian'])->name('daily.export');
+        Route::get('/report/daily/export', [ReportsController::class, 'exportHarian'])->name('daily.export');
         Route::get('/report/daily-cost', [ReportsController::class, 'indexDailyCost'])->name('daily-cost');
         Route::get('/report/batch-worker', [ReportsController::class, 'indexBatchWorker'])->name('batch-worker');
         Route::get('/report/sales', [ReportsController::class, 'indexPenjualan'])->name('sales');
@@ -312,6 +315,39 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/report/partner-performance', [ReportsController::class, 'indexPerformaMitra'])->name('partner-performance');
         Route::get('/report/performance', [ReportsController::class, 'indexPerforma'])->name('performance');
         Route::get('/report/inventory', [ReportsController::class, 'indexInventory'])->name('inventory');
+        Route::get('/report/smart-analytics', [ReportsController::class, 'smartAnalytics'])->name('smart-analytics');
+        // Route::get('/report/pembelian-livestock', [PurchaseReportsController::class, 'indexPembelianLivestock'])->name('pembelian-livestock');
+        // Route::get('/report/pembelian-pakan', [PurchaseReportsController::class, 'indexPembelianPakan'])->name('pembelian-pakan');
+        // Route::get('/report/pembelian-supply', [PurchaseReportsController::class, 'indexPembelianSupply'])->name('pembelian-supply');
+    });
+
+    Route::name('purchase-reports.')->group(function () {
+        // Livestock Purchase Reports
+        Route::get('/report/pembelian-livestock', [PurchaseReportsController::class, 'indexPembelianLivestock'])->name('pembelian-livestock');
+        Route::get('/report/pembelian-livestock/export', [PurchaseReportsController::class, 'exportPembelianLivestock'])->name('export-livestock');
+        Route::post('/report/pembelian-livestock/export', [PurchaseReportsController::class, 'exportPembelianLivestock'])->name('export-livestock');
+
+        // Feed Purchase Reports  
+        Route::get('/report/pembelian-pakan', [PurchaseReportsController::class, 'indexPembelianPakan'])->name('pembelian-pakan');
+        Route::get('/report/pembelian-pakan/export', [PurchaseReportsController::class, 'exportPembelianPakan'])->name('export-pakan');
+        Route::post('/report/pembelian-pakan/export', [PurchaseReportsController::class, 'exportPembelianPakan'])->name('export-pakan');
+
+        // Supply Purchase Reports
+        Route::get('/report/pembelian-supply', [PurchaseReportsController::class, 'indexPembelianSupply'])->name('pembelian-supply');
+        Route::get('/report/pembelian-supply/export', [PurchaseReportsController::class, 'exportPembelianSupply'])->name('export-supply');
+        Route::post('/report/pembelian-supply/export', [PurchaseReportsController::class, 'exportPembelianSupply'])->name('export-supply');
+    });
+
+    route::name('sample.')->group(function () {
+        Route::get('/sample/mortality-chart-refactored', function () {
+            return view('sample.mortality-chart-refactored');
+        })->name('mortality-chart-refactored');
+        Route::get('/sample/simple-notification-test', function () {
+            return view('sample.simple_notification_test');
+        })->name('simple_notification_test');
+        Route::get('/sample/browser-notification-debug', function () {
+            return view('sample.browser_notification_debug');
+        })->name('browser_notification_debug');
     });
 
     // Role Management Routes
