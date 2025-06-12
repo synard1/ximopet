@@ -1,0 +1,170 @@
+[
+    {
+        "date": "2025-05-30",
+        "farm": "Demo Farm",
+        "coop": "Kandang 1 - Demo Farm",
+        "livestock": "Batch-Demo Farm-Kandang 1 - Demo Farm-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Demo Farm",
+        "coop": "Kandang 1 - Demo Farm",
+        "livestock": "Batch-Demo Farm-Kandang 1 - Demo Farm-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-30",
+        "farm": "Demo Farm",
+        "coop": "Kandang 2 - Demo Farm",
+        "livestock": "Batch-Demo Farm-Kandang 2 - Demo Farm-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Demo Farm",
+        "coop": "Kandang 2 - Demo Farm",
+        "livestock": "Batch-Demo Farm-Kandang 2 - Demo Farm-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-30",
+        "farm": "Demo Farm 2",
+        "coop": "Kandang 1 - Demo Farm 2",
+        "livestock": "Batch-Demo Farm 2-Kandang 1 - Demo Farm 2-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Demo Farm 2",
+        "coop": "Kandang 1 - Demo Farm 2",
+        "livestock": "Batch-Demo Farm 2-Kandang 1 - Demo Farm 2-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-30",
+        "farm": "Demo Farm 2",
+        "coop": "Kandang 2 - Demo Farm 2",
+        "livestock": "Batch-Demo Farm 2-Kandang 2 - Demo Farm 2-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Demo Farm 2",
+        "coop": "Kandang 2 - Demo Farm 2",
+        "livestock": "Batch-Demo Farm 2-Kandang 2 - Demo Farm 2-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-30",
+        "farm": "Farm Demo 3",
+        "coop": "Kandang A-Farm Demo 3",
+        "livestock": "Batch-Farm Demo 3-Kandang A-Farm Demo 3-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Farm Demo 3",
+        "coop": "Kandang A-Farm Demo 3",
+        "livestock": "Batch-Farm Demo 3-Kandang A-Farm Demo 3-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-30",
+        "farm": "Farm Demo 3",
+        "coop": "Kandang B-Farm Demo 3",
+        "livestock": "Batch-Farm Demo 3-Kandang B-Farm Demo 3-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Farm Demo 3",
+        "coop": "Kandang B-Farm Demo 3",
+        "livestock": "Batch-Farm Demo 3-Kandang B-Farm Demo 3-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-30",
+        "farm": "Demo Farm",
+        "coop": "Kandang 1 - Demo Farm",
+        "livestock": "Batch-Demo Farm-Kandang 1 - Demo Farm-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Demo Farm",
+        "coop": "Kandang 1 - Demo Farm",
+        "livestock": "Batch-Demo Farm-Kandang 1 - Demo Farm-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-30",
+        "farm": "Demo Farm",
+        "coop": "Kandang 2 - Demo Farm",
+        "livestock": "Batch-Demo Farm-Kandang 2 - Demo Farm-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Demo Farm",
+        "coop": "Kandang 2 - Demo Farm",
+        "livestock": "Batch-Demo Farm-Kandang 2 - Demo Farm-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-30",
+        "farm": "Demo Farm 2",
+        "coop": "Kandang 1 - Demo Farm 2",
+        "livestock": "Batch-Demo Farm 2-Kandang 1 - Demo Farm 2-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Demo Farm 2",
+        "coop": "Kandang 1 - Demo Farm 2",
+        "livestock": "Batch-Demo Farm 2-Kandang 1 - Demo Farm 2-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-30",
+        "farm": "Demo Farm 2",
+        "coop": "Kandang 2 - Demo Farm 2",
+        "livestock": "Batch-Demo Farm 2-Kandang 2 - Demo Farm 2-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Demo Farm 2",
+        "coop": "Kandang 2 - Demo Farm 2",
+        "livestock": "Batch-Demo Farm 2-Kandang 2 - Demo Farm 2-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-30",
+        "farm": "Farm Demo 3",
+        "coop": "Kandang A-Farm Demo 3",
+        "livestock": "Batch-Farm Demo 3-Kandang A-Farm Demo 3-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Farm Demo 3",
+        "coop": "Kandang A-Farm Demo 3",
+        "livestock": "Batch-Farm Demo 3-Kandang A-Farm Demo 3-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-30",
+        "farm": "Farm Demo 3",
+        "coop": "Kandang B-Farm Demo 3",
+        "livestock": "Batch-Farm Demo 3-Kandang B-Farm Demo 3-2025-04",
+        "deaths": 1
+    },
+    {
+        "date": "2025-05-31",
+        "farm": "Farm Demo 3",
+        "coop": "Kandang B-Farm Demo 3",
+        "livestock": "Batch-Farm Demo 3-Kandang B-Farm Demo 3-2025-04",
+        "deaths": 1
+    }
+]

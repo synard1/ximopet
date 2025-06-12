@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+langsung apply perubahan, dan berikan log di setiap proses untuk kemudahan debugging

@@ -1,0 +1,6 @@
+---
+description: untuk debugging dan future proof
+globs: 
+alwaysApply: false
+---
+buat dokumentasi dan log yang jelas untuk kemudahan debugging dan monitoring. dokumentasi simpan di folder docs, script testting dan log testing simpan di folder testing. semua update perubahan di simpan di dokumentasi yang sudah di buat sebelumnya, kecuali kalau belum ada, dan pastikan tanggal dan waktu dokumentasi sesuai dengan waktu real
