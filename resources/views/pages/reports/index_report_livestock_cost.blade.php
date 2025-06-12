@@ -167,10 +167,10 @@
 
                     var uniqueKandangs = [];
                     farmTernak.forEach(function(ternak) {
-                        if (!uniqueKandangs.some(k => k.id === ternak.kandang_id)) {
+                        if (!uniqueKandangs.some(k => k.id === ternak.coop_id)) {
                             uniqueKandangs.push({
-                                id: ternak.kandang_id,
-                                name: ternak.kandang_name
+                                id: ternak.coop_id,
+                                name: ternak.coop_name
                             });
                         }
                     });
@@ -188,7 +188,7 @@
 
                 if (farmId && kandangId) {
                     var filteredTernak = ternakData.filter(function(ternak) {
-                        return ternak.farm_id == farmId && ternak.kandang_id == kandangId;
+                        return ternak.farm_id == farmId && ternak.coop_id == kandangId;
                     });
 
                     var uniqueYears = [...new Set(filteredTernak.map(ternak => new Date(ternak.start_date).getFullYear()))];
@@ -210,7 +210,7 @@
                 if (farmId && kandangId && tahun) {
                     var filteredTernak = ternakData.filter(function(ternak) {
                         return ternak.farm_id == farmId && 
-                               ternak.kandang_id == kandangId && 
+                               ternak.coop_id == kandangId && 
                                new Date(ternak.start_date).getFullYear() == tahun;
                     });
 

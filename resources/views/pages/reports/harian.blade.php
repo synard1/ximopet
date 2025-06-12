@@ -1,16 +1,6 @@
-@php
-    
-    function formatNumber($amount,$decimal) {
-        // Convert the number to a string with two decimal places
-        $formattedAmount = number_format($amount, $decimal, ',', '.');
-    
-        // Add the currency symbol and return the formatted number
-        return $formattedAmount;
-    }
-
-@endphp
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,57 +10,87 @@
             size: landscape;
             margin: 1cm;
         }
+
         body {
             font-family: Arial, sans-serif;
             font-size: 11pt;
             line-height: 1.3;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
         }
-        th, td {
+
+        th,
+        td {
             border: 1px solid black;
             padding: 4px 8px;
             text-align: center;
         }
+
         .header {
             font-weight: bold;
             text-align: left;
             margin-bottom: 10px;
         }
+
         .header-row td {
             background-color: #e6e6ff;
             font-weight: bold;
         }
+
         .footer-signatures {
             margin-top: 30px;
             display: flex;
             justify-content: space-between;
         }
-        .text-left { text-align: left; }
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .no-border { border: none; }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .no-border {
+            border: none;
+        }
+
+        .summary-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+        }
     </style>
 </head>
+
 <body>
     <div class="header">
         LAPORAN HARIAN KANDANG<br>
         FARM : {{ $farm }}<br>
-        TANGGAL : {{ $tanggal }}
+        TANGGAL : {{ $tanggal }}<br>
+        TIPE : {{ strtoupper($reportType) }} {{ $reportType === 'detail' ? '(PER BATCH)' : '(PER KANDANG)' }}
     </div>
 
     <table>
         <thead class="bg-gray-100 text-gray-700">
             <tr>
                 <th class="table-header" rowspan="3">KDG</th>
+                @if($reportType === 'detail')
+                <th class="table-header" rowspan="3">BATCH</th>
+                @endif
                 <th class="table-header" rowspan="3">UMUR</th>
                 <th colspan="8">POPULASI AYAM</th>
                 <th colspan="3">BERAT BADAN AYAM</th>
-                <th colspan="4">PEMAKAIAN PAKAN</th>
-                {{-- <th colspan="3">STRAIN ROSS</th> --}}
+                <th colspan="{{ count($distinctFeedNames) + 1 }}">PEMAKAIAN PAKAN</th>
             </tr>
             <tr class="header-row">
                 <th rowspan="2">EKOR<br>AYAM</th>
@@ -81,11 +101,12 @@
                 <th rowspan="2">SEMALAM<br>(Gr)</th>
                 <th rowspan="2">HARI INI<br>(Gr)</th>
                 <th rowspan="2">KENAIKAN<br>(Gr)</th>
-                <th colspan="3">JENIS PAKAN</th>
+                @if(count($distinctFeedNames) > 0)
+                <th colspan="{{ count($distinctFeedNames) }}">JENIS PAKAN</th>
+                @else
+                <th>JENIS PAKAN</th>
+                @endif
                 <th rowspan="2">TOTAL<br>TERPAKAI</th>
-                {{-- <th>NORMAL %</th>
-                <th>BM-TK %</th>
-                <th>GP %</th> --}}
             </tr>
             <tr class="header-row">
                 <th>MATI</th>
@@ -94,69 +115,132 @@
                 <th>MORTALITAS</th>
                 <th>EKOR</th>
                 <th>KG</th>
-                <th>SP 10</th>
-                <th>SP 11</th>
-                <th>SP 12</th>
-                {{-- <th></th>
-                <th></th>
-                <th></th> --}}
+                @if(count($distinctFeedNames) > 0)
+                @foreach($distinctFeedNames as $feedName)
+                <th>{{ $feedName }}</th>
+                @endforeach
+                @else
+                <th>-</th>
+                @endif
             </tr>
         </thead>
-        @foreach($recordings as $kandangNama => $record)
-        <tr>
-            <td>{{ $kandangNama ?? '' }}</td>
-            <td>{{ $record['umur'] ?? '' }}</td>
-            <td>{{ formatNumber($record['stock_awal'],0) ?? '' }}</td>
-            <td>{{ $record['mati'] ?? '' }}</td>
-            <td>{{ $record['afkir'] ?? '' }}</td>
-            <td>{{ $record['total_deplesi'] ?? '' }}</td>
-            <td>{{ $record['deplesi_percentage'] ?? '' }}</td>
-            <td>{{ formatNumber($record['jual_ekor'],0) ?? '' }}</td>
-            <td>{{ formatNumber($record['jual_kg'],0) ?? '' }}</td>
-            <td>{{ formatNumber($record['stock_akhir'],0) ?? '' }}</td>
-            <td>{{ round($record['berat_semalam'], 0) ?? '' }}</td>
-            <td>{{ round($record['berat_hari_ini'], 0) ?? '' }}</td>
-            <td>{{ round($record['kenaikan_berat'], 0) ?? '' }}</td>
-            <td>{{ formatNumber($record['pakan_harian']['SP 10'] ?? 0, 0) }}</td>
-            <td>{{ formatNumber($record['pakan_harian']['SP 11'] ?? 0, 0) }}</td>
-            <td>{{ formatNumber($record['pakan_harian']['SP 12'] ?? 0, 0) }}</td>
-            <td>{{ formatNumber($record['pakan_total'],0) ?? '' }}</td>
-            {{-- <td>{{ $record['normal_percentage'] ?? '' }}</td>
-            <td>{{ $record['bmtk_percentage'] ?? '' }}</td>
-            <td>{{ $record['gp_percentage'] ?? '' }}</td> --}}
-        </tr>
-        @endforeach
-
+        <tbody>
+            @if($reportType === 'detail')
+            @forelse($recordings as $coopNama => $batchesData)
+            @if(is_array($batchesData) && count($batchesData) > 0)
+            @foreach($batchesData as $index => $batch)
+            <tr>
+                @if($index === 0)
+                <td rowspan="{{ count($batchesData) }}">{{ $coopNama ?? '-' }}</td>
+                @endif
+                <td>{{ $batch['livestock_name'] ?? '-' }}</td>
+                <td>{{ $batch['umur'] ?? '0' }}</td>
+                <td>{{ formatNumber($batch['stock_awal'] ?? 0, 0) }}</td>
+                <td>{{ $batch['mati'] ?? '0' }}</td>
+                <td>{{ $batch['afkir'] ?? '0' }}</td>
+                <td>{{ $batch['total_deplesi'] ?? '0' }}</td>
+                <td>{{ number_format($batch['deplesi_percentage'] ?? 0, 2) }}%</td>
+                <td>{{ formatNumber($batch['jual_ekor'] ?? 0, 0) }}</td>
+                <td>{{ formatNumber($batch['jual_kg'] ?? 0, 0) }}</td>
+                <td>{{ formatNumber($batch['stock_akhir'] ?? 0, 0) }}</td>
+                <td>{{ round($batch['berat_semalam'] ?? 0, 0) }}</td>
+                <td>{{ round($batch['berat_hari_ini'] ?? 0, 0) }}</td>
+                <td>{{ round($batch['kenaikan_berat'] ?? 0, 0) }}</td>
+                @if(count($distinctFeedNames) > 0)
+                @foreach($distinctFeedNames as $feedName)
+                <td>{{ formatNumber($batch['pakan_harian'][$feedName] ?? 0, 0) }}</td>
+                @endforeach
+                @else
+                <td>0</td>
+                @endif
+                <td>{{ formatNumber($batch['pakan_total'] ?? 0, 0) }}</td>
+            </tr>
+            @endforeach
+            @endif
+            @empty
+            <tr>
+                <td colspan="{{ 14 + count($distinctFeedNames) + ($reportType === 'detail' ? 1 : 0) }}">Tidak ada data
+                    untuk ditampilkan</td>
+            </tr>
+            @endforelse
+            @else
+            @forelse($recordings as $coopNama => $record)
+            <tr>
+                <td>{{ $coopNama ?? '-' }}</td>
+                <td>{{ $record['umur'] ?? '0' }}</td>
+                <td>{{ formatNumber($record['stock_awal'] ?? 0, 0) }}</td>
+                <td>{{ $record['mati'] ?? '0' }}</td>
+                <td>{{ $record['afkir'] ?? '0' }}</td>
+                <td>{{ $record['total_deplesi'] ?? '0' }}</td>
+                <td>{{ number_format($record['deplesi_percentage'] ?? 0, 2) }}%</td>
+                <td>{{ formatNumber($record['jual_ekor'] ?? 0, 0) }}</td>
+                <td>{{ formatNumber($record['jual_kg'] ?? 0, 0) }}</td>
+                <td>{{ formatNumber($record['stock_akhir'] ?? 0, 0) }}</td>
+                <td>{{ round($record['berat_semalam'] ?? 0, 0) }}</td>
+                <td>{{ round($record['berat_hari_ini'] ?? 0, 0) }}</td>
+                <td>{{ round($record['kenaikan_berat'] ?? 0, 0) }}</td>
+                @if(count($distinctFeedNames) > 0 && isset($record['pakan_harian']))
+                @foreach($distinctFeedNames as $feedName)
+                <td>{{ formatNumber($record['pakan_harian'][$feedName] ?? 0, 0) }}</td>
+                @endforeach
+                @else
+                @for($i = 0; $i < max(1, count($distinctFeedNames)); $i++) <td>0</td>
+                    @endfor
+                    @endif
+                    <td>{{ formatNumber($record['pakan_total'] ?? 0, 0) }}</td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="{{ 14 + count($distinctFeedNames) }}">Tidak ada data untuk ditampilkan</td>
+            </tr>
+            @endforelse
+            @endif
+        </tbody>
 
         <!-- Total Row -->
-        <tr class="header-row">
-            <td colspan="2">TOTAL</td>
-            <td>{{ formatNumber($totals['stock_awal'],0) ?? '' }}</td>
-            <td>{{ $totals['mati'] ?? '' }}</td>
-            <td>{{ $totals['afkir'] ?? '' }}</td>
-            <td>{{ $totals['total_deplesi'] ?? '' }}</td>
-            <td></td>
-            <td>{{ formatNumber($totals['tangkap_ekor'],0) ?? '' }}</td>
-            <td>{{ formatNumber($totals['tangkap_kg'],0) ?? '' }}</td>
-            <td>{{ formatNumber($totals['stock_akhir'],0) ?? '' }}</td>
-            <td colspan="3"></td>
-            <td>{{ formatNumber($totals['pakan_harian']['SP 10'] ?? 0, 0) }}</td>
-            <td>{{ formatNumber($totals['pakan_harian']['SP 11'] ?? 0, 0) }}</td>
-            <td>{{ formatNumber($totals['pakan_harian']['SP 12'] ?? 0, 0) }}</td>
-            <td>{{ formatNumber($totals['pakan_total'],0) ?? '' }}</td>
-            {{-- <td colspan="3"></td> --}}
-        </tr>
+        <tfoot>
+            <tr class="header-row">
+                <td colspan="{{ $reportType === 'detail' ? '3' : '2' }}">TOTAL</td>
+                <td>{{ formatNumber($totals['stock_awal'] ?? 0, 0) }}</td>
+                <td>{{ $totals['mati'] ?? '0' }}</td>
+                <td>{{ $totals['afkir'] ?? '0' }}</td>
+                <td>{{ $totals['total_deplesi'] ?? '0' }}</td>
+                <td>{{ number_format($totals['deplesi_percentage'] ?? 0, 2) }}%</td>
+                <td>{{ formatNumber($totals['jual_ekor'] ?? 0, 0) }}</td>
+                <td>{{ formatNumber($totals['jual_kg'] ?? 0, 0) }}</td>
+                <td>{{ formatNumber($totals['stock_akhir'] ?? 0, 0) }}</td>
+                <td colspan="3"></td>
+                @if(count($distinctFeedNames) > 0)
+                @foreach($distinctFeedNames as $feedName)
+                <td>{{ formatNumber($totals['pakan_harian'][$feedName] ?? 0, 0) }}</td>
+                @endforeach
+                @else
+                <td>0</td>
+                @endif
+                <td>{{ formatNumber($totals['pakan_total'] ?? 0, 0) }}</td>
+            </tr>
+        </tfoot>
     </table>
 
+    <!-- Summary Information -->
+    <div class="summary-info">
+        <strong>RINGKASAN LAPORAN:</strong><br>
+        Total Stock Awal: {{ formatNumber($totals['stock_awal'] ?? 0, 0) }} ekor<br>
+        Total Stock Akhir: {{ formatNumber($totals['stock_akhir'] ?? 0, 0) }} ekor<br>
+        Total Deplesi: {{ $totals['total_deplesi'] ?? 0 }} ekor ({{ number_format($totals['deplesi_percentage'] ?? 0, 2)
+        }}%)<br>
+        Survival Rate: {{ number_format($totals['survival_rate'] ?? 0, 2) }}%<br>
+        Total Pakan Terpakai: {{ formatNumber($totals['pakan_total'] ?? 0, 0) }} kg<br>
+        @if(count($distinctFeedNames) > 0)
+        Jenis Pakan yang Digunakan: {{ implode(', ', $distinctFeedNames) }}
+        @else
+        Tidak ada data penggunaan pakan
+        @endif
+    </div>
+
     <div class="footer-signatures">
-        {{-- <div>
-            Diketahui oleh,<br><br><br>
-            ( {{ $diketahui }} )
-        </div>
-        <div>
-            Dibuat oleh,<br><br><br>
-            ( {{ $dibuat }} )
-        </div> --}}
+        {{-- Signature section commented out as per original --}}
     </div>
 </body>
+
 </html>

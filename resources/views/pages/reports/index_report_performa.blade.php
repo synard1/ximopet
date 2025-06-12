@@ -1,14 +1,14 @@
 <x-default-layout>
 
     @section('title')
-        Laporan Performa
+    Laporan Performa
     @endsection
 
     <div class="card">
         <!--begin::Card body-->
         <div class="card-body py-4">
             <h2 class="mb-4">Filter Laporan Performa </h2>
-            
+
             <form id="filter-form" class="mb-5">
                 <div class="row g-3">
                     <div class="col-md-3">
@@ -27,20 +27,20 @@
                             <option value="">Pilih Tahun</option>
                             <!-- Add year options dynamically -->
                             @for ($i = date('Y'); $i >= date('Y') - 5; $i--)
-                                <option value="{{ $i }}">{{ $i }}</option>
+                            <option value="{{ $i }}">{{ $i }}</option>
                             @endfor
                         </select>
                     </div>
                 </div>
                 <div class="row g-3">
                     <div class="col-md-3">
-                        <label for="kandang" class="form-label">Kandang</label>
-                        <select class="form-select" id="kandang" name="kandang">
+                        <label for="coop" class="form-label">Kandang</label>
+                        <select class="form-select" id="coop" name="coop">
                             <option value="">Pilih Kandang</option>
-                            {{-- @foreach($kandangs as $kandang)
-                            <option value="{{ $kandang->id }}">{{ $kandang->nama }}</option>
-                            @endforeach --}}
-                            <!-- Add kandang options dynamically -->
+                            @foreach($coops as $coop)
+                            <option value="{{ $coop->id }}">{{ $coop->name }}</option>
+                            @endforeach
+                            <!-- Add coop options dynamically -->
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -48,9 +48,8 @@
                         <select class="form-select" id="periode" name="periode">
                             <option value="">Pilih Periode</option>
                             <!-- Add periode options dynamically -->
-                            @for ($i = 1; $i <= 12; $i++)
-                                <option value="{{ $i }}">{{ $i }}</option>
-                            @endfor
+                            @for ($i = 1; $i <= 12; $i++) <option value="{{ $i }}">{{ $i }}</option>
+                                @endfor
                         </select>
                     </div>
                 </div>
@@ -69,7 +68,9 @@
     </div>
 
     @push('scripts')
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+        integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <script>
         $(document).ready(function() {
@@ -98,10 +99,10 @@
             // Handle reset button click
             $('#resetButton').on('click', function() {
                 // Reset all select elements
-                $('#farm, #kandang, #tahun, #periode', '#tanggal_surat').val('').trigger('change');
+                $('#farm, #coop, #tahun, #periode', '#tanggal_surat').val('').trigger('change');
 
                 // Disable select elements and button
-                $('#kandang, #tahun, #periode').prop('disabled', true);
+                $('#coop, #tahun, #periode').prop('disabled', true);
                 $('#saveChangesButton').prop('disabled', true);
 
                 // Clear the report content
@@ -123,16 +124,16 @@
             // Handle farm change
             $('#farm').on('change', function() {
                 var farmId = $(this).val();
-                updateKandangOptions(farmId);
-                kandangSelect.disabled = false;
+                updateCoopOptions(farmId);
+                coopSelect.disabled = false;
 
             });
 
             // Handle farm change
-            $('#kandang').on('change', function() {
+            $('#coop').on('change', function() {
                 var farmId = $('#farm').val();
-                var kandangId = $(this).val();
-                updateTahunOptions(farmId, kandangId);
+                var coopId = $(this).val();
+                updateTahunOptions(farmId, coopId);
                 // tahunsele.disabled = false;
 
             });
@@ -140,17 +141,17 @@
             // Handle tahun change
             $('#tahun').on('change', function() {
                 var farmId = $('#farm').val();
-                var kandangId = $('#kandang').val();
+                var coopId = $('#coop').val();
                 var tahun = $(this).val();
 
-                updatePeriodeOptions(farmId, kandangId, tahun);
+                updatePeriodeOptions(farmId, coopId, tahun);
 
 
-                // console.log('farm ' + farmId + ', kandang'+ kandangId + ', tahun'+ tahun);
+                // console.log('farm ' + farmId + ', coop'+ coopId + ', tahun'+ tahun);
                 
 
                 // You can add logic here to handle the year change
-                // For example, update the periode options based on the selected year, farm, and kandang
+                // For example, update the periode options based on the selected year, farm, and coop
             });
 
             // Handle tahun change
@@ -165,14 +166,14 @@
             // Handle tahun change
             // $('#tahun').on('change', function() {
             //     var farmId = $('#farm').val();
-            //     var kandangId = $('#kandang').val();
+            //     var coopId = $('#coop').val();
             //     var tahun = $(this).val();
 
-            //     console.log('farm ' + farmId + ', kandang'+ kandangId + ', tahun'+ tahun);
+            //     console.log('farm ' + farmId + ', coop'+ coopId + ', tahun'+ tahun);
                 
 
             //     // You can add logic here to handle the year change
-            //     // For example, update the periode options based on the selected year, farm, and kandang
+            //     // For example, update the periode options based on the selected year, farm, and coop
             // });
 
             
@@ -246,10 +247,10 @@
 
 
 
-            // Function to update kandang options based on selected farm
-            function updateKandangOptions(farmId) {
-                var kandangSelect = $('#kandang');
-                kandangSelect.empty().append(new Option('Pilih Kandang', ''));
+            // Function to update coop options based on selected farm
+            function updateCoopOptions(farmId) {
+                var coopSelect = $('#coop');
+                coopSelect.empty().append(new Option('Pilih Coop', ''));
                 
                 if (farmId) {
                     var farmTernak = ternakData.filter(function(ternak) {
@@ -258,28 +259,28 @@
 
                     var uniqueKandangs = [];
                     farmTernak.forEach(function(ternak) {
-                        if (!uniqueKandangs.some(k => k.id === ternak.kandang_id)) {
+                        if (!uniqueKandangs.some(k => k.id === ternak.coop_id)) {
                             uniqueKandangs.push({
-                                id: ternak.kandang_id,
-                                name: ternak.kandang_name
+                                id: ternak.coop_id,
+                                name: ternak.coop_name
                             });
                         }
                     });
 
-                    uniqueKandangs.forEach(function(kandang) {
-                        kandangSelect.append(new Option(kandang.name, kandang.id));
+                    uniqueKandangs.forEach(function(coop) {
+                        coopSelect.append(new Option(coop.name, coop.id));
                     });
                 }
             }
 
-            function updateTahunOptions(farmId, kandangId) {
+            function updateTahunOptions(farmId, coopId) {
                 var tahunSelect = $('#tahun');
                 tahunSelect.empty().append(new Option('Pilih Tahun', ''));
                 tahunSelect.prop('disabled', true);
 
-                if (farmId && kandangId) {
+                if (farmId && coopId) {
                     var filteredTernak = ternakData.filter(function(ternak) {
-                        return ternak.farm_id == farmId && ternak.kandang_id == kandangId;
+                        return ternak.farm_id == farmId && ternak.coop_id == coopId;
                     });
 
                     var uniqueYears = [...new Set(filteredTernak.map(ternak => new Date(ternak.start_date).getFullYear()))];
@@ -293,15 +294,15 @@
                 }
             }
 
-            function updatePeriodeOptions(farmId, kandangId, tahun) {
+            function updatePeriodeOptions(farmId, coopId, tahun) {
                 var periodeSelect = $('#periode');
                 periodeSelect.empty().append(new Option('Pilih Periode', ''));
                 periodeSelect.prop('disabled', true);
 
-                if (farmId && kandangId && tahun) {
+                if (farmId && coopId && tahun) {
                     var filteredTernak = ternakData.filter(function(ternak) {
                         return ternak.farm_id == farmId && 
-                               ternak.kandang_id == kandangId && 
+                               ternak.coop_id == coopId && 
                                new Date(ternak.start_date).getFullYear() == tahun;
                     });
 
@@ -325,12 +326,12 @@
             $('#periode').on('change', function() {
                 var selectedPeriodeId = $(this).val();
                 var farmId = $('#farm').val();
-                var kandangId = $('#kandang').val();
+                var coopId = $('#coop').val();
                 var tahun = $('#tahun').val();
 
                 var selectedTernak = ternakData.find(function(ternak) {
                     return ternak.farm_id == farmId && 
-                        ternak.kandang_id == kandangId && 
+                        ternak.coop_id == coopId && 
                         new Date(ternak.start_date).getFullYear() == tahun &&
                         ternak.id == selectedPeriodeId;
                 });

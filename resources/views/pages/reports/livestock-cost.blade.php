@@ -134,18 +134,26 @@
                     <th>JUMLAH</th>
                     <th>SATUAN</th>
                     <th>HARGA SATUAN</th>
+                    <th>TANGGAL</th>
                     @endif
                     <th>SUBTOTAL</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($cost['breakdown'] as $item)
-                <tr>
-                    <td class="text-left">{{ $item['kategori'] ?? '-' }}</td>
+                <tr @if(isset($item['is_initial_purchase']) && $item['is_initial_purchase'])
+                    style="background-color: #e8f4fd;" @endif>
+                    <td class="text-left">
+                        {{ $item['kategori'] ?? '-' }}
+                        @if(isset($item['is_initial_purchase']) && $item['is_initial_purchase'])
+                        <small style="color: #0066cc;">(Harga Pembelian Awal)</small>
+                        @endif
+                    </td>
                     @if($report_type === 'detail')
                     <td class="text-right">{{ formatNumber($item['jumlah'] ?? 0, 2) }}</td>
                     <td class="text-center">{{ $item['satuan'] ?? '-' }}</td>
                     <td class="text-right">{{ formatNumber($item['harga_satuan'] ?? 0, 2) }}</td>
+                    <td class="text-center">{{ $item['tanggal'] ?? '-' }}</td>
                     @endif
                     <td class="text-right">{{ formatNumber($item['subtotal'] ?? 0, 2) }}</td>
                 </tr>
@@ -153,15 +161,23 @@
 
                 @if($report_type === 'detail')
                 <tr class="header-row">
-                    <td colspan="4" class="text-right">Total Biaya Hari Sebelumnya:</td>
+                    <td colspan="5" class="text-right">Total Biaya Hari Sebelumnya:</td>
                     <td class="text-right">{{ formatNumber($prev_cost_data['total_added_cost'] ?? 0, 2)
                         }}</td>
                 </tr>
                 <tr class="header-row">
-                    <td colspan="4" class="text-right">Total Biaya Kumulatif Sampai Hari Ini:</td>
+                    <td colspan="5" class="text-right">Total Biaya Kumulatif Sampai Hari Ini:</td>
                     <td class="text-right">{{ formatNumber($total_cumulative_cost_calculated ?? 0,
                         2) }}</td>
                 </tr>
+                @if(isset($initial_purchase_data) && $initial_purchase_data['found'])
+                <tr style="background-color: #e8f4fd;">
+                    <td colspan="5" class="text-right"><strong>Harga Awal DOC ({{ $initial_purchase_data['date']
+                            }}):</strong></td>
+                    <td class="text-right"><strong>{{ formatNumber($initial_purchase_data['total_cost'], 2) }}</strong>
+                    </td>
+                </tr>
+                @endif
                 @endif
             </tbody>
         </table>
@@ -181,14 +197,14 @@
     @endforeach
 
     <div class="footer-signatures">
-        <div>
+        {{-- <div>
             Diketahui oleh,<br><br><br>
             ( {{ $diketahui ?? 'RIA NARSO' }} )
         </div>
         <div>
             Dibuat oleh,<br><br><br>
             ( {{ $dibuat ?? 'HENDRA' }} )
-        </div>
+        </div> --}}
     </div>
 </body>
 
