@@ -1,0 +1,67 @@
+{
+    "total_tests": 6,
+    "passed_tests": 5,
+    "failed_tests": 1,
+    "test_details": [
+        {
+            "test": "Service Instantiation",
+            "passed": true,
+            "message": "",
+            "details": {
+                "class": "App\\Services\\LivestockDataIntegrityService"
+            }
+        },
+        {
+            "test": "Database Connection",
+            "passed": true,
+            "message": "",
+            "details": {
+                "livestock_count": 1,
+                "current_livestock_count": 0,
+                "batch_count": 1
+            }
+        },
+        {
+            "test": "Missing CurrentLivestock Detection",
+            "passed": true,
+            "message": "",
+            "details": {
+                "missing_count": 1,
+                "missing_ids": [
+                    "9f1f01a2-30ee-4b5f-8cd4-7eecef7f1825"
+                ]
+            }
+        },
+        {
+            "test": "Orphaned CurrentLivestock Detection",
+            "passed": true,
+            "message": "",
+            "details": {
+                "orphaned_count": 0,
+                "orphaned_ids": []
+            }
+        },
+        {
+            "test": "Preview Method Execution",
+            "passed": true,
+            "message": "",
+            "details": {
+                "success": true,
+                "preview_count": 1,
+                "summary": {
+                    "missing_current_livestock": 1,
+                    "orphaned_current_livestock": 0,
+                    "total_changes": 1
+                }
+            }
+        },
+        {
+            "test": "Critical Error Handling",
+            "passed": false,
+            "message": "SQLSTATE[42S22]: Column not found: 1054 Unknown column 'quantity' in 'field list' (Connection: mysql, SQL: select sum(`quantity`) as aggregate from `livestock_batches` where `livestock_id` = 9f1f01a2-30ee-4b5f-8cd4-7eecef7f1825 and `deleted_at` is null and `livestock_batches`.`deleted_at` is null)",
+            "details": {
+                "exception": "Illuminate\\Database\\QueryException"
+            }
+        }
+    ]
+}

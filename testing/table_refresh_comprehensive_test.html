@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Refresh Comprehensive Test - Supply Purchase Notifications</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4><i class="fas fa-table"></i> Table Refresh Comprehensive Test</h4>
+                        <small>Testing auto-refresh, manual refresh, and notification behavior</small>
+                    </div>
+                    <div class="card-body">
+
+                        <!-- Test Controls -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <h6><i class="fas fa-play"></i> Test Controls</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <button class="btn btn-success btn-sm mb-2" onclick="testAutoRefreshSuccess()">
+                                            <i class="fas fa-check"></i> Test Auto-Refresh SUCCESS
+                                        </button>
+                                        <br>
+                                        <button class="btn btn-warning btn-sm mb-2" onclick="testAutoRefreshFail()">
+                                            <i class="fas fa-times"></i> Test Auto-Refresh FAIL
+                                        </button>
+                                        <br>
+                                        <button class="btn btn-info btn-sm mb-2" onclick="testManualRefresh()">
+                                            <i class="fas fa-hand-pointer"></i> Test Manual Refresh
+                                        </button>
+                                        <br>
+                                        <button class="btn btn-secondary btn-sm" onclick="clearAllTests()">
+                                            <i class="fas fa-broom"></i> Clear All
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card border-success">
+                                    <div class="card-header bg-success text-white">
+                                        <h6><i class="fas fa-info-circle"></i> Expected Behavior</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-unstyled">
+                                            <li><i class="fas fa-check text-success"></i> <strong>Auto-Refresh
+                                                    SUCCESS:</strong> Notification auto-closes, no buttons</li>
+                                            <li><i class="fas fa-exclamation text-warning"></i> <strong>Auto-Refresh
+                                                    FAIL:</strong> Notification stays, buttons visible</li>
+                                            <li><i class="fas fa-hand-pointer text-info"></i> <strong>Manual
+                                                    Refresh:</strong> Status updates, then auto-closes</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mock DataTable -->
+                        <div class="table-responsive">
+                            <table id="supplyPurchasing-table" class="table table-striped table-bordered">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        <th>Supplier</th>
+                                        <th>Status</th>
+                                        <th>Total</th>
+                                        <th>Last Updated</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>2024-12-11</td>
+                                        <td>Supplier A</td>
+                                        <td><span class="badge bg-warning">Pending</span></td>
+                                        <td>Rp 1,500,000</td>
+                                        <td id="last-updated-1">Never</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2</td>
+                                        <td>2024-12-10</td>
+                                        <td>Supplier B</td>
+                                        <td><span class="badge bg-info">Confirmed</span></td>
+                                        <td>Rp 2,300,000</td>
+                                        <td id="last-updated-2">Never</td>
+                                    </tr>
+                                    <tr>
+                                        <td>3</td>
+                                        <td>2024-12-09</td>
+                                        <td>Supplier C</td>
+                                        <td><span class="badge bg-success">Completed</span></td>
+                                        <td>Rp 890,000</td>
+                                        <td id="last-updated-3">Never</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Test Results -->
+                        <div class="mt-4">
+                            <div class="card border-secondary">
+                                <div class="card-header">
+                                    <h6><i class="fas fa-clipboard-list"></i> Test Results Log</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="test-results" class="bg-light p-3"
+                                        style="height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;">
+                                        <div class="text-muted">Test results will appear here...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load notification system -->
+    <script src="../public/assets/js/browser-notification.js"></script>
+
+    <script>
+        // Initialize mock DataTable
+        let mockTable;
+        let testCounter = 0;
+
+        $(document).ready(function () {
+            // Initialize DataTable
+            mockTable = $('#supplyPurchasing-table').DataTable({
+                "pageLength": 10,
+                "searching": true,
+                "ordering": true,
+                "info": true,
+                "autoWidth": false
+            });
+
+            logResult("✅ Mock DataTable initialized successfully");
+            logResult("🔔 Notification system should be loading...");
+
+            // Set user info for testing
+            window.Laravel = {user: {id: 999}}; // Test user ID
+
+            // Wait for notification system to load
+            setTimeout(() => {
+                if (window.NotificationSystem) {
+                    logResult("✅ Notification system loaded successfully");
+                    logResult("👤 Test user ID set to: 999");
+                } else {
+                    logResult("❌ Notification system failed to load");
+                }
+            }, 2000);
+        });
+
+        // Test auto-refresh success scenario
+        function testAutoRefreshSuccess() {
+            testCounter++;
+            logResult(`\n🧪 TEST ${testCounter}: Auto-Refresh SUCCESS`);
+
+            // Mock successful refresh by updating table
+            updateMockTableData();
+
+            // Create notification that should auto-close
+            const testNotification = {
+                type: "info",
+                title: "Supply Purchase Status Changed",
+                message: "Purchase #123 status changed to 'Confirmed'",
+                data: {
+                    batch_id: 123,
+                    requires_refresh: true,
+                    updated_by: 888 // Different user to avoid self-exclusion
+                }
+            };
+
+            if (window.NotificationSystem) {
+                window.NotificationSystem.showDataUpdatedNotification(testNotification);
+                logResult("✅ Notification sent - should auto-refresh and auto-close");
+                logResult("⏰ Expected: Auto-close in 8 seconds");
+            } else {
+                logResult("❌ Notification system not available");
+            }
+        }
+
+        // Test auto-refresh fail scenario
+        function testAutoRefreshFail() {
+            testCounter++;
+            logResult(`\n🧪 TEST ${testCounter}: Auto-Refresh FAIL`);
+
+            // Temporarily break DataTable to simulate failure
+            const originalDataTable = $.fn.DataTable;
+            $.fn.DataTable = undefined;
+
+            const testNotification = {
+                type: "info",
+                title: "Supply Purchase Status Changed",
+                message: "Purchase #456 status changed to 'Arrived'",
+                data: {
+                    batch_id: 456,
+                    requires_refresh: true,
+                    updated_by: 777 // Different user
+                }
+            };
+
+            if (window.NotificationSystem) {
+                window.NotificationSystem.showDataUpdatedNotification(testNotification);
+                logResult("✅ Notification sent with broken DataTable");
+                logResult("⏰ Expected: NO auto-close, refresh buttons visible");
+
+                // Restore DataTable after test
+                setTimeout(() => {
+                    $.fn.DataTable = originalDataTable;
+                    logResult("🔧 DataTable functionality restored");
+                }, 3000);
+            } else {
+                logResult("❌ Notification system not available");
+            }
+        }
+
+        // Test manual refresh
+        function testManualRefresh() {
+            testCounter++;
+            logResult(`\n🧪 TEST ${testCounter}: Manual Refresh`);
+            logResult("💡 This test requires you to click the 'Refresh Table Only' button");
+            logResult("📋 Steps: 1) Wait for notification 2) Click 'Refresh Table Only' 3) Observe behavior");
+
+            const testNotification = {
+                type: "info",
+                title: "Supply Purchase Status Changed",
+                message: "Purchase #789 requires manual refresh",
+                data: {
+                    batch_id: 789,
+                    requires_refresh: true,
+                    updated_by: 555 // Different user
+                }
+            };
+
+            // Simulate partial failure to force manual refresh
+            const originalConsoleLog = console.log;
+            let refreshAttempts = 0;
+
+            // Override attemptAutoRefresh to fail first time
+            if (window.NotificationSystem) {
+                const originalAttemptAutoRefresh = window.NotificationSystem.attemptAutoRefresh;
+                window.NotificationSystem.attemptAutoRefresh = function () {
+                    refreshAttempts++;
+                    if (refreshAttempts === 1) {
+                        logResult("🔄 Simulating auto-refresh failure...");
+                        return false; // Fail first attempt
+                    } else {
+                        logResult("🔄 Manual refresh attempt...");
+                        updateMockTableData();
+                        return originalAttemptAutoRefresh.call(this);
+                    }
+                };
+
+                window.NotificationSystem.showDataUpdatedNotification(testNotification);
+                logResult("✅ Notification sent - auto-refresh will fail");
+                logResult("👆 Click 'Refresh Table Only' button to test manual refresh");
+            }
+        }
+
+        // Update mock table data
+        function updateMockTableData() {
+            const now = new Date().toLocaleTimeString();
+            $('#last-updated-1').text(now);
+            $('#last-updated-2').text(now);
+            $('#last-updated-3').text(now);
+            logResult(`🔄 Mock table data updated at ${now}`);
+        }
+
+        // Clear all tests
+        function clearAllTests() {
+            if (window.NotificationSystem) {
+                window.NotificationSystem.clearAllNotifications();
+            }
+            $('#test-results').html('<div class="text-muted">Test results cleared...</div>');
+            testCounter = 0;
+            logResult("🧹 All tests cleared");
+        }
+
+        // Log test results
+        function logResult(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            const resultsDiv = $('#test-results');
+
+            if (resultsDiv.text().includes('Test results will appear here') ||
+                resultsDiv.text().includes('Test results cleared')) {
+                resultsDiv.html('');
+            }
+
+            resultsDiv.append(`<div>${logEntry}</div>`);
+            resultsDiv.scrollTop(resultsDiv[0].scrollHeight);
+        }
+
+        // Keyboard shortcuts for testing
+        $(document).keydown(function (e) {
+            if (e.ctrlKey && e.shiftKey) {
+                switch (e.key) {
+                    case '1':
+                        e.preventDefault();
+                        testAutoRefreshSuccess();
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        testAutoRefreshFail();
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        testManualRefresh();
+                        break;
+                    case 'C':
+                        e.preventDefault();
+                        clearAllTests();
+                        break;
+                }
+            }
+        });
+
+        // Log keyboard shortcuts
+        setTimeout(() => {
+            logResult("\n⌨️ KEYBOARD SHORTCUTS:");
+            logResult("Ctrl+Shift+1 = Test Auto-Refresh Success");
+            logResult("Ctrl+Shift+2 = Test Auto-Refresh Fail");
+            logResult("Ctrl+Shift+3 = Test Manual Refresh");
+            logResult("Ctrl+Shift+C = Clear All Tests");
+            logResult("\n🚀 Ready for testing!");
+        }, 1000);
+    </script>
+</body>
+
+</html>

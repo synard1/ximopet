@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Table Refresh Test</title>
+    <meta charset="utf-8">
+    <meta name="user-id" content="1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .debug-box {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .info {
+            color: blue;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+
+        .test-info {
+            background: #e6ffe6;
+            padding: 10px;
+            border: 2px solid #00aa00;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔄 Table Refresh Test</h1>
+
+    <div class="debug-box test-info">
+        <h3>Table Refresh Functionality Test</h3>
+        <p>This page tests if notifications with requires_refresh trigger proper table refresh and show refresh options.
+        </p>
+    </div>
+
+    <div class="debug-box">
+        <h3>Test Actions</h3>
+        <button onclick="testNotificationWithRefresh()">Send Notification with Refresh Required</button>
+        <button onclick="testNotificationWithoutRefresh()">Send Notification without Refresh</button>
+        <button onclick="testAutoRefresh()">Test Auto-Refresh Logic</button>
+        <button onclick="testRefreshButtons()">Test Refresh Button Display</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="debug-box">
+        <h3>Debug Log</h3>
+        <div id="log" class="log">Table refresh test log will appear here...</div>
+    </div>
+
+    <!-- Include notification system -->
+    <script src="/assets/js/browser-notification.js"></script>
+
+    <script>
+        function log(message) {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${timestamp}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        async function testNotificationWithRefresh() {
+            log('🧪 Testing notification WITH requires_refresh = true');
+
+            const notification = {
+                type: 'info',
+                title: 'Supply Purchase Status Updated',
+                message: 'Purchase status changed from Draft to Confirmed - table should refresh',
+                data: {
+                    test: true,
+                    updated_by: 999, // Different user to avoid self-exclusion
+                    updated_by_name: 'Test User',
+                    requires_refresh: true,
+                    show_refresh_button: true,
+                    batch_id: 123
+                }
+            };
+
+            log('📤 Sending notification with requires_refresh: true');
+            log('📋 Expected behavior: Auto-refresh + Refresh buttons should appear');
+
+            try {
+                const response = await fetch('http://demo51.local/testing/notification_bridge.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(notification)
+                });
+
+                const result = await response.json();
+                log('✅ Notification with refresh sent: ' + JSON.stringify(result, null, 2));
+                log('🔍 Check if notification shows refresh buttons and triggers auto-refresh');
+            } catch (error) {
+                log('❌ Failed to send notification: ' + error.message);
+            }
+        }
+
+        async function testNotificationWithoutRefresh() {
+            log('🧪 Testing notification WITHOUT requires_refresh');
+
+            const notification = {
+                type: 'info',
+                title: 'Test Notification',
+                message: 'Simple notification without refresh requirement',
+                data: {
+                    test: true,
+                    updated_by: 999,
+                    updated_by_name: 'Test User',
+                    requires_refresh: false,
+                    show_refresh_button: false
+                }
+            };
+
+            log('📤 Sending notification with requires_refresh: false');
+            log('📋 Expected behavior: No auto-refresh, no refresh buttons');
+
+            try {
+                const response = await fetch('http://demo51.local/testing/notification_bridge.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(notification)
+                });
+
+                const result = await response.json();
+                log('✅ Notification without refresh sent: ' + JSON.stringify(result, null, 2));
+                log('🔍 Check if notification appears without refresh buttons');
+            } catch (error) {
+                log('❌ Failed to send notification: ' + error.message);
+            }
+        }
+
+        function testAutoRefresh() {
+            log('🧪 Testing auto-refresh logic directly');
+
+            if (!window.NotificationSystem) {
+                log('❌ NotificationSystem not available');
+                return;
+            }
+
+            // Create test notification object with refresh requirements
+            const testNotification = {
+                title: 'Direct Auto-Refresh Test',
+                message: 'Testing auto-refresh logic directly',
+                data: {
+                    requires_refresh: true,
+                    show_refresh_button: true,
+                    batch_id: 456
+                }
+            };
+
+            log('🔄 Calling showDataUpdatedNotification with refresh requirements');
+            log('📋 Expected: Auto-refresh should trigger + refresh buttons should appear');
+
+            try {
+                window.NotificationSystem.showDataUpdatedNotification(testNotification);
+                log('✅ Direct notification call completed');
+                log('🔍 Check console for auto-refresh logs and refresh button display');
+            } catch (error) {
+                log('❌ Error in direct notification call: ' + error.message);
+            }
+        }
+
+        function testRefreshButtons() {
+            log('🧪 Testing refresh button display logic');
+
+            // Test different scenarios
+            const scenarios = [
+                {
+                    name: 'requires_refresh: true',
+                    data: {requires_refresh: true}
+                },
+                {
+                    name: 'show_refresh_button: true',
+                    data: {show_refresh_button: true}
+                },
+                {
+                    name: 'both true',
+                    data: {requires_refresh: true, show_refresh_button: true}
+                },
+                {
+                    name: 'both false',
+                    data: {requires_refresh: false, show_refresh_button: false}
+                },
+                {
+                    name: 'no data',
+                    data: null
+                }
+            ];
+
+            scenarios.forEach((scenario, index) => {
+                setTimeout(() => {
+                    log(`🔍 Testing scenario: ${scenario.name}`);
+
+                    const testNotification = {
+                        title: `Button Test ${index + 1}`,
+                        message: `Testing refresh buttons: ${scenario.name}`,
+                        data: scenario.data
+                    };
+
+                    if (window.NotificationSystem) {
+                        window.NotificationSystem.showDataUpdatedNotification(testNotification);
+                        log(`📋 Notification sent for: ${scenario.name}`);
+                    }
+                }, index * 2000); // Stagger the tests
+            });
+        }
+
+        // Monitor for notifications appearing
+        function monitorNotifications() {
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
+                    mutation.addedNodes.forEach(function (node) {
+                        if (node.nodeType === 1 && node.classList && node.classList.contains('alert')) {
+                            log('👁️ Notification element detected in DOM');
+
+                            // Check for refresh buttons
+                            const refreshButtons = node.querySelectorAll('button');
+                            if (refreshButtons.length > 1) { // More than just close button
+                                log('✅ Refresh buttons found in notification');
+                                refreshButtons.forEach(btn => {
+                                    if (btn.textContent.includes('Refresh')) {
+                                        log(`🔲 Found button: "${btn.textContent.trim()}"`);
+                                    }
+                                });
+                            } else {
+                                log('⚠️ No refresh buttons found in notification');
+                            }
+                        }
+                    });
+                });
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            log('👁️ Notification monitor started');
+        }
+
+        // Auto-initialize
+        window.addEventListener('DOMContentLoaded', function () {
+            log('🚀 Table refresh test page loaded');
+            setTimeout(() => {
+                monitorNotifications();
+                log('✅ Test environment ready');
+            }, 1000);
+        });
+    </script>
+</body>
+
+</html>

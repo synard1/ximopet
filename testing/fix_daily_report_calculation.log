@@ -1,0 +1,88 @@
+=== FIX DAILY REPORT CALCULATION LOG ===
+Date: 2025-01-02
+File: app/Http/Controllers/ReportsController.php
+Method: exportHarian()
+
+=== MASALAH YANG DITEMUKAN ===
+1. Type casting tidak konsisten:
+   - Data 'mati': "1" (string) → seharusnya 1 (integer)
+   - Data 'total_deplesi': "230" (string) → seharusnya 230 (integer)
+   
+2. Agregasi totals tidak lengkap:
+   - tangkap_ekor tidak diakumulasi
+   - tangkap_kg tidak diakumulasi
+   - distinct feed names tidak dikumpulkan dengan benar
+
+3. Debugging sulit karena tidak ada logging
+
+=== PERBAIKAN YANG DITERAPKAN ===
+
+✅ 1. PERBAIKAN TYPE CASTING:
+   - LivestockDepletion::sum() → (int) LivestockDepletion::sum()
+   - $livestock->initial_quantity → (int) $livestock->initial_quantity
+   - FeedUsageDetail quantities → (float) quantities
+   - Recording data → (float) casting untuk berat
+
+✅ 2. PERBAIKAN AGREGASI TOTALS:
+   - Menambah: $totals['tangkap_ekor'] += (int) ($sales->quantity ?? 0)
+   - Menambah: $totals['tangkap_kg'] += (float) ($sales->total_berat ?? 0)
+   - Fix distinct feed names dengan array_unique() dan array_merge()
+
+✅ 3. IMPLEMENTASI LOGGING:
+   - Log request parameters
+   - Log livestock count dan IDs
+   - Log individual livestock calculations
+   - Log final totals untuk verifikasi
+
+=== EXPECTED RESULTS ===
+Sebelum:
+array:2 [
+  "Kandang 1 - Demo Farm 2" => [
+    "mati" => "1"           // STRING
+    "total_deplesi" => "230" // STRING
+  ]
+  "Kandang 2 - Demo Farm 2" => [
+    "mati" => "1"           // STRING
+    "total_deplesi" => "190" // STRING
+  ]
+]
+
+Sesudah:
+array:2 [
+  "Kandang 1 - Demo Farm 2" => [
+    "mati" => 1             // INTEGER
+    "total_deplesi" => 230   // INTEGER
+  ]
+  "Kandang 2 - Demo Farm 2" => [
+    "mati" => 1             // INTEGER
+    "total_deplesi" => 190   // INTEGER
+  ]
+]
+
+=== TESTING INSTRUCTIONS ===
+1. Hit endpoint: POST /api/reports/harian
+   Request: {
+     "farm": "9f1ce80a-f1b5-4626-9ea5-85f0dbaf283a",
+     "tanggal": "2025-06-02"
+   }
+
+2. Check logs di storage/logs/laravel.log untuk:
+   - "Export Harian Report" log dengan farm_id dan tanggal
+   - "Livestocks found" log dengan count dan IDs
+   - "Livestock calculation" log per kandang
+   - "Final totals calculated" log dengan hasil akhir
+
+3. Verifikasi output tidak lagi menampilkan string untuk numeric values
+
+=== STATUS ===
+✅ COMPLETED - Ready for testing
+✅ DOCUMENTED - Added to REFACTOR_SUMMARY.md
+✅ LOGGED - Comprehensive logging implemented 
+
+=== ADDITIONAL NOTES (2025-01-23) ===
+This log has been moved to the /testing folder for better organization.
+Related files:
+- /docs/DAILY_REPORT_REFACTOR_SUMMARY.md (moved from root)
+- /testing/test_daily_report_aggregation.php
+- /testing/daily_report_aggregation_fix_log.md
+- /testing/test_daily_report_detail_simple_modes.php 

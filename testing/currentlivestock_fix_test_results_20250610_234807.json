@@ -1,0 +1,112 @@
+{
+    "total_tests": 10,
+    "passed_tests": 10,
+    "failed_tests": 0,
+    "test_details": [
+        {
+            "test": "Service Instantiation",
+            "passed": true,
+            "message": "",
+            "details": {
+                "class": "App\\Services\\LivestockDataIntegrityService"
+            }
+        },
+        {
+            "test": "Database Connection",
+            "passed": true,
+            "message": "",
+            "details": {
+                "livestock_count": 1,
+                "current_livestock_count": 0,
+                "batch_count": 1
+            }
+        },
+        {
+            "test": "Missing CurrentLivestock Detection",
+            "passed": true,
+            "message": "",
+            "details": {
+                "missing_count": 1,
+                "missing_ids": [
+                    "9f1f01a2-30ee-4b5f-8cd4-7eecef7f1825"
+                ]
+            }
+        },
+        {
+            "test": "Orphaned CurrentLivestock Detection",
+            "passed": true,
+            "message": "",
+            "details": {
+                "orphaned_count": 0,
+                "orphaned_ids": []
+            }
+        },
+        {
+            "test": "Preview Method Execution",
+            "passed": true,
+            "message": "",
+            "details": {
+                "success": true,
+                "preview_count": 1,
+                "summary": {
+                    "missing_current_livestock": 1,
+                    "orphaned_current_livestock": 0,
+                    "total_changes": 1
+                }
+            }
+        },
+        {
+            "test": "Calculation Logic Consistency",
+            "passed": true,
+            "message": "",
+            "details": {
+                "livestock_id": "9f1f01a2-30ee-4b5f-8cd4-7eecef7f1825",
+                "service_quantity": 8000,
+                "direct_quantity": "8000",
+                "service_weight_sum": 320000,
+                "service_avg_weight": 40,
+                "batch_count": 1
+            }
+        },
+        {
+            "test": "Livewire Component Instantiation",
+            "passed": true,
+            "message": "",
+            "details": {
+                "class": "App\\Livewire\\DataIntegrity\\LivestockDataIntegrity"
+            }
+        },
+        {
+            "test": "Error Handling",
+            "passed": true,
+            "message": "",
+            "details": {
+                "result_structure": [
+                    "success",
+                    "preview",
+                    "summary"
+                ]
+            }
+        },
+        {
+            "test": "Fix Method Structure",
+            "passed": true,
+            "message": "",
+            "details": {
+                "method_exists": true,
+                "method_name": "fixMissingCurrentLivestock",
+                "is_public": true
+            }
+        },
+        {
+            "test": "Data Consistency Checks",
+            "passed": true,
+            "message": "",
+            "details": {
+                "livestock_without_batches": 0,
+                "batches_without_livestock": 0,
+                "zero_quantity_current_livestock": 0
+            }
+        }
+    ]
+}

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Self-Exclusion Debug Test</title>
+    <meta charset="utf-8">
+    <meta name="user-id" content="1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .debug-box {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .info {
+            color: blue;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+
+        .user-info {
+            background: #e6f3ff;
+            padding: 10px;
+            border: 2px solid #007bff;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 Self-Exclusion Debug Test</h1>
+
+    <div class="debug-box user-info">
+        <h3>Current User Information</h3>
+        <div id="user-info">Loading user information...</div>
+        <button onclick="checkUserSources()">Check All User ID Sources</button>
+    </div>
+
+    <div class="debug-box">
+        <h3>Self-Exclusion Tests</h3>
+        <button onclick="sendSelfNotification()">Send Self-Notification (Should be Excluded)</button>
+        <button onclick="sendOtherNotification()">Send Other User Notification (Should Show)</button>
+        <button onclick="testCurrentLogic()">Test Current Self-Exclusion Logic</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="debug-box">
+        <h3>Debug Log</h3>
+        <div id="log" class="log">Self-exclusion debug log will appear here...</div>
+    </div>
+
+    <!-- Include notification system -->
+    <script src="/assets/js/browser-notification.js"></script>
+
+    <script>
+        function log(message) {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${timestamp}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function checkUserSources() {
+            log('🔍 Checking all user ID sources...');
+
+            // Check window.Laravel
+            if (window.Laravel && window.Laravel.user) {
+                log('✅ window.Laravel.user: ' + JSON.stringify(window.Laravel.user));
+            } else {
+                log('❌ window.Laravel.user: not available');
+            }
+
+            // Check window.authUserId
+            if (window.authUserId) {
+                log('✅ window.authUserId: ' + window.authUserId);
+            } else {
+                log('❌ window.authUserId: not available');
+            }
+
+            // Check meta tag
+            const userMeta = document.querySelector('meta[name="user-id"]');
+            if (userMeta) {
+                log('✅ meta[name="user-id"]: ' + userMeta.getAttribute('content'));
+            } else {
+                log('❌ meta[name="user-id"]: not found');
+            }
+
+            // Check window.user_id
+            if (window.user_id) {
+                log('✅ window.user_id: ' + window.user_id);
+            } else {
+                log('❌ window.user_id: not available');
+            }
+
+            // Check notification system
+            if (window.NotificationSystem) {
+                log('✅ NotificationSystem.currentUserId: ' + window.NotificationSystem.currentUserId);
+            } else {
+                log('❌ NotificationSystem: not loaded');
+            }
+
+            updateUserInfo();
+        }
+
+        function updateUserInfo() {
+            const userInfoEl = document.getElementById('user-info');
+            const currentUserId = window.NotificationSystem ? window.NotificationSystem.currentUserId : 'Unknown';
+
+            userInfoEl.innerHTML = `
+                <strong>Current User ID:</strong> ${currentUserId}<br>
+                <strong>Type:</strong> ${typeof currentUserId}<br>
+                <strong>Is Number:</strong> ${!isNaN(parseInt(currentUserId))}<br>
+                <strong>Parsed:</strong> ${parseInt(currentUserId)}
+            `;
+        }
+
+        async function sendSelfNotification() {
+            log('📤 Sending SELF notification (should be excluded)...');
+
+            const currentUserId = window.NotificationSystem ? window.NotificationSystem.currentUserId : 1;
+
+            const notification = {
+                type: 'info',
+                title: 'Self Notification Test',
+                message: 'This notification is from current user - SHOULD BE EXCLUDED',
+                data: {
+                    test: true,
+                    updated_by: currentUserId, // Same as current user
+                    updated_by_name: 'Current User',
+                    requires_refresh: false
+                }
+            };
+
+            log('📤 Sending notification with updated_by: ' + notification.data.updated_by);
+
+            try {
+                const response = await fetch('http://demo51.local/testing/notification_bridge.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(notification)
+                });
+
+                const result = await response.json();
+                log('✅ Self notification sent: ' + JSON.stringify(result, null, 2));
+                log('🔍 This notification should NOT appear on screen (excluded by self-exclusion logic)');
+            } catch (error) {
+                log('❌ Failed to send self notification: ' + error.message);
+            }
+        }
+
+        async function sendOtherNotification() {
+            log('📤 Sending OTHER user notification (should show)...');
+
+            const currentUserId = window.NotificationSystem ? window.NotificationSystem.currentUserId : 1;
+            const otherUserId = currentUserId + 100; // Different user
+
+            const notification = {
+                type: 'info',
+                title: 'Other User Notification Test',
+                message: 'This notification is from other user - SHOULD BE SHOWN',
+                data: {
+                    test: true,
+                    updated_by: otherUserId, // Different from current user
+                    updated_by_name: 'Other User',
+                    requires_refresh: false
+                }
+            };
+
+            log('📤 Sending notification with updated_by: ' + notification.data.updated_by + ' (current user: ' + currentUserId + ')');
+
+            try {
+                const response = await fetch('http://demo51.local/testing/notification_bridge.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(notification)
+                });
+
+                const result = await response.json();
+                log('✅ Other user notification sent: ' + JSON.stringify(result, null, 2));
+                log('🔍 This notification SHOULD appear on screen (not excluded)');
+            } catch (error) {
+                log('❌ Failed to send other user notification: ' + error.message);
+            }
+        }
+
+        function testCurrentLogic() {
+            log('🧪 Testing current self-exclusion logic...');
+
+            if (!window.NotificationSystem) {
+                log('❌ NotificationSystem not loaded');
+                return;
+            }
+
+            const currentUserId = window.NotificationSystem.currentUserId;
+            log('Current User ID: ' + currentUserId + ' (type: ' + typeof currentUserId + ')');
+
+            // Test case 1: Same user
+            const selfNotification = {
+                data: {updated_by: currentUserId}
+            };
+            const shouldExcludeSelf = window.NotificationSystem.shouldExcludeNotification(selfNotification);
+            log('🧪 Self notification exclusion: ' + shouldExcludeSelf + ' (should be true)');
+
+            // Test case 2: Different user
+            const otherNotification = {
+                data: {updated_by: currentUserId + 100}
+            };
+            const shouldExcludeOther = window.NotificationSystem.shouldExcludeNotification(otherNotification);
+            log('🧪 Other notification exclusion: ' + shouldExcludeOther + ' (should be false)');
+
+            // Test case 3: No data
+            const noDataNotification = {};
+            const shouldExcludeNoData = window.NotificationSystem.shouldExcludeNotification(noDataNotification);
+            log('🧪 No data notification exclusion: ' + shouldExcludeNoData + ' (should be false)');
+        }
+
+        // Auto-initialize
+        window.addEventListener('DOMContentLoaded', function () {
+            log('🚀 Self-exclusion debug page loaded');
+            setTimeout(() => {
+                checkUserSources();
+                updateUserInfo();
+            }, 1000);
+        });
+    </script>
+</body>
+
+</html>

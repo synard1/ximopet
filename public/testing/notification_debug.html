@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Emergency Notification Debug</title>
+    <meta charset="utf-8">
+    <meta name="user-id" content="1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .debug-box {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .info {
+            color: blue;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔧 Emergency Notification Debug</h1>
+
+    <div class="debug-box">
+        <h3>Quick Tests</h3>
+        <button onclick="testBridge()">Test Bridge Status</button>
+        <button onclick="sendTestNotification()">Send Test Notification</button>
+        <button onclick="clearBridge()">Clear Bridge</button>
+        <button onclick="pollNotifications()">Poll Once</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="debug-box">
+        <h3>Debug Log</h3>
+        <div id="log" class="log">Debug log will appear here...</div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${timestamp}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        async function testBridge() {
+            log('🌉 Testing bridge connection...');
+            try {
+                const response = await fetch('http://demo51.local/testing/notification_bridge.php?action=status');
+                const data = await response.json();
+                log('✅ Bridge response: ' + JSON.stringify(data, null, 2));
+            } catch (error) {
+                log('❌ Bridge test failed: ' + error.message);
+            }
+        }
+
+        async function sendTestNotification() {
+            log('📤 Sending test notification...');
+            try {
+                const notification = {
+                    type: 'info',
+                    title: 'Debug Test Notification',
+                    message: 'Direct test dari debug page - ' + new Date().toLocaleTimeString(),
+                    data: {
+                        test: true,
+                        updated_by: 999, // Fake user to avoid self-exclusion
+                        requires_refresh: false
+                    }
+                };
+
+                const response = await fetch('http://demo51.local/testing/notification_bridge.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(notification)
+                });
+
+                const result = await response.json();
+                log('✅ Test notification sent: ' + JSON.stringify(result, null, 2));
+            } catch (error) {
+                log('❌ Failed to send test notification: ' + error.message);
+            }
+        }
+
+        async function clearBridge() {
+            log('🧹 Clearing bridge...');
+            try {
+                const response = await fetch('http://demo51.local/testing/notification_bridge.php?action=clear');
+                const data = await response.json();
+                log('✅ Bridge cleared: ' + JSON.stringify(data, null, 2));
+            } catch (error) {
+                log('❌ Failed to clear bridge: ' + error.message);
+            }
+        }
+
+        async function pollNotifications() {
+            log('📨 Polling for notifications...');
+            try {
+                const since = Math.floor(Date.now() / 1000) - 300; // Last 5 minutes
+                const url = `http://demo51.local/testing/notification_bridge.php?since=${since}`;
+                log('📨 Polling URL: ' + url);
+
+                const response = await fetch(url);
+                const data = await response.json();
+                log('📨 Poll result: ' + JSON.stringify(data, null, 2));
+
+                if (data.notifications && data.notifications.length > 0) {
+                    log(`✅ Found ${data.notifications.length} notifications!`);
+                    data.notifications.forEach(notif => {
+                        log(`  - ${notif.title}: ${notif.message}`);
+                    });
+                } else {
+                    log('ℹ️ No notifications found');
+                }
+            } catch (error) {
+                log('❌ Failed to poll notifications: ' + error.message);
+            }
+        }
+
+        // Auto-test on load
+        log('🚀 Debug page loaded');
+        testBridge();
+    </script>
+</body>
+
+</html>
