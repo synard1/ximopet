@@ -17,11 +17,16 @@ class LivestockDepletion extends BaseModel
         'tanggal',
         'jumlah',
         'jenis',
+        'data',
+        'metadata',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
         'tanggal' => 'date',
-        'data' => 'array'
+        'data' => 'array',
+        'metadata' => 'array'
     ];
 
     public function livestock()

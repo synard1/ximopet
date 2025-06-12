@@ -29,6 +29,7 @@ class LivestockPurchaseItem extends BaseModel
         'weight_per_unit',
         'weight_total',
         'notes',
+        'data',
         'created_by',
         'updated_by'
     ];
@@ -43,6 +44,7 @@ class LivestockPurchaseItem extends BaseModel
         'weight_value' => 'decimal:2',
         'weight_per_unit' => 'decimal:2',
         'weight_total' => 'decimal:2',
+        'data' => 'array',
     ];
 
     public function livestockPurchase()
@@ -53,6 +55,11 @@ class LivestockPurchaseItem extends BaseModel
     public function livestock()
     {
         return $this->belongsTo(Livestock::class, 'livestock_id');
+    }
+
+    public function livestockStrain()
+    {
+        return $this->belongsTo(LivestockStrain::class, 'livestock_strain_id');
     }
 
     public function livestockBatches()

@@ -16,7 +16,7 @@ class LivestockSalesItem extends BaseModel
         'livestock_sales_id',
         'livestock_id',
         'tanggal',
-        'jumlah',
+        'quantity',
         'berat_total',
         'harga_satuan',
         'created_by',

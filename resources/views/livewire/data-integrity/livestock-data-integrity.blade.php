@@ -1,6 +1,8 @@
 <div>
     <div class="p-6 bg-white rounded-lg shadow-lg">
         <h2 class="text-2xl font-bold mb-4">Livestock Data Integrity Check</h2>
+        <p class="text-sm text-gray-600 mb-6">Mengecek dan memperbaiki integritas data livestock termasuk relasi dengan
+            CurrentLivestock</p>
 
         <div class="mb-4 space-x-4">
             <button wire:click="previewInvalidData"
@@ -24,6 +26,21 @@
                 <span wire:loading>Running...</span>
             </button>
 
+            @if($missingCurrentLivestockCount > 0)
+            <button wire:click="previewCurrentLivestockChanges"
+                class="btn btn-info px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 mr-2"
+                wire:loading.attr="disabled">
+                <span wire:loading.remove>Preview CurrentLivestock Changes</span>
+                <span wire:loading>Loading Preview...</span>
+            </button>
+            <button wire:click="fixMissingCurrentLivestock"
+                class="btn btn-success px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                wire:loading.attr="disabled">
+                <span wire:loading.remove>Fix {{ $missingCurrentLivestockCount }} Missing CurrentLivestock</span>
+                <span wire:loading>Processing...</span>
+            </button>
+            @endif
+
             @if($showPreview)
             <button wire:click="applyChanges"
                 class="btn btn-success px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
@@ -37,7 +54,7 @@
             <button wire:click="runIntegrityCheck"
                 class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
                 wire:loading.attr="disabled">
-                <span wire:loading.remove>Delete {{ ($invalidStocksCount ?? 0) + ($invalidBatchesCount ?? 0) }} Invalid
+                <span wire:loading.remove">Delete {{ ($invalidStocksCount ?? 0) + ($invalidBatchesCount ?? 0) }} Invalid
                     Records</span>
                 <span wire:loading>Processing...</span>
             </button>
@@ -61,9 +78,34 @@
                         <span class="text-red-700">⚠️ Empty Source (Source type/ID kosong)</span>
                         @elseif($change['type'] === 'purchase_item_batch_mismatch')
                         <span class="text-yellow-700">⚠️ Purchase Item & Batch Mismatch</span>
+                        @elseif($change['type'] === 'missing_current_livestock')
+                        <span class="text-blue-700">🏠 Missing CurrentLivestock</span>
+                        @elseif($change['type'] === 'orphaned_current_livestock')
+                        <span class="text-red-700">🗑️ Orphaned CurrentLivestock</span>
+                        @elseif($change['type'] === 'create_current_livestock')
+                        <span class="text-green-700">➕ Create CurrentLivestock</span>
+                        @elseif($change['type'] === 'remove_orphaned_current_livestock')
+                        <span class="text-red-700">🗑️ Remove Orphaned CurrentLivestock</span>
                         @endif
                     </div>
-                    <p class="text-sm text-gray-600 mb-3">{{ $change['message'] }}</p>
+                    <p class="text-sm text-gray-600 mb-3">
+                        @if(isset($change['message']))
+                        {{ $change['message'] }}
+                        @elseif(isset($change['description']))
+                        {{ $change['description'] }}
+                        @endif
+
+                        @if(isset($change['livestock_name']) && $change['livestock_name'])
+                        <br><strong>Livestock:</strong> {{ $change['livestock_name'] }}
+                        @endif
+                        @if(isset($change['farm_name']) && $change['farm_name'])
+                        <strong>Farm:</strong> {{ $change['farm_name'] }}
+                        @endif
+                        @if(isset($change['coop_name']) && $change['coop_name'])
+                        <strong>Coop:</strong> {{ $change['coop_name'] }}
+                        @endif
+                    </p>
+
                     @if($change['type'] === 'empty_source' && isset($change['details']))
                     <div class="mb-2">
                         <table class="text-xs border rounded bg-gray-50">
@@ -108,6 +150,7 @@
                         </table>
                     </div>
                     @endif
+
                     <div class="grid grid-cols-2 gap-4"
                         style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div class="p-3 bg-red-50 rounded" style="background: #fef2f2; border-radius: 0.5rem;">
@@ -116,7 +159,13 @@
                                 @foreach($change['before'] as $key => $value)
                                 <div class="text-sm">
                                     <span class="font-medium">{{ str_replace('_', ' ', ucfirst($key)) }}:</span>
-                                    <span class="text-red-600" style="color: #dc2626;">{{ $value }}</span>
+                                    <span class="text-red-600" style="color: #dc2626;">
+                                        @if(is_bool($value))
+                                        {{ $value ? 'Yes' : 'No' }}
+                                        @else
+                                        {{ $value }}
+                                        @endif
+                                    </span>
                                 </div>
                                 @endforeach
                             </div>
@@ -127,7 +176,13 @@
                                 @foreach($change['after'] as $key => $value)
                                 <div class="text-sm">
                                     <span class="font-medium">{{ str_replace('_', ' ', ucfirst($key)) }}:</span>
-                                    <span class="text-green-600" style="color: #16a34a;">{{ $value }}</span>
+                                    <span class="text-green-600" style="color: #16a34a;">
+                                        @if(is_bool($value))
+                                        {{ $value ? 'Yes' : 'No' }}
+                                        @else
+                                        {{ $value }}
+                                        @endif
+                                    </span>
                                 </div>
                                 @endforeach
                             </div>
@@ -150,8 +205,8 @@
         <div class="mb-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
             <p class="font-bold">Warning:</p>
             <p>Found {{ ($invalidStocksCount ?? 0) + ($invalidBatchesCount ?? 0) }} invalid livestock batch/stock
-                records. Click the red button above to delete these
-                records and recalculate stock levels.</p>
+                records and {{ $missingCurrentLivestockCount ?? 0 }} missing CurrentLivestock records.
+                Click the buttons above to fix these issues.</p>
         </div>
         @endif
 
@@ -169,6 +224,10 @@
         'mutation_quantity_mismatch');
         $hasPurchaseItemBatchMismatch = collect($logs)->contains(fn($log) => $log['type'] ===
         'purchase_item_batch_mismatch');
+        $hasMissingCurrentLivestock = collect($logs)->contains(fn($log) => $log['type'] ===
+        'missing_current_livestock');
+        $hasOrphanedCurrentLivestock = collect($logs)->contains(fn($log) => $log['type'] ===
+        'orphaned_current_livestock');
         @endphp
 
         @if($hasQuantityMismatch)
@@ -195,6 +254,12 @@
             Perbaiki Semua Purchase Item & Batch Mismatch
         </button>
         @endif
+        @if($hasMissingCurrentLivestock || $hasOrphanedCurrentLivestock)
+        <button wire:click="fixMissingCurrentLivestock"
+            class="btn btn-success mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
+            Perbaiki CurrentLivestock Records
+        </button>
+        @endif
 
         @if(count($logs) > 0)
         <div class="mt-4">
@@ -206,6 +271,10 @@
                             @elseif($log['type'] === 'deleted_stock') bg-red-50 border-red-200
                             @elseif($log['type'] === 'recalculation') bg-green-50 border-green-200
                             @elseif($log['type'] === 'missing_stock') bg-blue-50 border-blue-200
+                            @elseif($log['type'] === 'missing_current_livestock') bg-blue-50 border-blue-200
+                            @elseif($log['type'] === 'orphaned_current_livestock') bg-red-50 border-red-200
+                            @elseif($log['type'] === 'fix_missing_current_livestock') bg-green-50 border-green-200
+                            @elseif($log['type'] === 'remove_orphaned_current_livestock') bg-orange-50 border-orange-200
                             @else bg-gray-50 border-gray-200
                             @endif">
 
@@ -235,6 +304,14 @@
                             class="btn btn-danger ml-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs">
                             Restore Stock
                         </button>
+                        @elseif($log['type'] === 'missing_current_livestock')
+                        <span class="text-blue-700">🏠 Missing CurrentLivestock</span>
+                        @elseif($log['type'] === 'orphaned_current_livestock')
+                        <span class="text-red-700">🗑️ Orphaned CurrentLivestock</span>
+                        @elseif($log['type'] === 'fix_missing_current_livestock')
+                        <span class="text-green-700">✅ CurrentLivestock Created</span>
+                        @elseif($log['type'] === 'remove_orphaned_current_livestock')
+                        <span class="text-orange-700">🗑️ Orphaned CurrentLivestock Removed</span>
                         @elseif($log['type'] === 'invalid_batch' || $log['type'] === 'invalid_batch_source' ||
                         $log['type'] === 'cannot_fix_empty_source' || $log['type'] === 'fix_single_failed')
                         <button
@@ -315,24 +392,24 @@
                         <tbody>
                             @foreach($auditTrails as $audit)
                             <tr class="border-b">
-                                <td class="px-2 py-1">{{ $audit->created_at }}</td>
-                                <td class="px-2 py-1">{{ $audit->user?->name ?? '-' }}</td>
-                                <td class="px-2 py-1">{{ $audit->action }}</td>
+                                <td class="px-2 py-1">{{ $audit['created_at'] ?? '-' }}</td>
+                                <td class="px-2 py-1">{{ $audit['user']['name'] ?? '-' }}</td>
+                                <td class="px-2 py-1">{{ $audit['action'] ?? '-' }}</td>
                                 <td class="px-2 py-1">
                                     <details>
                                         <summary class="cursor-pointer text-blue-600">Lihat Detail</summary>
                                         <div class="mt-1">
                                             <div class="font-semibold text-xs">Before:</div>
                                             <pre
-                                                class="bg-red-50 p-2 rounded text-xs">{{ json_encode($audit->before_data, JSON_PRETTY_PRINT) }}</pre>
+                                                class="bg-red-50 p-2 rounded text-xs">{{ json_encode($audit['before_data'] ?? [], JSON_PRETTY_PRINT) }}</pre>
                                             <div class="font-semibold text-xs mt-2">After:</div>
                                             <pre
-                                                class="bg-green-50 p-2 rounded text-xs">{{ json_encode($audit->after_data, JSON_PRETTY_PRINT) }}</pre>
+                                                class="bg-green-50 p-2 rounded text-xs">{{ json_encode($audit['after_data'] ?? [], JSON_PRETTY_PRINT) }}</pre>
                                         </div>
                                     </details>
                                 </td>
                                 <td class="px-2 py-1">
-                                    <button wire:click="rollbackAudit('{{ $audit->id }}')"
+                                    <button wire:click="rollbackAudit('{{ $audit['id'] }}')"
                                         class="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs">
                                         Rollback
                                     </button>

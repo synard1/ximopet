@@ -3,6 +3,7 @@
 namespace App\Livewire\LivestockPurchase;
 
 use App\Services\AuditTrailService;
+use App\Traits\HasTempAuthorization;
 
 use App\Models\CurrentSupply;
 use Livewire\Component;
@@ -32,10 +33,12 @@ use App\Models\Livestock;
 use App\Models\LivestockStrain;
 use App\Models\Kandang;
 use App\Models\LivestockPurchaseItem;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class Create extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, HasTempAuthorization;
 
     public $livestockId;
     public $invoice_number;
@@ -54,7 +57,7 @@ class Create extends Component
     public $errorItems = [];
     public $availableKandangs = [];
     public $maxItems = 3;
-
+    public $status = null;
     public bool $withHistory = false; // ← Tambahkan ini di atas class Livewire
 
     protected $listeners = [
@@ -63,12 +66,22 @@ class Create extends Component
         'showEditForm' => 'showEditForm',
         'showCreateForm' => 'showCreateForm',
         'cancel' => 'cancel',
-
+        'updateStatusLivestockPurchase' => 'updateStatusLivestockPurchase',
+        'tempAuthGranted' => 'onTempAuthGranted',
+        'tempAuthRevoked' => 'onTempAuthRevoked',
+        'echo:livestock-purchases,status-changed' => 'handleStatusChanged',
     ];
+
+    public function getListeners()
+    {
+        return array_merge($this->listeners, [
+            'echo-notification:App.Models.User.' . auth()->id() => 'handleUserNotification',
+        ]);
+    }
 
     public function mount()
     {
-        $this->authorize('read livestock purchasing');
+        $this->initializeTempAuth();
     }
 
     public function updatedFarmId($value)
@@ -507,7 +520,7 @@ class Create extends Component
         $this->errorItems = [];
 
         try {
-            // Validate input data
+            // Validasi input tetap sama seperti sebelumnya
             $validated = $this->validate([
                 'invoice_number' => 'required|string',
                 'date' => 'required|date',
@@ -541,26 +554,10 @@ class Create extends Component
         DB::beginTransaction();
 
         try {
-            // Validate kandang capacity for each item
+            // Validasi kapasitas kandang tetap sama
             foreach ($this->items as $idx => $item) {
                 try {
                     $kandang = Coop::findOrFail($this->coop_id);
-
-                    // Validasi status kandang dan tanggal
-                    if ($kandang->status === 'in_use') {
-                        // Cek apakah ada data livestock dengan tanggal berbeda
-                        $existingLivestock = Livestock::where('coop_id', $kandang->id)
-                            ->where('status', 'active')
-                            ->whereDate('start_date', '!=', $this->date)
-                            ->first();
-
-                        if ($existingLivestock) {
-                            throw ValidationException::withMessages([
-                                'items' => "Kandang {$kandang->name} sudah digunakan dengan tanggal yang berbeda ({$existingLivestock->start_date->format('d-m-Y')}). Tidak dapat menambahkan data dengan tanggal {$this->date}."
-                            ]);
-                        }
-                    }
-
                     $this->validateKandangCapacity($item, $kandang);
                 } catch (ValidationException $e) {
                     $this->errorItems[$idx] = $e->validator->errors()->first();
@@ -570,30 +567,53 @@ class Create extends Component
                 }
             }
 
-            // Create or update the livestock purchase
+            // Ensure expedition_id is set to null if not provided or empty
+            $expeditionId = (!empty($this->expedition_id) && $this->expedition_id !== '') ? $this->expedition_id : null;
+
+            // Validate the expedition_id if it is provided
+            if ($expeditionId && !Partner::find($expeditionId)) {
+                throw new \Exception("Invalid expedition ID provided.");
+            }
+
+            // Siapkan data untuk LivestockPurchase
             $purchaseData = [
                 'invoice_number' => $this->invoice_number,
                 'tanggal' => $this->date,
-                'vendor_id' => $this->supplier_id,
-                'expedition_id' => $this->expedition_id ?? null,
+                'supplier_id' => $this->supplier_id,
+                'farm_id' => $this->farm_id,
+                'coop_id' => $this->coop_id,
+                'expedition_id' => $expeditionId,
                 'expedition_fee' => $this->expedition_fee ?? 0,
+                'status' => LivestockPurchase::STATUS_DRAFT,
                 'updated_by' => auth()->id(),
+                'data' => [
+                    'batch_name' => $this->batch_name,
+                    'total_quantity' => array_sum(array_column($this->items, 'quantity')),
+                    'total_weight' => array_sum(array_map(function ($item) {
+                        return $item['weight_type'] === 'per_unit' ?
+                            ($item['weight_value'] * $item['quantity']) :
+                            $item['weight_value'];
+                    }, $this->items)),
+                ]
             ];
 
             if (!$this->pembelianId) {
                 $purchaseData['created_by'] = auth()->id();
             }
 
+            // Create/Update LivestockPurchase
             $purchase = LivestockPurchase::updateOrCreate(
                 ['id' => $this->pembelianId],
                 $purchaseData
             );
 
-            // Ambil semua id item lama
-            $oldItemIds = $purchase->details()->pluck('id')->toArray();
-            $newItemIds = [];
+            // Hapus item lama jika update
+            if ($this->pembelianId) {
+                $purchase->details()->delete();
+            }
 
-            foreach ($this->items as $index => $item) {
+            // Proses setiap item
+            foreach ($this->items as $item) {
                 $breed = LivestockStrain::findOrFail($item['livestock_strain_id']);
                 $farm = Farm::findOrFail($this->farm_id);
                 $kandang = Coop::findOrFail($this->coop_id);
@@ -601,23 +621,14 @@ class Create extends Component
                 $periodeFormat = 'PR-' . $farm->code . '-' . $kandang->code . '-' . Carbon::parse($purchase->tanggal)->format('dmY');
                 $periode = $this->batch_name ?? $periodeFormat;
 
+                // Hitung nilai-nilai
                 $weightPerUnit = $item['weight_type'] === 'per_unit' ? $item['weight_value'] : ($item['weight_value'] / $item['quantity']);
                 $pricePerUnit = $item['price_type'] === 'per_unit' ? $item['price_value'] : ($item['price_value'] / $item['quantity']);
                 $weightTotal = $item['weight_type'] === 'per_unit' ? ($item['weight_value'] * $item['quantity']) : $item['weight_value'];
                 $priceTotal = $item['price_type'] === 'per_unit' ? ($item['price_value'] * $item['quantity']) : $item['price_value'];
 
-                // Cari/Update/Insert Livestock
-                $existingLivestock = Livestock::where([
-                    'farm_id' => $farm->id,
-                    'coop_id' => $kandang->id,
-                    'start_date' => $this->date,
-                ])->get();
-
-                if ($this->pembelianId && $existingLivestock->count() > 1) {
-                    throw new \Exception("Multiple livestock records found for the same farm, coop, and date combination.");
-                }
-
-                $livestock = $existingLivestock->first() ?? Livestock::create([
+                // Siapkan data untuk Livestock dan LivestockBatch
+                $livestockData = [
                     'name' => $periode,
                     'farm_id' => $farm->id,
                     'coop_id' => $kandang->id,
@@ -626,232 +637,424 @@ class Create extends Component
                     'price' => $pricePerUnit,
                     'start_date' => $this->date,
                     'status' => 'active',
+                ];
+
+                $batchData = [
+                    'name' => $periode,
+                    'livestock_strain_id' => $breed->id,
+                    'livestock_strain_name' => $breed->name,
+                    'start_date' => $this->date,
+                    'source_type' => 'purchase',
+                    'source_id' => $purchase->id,
+                    'farm_id' => $farm->id,
+                    'coop_id' => $kandang->id,
+                    'initial_quantity' => $item['quantity'],
+                    'initial_weight' => $weightPerUnit,
+                    'weight' => $weightPerUnit,
+                    'weight_per_unit' => $weightPerUnit,
+                    'weight_total' => $weightTotal,
+                    'weight_type' => $item['weight_type'],
+                    'weight_value' => $item['weight_value'],
+                    'price_per_unit' => $pricePerUnit,
+                    'price_total' => $priceTotal,
+                    'price_type' => $item['price_type'],
+                    'price_value' => $item['price_value'],
+                    'status' => 'active',
+                ];
+
+                // Create LivestockPurchaseItem dengan data Livestock dan Batch
+                LivestockPurchaseItem::create([
+                    'tanggal' => $this->date,
+                    'livestock_purchase_id' => $purchase->id,
+                    'livestock_strain_id' => $item['livestock_strain_id'],
+                    'livestock_strain_standard_id' => $item['livestock_strain_standard_id'] ?? null,
+                    'quantity' => $item['quantity'],
+                    'price_value' => $item['price_value'],
+                    'price_type' => $item['price_type'],
+                    'price_per_unit' => $pricePerUnit,
+                    'price_total' => $priceTotal,
+                    'tax_percentage' => $item['tax_percentage'] ?? null,
+                    'weight_value' => $item['weight_value'],
+                    'weight_type' => $item['weight_type'],
+                    'weight_per_unit' => $weightPerUnit,
+                    'weight_total' => $weightTotal,
+                    'notes' => $item['notes'] ?? null,
                     'created_by' => auth()->id(),
                     'updated_by' => auth()->id(),
+                    'data' => [
+                        'livestock' => $livestockData,
+                        'batch' => $batchData
+                    ]
                 ]);
-
-                // Update livestock jika sudah ada
-                if ($existingLivestock->isNotEmpty()) {
-                    $currentQuantity = $livestock->initial_quantity;
-                    $currentWeight = $livestock->initial_weight;
-                    $currentPrice = $livestock->price;
-                    $newQuantity = $currentQuantity + $item['quantity'];
-                    $newWeight = (($currentWeight * $currentQuantity) + ($weightPerUnit * $item['quantity'])) / $newQuantity;
-                    $newPrice = (($currentPrice * $currentQuantity) + ($pricePerUnit * $item['quantity'])) / $newQuantity;
-                    $livestock->update([
-                        'name' => $periode,
-                        'initial_quantity' => $newQuantity,
-                        'initial_weight' => $newWeight,
-                        'price' => $newPrice,
-                        'updated_by' => auth()->id(),
-                    ]);
-                }
-
-                // --- Refactor proses simpan item ---
-                $criteria = [
-                    'livestock_purchase_id' => $purchase->id,
-                    'livestock_id' => $livestock->id,
-                ];
-                $purchaseItem = LivestockPurchaseItem::where($criteria)->first();
-                if ($purchaseItem) {
-                    $purchaseItem->update([
-                        'tanggal' => $this->date,
-                        'livestock_strain_id' => $item['livestock_strain_id'],
-                        'livestock_strain_standard_id' => $item['livestock_strain_standard_id'] ?? null,
-                        'quantity' => $item['quantity'],
-                        'price_value' => $item['price_value'],
-                        'price_type' => $item['price_type'],
-                        'price_per_unit' => $pricePerUnit,
-                        'price_total' => $priceTotal,
-                        'tax_percentage' => $item['tax_percentage'] ?? null,
-                        'weight_value' => $item['weight_value'],
-                        'weight_type' => $item['weight_type'],
-                        'weight_per_unit' => $weightPerUnit,
-                        'weight_total' => $weightTotal,
-                        'notes' => $item['notes'] ?? null,
-                        'updated_by' => auth()->id(),
-                    ]);
-                    $newItemIds[] = $purchaseItem->id;
-                } else {
-                    $purchaseItem = LivestockPurchaseItem::create([
-                        'tanggal' => $this->date,
-                        'livestock_purchase_id' => $purchase->id,
-                        'livestock_id' => $livestock->id,
-                        'livestock_strain_id' => $item['livestock_strain_id'],
-                        'livestock_strain_standard_id' => $item['livestock_strain_standard_id'] ?? null,
-                        'quantity' => $item['quantity'],
-                        'price_value' => $item['price_value'],
-                        'price_type' => $item['price_type'],
-                        'price_per_unit' => $pricePerUnit,
-                        'price_total' => $priceTotal,
-                        'tax_percentage' => $item['tax_percentage'] ?? null,
-                        'weight_value' => $item['weight_value'],
-                        'weight_type' => $item['weight_type'],
-                        'weight_per_unit' => $weightPerUnit,
-                        'weight_total' => $weightTotal,
-                        'notes' => $item['notes'] ?? null,
-                        'created_by' => auth()->id(),
-                        'updated_by' => auth()->id(),
-                    ]);
-                    $newItemIds[] = $purchaseItem->id;
-                }
-
-                // Update or Create Batch
-                $batch = LivestockBatch::where('livestock_purchase_item_id', $purchaseItem->id)->first();
-                if ($batch) {
-                    $batch->update([
-                        'name' => $periode,
-                        'livestock_strain_id' => $breed->id,
-                        'livestock_strain_name' => $breed->name,
-                        'start_date' => $this->date,
-                        'source_type' => 'purchase',
-                        'source_id' => $purchase->id,
-                        'farm_id' => $farm->id,
-                        'coop_id' => $kandang->id,
-                        'initial_quantity' => $item['quantity'],
-                        'initial_weight' => $weightPerUnit,
-                        'weight' => $weightPerUnit,
-                        'weight_per_unit' => $weightPerUnit,
-                        'weight_total' => $weightTotal,
-                        'weight_type' => $item['weight_type'],
-                        'weight_value' => $item['weight_value'],
-                        'price_per_unit' => $pricePerUnit,
-                        'price_total' => $priceTotal,
-                        'price_type' => $item['price_type'],
-                        'price_value' => $item['price_value'],
-                        'status' => 'active',
-                        'livestock_id' => $livestock->id,
-                        'updated_by' => auth()->id(),
-                    ]);
-                } else {
-                    $batch = LivestockBatch::create([
-                        'name' => $periode,
-                        'livestock_strain_id' => $breed->id,
-                        'livestock_strain_name' => $breed->name,
-                        'start_date' => $this->date,
-                        'source_type' => 'purchase',
-                        'source_id' => $purchase->id,
-                        'farm_id' => $farm->id,
-                        'coop_id' => $kandang->id,
-                        'initial_quantity' => $item['quantity'],
-                        'initial_weight' => $weightPerUnit,
-                        'weight' => $weightPerUnit,
-                        'weight_per_unit' => $weightPerUnit,
-                        'weight_total' => $weightTotal,
-                        'weight_type' => $item['weight_type'],
-                        'weight_value' => $item['weight_value'],
-                        'price_per_unit' => $pricePerUnit,
-                        'price_total' => $priceTotal,
-                        'price_type' => $item['price_type'],
-                        'price_value' => $item['price_value'],
-                        'status' => 'active',
-                        'livestock_purchase_item_id' => $purchaseItem->id,
-                        'livestock_id' => $livestock->id,
-                        'created_by' => auth()->id(),
-                        'updated_by' => auth()->id(),
-                    ]);
-                }
-
-                // Update CurrentLivestock
-                $this->updateCurrentLivestock($farm, $kandang, $livestock);
             }
 
-            // Update coop quantity and weight
-            $totalQuantity = array_sum(array_column($this->items, 'quantity'));
-            $totalWeight = array_sum(array_map(function ($item) {
-                return $item['weight_type'] === 'per_unit' ?
-                    ($item['weight_value'] * $item['quantity']) :
-                    $item['weight_value'];
-            }, $this->items));
-
-            $currentCoopQuantity = $kandang->quantity ?? 0;
-            $currentCoopWeight = $kandang->weight ?? 0;
-            $newCoopQuantity = $currentCoopQuantity + $totalQuantity;
-            $newCoopWeight = $currentCoopWeight + $totalWeight;
-
+            // Update status kandang
             $kandang->update([
-                'quantity' => $newCoopQuantity,
-                'weight' => $newCoopWeight,
-                'updated_by' => auth()->id(),
-                'status' => 'in_use'
+                'status' => 'in_use',
+                'updated_by' => auth()->id()
             ]);
 
-            // --- Setelah proses simpan item ---
-            // Ambil semua kombinasi unik yang seharusnya ada
-            $shouldExist = [];
-            foreach ($this->items as $item) {
-                $shouldExist[] = [
-                    'livestock_purchase_id' => $purchase->id,
-                    'livestock_id' => $livestock->id,
-                ];
-            }
-
-            // Ambil semua item lama dari database
-            $allDbItems = LivestockPurchaseItem::where('livestock_purchase_id', $purchase->id)->get();
-
-            // Hapus item yang tidak ada di input
-            foreach ($allDbItems as $dbItem) {
-                $found = false;
-                foreach ($shouldExist as $criteria) {
-                    if (
-                        $dbItem->livestock_purchase_id == $criteria['livestock_purchase_id'] &&
-                        $dbItem->livestock_id == $criteria['livestock_id']
-                    ) {
-                        $found = true;
-                        break;
-                    }
-                }
-                if (!$found) {
-                    // Hapus LivestockBatch terkait
-                    LivestockBatch::where('livestock_purchase_item_id', $dbItem->id)->delete();
-                    // Hapus LivestockPurchaseItem
-                    $dbItem->delete();
-                }
-            }
-
-            // --- Rekapitulasi initial_quantity, initial_weight, dan price pada Livestock ---
-            $livestockIds = LivestockPurchaseItem::where('livestock_purchase_id', $purchase->id)
-                ->pluck('livestock_id')
-                ->unique();
-
-            foreach ($livestockIds as $livestockId) {
-                $livestock = Livestock::find($livestockId);
-                if ($livestock) {
-                    $batches = LivestockBatch::where('livestock_id', $livestockId)
-                        ->where('status', 'active')
-                        ->get();
-
-                    $totalQty = $batches->sum('initial_quantity');
-                    $totalWeight = $batches->sum(function ($batch) {
-                        return $batch->initial_quantity * $batch->initial_weight;
-                    });
-                    $avgWeight = $totalQty > 0 ? $totalWeight / $totalQty : 0;
-
-                    // Ambil price dari LivestockPurchaseItem
-                    $items = LivestockPurchaseItem::where('livestock_id', $livestockId)
-                        ->where('livestock_purchase_id', $purchase->id)
-                        ->get();
-                    $totalPrice = $items->sum(function ($item) {
-                        return $item->quantity * $item->price_per_unit;
-                    });
-                    $avgPrice = $totalQty > 0 ? $totalPrice / $totalQty : 0;
-
-                    $livestock->update([
-                        'initial_quantity' => $totalQty,
-                        'initial_weight' => $avgWeight,
-                        'price' => $avgPrice,
-                    ]);
-                }
-            }
-
             DB::commit();
-            $this->dispatch('success', 'Pembelian ternak berhasil ' . ($this->pembelianId ? 'diperbarui' : 'disimpan'));
+            $this->dispatch('success', 'Pembelian ayam berhasil ' . ($this->pembelianId ? 'diperbarui' : 'disimpan'));
             $this->close();
         } catch (\Exception $e) {
             DB::rollBack();
             $this->dispatch('error', 'Terjadi kesalahan saat ' . ($this->pembelianId ? 'memperbarui' : 'menyimpan') . ' data. ' . $e->getMessage());
         }
     }
+
+    // public function save()
+    // {
+    //     $this->authorize($this->pembelianId ? 'update livestock purchasing' : 'create livestock purchasing');
+    //     $this->errorItems = [];
+
+    //     try {
+    //         // Validate input data
+    //         $validated = $this->validate([
+    //             'invoice_number' => 'required|string',
+    //             'date' => 'required|date',
+    //             'supplier_id' => 'required|exists:partners,id',
+    //             'expedition_fee' => 'numeric|min:0',
+    //             'farm_id' => 'required|exists:farms,id',
+    //             'coop_id' => 'required|exists:coops,id',
+    //             'items' => 'required|array|min:1',
+    //             'items.*.livestock_strain_id' => 'required|exists:livestock_strains,id',
+    //             'items.*.quantity' => 'required|numeric|min:1',
+    //             'items.*.price_value' => 'required|numeric|min:0',
+    //             'items.*.price_type' => 'required|in:per_unit,total',
+    //             'items.*.weight_value' => 'required|numeric|min:0',
+    //             'items.*.weight_type' => 'required|in:per_unit,total',
+    //             'items.*.tax_percentage' => 'nullable|numeric|min:0|max:100',
+    //             'items.*.notes' => 'nullable|string',
+    //         ]);
+    //         $this->errorItems = [];
+    //     } catch (ValidationException $e) {
+    //         $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
+    //         $this->setErrorBag($e->validator->errors());
+    //         foreach ($e->validator->errors()->getMessages() as $key => $messages) {
+    //             if (preg_match('/items\\.(\\d+)\\./', $key, $m)) {
+    //                 $idx = (int)$m[1];
+    //                 $this->errorItems[$idx] = implode(' ', $messages);
+    //             }
+    //         }
+    //         return;
+    //     }
+
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // Validate kandang capacity for each item
+    //         foreach ($this->items as $idx => $item) {
+    //             try {
+    //                 $kandang = Coop::findOrFail($this->coop_id);
+
+    //                 // Validasi status kandang dan tanggal
+    //                 if ($kandang->status === 'in_use') {
+    //                     // Cek apakah ada data livestock dengan tanggal berbeda
+    //                     $existingLivestock = Livestock::where('coop_id', $kandang->id)
+    //                         ->where('status', 'active')
+    //                         ->whereDate('start_date', '!=', $this->date)
+    //                         ->first();
+
+    //                     if ($existingLivestock) {
+    //                         throw ValidationException::withMessages([
+    //                             'items' => "Kandang {$kandang->name} sudah digunakan dengan tanggal yang berbeda ({$existingLivestock->start_date->format('d-m-Y')}). Tidak dapat menambahkan data dengan tanggal {$this->date}."
+    //                         ]);
+    //                     }
+    //                 }
+
+    //                 $this->validateKandangCapacity($item, $kandang);
+    //             } catch (ValidationException $e) {
+    //                 $this->errorItems[$idx] = $e->validator->errors()->first();
+    //                 $this->dispatch('validation-errors', ['errors' => array_values($this->errorItems)]);
+    //                 DB::rollBack();
+    //                 return;
+    //             }
+    //         }
+
+    //         // Create or update the livestock purchase
+    //         $purchaseData = [
+    //             'invoice_number' => $this->invoice_number,
+    //             'tanggal' => $this->date,
+    //             'vendor_id' => $this->supplier_id,
+    //             'expedition_id' => $this->expedition_id ?? null,
+    //             'expedition_fee' => $this->expedition_fee ?? 0,
+    //             'status' => LivestockPurchase::STATUS_DRAFT,
+    //             'updated_by' => auth()->id(),
+    //         ];
+
+    //         if (!$this->pembelianId) {
+    //             $purchaseData['created_by'] = auth()->id();
+    //         }
+
+    //         $purchase = LivestockPurchase::updateOrCreate(
+    //             ['id' => $this->pembelianId],
+    //             $purchaseData
+    //         );
+
+    //         // Ambil semua id item lama
+    //         $oldItemIds = $purchase->details()->pluck('id')->toArray();
+    //         $newItemIds = [];
+
+    //         foreach ($this->items as $index => $item) {
+    //             $breed = LivestockStrain::findOrFail($item['livestock_strain_id']);
+    //             $farm = Farm::findOrFail($this->farm_id);
+    //             $kandang = Coop::findOrFail($this->coop_id);
+
+    //             $periodeFormat = 'PR-' . $farm->code . '-' . $kandang->code . '-' . Carbon::parse($purchase->tanggal)->format('dmY');
+    //             $periode = $this->batch_name ?? $periodeFormat;
+
+    //             $weightPerUnit = $item['weight_type'] === 'per_unit' ? $item['weight_value'] : ($item['weight_value'] / $item['quantity']);
+    //             $pricePerUnit = $item['price_type'] === 'per_unit' ? $item['price_value'] : ($item['price_value'] / $item['quantity']);
+    //             $weightTotal = $item['weight_type'] === 'per_unit' ? ($item['weight_value'] * $item['quantity']) : $item['weight_value'];
+    //             $priceTotal = $item['price_type'] === 'per_unit' ? ($item['price_value'] * $item['quantity']) : $item['price_value'];
+
+    //             // Cari/Update/Insert Livestock
+    //             $existingLivestock = Livestock::where([
+    //                 'farm_id' => $farm->id,
+    //                 'coop_id' => $kandang->id,
+    //                 'start_date' => $this->date,
+    //             ])->get();
+
+    //             if ($this->pembelianId && $existingLivestock->count() > 1) {
+    //                 throw new \Exception("Multiple livestock records found for the same farm, coop, and date combination.");
+    //             }
+
+    //             $livestock = $existingLivestock->first() ?? Livestock::create([
+    //                 'name' => $periode,
+    //                 'farm_id' => $farm->id,
+    //                 'coop_id' => $kandang->id,
+    //                 'initial_quantity' => $item['quantity'],
+    //                 'initial_weight' => $weightPerUnit,
+    //                 'price' => $pricePerUnit,
+    //                 'start_date' => $this->date,
+    //                 'status' => 'active',
+    //                 'created_by' => auth()->id(),
+    //                 'updated_by' => auth()->id(),
+    //             ]);
+
+    //             // Update livestock jika sudah ada
+    //             if ($existingLivestock->isNotEmpty()) {
+    //                 $currentQuantity = $livestock->initial_quantity;
+    //                 $currentWeight = $livestock->initial_weight;
+    //                 $currentPrice = $livestock->price;
+    //                 $newQuantity = $currentQuantity + $item['quantity'];
+    //                 $newWeight = (($currentWeight * $currentQuantity) + ($weightPerUnit * $item['quantity'])) / $newQuantity;
+    //                 $newPrice = (($currentPrice * $currentQuantity) + ($pricePerUnit * $item['quantity'])) / $newQuantity;
+    //                 $livestock->update([
+    //                     'name' => $periode,
+    //                     'initial_quantity' => $newQuantity,
+    //                     'initial_weight' => $newWeight,
+    //                     'price' => $newPrice,
+    //                     'updated_by' => auth()->id(),
+    //                 ]);
+    //             }
+
+    //             // --- Refactor proses simpan item ---
+    //             $criteria = [
+    //                 'livestock_purchase_id' => $purchase->id,
+    //                 'livestock_id' => $livestock->id,
+    //             ];
+    //             $purchaseItem = LivestockPurchaseItem::where($criteria)->first();
+    //             if ($purchaseItem) {
+    //                 $purchaseItem->update([
+    //                     'tanggal' => $this->date,
+    //                     'livestock_strain_id' => $item['livestock_strain_id'],
+    //                     'livestock_strain_standard_id' => $item['livestock_strain_standard_id'] ?? null,
+    //                     'quantity' => $item['quantity'],
+    //                     'price_value' => $item['price_value'],
+    //                     'price_type' => $item['price_type'],
+    //                     'price_per_unit' => $pricePerUnit,
+    //                     'price_total' => $priceTotal,
+    //                     'tax_percentage' => $item['tax_percentage'] ?? null,
+    //                     'weight_value' => $item['weight_value'],
+    //                     'weight_type' => $item['weight_type'],
+    //                     'weight_per_unit' => $weightPerUnit,
+    //                     'weight_total' => $weightTotal,
+    //                     'notes' => $item['notes'] ?? null,
+    //                     'updated_by' => auth()->id(),
+    //                 ]);
+    //                 $newItemIds[] = $purchaseItem->id;
+    //             } else {
+    //                 $purchaseItem = LivestockPurchaseItem::create([
+    //                     'tanggal' => $this->date,
+    //                     'livestock_purchase_id' => $purchase->id,
+    //                     'livestock_id' => $livestock->id,
+    //                     'livestock_strain_id' => $item['livestock_strain_id'],
+    //                     'livestock_strain_standard_id' => $item['livestock_strain_standard_id'] ?? null,
+    //                     'quantity' => $item['quantity'],
+    //                     'price_value' => $item['price_value'],
+    //                     'price_type' => $item['price_type'],
+    //                     'price_per_unit' => $pricePerUnit,
+    //                     'price_total' => $priceTotal,
+    //                     'tax_percentage' => $item['tax_percentage'] ?? null,
+    //                     'weight_value' => $item['weight_value'],
+    //                     'weight_type' => $item['weight_type'],
+    //                     'weight_per_unit' => $weightPerUnit,
+    //                     'weight_total' => $weightTotal,
+    //                     'notes' => $item['notes'] ?? null,
+    //                     'created_by' => auth()->id(),
+    //                     'updated_by' => auth()->id(),
+    //                 ]);
+    //                 $newItemIds[] = $purchaseItem->id;
+    //             }
+
+    //             // Update or Create Batch
+    //             $batch = LivestockBatch::where('livestock_purchase_item_id', $purchaseItem->id)->first();
+    //             if ($batch) {
+    //                 $batch->update([
+    //                     'name' => $periode,
+    //                     'livestock_strain_id' => $breed->id,
+    //                     'livestock_strain_name' => $breed->name,
+    //                     'start_date' => $this->date,
+    //                     'source_type' => 'purchase',
+    //                     'source_id' => $purchase->id,
+    //                     'farm_id' => $farm->id,
+    //                     'coop_id' => $kandang->id,
+    //                     'initial_quantity' => $item['quantity'],
+    //                     'initial_weight' => $weightPerUnit,
+    //                     'weight' => $weightPerUnit,
+    //                     'weight_per_unit' => $weightPerUnit,
+    //                     'weight_total' => $weightTotal,
+    //                     'weight_type' => $item['weight_type'],
+    //                     'weight_value' => $item['weight_value'],
+    //                     'price_per_unit' => $pricePerUnit,
+    //                     'price_total' => $priceTotal,
+    //                     'price_type' => $item['price_type'],
+    //                     'price_value' => $item['price_value'],
+    //                     'status' => 'active',
+    //                     'livestock_id' => $livestock->id,
+    //                     'updated_by' => auth()->id(),
+    //                 ]);
+    //             } else {
+    //                 $batch = LivestockBatch::create([
+    //                     'name' => $periode,
+    //                     'livestock_strain_id' => $breed->id,
+    //                     'livestock_strain_name' => $breed->name,
+    //                     'start_date' => $this->date,
+    //                     'source_type' => 'purchase',
+    //                     'source_id' => $purchase->id,
+    //                     'farm_id' => $farm->id,
+    //                     'coop_id' => $kandang->id,
+    //                     'initial_quantity' => $item['quantity'],
+    //                     'initial_weight' => $weightPerUnit,
+    //                     'weight' => $weightPerUnit,
+    //                     'weight_per_unit' => $weightPerUnit,
+    //                     'weight_total' => $weightTotal,
+    //                     'weight_type' => $item['weight_type'],
+    //                     'weight_value' => $item['weight_value'],
+    //                     'price_per_unit' => $pricePerUnit,
+    //                     'price_total' => $priceTotal,
+    //                     'price_type' => $item['price_type'],
+    //                     'price_value' => $item['price_value'],
+    //                     'status' => 'active',
+    //                     'livestock_purchase_item_id' => $purchaseItem->id,
+    //                     'livestock_id' => $livestock->id,
+    //                     'created_by' => auth()->id(),
+    //                     'updated_by' => auth()->id(),
+    //                 ]);
+    //             }
+
+    //             // Update CurrentLivestock
+    //             $this->updateCurrentLivestock($farm, $kandang, $livestock);
+    //         }
+
+    //         // Update coop quantity and weight
+    //         $totalQuantity = array_sum(array_column($this->items, 'quantity'));
+    //         $totalWeight = array_sum(array_map(function ($item) {
+    //             return $item['weight_type'] === 'per_unit' ?
+    //                 ($item['weight_value'] * $item['quantity']) :
+    //                 $item['weight_value'];
+    //         }, $this->items));
+
+    //         $currentCoopQuantity = $kandang->quantity ?? 0;
+    //         $currentCoopWeight = $kandang->weight ?? 0;
+    //         $newCoopQuantity = $currentCoopQuantity + $totalQuantity;
+    //         $newCoopWeight = $currentCoopWeight + $totalWeight;
+
+    //         $kandang->update([
+    //             'quantity' => $newCoopQuantity,
+    //             'weight' => $newCoopWeight,
+    //             'updated_by' => auth()->id(),
+    //             'status' => 'in_use'
+    //         ]);
+
+    //         // --- Setelah proses simpan item ---
+    //         // Ambil semua kombinasi unik yang seharusnya ada
+    //         $shouldExist = [];
+    //         foreach ($this->items as $item) {
+    //             $shouldExist[] = [
+    //                 'livestock_purchase_id' => $purchase->id,
+    //                 'livestock_id' => $livestock->id,
+    //             ];
+    //         }
+
+    //         // Ambil semua item lama dari database
+    //         $allDbItems = LivestockPurchaseItem::where('livestock_purchase_id', $purchase->id)->get();
+
+    //         // Hapus item yang tidak ada di input
+    //         foreach ($allDbItems as $dbItem) {
+    //             $found = false;
+    //             foreach ($shouldExist as $criteria) {
+    //                 if (
+    //                     $dbItem->livestock_purchase_id == $criteria['livestock_purchase_id'] &&
+    //                     $dbItem->livestock_id == $criteria['livestock_id']
+    //                 ) {
+    //                     $found = true;
+    //                     break;
+    //                 }
+    //             }
+    //             if (!$found) {
+    //                 // Hapus LivestockBatch terkait
+    //                 LivestockBatch::where('livestock_purchase_item_id', $dbItem->id)->delete();
+    //                 // Hapus LivestockPurchaseItem
+    //                 $dbItem->delete();
+    //             }
+    //         }
+
+    //         // --- Rekapitulasi initial_quantity, initial_weight, dan price pada Livestock ---
+    //         $livestockIds = LivestockPurchaseItem::where('livestock_purchase_id', $purchase->id)
+    //             ->pluck('livestock_id')
+    //             ->unique();
+
+    //         foreach ($livestockIds as $livestockId) {
+    //             $livestock = Livestock::find($livestockId);
+    //             if ($livestock) {
+    //                 $batches = LivestockBatch::where('livestock_id', $livestockId)
+    //                     ->where('status', 'active')
+    //                     ->get();
+
+    //                 $totalQty = $batches->sum('initial_quantity');
+    //                 $totalWeight = $batches->sum(function ($batch) {
+    //                     return $batch->initial_quantity * $batch->initial_weight;
+    //                 });
+    //                 $avgWeight = $totalQty > 0 ? $totalWeight / $totalQty : 0;
+
+    //                 // Ambil price dari LivestockPurchaseItem
+    //                 $items = LivestockPurchaseItem::where('livestock_id', $livestockId)
+    //                     ->where('livestock_purchase_id', $purchase->id)
+    //                     ->get();
+    //                 $totalPrice = $items->sum(function ($item) {
+    //                     return $item->quantity * $item->price_per_unit;
+    //                 });
+    //                 $avgPrice = $totalQty > 0 ? $totalPrice / $totalQty : 0;
+
+    //                 $livestock->update([
+    //                     'initial_quantity' => $totalQty,
+    //                     'initial_weight' => $avgWeight,
+    //                     'price' => $avgPrice,
+    //                 ]);
+    //             }
+    //         }
+
+    //         DB::commit();
+    //         $this->dispatch('success', 'Pembelian ternak berhasil ' . ($this->pembelianId ? 'diperbarui' : 'disimpan'));
+    //         $this->close();
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         $this->dispatch('error', 'Terjadi kesalahan saat ' . ($this->pembelianId ? 'memperbarui' : 'menyimpan') . ' data. ' . $e->getMessage());
+    //     }
+    // }
 
     /**
      * Handle existing records when updating with history
@@ -1013,6 +1216,9 @@ class Create extends Component
 
     public function render()
     {
+        // Check temp auth on every render
+        $this->checkTempAuth();
+
         $strains = LivestockStrain::active()->orderBy('name')->get();
         $standardStrains = LivestockStrainStandard::active()->orderBy('livestock_strain_name')->get();
         // Get farms based on user role
@@ -1055,6 +1261,34 @@ class Create extends Component
         $this->resetForm();
         $this->showForm = false;
         $this->dispatch('show-datatable');
+    }
+
+
+
+    public function isReadonly()
+    {
+        Log::info('Checking readonly status', [
+            'tempAuthEnabled' => $this->tempAuthEnabled,
+            'edit_mode' => $this->edit_mode,
+            'status' => $this->status,
+        ]);
+
+        if ($this->tempAuthEnabled) {
+            return false;
+        }
+
+        return in_array($this->status, ['in_coop', 'complete']);
+    }
+
+    public function isDisabled()
+    {
+        // If temp auth is enabled, not disabled
+        if ($this->tempAuthEnabled) {
+            return false;
+        }
+
+        // Check local conditions
+        return in_array($this->status, ['in_coop', 'complete']);
     }
 
     /**
@@ -1162,6 +1396,11 @@ class Create extends Component
                 'vendor'
             ])->findOrFail($purchaseId);
 
+            // Check if the purchase status is in_coop or complete, preventing deletion
+            if ($purchase->status == 'in_coop' || $purchase->status == 'complete') {
+                $this->dispatch('error', 'Tidak bisa hapus karena status sudah dalam kandang atau selesai.');
+                return;
+            }
 
             // Check if any livestock has transactions that prevent deletion
             foreach ($purchase->details as $item) {
@@ -1353,48 +1592,660 @@ class Create extends Component
         $this->items = [];
         if ($pembelian && $pembelian->details->isNotEmpty()) {
             $this->date = $pembelian->tanggal;
-            $this->batch_name = $pembelian->details->first()->livestock->name;
+            $this->batch_name = $pembelian->details->first()->livestock->name ?? null;
             $this->invoice_number = $pembelian->invoice_number;
             $this->supplier_id = $pembelian->vendor_id;
             $this->expedition_id = $pembelian->expedition_id;
             $this->expedition_fee = $pembelian->expedition_fee;
+            $this->status = $pembelian->status;
+
 
             // Get farm_id and coop_id from the first livestock record
-            $firstLivestock = $pembelian->details->first()->livestock;
+            // $firstLivestock = $pembelian->details->first()->livestock;
+            $firstLivestock = $pembelian->details->first()->data['livestock'];
+            // dd($firstLivestock['farm_id']);
             if ($firstLivestock) {
-                $this->farm_id = $firstLivestock->farm_id;
-                $this->coop_id = $firstLivestock->coop_id;
+                $this->farm_id = $firstLivestock['farm_id'];
+                $this->coop_id = $firstLivestock['coop_id'];
                 $this->availableKandangs = Coop::where('farm_id', $this->farm_id)
                     ->where('status', '!=', 'inactive')
                     ->whereRaw('quantity < capacity')
                     ->get();
             }
 
+            // dd($this->farm_id, $this->coop_id);
+
             foreach ($pembelian->details as $item) {
-                $livestock = $item->livestock;
+                $livestock = $item->data['batch'];
+                // dd($livestock);
+                // dd($livestock['livestock_strain_id']);
                 if ($livestock) {
                     $batch = $item->livestockBatches->first();
                     $this->items[] = [
-                        'livestock_id' => $livestock->id,
-                        'livestock_strain_id' => $batch->livestock_strain_id,
+                        'livestock_id' => $item->livestock_id ?? null,
+                        'livestock_strain_id' => $livestock['livestock_strain_id'] ?? null,
                         'quantity' => $item->quantity,
                         'price_value' => $item->price_value,
                         'price_type' => $item->price_type,
-                        'farm_id' => $livestock->farm_id,
-                        'coop_id' => $livestock->coop_id,
-                        'livestock_strain_standard_id' => $batch->livestock_strain_standard_id,
-                        'start_date' => $livestock->start_date,
-                        'weight_type' => $item->weight_type,
-                        'weight_value' => $item->weight_value,
+                        'farm_id' => $this->farm_id,
+                        'coop_id' => $this->coop_id,
+                        'livestock_strain_standard_id' => $livestock['livestock_strain_standard_id'] ?? null,
+                        'start_date' => $this->date ?? null,
+                        'weight_type' => $item->weight_type ?? null,
+                        'weight_value' => $item->weight_value ?? null,
                     ];
                 }
+
+                // dd($this->items);
             }
         }
-
-        // dd($this->items);
 
         $this->showForm = true;
         $this->edit_mode = true;
         $this->dispatch('hide-datatable');
     }
+
+    public function updateStatusLivestockPurchase($purchaseId, $status, $notes)
+    {
+        if (empty($purchaseId) || empty($status)) {
+            return;
+        }
+
+        $purchase = \App\Models\LivestockPurchase::findOrFail($purchaseId);
+        $notes = $notes ?? null;
+        $oldStatus = $purchase->status;
+
+        // If status is in_coop, try generating livestock and batch first
+        if ($status === \App\Models\LivestockPurchase::STATUS_IN_COOP) {
+            try {
+                $this->generateLivestockAndBatch($purchase->id);
+            } catch (\Exception $e) {
+                $this->dispatch('error', 'Gagal generate livestock: ' . $e->getMessage());
+                return;
+            }
+        }
+
+        // Only update status if livestock generation was successful or not needed
+        $purchase->updateStatus($status, $notes);
+
+        // 🎯 DISPATCH REAL-TIME NOTIFICATION
+        if ($oldStatus !== $status) {
+            $notificationData = [
+                'type' => $this->getNotificationTypeForStatus($status),
+                'title' => 'Livestock Purchase Status Updated',
+                'message' => $this->getStatusChangeMessage($purchase, $oldStatus, $status),
+                'batch_id' => $purchase->id,
+                'old_status' => $oldStatus,
+                'new_status' => $status,
+                'updated_by' => auth()->id(),
+                'updated_by_name' => auth()->user()->name,
+                'invoice_number' => $purchase->invoice_number,
+                'requires_refresh' => $this->requiresRefresh($oldStatus, $status),
+                'priority' => $this->getPriority($oldStatus, $status),
+                'show_refresh_button' => true,
+                'timestamp' => now()->toISOString()
+            ];
+
+            // 🎯 BROADCAST TO ALL LIVESTOCK PURCHASE LIVEWIRE COMPONENTS IMMEDIATELY
+            $this->dispatch('notify-status-change', $notificationData)->to('livestock-purchase.create');
+
+            Log::info('IMMEDIATE livestock purchase notification dispatched to Livewire components', [
+                'batch_id' => $purchase->id,
+                'notification_data' => $notificationData
+            ]);
+
+            // ✅ SEND TO SSE NOTIFICATION BRIDGE FOR REAL-TIME UPDATES (NO MORE POLLING!)
+            $this->sendToSSENotificationBridge($notificationData, $purchase);
+
+            // Fire event for external systems and broadcasting (secondary)
+            try {
+                \App\Events\LivestockPurchaseStatusChanged::dispatch(
+                    $purchase,
+                    $oldStatus,
+                    $status,
+                    auth()->id(),
+                    $notes,
+                    $notificationData
+                );
+
+                Log::info('LivestockPurchaseStatusChanged event fired', [
+                    'batch_id' => $purchase->id,
+                    'old_status' => $oldStatus,
+                    'new_status' => $status,
+                    'updated_by' => auth()->id()
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to fire LivestockPurchaseStatusChanged event', [
+                    'batch_id' => $purchase->id,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]);
+            }
+        }
+
+        $this->dispatch('statusUpdated');
+        $this->dispatch('success', 'Status pembelian berhasil diperbarui.');
+    }
+
+    public function generateLivestockAndBatch($purchaseId)
+    {
+        Log::info('Starting generateLivestockAndBatch for purchase ID: ' . $purchaseId);
+
+        $purchase = \App\Models\LivestockPurchase::with('details')->findOrFail($purchaseId);
+        Log::info('Found purchase:', ['purchase' => $purchase->toArray()]);
+
+        // Cek apakah sudah pernah dibuat (misal: ada Livestock dengan purchase ini)
+        $alreadyGenerated = Livestock::where('start_date', $purchase->tanggal)
+            ->whereIn('id', $purchase->details->pluck('livestock_id'))
+            ->exists();
+
+        Log::info('Checking if already generated:', ['alreadyGenerated' => $alreadyGenerated]);
+
+        if ($alreadyGenerated) {
+            Log::info('Livestock already generated, skipping...');
+            return; // Hindari duplikasi
+        }
+
+        foreach ($purchase->details as $item) {
+            Log::info('Processing purchase item:', ['item' => $item->toArray()]);
+
+            // Get data from purchase item's data column
+            $itemData = $item->data ?? [];
+            Log::info('Item data:', ['itemData' => $itemData]);
+
+            $farm = $purchase->farm;
+            $kandang = $purchase->coop;
+            $strain = $itemData['batch'] ? LivestockStrain::find($itemData['batch']['livestock_strain_id']) : null;
+            $strainStandard = $itemData['batch'] && isset($itemData['batch']['livestock_strain_standard_id'])
+                ? LivestockStrainStandard::find($itemData['batch']['livestock_strain_standard_id'])
+                : null;
+
+            // dd($farm, $kandang, $strain, $strainStandard);
+
+            Log::info('Retrieved related models:', [
+                'farm' => $farm,
+                'kandang' => $kandang,
+                'strain' => $strain ? $strain->toArray() : null,
+                'strainStandard' => $strainStandard ? $strainStandard->toArray() : null
+            ]);
+
+            $quantity = $itemData['quantity'] ?? $item->quantity;
+            $weightPerUnit = $itemData['weight_per_unit'] ?? $item->weight_per_unit;
+            $weightTotal = $itemData['weight_total'] ?? $item->weight_total;
+            $pricePerUnit = $itemData['price_per_unit'] ?? $item->price_per_unit;
+            $priceTotal = $itemData['price_total'] ?? $item->price_total;
+            $priceType = $itemData['price_type'] ?? $item->price_type;
+            $priceValue = $itemData['price_value'] ?? $item->price_value;
+
+            // dd($weightTotal);
+
+            $periodeFormat = 'PR-' . $farm->code . '-' . $kandang->code . '-' . \Carbon\Carbon::parse($purchase->tanggal)->format('dmY');
+            $periode = !empty($purchase->data['batch_name']) ? $purchase->data['batch_name'] : $periodeFormat;
+
+            // dd($periode);
+
+            Log::info('Generated periode:', ['periode' => $periode]);
+
+            // Buat Livestock jika belum ada
+            $livestock = \App\Models\Livestock::firstOrCreate([
+                'name' => $periode,
+                'farm_id' => $farm->id,
+                'coop_id' => $kandang->id,
+                'start_date' => $purchase->tanggal,
+            ], [
+                'initial_quantity' => $itemData['quantity'] ?? $item->quantity,
+                'initial_weight' => $itemData['weight_per_unit'] ?? $item->weight_per_unit,
+                'price' => $itemData['price_per_unit'] ?? $item->price_per_unit,
+                'status' => 'active',
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+            ]);
+
+            Log::info('Created/Found Livestock:', ['livestock' => $livestock->toArray()]);
+
+            // Buat LivestockBatch jika belum ada
+            $batch = \App\Models\LivestockBatch::firstOrCreate([
+                'livestock_purchase_item_id' => $item->id,
+                'livestock_id' => $livestock->id,
+            ], [
+                'name' => $periode,
+                'livestock_strain_id' => $strain->id,
+                'livestock_strain_name' => $strain->name,
+                'livestock_strain_standard_id' => $strainStandard,
+                'start_date' => $purchase->tanggal,
+                'source_type' => 'purchase',
+                'source_id' => $purchase->id,
+                'farm_id' => $farm->id,
+                'coop_id' => $kandang->id,
+                'initial_quantity' => $itemData['quantity'] ?? $item->quantity,
+                'initial_weight' => $itemData['weight_per_unit'] ?? $item->weight_per_unit,
+                'weight' => $itemData['weight_per_unit'] ?? $item->weight_per_unit,
+                'weight_per_unit' => $itemData['weight_per_unit'] ?? $item->weight_per_unit,
+                'weight_total' => $itemData['weight_total'] ?? $item->weight_total,
+                'weight_type' => $itemData['weight_type'] ?? $item->weight_type,
+                'weight_value' => $itemData['weight_value'] ?? $item->weight_value,
+                'price_per_unit' => $itemData['price_per_unit'] ?? $item->price_per_unit,
+                'price_total' => $itemData['price_total'] ?? $item->price_total,
+                'price_type' => $itemData['price_type'] ?? $item->price_type,
+                'price_value' => $itemData['price_value'] ?? $item->price_value,
+                'status' => 'active',
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+            ]);
+
+            Log::info('Created/Found LivestockBatch:', ['batch' => $batch->toArray()]);
+
+            // update livestock purchase item
+            $item->update([
+                'livestock_id' => $livestock->id,
+            ]);
+
+            // update coop quantity, status, weight, livestock_id
+            $kandang->update([
+                'quantity' => $kandang->quantity + $quantity,
+                'status' => 'in_use',
+                'livestock_id' => $livestock->id,
+                'weight' => $kandang->weight + $weightTotal,
+            ]);
+        }
+
+        Log::info('Finished generateLivestockAndBatch for purchase ID: ' . $purchaseId);
+    }
+
+    /**
+     * Handle real-time status change notifications from broadcasting
+     */
+    public function handleStatusChanged($event)
+    {
+        Log::info('Received real-time livestock purchase status change notification', [
+            'batch_id' => $event['batch_id'] ?? 'unknown',
+            'old_status' => $event['old_status'] ?? 'unknown',
+            'new_status' => $event['new_status'] ?? 'unknown',
+            'updated_by' => $event['updated_by'] ?? 'unknown',
+            'current_user' => auth()->id()
+        ]);
+
+        try {
+            // Check if this change affects current user's view
+            if ($this->shouldRefreshData($event)) {
+                $this->dispatch('notify-status-change', [
+                    'type' => 'info',
+                    'title' => 'Data Update Available',
+                    'message' => $event['message'] ?? 'A livestock purchase status has been updated.',
+                    'requires_refresh' => $event['metadata']['requires_refresh'] ?? false,
+                    'priority' => $event['metadata']['priority'] ?? 'normal',
+                    'batch_id' => $event['batch_id'] ?? null,
+                    'show_refresh_button' => true
+                ]);
+
+                Log::info('Livestock purchase status change notification dispatched to user', [
+                    'batch_id' => $event['batch_id'] ?? 'unknown',
+                    'user_id' => auth()->id()
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error handling livestock purchase status change notification', [
+                'error' => $e->getMessage(),
+                'event' => $event,
+                'user_id' => auth()->id()
+            ]);
+        }
+    }
+
+    /**
+     * Handle user-specific notifications
+     */
+    public function handleUserNotification($notification)
+    {
+        Log::info('Received user-specific livestock purchase notification', [
+            'notification_type' => $notification['type'] ?? 'unknown',
+            'user_id' => auth()->id()
+        ]);
+
+        try {
+            if (isset($notification['type']) && $notification['type'] === 'livestock_purchase_status_changed') {
+                $this->dispatch('notify-status-change', [
+                    'type' => $this->getNotificationType($notification['priority'] ?? 'normal'),
+                    'title' => $notification['title'] ?? 'Livestock Purchase Update',
+                    'message' => $notification['message'] ?? 'A livestock purchase has been updated.',
+                    'requires_refresh' => in_array('refresh_data', $notification['action_required'] ?? []),
+                    'priority' => $notification['priority'] ?? 'normal',
+                    'batch_id' => $notification['batch_id'] ?? null,
+                    'show_refresh_button' => true
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error handling livestock purchase user notification', [
+                'error' => $e->getMessage(),
+                'notification' => $notification,
+                'user_id' => auth()->id()
+            ]);
+        }
+    }
+
+    /**
+     * Determine if data should be refreshed based on event
+     */
+    private function shouldRefreshData($event): bool
+    {
+        // Always show notifications for high priority changes
+        if (($event['metadata']['priority'] ?? 'normal') === 'high') {
+            return true;
+        }
+
+        // Show if refresh is explicitly required
+        if ($event['metadata']['requires_refresh'] ?? false) {
+            return true;
+        }
+
+        // Show for current user's related batches (if we're in edit mode)
+        if ($this->pembelianId && isset($event['batch_id']) && $event['batch_id'] == $this->pembelianId) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get notification type based on priority
+     */
+    private function getNotificationType(string $priority): string
+    {
+        return match ($priority) {
+            'high' => 'warning',
+            'medium' => 'info',
+            'low' => 'success',
+            default => 'info'
+        };
+    }
+
+    /**
+     * Get notification type based on status
+     */
+    private function getNotificationTypeForStatus(string $status): string
+    {
+        switch ($status) {
+            case 'in_coop':
+                return 'success';
+            case 'cancelled':
+                return 'warning';
+            case 'completed':
+                return 'info';
+            default:
+                return 'info';
+        }
+    }
+
+    /**
+     * Get status change message
+     */
+    private function getStatusChangeMessage($purchase, $oldStatus, $newStatus): string
+    {
+        $statusLabels = \App\Models\LivestockPurchase::STATUS_LABELS;
+        $oldLabel = $statusLabels[$oldStatus] ?? $oldStatus;
+        $newLabel = $statusLabels[$newStatus] ?? $newStatus;
+
+        return sprintf(
+            'Livestock Purchase #%s status changed from %s to %s by %s',
+            $purchase->invoice_number,
+            $oldLabel,
+            $newLabel,
+            auth()->user()->name
+        );
+    }
+
+    /**
+     * Check if status change requires page refresh
+     */
+    private function requiresRefresh(string $oldStatus, string $newStatus): bool
+    {
+        $criticalChanges = [
+            'draft' => ['in_coop', 'confirmed'],
+            'confirmed' => ['in_coop', 'cancelled'],
+            'in_coop' => ['completed', 'cancelled'],
+            'pending' => ['in_coop', 'cancelled'],
+        ];
+
+        return isset($criticalChanges[$oldStatus]) &&
+            in_array($newStatus, $criticalChanges[$oldStatus]);
+    }
+
+    /**
+     * Get notification priority
+     */
+    private function getPriority(string $oldStatus, string $newStatus): string
+    {
+        if ($newStatus === 'in_coop') return 'high';
+        if ($newStatus === 'cancelled') return 'medium';
+        if ($newStatus === 'completed') return 'low';
+        return 'normal';
+    }
+
+    /**
+     * Send notification to SSE bridge with debounce mechanism
+     */
+    private function sendToSSENotificationBridge($notificationData, $purchase)
+    {
+        try {
+            // Debounce mechanism: prevent duplicate notifications for same batch within 2 seconds
+            $cacheKey = "sse_notification_debounce_livestock_{$purchase->id}_{$notificationData['new_status']}";
+
+            if (Cache::has($cacheKey)) {
+                Log::info('SSE livestock purchase notification debounced (too frequent)', [
+                    'batch_id' => $purchase->id,
+                    'status' => $notificationData['new_status'],
+                    'cache_key' => $cacheKey
+                ]);
+                return;
+            }
+
+            // Set debounce cache for 2 seconds
+            Cache::put($cacheKey, true, 2);
+
+            // Prepare notification data for SSE storage
+            $sseNotification = [
+                'type' => 'livestock_purchase_status_changed',
+                'title' => $notificationData['title'],
+                'message' => $notificationData['message'],
+                'source' => 'livewire_sse',
+                'priority' => $notificationData['priority'] ?? 'normal',
+                'data' => [
+                    'batch_id' => $purchase->id,
+                    'invoice_number' => $purchase->invoice_number,
+                    'updated_by' => auth()->id(),
+                    'updated_by_name' => auth()->user()->name,
+                    'old_status' => $notificationData['old_status'],
+                    'new_status' => $notificationData['new_status'],
+                    'timestamp' => $notificationData['timestamp'],
+                    'requires_refresh' => $notificationData['requires_refresh']
+                ],
+                'requires_refresh' => $notificationData['requires_refresh'],
+                'timestamp' => time(),
+                'debounce_key' => $cacheKey
+            ];
+
+            // Store notification for SSE clients (with retry mechanism)
+            $result = $this->storeSSENotification($sseNotification);
+
+            if ($result) {
+                Log::info('Successfully stored livestock purchase notification for SSE bridge', [
+                    'batch_id' => $purchase->id,
+                    'notification_id' => $result['id'],
+                    'updated_by' => auth()->id(),
+                    'sse_system' => 'active'
+                ]);
+            } else {
+                Log::warning('Failed to store SSE livestock purchase notification after retries', [
+                    'batch_id' => $purchase->id,
+                    'updated_by' => auth()->id()
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error storing livestock purchase notification for SSE bridge', [
+                'batch_id' => $purchase->id,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+        }
+    }
+
+    /**
+     * Store notification for SSE clients with file locking and retry mechanism
+     */
+    private function storeSSENotification($notification)
+    {
+        $filePath = base_path('testing/sse-notifications.json');
+        $maxRetries = 3;
+        $retryDelay = 100000; // 100ms in microseconds
+
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                // Create lock file to prevent race conditions
+                $lockFile = $filePath . '.lock';
+                $lockHandle = fopen($lockFile, 'w');
+
+                if (!$lockHandle || !flock($lockHandle, LOCK_EX | LOCK_NB)) {
+                    if ($lockHandle) fclose($lockHandle);
+
+                    // If this is not the last attempt, wait and retry
+                    if ($attempt < $maxRetries) {
+                        usleep($retryDelay * $attempt); // Exponential backoff
+                        continue;
+                    }
+
+                    Log::warning('Could not acquire file lock for SSE livestock purchase notification', [
+                        'attempt' => $attempt,
+                        'file' => $filePath
+                    ]);
+                    return null;
+                }
+
+                // Initialize file if not exists
+                if (!file_exists($filePath)) {
+                    file_put_contents($filePath, json_encode([
+                        'notifications' => [],
+                        'last_update' => time(),
+                        'stats' => [
+                            'total_sent' => 0,
+                            'clients_connected' => 0
+                        ]
+                    ]));
+                }
+
+                // Read existing data
+                $content = file_get_contents($filePath);
+                $data = $content ? json_decode($content, true) : [
+                    'notifications' => [],
+                    'last_update' => time(),
+                    'stats' => ['total_sent' => 0, 'clients_connected' => 0]
+                ];
+
+                // Prepare notification with unique ID and timestamp
+                $notification['id'] = uniqid() . '_' . microtime(true);
+                $notification['timestamp'] = time();
+                $notification['datetime'] = date('Y-m-d H:i:s');
+                $notification['microseconds'] = microtime(true);
+
+                // Add to beginning of array (newest first)
+                array_unshift($data['notifications'], $notification);
+
+                // Keep only last 50 notifications (reduced from 100 for performance)
+                $data['notifications'] = array_slice($data['notifications'], 0, 50);
+
+                $data['last_update'] = time();
+                $data['stats']['total_sent']++;
+
+                // Write atomically using temporary file
+                $tempFile = $filePath . '.tmp';
+                if (file_put_contents($tempFile, json_encode($data, JSON_PRETTY_PRINT)) !== false) {
+                    rename($tempFile, $filePath);
+                }
+
+                // Release lock
+                flock($lockHandle, LOCK_UN);
+                fclose($lockHandle);
+                unlink($lockFile);
+
+                Log::info('SSE livestock purchase notification stored successfully', [
+                    'notification_id' => $notification['id'],
+                    'attempt' => $attempt,
+                    'total_notifications' => count($data['notifications'])
+                ]);
+
+                return $notification;
+            } catch (\Exception $e) {
+                // Clean up lock if it exists
+                if (isset($lockHandle) && $lockHandle) {
+                    flock($lockHandle, LOCK_UN);
+                    fclose($lockHandle);
+                }
+                if (isset($lockFile) && file_exists($lockFile)) {
+                    unlink($lockFile);
+                }
+
+                Log::error('Error storing SSE livestock purchase notification', [
+                    'attempt' => $attempt,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]);
+
+                // If this is not the last attempt, wait and retry
+                if ($attempt < $maxRetries) {
+                    usleep($retryDelay * $attempt);
+                    continue;
+                }
+
+                // Last attempt failed
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get notification bridge URL based on environment
+     */
+    private function getBridgeUrl()
+    {
+        // Check if we're in a web context
+        if (request()->server('HTTP_HOST')) {
+            $baseUrl = request()->getSchemeAndHttpHost();
+            $bridgeUrl = $baseUrl . '/testing/notification_bridge.php';
+
+            // Test if bridge is available
+            try {
+                $testResponse = Http::timeout(2)->get($bridgeUrl . '?action=status');
+                if ($testResponse->successful()) {
+                    $data = $testResponse->json();
+                    if ($data['success'] ?? false) {
+                        return $bridgeUrl;
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::debug('Bridge test failed', ['error' => $e->getMessage()]);
+            }
+        }
+
+        return null; // Bridge not available
+    }
+
+    // public function updateStatusLivestockPurchase($purchaseId, $status, $notes)
+    // {
+    //     if (empty($purchaseId) || empty($status)) {
+    //         return;
+    //     }
+
+    //     $purchase = LivestockPurchase::findOrFail($purchaseId);
+    //     $notes = $notes ?? null;
+
+    //     $purchase->updateStatus($status, $notes);
+
+    //     $this->dispatch('statusUpdated');
+
+    //     $this->dispatch('success', 'Status pembelian berhasil diperbarui.');
+    // }
 }
