@@ -48,8 +48,8 @@
                         <select class="form-select" id="periode" name="periode">
                             <option value="">Pilih Periode</option>
                             <!-- Add periode options dynamically -->
-                            @for ($i = 1; $i <= 12; $i++) <option value="{{ $i }}">{{ $i }}</option>
-                                @endfor
+                            {{-- @for ($i = 1; $i <= 12; $i++) <option value="{{ $i }}">{{ $i }}</option>
+                                @endfor --}}
                         </select>
                     </div>
                 </div>
@@ -78,8 +78,8 @@
             console.table(ternakData);
 
             // Show loading spinner
-            const kandangSelect = document.getElementById('kandang');
-            kandangSelect.disabled = true;
+            const coopSelect = document.getElementById('coop');
+            coopSelect.disabled = true;
 
             const tahunSelect = document.getElementById('tahun');
             tahunSelect.disabled = true;
@@ -93,7 +93,7 @@
             saveChangesButton.disabled = true;
 
             // Initialize select2 for dropdowns if needed
-            $('#farm, #kandang, #tahun, #periode').select2();
+            $('#farm, #coop, #tahun, #periode').select2();
 
 
             // Handle reset button click

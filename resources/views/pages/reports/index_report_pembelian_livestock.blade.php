@@ -60,72 +60,50 @@
 
             <!--begin::Card body-->
             <div class="card-body py-4">
-                <!--begin::Form-->
-                <form id="reportForm" action="{{ route('purchase-reports.export-livestock') }}" method="POST">
-                    @csrf
-                    <div class="row g-6 mb-6">
-                        <!--begin::Input group - Periode-->
-                        <div class="col-md-6">
-                            <label class="required form-label">Periode</label>
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <input type="date" name="start_date" class="form-control"
-                                        value="{{ date('Y-m-01') }}" required>
-                                    <div class="form-text">Tanggal Mulai</div>
-                                </div>
-                                <div class="col-6">
-                                    <input type="date" name="end_date" class="form-control" value="{{ date('Y-m-t') }}"
-                                        required>
-                                    <div class="form-text">Tanggal Selesai</div>
-                                </div>
-                            </div>
-                        </div>
-                        <!--end::Input group-->
-
-                        <!--begin::Input group - Farm-->
-                        <div class="col-md-6">
-                            <label class="form-label">Farm</label>
-                            <select name="farm_id" class="form-select" data-control="select2"
-                                data-placeholder="Pilih Farm (Kosongkan untuk semua)">
-                                <option value="">Semua Farm</option>
+                <h2 class="mb-4">Filter Laporan Pembelian Livestock</h2>
+                <form id="filter-form" class="mb-5">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label for="farm" class="form-label required">Farm</label>
+                            <select class="form-select" id="farm" name="farm">
+                                <option value="">Pilih Farm</option>
                                 @foreach($farms as $farm)
                                 <option value="{{ $farm->id }}">{{ $farm->name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <!--end::Input group-->
-
-                        <!--begin::Input group - Supplier-->
-                        <div class="col-md-6">
-                            <label class="form-label">Supplier</label>
-                            <select name="supplier_id" class="form-select" data-control="select2"
-                                data-placeholder="Pilih Supplier (Kosongkan untuk semua)">
+                        <div class="col-md-3">
+                            <label for="coop" class="form-label required">Kandang</label>
+                            <select class="form-select" id="coop" name="coop" disabled>
+                                <option value="">Pilih Kandang</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="tahun" class="form-label required">Tahun</label>
+                            <select class="form-select" id="tahun" name="tahun" disabled>
+                                <option value="">Pilih Tahun</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="periode" class="form-label required">Periode (Batch)</label>
+                            <select class="form-select" id="periode" name="periode" disabled>
+                                <option value="">Pilih Periode</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="supplier" class="form-label">Supplier</label>
+                            <select class="form-select" id="supplier" name="supplier">
                                 <option value="">Semua Supplier</option>
                                 @foreach($partners as $partner)
                                 <option value="{{ $partner->id }}">{{ $partner->name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <!--end::Input group-->
-
-                        <!--begin::Input group - Expedition-->
-                        <div class="col-md-6">
-                            <label class="form-label">Ekspedisi</label>
-                            <select name="expedition_id" class="form-select" data-control="select2"
-                                data-placeholder="Pilih Ekspedisi (Kosongkan untuk semua)">
-                                <option value="">Semua Ekspedisi</option>
-                                @foreach($expeditions as $expedition)
-                                <option value="{{ $expedition->id }}">{{ $expedition->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <!--end::Input group-->
-
-                        <!--begin::Input group - Status-->
-                        <div class="col-md-6">
-                            <label class="form-label">Status</label>
-                            <select name="status" class="form-select" data-control="select2"
-                                data-placeholder="Pilih Status (Kosongkan untuk semua)">
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-2">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
                                 <option value="">Semua Status</option>
                                 <option value="draft">Draft</option>
                                 <option value="confirmed">Confirmed</option>
@@ -133,35 +111,31 @@
                                 <option value="completed">Completed</option>
                             </select>
                         </div>
-                        <!--end::Input group-->
-
-                        <!--begin::Input group - Format Export-->
-                        <div class="col-md-6">
-                            <label class="form-label">Format Export</label>
-                            <select name="export_format" class="form-select" data-control="select2">
-                                <option value="html">HTML (Preview)</option>
-                                <option value="excel">Excel (.xlsx)</option>
-                                <option value="pdf">PDF</option>
-                                <option value="csv">CSV</option>
-                            </select>
+                        <div class="col-md-2">
+                            <label for="start_date" class="form-label required">Tanggal Mulai</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" required
+                                value="{{ request('start_date', \Carbon\Carbon::now()->subMonth()->format('Y-m-d')) }}">
                         </div>
-                        <!--end::Input group-->
+                        <div class="col-md-2">
+                            <label for="end_date" class="form-label required">Tanggal Selesai</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" required
+                                value="{{ request('end_date', \Carbon\Carbon::now()->format('Y-m-d')) }}">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100" id="showButton">
+                                <i class="fas fa-search me-2"></i>Tampilkan
+                            </button>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-success w-100 ms-2" id="exportButton">
+                                <i class="fas fa-file-excel me-2"></i>Export Excel
+                            </button>
+                        </div>
                     </div>
-
-                    <!--begin::Actions-->
-                    <div class="d-flex justify-content-end">
-                        <button type="reset" class="btn btn-light me-3">Reset</button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="ki-duotone ki-document-download fs-2">
-                                <span class="path1"></span>
-                                <span class="path2"></span>
-                            </i>
-                            Generate Laporan
-                        </button>
-                    </div>
-                    <!--end::Actions-->
                 </form>
-                <!--end::Form-->
+                <div id="report-content">
+                    <!-- Report content will be loaded here -->
+                </div>
             </div>
             <!--end::Card body-->
         </div>
@@ -233,49 +207,123 @@
     @push('scripts')
     <script>
         $(document).ready(function() {
-        // Initialize Select2
-        $('[data-control="select2"]').select2();
-
-        // Form validation
-        $('#reportForm').on('submit', function(e) {
-            const startDate = $('input[name="start_date"]').val();
-            const endDate = $('input[name="end_date"]').val();
-            
-            if (startDate && endDate && startDate > endDate) {
+            var livestockData = @json($livestocks);
+            // Dynamic filter logic (same as performa)
+            const coopSelect = document.getElementById('coop');
+            const tahunSelect = document.getElementById('tahun');
+            const periodeSelect = document.getElementById('periode');
+            $('#farm').on('change', function() {
+                var farmId = $(this).val();
+                updateCoopOptions(farmId);
+                coopSelect.disabled = false;
+            });
+            $('#coop').on('change', function() {
+                var farmId = $('#farm').val();
+                var coopId = $(this).val();
+                updateTahunOptions(farmId, coopId);
+            });
+            $('#tahun').on('change', function() {
+                var farmId = $('#farm').val();
+                var coopId = $('#coop').val();
+                var tahun = $(this).val();
+                updatePeriodeOptions(farmId, coopId, tahun);
+            });
+            function updateCoopOptions(farmId) {
+                var coopSelect = $('#coop');
+                coopSelect.empty().append(new Option('Pilih Kandang', ''));
+                if (farmId) {
+                    var farmLivestock = livestockData.filter(function(l) { return l.farm_id == farmId; });
+                    var uniqueCoops = [];
+                    farmLivestock.forEach(function(l) {
+                        if (!uniqueCoops.some(k => k.id === l.coop_id)) {
+                            uniqueCoops.push({ id: l.coop_id, name: l.coop_name });
+                        }
+                    });
+                    uniqueCoops.forEach(function(kandang) {
+                        coopSelect.append(new Option(kandang.name, kandang.id));
+                    });
+                    coopSelect.prop('disabled', false);
+                } else {
+                    coopSelect.prop('disabled', true);
+                }
+            }
+            function updateTahunOptions(farmId, coopId) {
+                var tahunSelect = $('#tahun');
+                tahunSelect.empty().append(new Option('Pilih Tahun', ''));
+                tahunSelect.prop('disabled', true);
+                if (farmId && coopId) {
+                    var filtered = livestockData.filter(function(l) { return l.farm_id == farmId && l.coop_id == coopId; });
+                    var uniqueYears = [...new Set(filtered.map(l => new Date(l.start_date).getFullYear()))];
+                    uniqueYears.sort((a, b) => b - a);
+                    uniqueYears.forEach(function(year) {
+                        tahunSelect.append(new Option(year, year));
+                    });
+                    tahunSelect.prop('disabled', false);
+                }
+            }
+            function updatePeriodeOptions(farmId, coopId, tahun) {
+                var periodeSelect = $('#periode');
+                periodeSelect.empty().append(new Option('Pilih Periode', ''));
+                periodeSelect.prop('disabled', true);
+                if (farmId && coopId && tahun) {
+                    var filtered = livestockData.filter(function(l) {
+                        return l.farm_id == farmId && l.coop_id == coopId && new Date(l.start_date).getFullYear() == tahun;
+                    });
+                    var uniquePeriodes = filtered.map(l => ({ id: l.id, name: l.name }));
+                    uniquePeriodes.sort((a, b) => a.name.localeCompare(b.name));
+                    uniquePeriodes.forEach(function(periode) {
+                        periodeSelect.append(new Option(periode.name, periode.id));
+                    });
+                    periodeSelect.prop('disabled', false);
+                }
+            }
+            // Handle form submit (AJAX load report)
+            $('#filter-form').on('submit', function(e) {
                 e.preventDefault();
-                Swal.fire({
-                    text: "Tanggal mulai tidak boleh lebih besar dari tanggal selesai",
-                    icon: "error",
-                    buttonsStyling: false,
-                    confirmButtonText: "OK",
-                    customClass: {
-                        confirmButton: "btn btn-primary"
+                var form = $(this);
+                var data = form.serialize();
+                $('#report-content').html('<div class="text-center py-5"><span class="spinner-border"></span> Memuat laporan...</div>');
+                $.ajax({
+                    url: '/report/livestock-purchase/export',
+                    method: 'POST',
+                    data: data + '&export_format=html',
+                    headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+                    success: function(data) {
+                        // Clear previous content
+                        $('#report-content').empty();
+                        var iframe = $('<iframe>', {
+                            id: 'report-iframe',
+                            frameborder: 0,
+                            scrolling: 'yes',
+                            width: '100%',
+                            height: '500px'
+                        }).appendTo('#report-content');
+                        var iframeDoc = iframe[0].contentDocument || iframe[0].contentWindow.document;
+                        iframeDoc.open();
+                        iframeDoc.write(data);
+                        iframeDoc.close();
+                        iframe.on('load', function() {
+                            var printBtn = $('<button>', {
+                                text: 'Print Report',
+                                class: 'btn btn-primary mt-3 me-2',
+                                click: function() {
+                                    iframe[0].contentWindow.print();
+                                }
+                            }).appendTo('#report-content');
+                        });
+                    },
+                    error: function(xhr) {
+                        let msg = 'Gagal memuat laporan.';
+                        if(xhr.responseJSON && xhr.responseJSON.error) msg = xhr.responseJSON.error;
+                        $('#report-content').html('<div class="alert alert-danger">'+msg+'</div>');
                     }
                 });
-                return;
-            }
-
-            // Show loading state
-            const submitBtn = $(this).find('button[type="submit"]');
-            const originalText = submitBtn.html();
-            submitBtn.html('<span class="spinner-border spinner-border-sm me-2"></span>Generating...');
-            submitBtn.prop('disabled', true);
-
-            // Re-enable button after timeout (in case of error)
-            setTimeout(() => {
-                submitBtn.html(originalText);
-                submitBtn.prop('disabled', false);
-            }, 30000);
+            });
+            // Handle export button
+            $('#exportButton').on('click', function() {
+                // TODO: Export logic here
+            });
         });
-
-        // Reset form
-        $('button[type="reset"]').on('click', function() {
-            $('[data-control="select2"]').val('').trigger('change');
-            $('input[name="start_date"]').val('{{ date("Y-m-01") }}');
-            $('input[name="end_date"]').val('{{ date("Y-m-t") }}');
-            $('select[name="export_format"]').val('html').trigger('change');
-        });
-    });
     </script>
     @endpush
 </x-default-layout>

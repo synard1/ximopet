@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Biaya Ternak</title>
+    <title>Laporan Biaya Ayam</title>
     <style>
         @page {
             size: landscape;
@@ -81,12 +81,28 @@
             margin: 10px 0;
             color: #333;
         }
+
+        .supply-highlight {
+            background-color: #f0f8ff;
+        }
+
+        .feed-highlight {
+            background-color: #f0fff0;
+        }
+
+        .deplesi-highlight {
+            background-color: #fff5ee;
+        }
+
+        .initial-purchase-highlight {
+            background-color: #e8f4fd;
+        }
     </style>
 </head>
 
 <body>
     <div class="header">
-        LAPORAN BIAYA TERNAK<br>
+        LAPORAN BIAYA AYAM<br>
         FARM : {{ $farm }}<br>
         TANGGAL : {{ $tanggal }}
     </div>
@@ -97,8 +113,9 @@
                 <th>KANDANG</th>
                 <th>BATCH</th>
                 <th>UMUR (HARI)</th>
-                <th>TOTAL BIAYA</th>
+                <th>TOTAL BIAYA HARIAN</th>
                 <th>BIAYA PER AYAM</th>
+                <th>BIAYA KUMULATIF PER AYAM</th>
             </tr>
         </thead>
         <tbody>
@@ -108,6 +125,7 @@
                 <td>{{ $cost['livestock'] }}</td>
                 <td>{{ $cost['umur'] }}</td>
                 <td class="text-right">{{ formatNumber($cost['total_cost'], 2) }}</td>
+                <td class="text-right">{{ formatNumber($cost['daily_cost_per_ayam'] ?? 0, 2) }}</td>
                 <td class="text-right">{{ formatNumber($cost['cost_per_ayam'], 2) }}</td>
             </tr>
             @endforeach
@@ -116,6 +134,7 @@
             <tr class="header-row">
                 <td colspan="3" class="text-right">TOTAL:</td>
                 <td class="text-right">{{ formatNumber($totals['total_cost'], 2) }}</td>
+                <td class="text-right">{{ formatNumber($totals['daily_cost_per_ayam'] ?? 0, 2) }}</td>
                 <td class="text-right">{{ formatNumber($totals['total_cost_per_ayam'], 2) }}</td>
             </tr>
         </tfoot>
@@ -142,11 +161,21 @@
             <tbody>
                 @foreach($cost['breakdown'] as $item)
                 <tr @if(isset($item['is_initial_purchase']) && $item['is_initial_purchase'])
-                    style="background-color: #e8f4fd;" @endif>
+                    class="initial-purchase-highlight" @elseif(str_contains(strtolower($item['kategori'] ?? ''
+                    ), 'pakan' ) || str_contains(strtolower($item['kategori'] ?? '' ), 'feed' )) class="feed-highlight"
+                    @elseif(str_contains(strtolower($item['kategori'] ?? '' ), 'supply' ) ||
+                    str_contains(strtolower($item['kategori'] ?? '' ), 'ovk' ) ||
+                    str_contains(strtolower($item['kategori'] ?? '' ), 'biocid' ) ||
+                    str_contains(strtolower($item['kategori'] ?? '' ), 'cevamune' )) class="supply-highlight"
+                    @elseif(str_contains(strtolower($item['kategori'] ?? '' ), 'deplesi' )) class="deplesi-highlight"
+                    @endif>
                     <td class="text-left">
                         {{ $item['kategori'] ?? '-' }}
                         @if(isset($item['is_initial_purchase']) && $item['is_initial_purchase'])
                         <small style="color: #0066cc;">(Harga Pembelian Awal)</small>
+                        @endif
+                        @if(isset($item['calculation_note']))
+                        <br><small style="color: #666;">{{ $item['calculation_note'] }}</small>
                         @endif
                     </td>
                     @if($report_type === 'detail')
@@ -161,19 +190,19 @@
 
                 @if($report_type === 'detail')
                 <tr class="header-row">
-                    <td colspan="5" class="text-right">Total Biaya Hari Sebelumnya:</td>
-                    <td class="text-right">{{ formatNumber($prev_cost_data['total_added_cost'] ?? 0, 2)
-                        }}</td>
+                    <td colspan="{{ $report_type === 'detail' ? '5' : '1' }}" class="text-right">Total Biaya Hari
+                        Sebelumnya:</td>
+                    <td class="text-right">{{ formatNumber($prev_cost_data['total_added_cost'] ?? 0, 2) }}</td>
                 </tr>
                 <tr class="header-row">
-                    <td colspan="5" class="text-right">Total Biaya Kumulatif Sampai Hari Ini:</td>
-                    <td class="text-right">{{ formatNumber($total_cumulative_cost_calculated ?? 0,
-                        2) }}</td>
+                    <td colspan="{{ $report_type === 'detail' ? '5' : '1' }}" class="text-right">Total Biaya Kumulatif
+                        Sampai Hari Ini:</td>
+                    <td class="text-right">{{ formatNumber($total_cumulative_cost_calculated ?? 0, 2) }}</td>
                 </tr>
                 @if(isset($initial_purchase_data) && $initial_purchase_data['found'])
-                <tr style="background-color: #e8f4fd;">
-                    <td colspan="5" class="text-right"><strong>Harga Awal DOC ({{ $initial_purchase_data['date']
-                            }}):</strong></td>
+                <tr class="initial-purchase-highlight">
+                    <td colspan="{{ $report_type === 'detail' ? '5' : '1' }}" class="text-right"><strong>Harga Awal DOC
+                            ({{ $initial_purchase_data['date'] }}):</strong></td>
                     <td class="text-right"><strong>{{ formatNumber($initial_purchase_data['total_cost'], 2) }}</strong>
                     </td>
                 </tr>
@@ -181,6 +210,24 @@
                 @endif
             </tbody>
         </table>
+
+        <!-- Summary Information for Detail Report -->
+        @if($report_type === 'detail' && isset($summary_data))
+        <div style="margin-top: 15px; padding: 10px; background-color: #f9f9f9; border: 1px solid #ddd;">
+            <h5 style="margin: 0 0 10px 0;">Ringkasan Biaya Harian:</h5>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 10pt;">
+                <div><strong>Pakan:</strong> {{ formatNumber($summary_data['daily_feed_cost'] ?? 0, 2) }}</div>
+                <div><strong>Supply:</strong> {{ formatNumber(($summary_data['daily_ovk_cost'] ?? 0) +
+                    ($summary_data['daily_supply_usage_cost'] ?? ($summary_data['supply_usage'] ?? 0)), 2) }}</div>
+                <div><strong>Deplesi:</strong> {{ formatNumber($summary_data['daily_deplesi_cost'] ?? 0, 2) }}</div>
+                <div><strong>Total Harian:</strong> {{ formatNumber($summary_data['total_daily_added_cost'] ?? 0, 2) }}
+                </div>
+                <div><strong>Per Ayam:</strong> {{ formatNumber($summary_data['daily_added_cost_per_chicken'] ?? 0, 2)
+                    }}</div>
+                <div></div>
+            </div>
+        </div>
+        @endif
     </div>
     @else
     <div class="breakdown-section">
