@@ -111,8 +111,9 @@ return new class extends Migration
 
         Schema::create('supply_usages', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('livestock_id');
             $table->dateTime('usage_date');
+            $table->uuid('livestock_id')->constrained()->onDelete('cascade');
+            $table->decimal('total_quantity', 12, 2);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();

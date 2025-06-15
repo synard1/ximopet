@@ -83,6 +83,7 @@ class LivestockController extends Controller
         $stockAwal = $livestock->populasi_awal;
         $totalPakanUsage = 0;
         $totalDeplesi = 0;
+        $totalOvkUsage = 0; // Initialize total OVK usage
 
         // Standar target FCR dan bobot
         $standarData = $livestock->data[0]['standar_bobot'] ?? [];
@@ -111,22 +112,17 @@ class LivestockController extends Controller
                     ->whereDate('usage_date', $dateStr);
             })->get();
 
-
-
             $pakanHarian = $usage->sum('quantity_taken');
             $pakanJenis = $usage->pluck('feed.name')->unique()->implode(', ') ?: '-';
             $totalPakanUsage += $pakanHarian;
 
-            // dd($pakanHarian);
+            // OVK Usage
+            $ovkUsage = SupplyUsageDetail::whereHas('supplyUsage', function ($q) use ($livestock, $dateStr) {
+                $q->where('livestock_id', $livestock->id)
+                    ->whereDate('usage_date', $dateStr);
+            })->sum('quantity_taken');
 
-            // OVK Usage (kalau sudah pakai Supply*)
-            // $ovkUsage = SupplyUsageDetail::whereHas('usage', function ($q) use ($livestock, $dateStr) {
-            //     $q->where('livestock_id', $livestock->id)
-            //     ->whereDate('usage_date', $dateStr);
-            // })->whereHas('supply.category', function ($q) {
-            //     $q->where('name', 'OVK');
-            // })->sum('quantity_taken');
-            $ovkUsage = [];
+            $totalOvkUsage += $ovkUsage; // Accumulate total OVK usage
 
             // Target standar
             $standarBobot = $standarData['data'][$umur] ?? null;
@@ -146,7 +142,8 @@ class LivestockController extends Controller
                 'pakan_jenis' => $pakanJenis,
                 'pakan_harian' => $pakanHarian,
                 'pakan_total' => $totalPakanUsage,
-                'ovk_harian' => $ovkUsage,
+                'ovk_harian' => $ovkUsage, // Include daily OVK usage
+                'total_ovk' => $totalOvkUsage, // Include total OVK usage
                 'fcr_actual' => $stockAwal - $totalDeplesi > 0 ? round($totalPakanUsage / ($stockAwal - $totalDeplesi), 2) : 0,
             ];
 
@@ -165,6 +162,7 @@ class LivestockController extends Controller
             'total_deplesi' => $totalDeplesi,
             'deplesi_percentage' => $livestock->populasi_awal > 0 ? round(($totalDeplesi / $livestock->populasi_awal) * 100, 2) : 0,
             'total_pakan' => $totalPakanUsage,
+            'total_ovk' => $totalOvkUsage, // Include total OVK in the result
             'fcr_actual' => $stockAwal > 0 ? round($totalPakanUsage / $stockAwal, 2) : 0,
         ];
 

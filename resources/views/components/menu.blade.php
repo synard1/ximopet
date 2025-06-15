@@ -153,40 +153,43 @@ return false;
         menuToggles.forEach(toggle => {
             // Add click event listener
             toggle.addEventListener('click', function(e) {
+                // Always prevent default for menu toggles
+                e.preventDefault();
+                
                 const parentItem = this.closest('.menu-item.menu-accordion');
                 if (!parentItem) return; // Exit if not inside an accordion menu item
 
                 const submenu = this.nextElementSibling;
                 if (!submenu || !submenu.classList.contains('menu-sub-accordion')) return; // Exit if no submenu or not an accordion submenu
 
-                // Check if the menu toggle has the 'active' class (set by Blade if active by route)
-                const isCurrentlyActiveByRoute = this.classList.contains('active');
-
-                // If the menu is currently active by route, prevent default and do nothing else (it stays open).
-                if (isCurrentlyActiveByRoute) {
-                    e.preventDefault();
-                    return; // Stop processing this click
+                // Check if sidebar is collapsed - if so, don't allow accordion actions
+                const isCollapsed = document.body.getAttribute('data-kt-app-sidebar-collapsed') === 'true';
+                if (isCollapsed) {
+                    return; // Don't allow accordion toggles when sidebar is collapsed
                 }
 
-                // If it's not active by route, prevent default for '#' links and toggle its state.
-                 if (this.getAttribute('href') === '#' || this.getAttribute('href') === null) {
-                     e.preventDefault();
-                 }
+                // Get current state
+                const isCurrentlyOpen = submenu.classList.contains('show');
+                
+                // If menu is currently open, close it
+                if (isCurrentlyOpen) {
+                    this.classList.remove('active', 'show');
+                    submenu.classList.remove('show');
+                    return;
+                }
 
-                 // Close all other open accordion menus that are NOT active by route
-                 document.querySelectorAll('.menu-item.menu-accordion .menu-sub-accordion.show').forEach(openSubmenu => {
-                     const openToggle = openSubmenu.previousElementSibling;
-                      // Check if the toggle exists, is a menu-toggle, and is NOT active by route
-                     if(openToggle && openToggle.classList.contains('menu-toggle') && !openToggle.classList.contains('active')) {
-                             openSubmenu.classList.remove('show');
-                             openToggle.classList.remove('active', 'show');
-                     }
-                 });
+                // Close all other open accordion menus
+                document.querySelectorAll('.menu-item.menu-accordion .menu-sub-accordion.show').forEach(openSubmenu => {
+                    const openToggle = openSubmenu.previousElementSibling;
+                    if (openToggle && openToggle.classList.contains('menu-toggle')) {
+                        openSubmenu.classList.remove('show');
+                        openToggle.classList.remove('active', 'show');
+                    }
+                });
 
-                // Toggle the current menu's show/active state
-                this.classList.toggle('active');
-                this.classList.toggle('show');
-                submenu.classList.toggle('show');
+                // Open the current menu
+                this.classList.add('active', 'show');
+                submenu.classList.add('show');
             });
         });
 
@@ -203,6 +206,24 @@ return false;
                 } else {
                     break; // Stop if no parent toggle found
                 }
+            }
+        });
+
+        // Listen for sidebar toggle events
+        document.addEventListener('sidebar-toggled', function(e) {
+            if (e.detail.collapsed) {
+                // When sidebar is collapsed, close all accordion menus
+                document.querySelectorAll('.menu-sub-accordion.show').forEach(submenu => {
+                    submenu.classList.remove('show');
+                });
+                document.querySelectorAll('.menu-toggle.active, .menu-toggle.show').forEach(toggle => {
+                    // Only remove 'active' and 'show' classes, not classes set by route matching
+                    const wasActiveByRoute = toggle.querySelector('.menu-title') && 
+                        toggle.closest('.menu-item').querySelector('.menu-link.active');
+                    if (!wasActiveByRoute) {
+                        toggle.classList.remove('active', 'show');
+                    }
+                });
             }
         });
 

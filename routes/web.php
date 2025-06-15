@@ -319,23 +319,68 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Route::get('/report/pembelian-livestock', [PurchaseReportsController::class, 'indexPembelianLivestock'])->name('pembelian-livestock');
         // Route::get('/report/pembelian-pakan', [PurchaseReportsController::class, 'indexPembelianPakan'])->name('pembelian-pakan');
         // Route::get('/report/pembelian-supply', [PurchaseReportsController::class, 'indexPembelianSupply'])->name('pembelian-supply');
+
+        // Supply Purchase Reports
+        Route::prefix('supply-purchase')->group(function () {
+            Route::get('/', [PurchaseReportsController::class, 'indexPembelianSupply'])->name('supply-purchase.index');
+            Route::get('/export', [PurchaseReportsController::class, 'exportPembelianSupply'])->name('supply-purchase.export');
+            Route::get('/html', [PurchaseReportsController::class, 'exportPembelianSupplyHtml'])->name('supply-purchase.html');
+        });
     });
 
     Route::name('purchase-reports.')->group(function () {
         // Livestock Purchase Reports
-        Route::get('/report/pembelian-livestock', [PurchaseReportsController::class, 'indexPembelianLivestock'])->name('pembelian-livestock');
-        Route::get('/report/pembelian-livestock/export', [PurchaseReportsController::class, 'exportPembelianLivestock'])->name('export-livestock');
-        Route::post('/report/pembelian-livestock/export', [PurchaseReportsController::class, 'exportPembelianLivestock'])->name('export-livestock');
+        Route::get('/report/livestock-purchase', [PurchaseReportsController::class, 'indexPembelianLivestock'])->name('pembelian-livestock');
+        Route::get('/report/livestock-purchase/export', [PurchaseReportsController::class, 'exportPembelianLivestock'])->name('export-livestock');
+        Route::post('/report/livestock-purchase/export', [PurchaseReportsController::class, 'exportPembelianLivestock'])->name('export-livestock');
 
         // Feed Purchase Reports  
-        Route::get('/report/pembelian-pakan', [PurchaseReportsController::class, 'indexPembelianPakan'])->name('pembelian-pakan');
-        Route::get('/report/pembelian-pakan/export', [PurchaseReportsController::class, 'exportPembelianPakan'])->name('export-pakan');
-        Route::post('/report/pembelian-pakan/export', [PurchaseReportsController::class, 'exportPembelianPakan'])->name('export-pakan');
+        Route::get('/report/feed-purchase', [PurchaseReportsController::class, 'indexPembelianPakan'])->name('pembelian-pakan');
+        Route::get('/report/feed-purchase/export', [PurchaseReportsController::class, 'exportPembelianPakan'])->name('export-pakan');
+        Route::post('/report/feed-purchase/export', [PurchaseReportsController::class, 'exportPembelianPakan'])->name('export-pakan');
 
         // Supply Purchase Reports
-        Route::get('/report/pembelian-supply', [PurchaseReportsController::class, 'indexPembelianSupply'])->name('pembelian-supply');
-        Route::get('/report/pembelian-supply/export', [PurchaseReportsController::class, 'exportPembelianSupply'])->name('export-supply');
-        Route::post('/report/pembelian-supply/export', [PurchaseReportsController::class, 'exportPembelianSupply'])->name('export-supply');
+        Route::get('/report/supply-purchase', [PurchaseReportsController::class, 'indexPembelianSupply'])->name('pembelian-supply');
+        Route::get('/report/supply-purchase/export', [PurchaseReportsController::class, 'exportPembelianSupply'])->name('export-supply');
+        Route::post('/report/supply-purchase/export', [PurchaseReportsController::class, 'exportPembelianSupply'])->name('export-supply');
+    });
+
+    Route::get('/report/supply-purchase/html', function (\Illuminate\Http\Request $request) {
+        $query = \App\Models\SupplyPurchaseBatch::with([
+            'supplier',
+            'supplyPurchases.supply',
+            'supplyPurchases.unit',
+            'farm'
+        ])
+            ->when($request->start_date, fn($q) => $q->where('date', '>=', $request->start_date))
+            ->when($request->end_date, fn($q) => $q->where('date', '<=', $request->end_date))
+            ->when($request->supplier, fn($q) => $q->where('supplier_id', $request->supplier))
+            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($request->farm, fn($q) => $q->where('farm_id', $request->farm))
+            ->when($request->tahun, fn($q) => $q->whereYear('date', $request->tahun))
+            ->when($request->supply, function ($q) use ($request) {
+                $q->whereHas('supplyPurchases', function ($sq) use ($request) {
+                    $sq->where('supply_id', $request->supply);
+                });
+            })
+            ->when($request->invoice_number, fn($q) => $q->where('invoice_number', $request->invoice_number));
+        $batches = $query->get();
+        $summary = [
+            'period' => ($request->start_date && $request->end_date) ? (\Carbon\Carbon::parse($request->start_date)->format('d-m-Y') . ' s.d. ' . \Carbon\Carbon::parse($request->end_date)->format('d-m-Y')) : '-',
+            'total_batches' => $batches->count(),
+            'total_purchases' => $batches->sum(fn($batch) => $batch->supplyPurchases->count()),
+            'total_suppliers' => $batches->unique('supplier_id')->count(),
+            'total_farms' => $batches->pluck('farm_id')->unique()->count(),
+            'total_value' => $batches->sum(fn($batch) => $batch->supplyPurchases->sum(fn($purchase) => $purchase->quantity * $purchase->price_per_unit)),
+            'total_quantity' => $batches->sum(fn($batch) => $batch->supplyPurchases->sum('quantity')),
+        ];
+        $invoiceDetail = null;
+        if ($request->invoice_number) {
+            $invoiceDetail = \App\Models\SupplyPurchaseBatch::with(['supplier', 'supplyPurchases.supply', 'supplyPurchases.unit'])
+                ->where('invoice_number', $request->invoice_number)
+                ->first();
+        }
+        return view('pages.reports.pembelian-supply-html', compact('batches', 'summary', 'invoiceDetail'));
     });
 
     route::name('sample.')->group(function () {
@@ -366,6 +411,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return view('pages.admin.audit-trail.index');
     })->name('audit-trail.index');
     // Route::get('/audit-trail', AuditTrail::class)->name('audit-trail.index');
+
+    // Batch Worker Report
+    Route::get('/reports/batch-worker', [ReportsController::class, 'indexBatchWorker'])->name('reports.batch-worker');
+    Route::get('/reports/batch-worker/export', [ReportsController::class, 'exportBatchWorker'])->name('reports.batch-worker.export');
 });
 
 // Error Routes

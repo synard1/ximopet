@@ -54,4 +54,19 @@ class Supply extends BaseModel
     {
         return $this->hasMany(SupplyPurchase::class, 'supply_id');
     }
+
+    public function supplyUsage()
+    {
+        return $this->hasMany(SupplyUsage::class, 'supply_id');
+    }
+
+    public function supplyUsageDetail()
+    {
+        return $this->hasMany(SupplyUsageDetail::class, 'supply_id');
+    }
+
+    public function supplyStocks()
+    {
+        return $this->hasMany(SupplyStock::class, 'supply_id');
+    }
 }

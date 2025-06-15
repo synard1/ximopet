@@ -1,0 +1,222 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Dokumentasi Perubahan
+
+## 25 Maret 2024 - Penambahan Fitur Validasi Transaksi
+
+### Deskripsi
+Menambahkan fitur validasi transaksi oleh penanggung jawab (validator) untuk memastikan data transaksi sudah benar sebelum di-mark sebagai completed.
+
+### Perubahan yang Dilakukan
+
+1. **Database**
+   - Menambah field validasi di tabel transactions:
+     - `validated_by`: ID user yang melakukan validasi
+     - `validated_at`: Waktu validasi
+     - `validation_notes`: Catatan validasi (opsional)
+
+2. **Permission & Role**
+   - Menambah permission baru:
+     - `validate transactions`: Untuk melakukan validasi
+     - `view validation history`: Untuk melihat riwayat validasi
+   - Menambah role `Validator` khusus untuk validasi
+   - Memberikan permission validasi ke role:
+     - SuperAdmin
+     - Manager
+     - Validator
+
+3. **Model**
+   - Update model Transaction:
+     - Relasi ke validator (User)
+     - Method validate() untuk proses validasi
+     - Method isValidated() untuk cek status validasi
+     - Method getValidationStatus() untuk tampilan status
+
+4. **Livewire Component**
+   - Membuat component TransactionValidation:
+     - List transaksi yang perlu divalidasi
+     - Modal untuk input catatan validasi
+     - Real-time update status
+     - Notifikasi sukses/error
+
+### Diagram Alur Validasi
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant V as Validator
+    participant S as System
+    
+    U->>S: Create Transaction
+    S->>S: Set Status = draft
+    
+    V->>S: View Unvalidated Transactions
+    S->>V: Show Transaction List
+    
+    V->>S: Click Validate
+    S->>V: Show Validation Modal
+    
+    V->>S: Submit Validation
+    S->>S: Check Permission
+    S->>S: Update Transaction
+    S->>S: Set Status = completed
+    S->>V: Show Success Message
+```
+
+### Cara Penggunaan
+
+1. **Assign Role Validator**
+   - Berikan role `Validator` ke user yang akan melakukan validasi
+   - Atau berikan permission `validate transactions` ke role yang ada
+
+2. **Validasi Transaksi**
+   - Akses halaman validasi transaksi
+   - Pilih transaksi yang perlu divalidasi
+   - Klik tombol Validate
+   - Isi catatan validasi (opsional)
+   - Submit validasi
+
+3. **View Validation History**
+   - User dengan permission `view validation history` bisa melihat riwayat validasi
+   - Termasuk siapa yang melakukan validasi dan kapan
+
+### Catatan
+- Transaksi yang sudah divalidasi tidak bisa diubah lagi
+- Status transaksi akan otomatis berubah ke `completed` setelah divalidasi
+- Validator bisa memberikan catatan untuk dokumentasi
+
+## 25 Maret 2024 - Implementasi Service Validasi Tersentral
+
+### Deskripsi
+Membuat service validasi yang tersentral untuk menangani validasi di semua model, dengan tracking metadata dan audit trail.
+
+### Perubahan yang Dilakukan
+
+1. **Service Validasi (`ValidationService`)**
+   - Class `App\Services\ValidationService` untuk menangani validasi
+   - Fitur:
+     - Validasi model dengan permission check
+     - Audit trail untuk setiap validasi
+     - Tracking metadata dan user info
+     - Transaction handling untuk data consistency
+     - History tracking dan status checking
+
+2. **Trait Validasi (`HasValidation`)**
+   - Trait `App\Traits\HasValidation` untuk digunakan di model
+   - Otomatis menambah field validasi ke model
+   - Method helper untuk validasi
+   - Relasi ke validator (User)
+
+3. **Field Validasi di Model**
+   - `validated_by`: ID user yang melakukan validasi
+   - `validated_at`: Waktu validasi
+   - `validation_notes`: Catatan validasi
+   - `status`: Status model (completed setelah validasi)
+
+4. **Audit Trail**
+   - Mencatat setiap validasi dengan detail:
+     - Model yang divalidasi
+     - User yang melakukan validasi
+     - Waktu validasi
+     - Catatan validasi
+     - Metadata tambahan
+     - Data sebelum dan sesudah validasi
+
+### Cara Penggunaan
+
+1. **Di Model**
+   ```php
+   use App\Traits\HasValidation;
+   
+   class YourModel extends Model
+   {
+       use HasValidation;
+       // ... kode lainnya
+   }
+   ```
+
+2. **Validasi Model**
+   ```php
+   $model->validate($user, 'Catatan validasi', [
+       'additional_data' => 'value'
+   ]);
+   ```
+
+3. **Cek Status Validasi**
+   ```php
+   if ($model->isValidated()) {
+       echo $model->getValidationStatus();
+   }
+   ```
+
+4. **Lihat History Validasi**
+   ```php
+   $history = $model->getValidationHistory();
+   ```
+
+### Diagram Alur Validasi
+
+```mermaid
+sequenceDiagram
+    participant M as Model
+    participant V as Validator
+    participant S as ValidationService
+    participant A as AuditTrail
+    
+    V->>M: validate()
+    M->>S: validate()
+    S->>S: Check Permission
+    S->>S: Begin Transaction
+    S->>M: Update Fields
+    S->>A: Create Audit Trail
+    S->>S: Commit Transaction
+    S-->>M: Return Result
+    M-->>V: Return Status
+```
+
+### Catatan
+- Setiap model yang menggunakan trait `HasValidation` akan otomatis memiliki field dan method validasi
+- Validasi akan mencatat audit trail lengkap dengan metadata
+- Permission check berdasarkan nama model (e.g. 'validate transaction' untuk model Transaction)
+- Status model akan diubah ke 'completed' setelah validasi
+- Semua operasi validasi dalam transaction untuk menjaga konsistensi data
+
+## [2024-06-15 20:00] Refaktor Laporan Pembelian Supply/OVK
+- Livewire AdvancedSupplyPurchaseReport: perbaikan linter, summary, dan tombol output HTML
+- Penambahan method showHtmlReport untuk redirect ke output HTML
+- Penambahan route '/report/supply-purchase/html' untuk output HTML report (print/export)
+- Pembuatan view baru 'pages/reports/pembelian-supply-html.blade.php' untuk output HTML (layout mengikuti pembelian-supply.blade.php)
+- Semua akses summary di Blade sudah array-safe
+- Dokumentasi dan log update sesuai aturan
+
+## [2024-06-15 20:15] Update Fitur Print HTML Laporan Pembelian Supply/OVK
+- Perbaikan fitur print HTML:
+  - Membuka di tab baru menggunakan window.open
+  - Auto print saat halaman dimuat
+  - Parameter print=true untuk trigger auto print
+  - Event Livewire untuk handle window.open
+- Dokumentasi dan log update sesuai aturan
+
+## [2024-06-15 20:25] Perbaikan Tampilan Print Laporan Pembelian Supply/OVK
+- Print CSS: Hilangkan scroll pada tabel, tabel lebar penuh saat print
+- Font diganti ke Segoe UI/Arial/sans-serif, ukuran lebih nyaman
+- Padding/margin card dan header diperkecil saat print
+- Print lebih user friendly dan rapi
+
+## [2024-06-15 20:35] Penambahan Fitur Filter Invoice/No. Transaksi
+- Filter invoice aktif jika tahun & supplier dipilih
+- Jika invoice dipilih, laporan hanya tampilkan batch & detail transaksi invoice tsb
+- Output HTML print juga tampilkan detail transaksi jika filter invoice aktif
+- Dokumentasi dan log update sesuai aturan
+
+## [2024-06-15 20:45] Output Detail Invoice Lebih Lengkap
+- Header detail transaksi: supplier, farm, tanggal, status, invoice number
+- Tabel item: nama, qty, satuan, harga satuan, subtotal
+- Grand total di bawah tabel item
+- Keterangan/keterangan batch jika ada
+- Double check: semua permintaan detail invoice sudah terpenuhi
+
+

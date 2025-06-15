@@ -12,6 +12,12 @@ use App\Models\OVKRecord;
 use App\Models\SupplyStock;
 use App\Models\LivestockPurchaseItem;
 
+// Supply Usage related imports
+use App\Models\SupplyUsage;
+use App\Models\SupplyUsageDetail;
+use App\Models\SupplyPurchase;
+use App\Models\Supply;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -112,10 +118,15 @@ class LivestockCostService
         $feedCost = $feedResult['total_cost'];
         $feedDetails = $feedResult['details'];
 
-        // Calculate OVK costs for this date
+        // Calculate OVK costs for this date (legacy OVKRecord)
         $ovkResult = $this->calculateOVKCosts($livestockId, $tanggal, $livestock);
         $ovkCost = $ovkResult['total_cost'];
         $ovkDetails = $ovkResult['details'];
+
+        // Calculate Supply Usage costs for this date (new SupplyUsage system)
+        $supplyUsageResult = $this->calculateSupplyUsageCosts($livestockId, $tanggal, $livestock);
+        $supplyUsageCost = $supplyUsageResult['total_cost'];
+        $supplyUsageDetails = $supplyUsageResult['details'];
 
         // Get previous day's cumulative data for accurate deplesi calculation
         $previousCostData = $this->getPreviousDayCostData($livestockId, $tanggal);
@@ -125,8 +136,8 @@ class LivestockCostService
         $cumulativeCostPerChickenPreviousDay = $previousCostData['cumulative_cost_per_chicken'];
         $deplesiCost = $deplesiQty * $cumulativeCostPerChickenPreviousDay;
 
-        // Total added cost for today (Feed + OVK + Deplesi)
-        $totalDailyAddedCost = $feedCost + $ovkCost + $deplesiCost;
+        // Total added cost for today (Feed + OVK + Supply Usage + Deplesi)
+        $totalDailyAddedCost = $feedCost + $ovkCost + $supplyUsageCost + $deplesiCost;
 
         // Calculate cumulative costs
         $cumulativeData = $this->calculateCumulativeCosts(
@@ -134,6 +145,7 @@ class LivestockCostService
             $tanggal,
             $feedCost,
             $ovkCost,
+            $supplyUsageCost,
             $deplesiCost,
             $initialPricePerUnit,
             $initialQuantity
@@ -145,8 +157,10 @@ class LivestockCostService
             round($cumulativeData['total_cumulative_added_cost'] / $stockAkhir, 2) : 0;
         $totalCostPerChicken = $initialPricePerUnit + $cumulativeCostPerChicken;
 
-        // Calculate OVK cost per chicken
+        // Calculate individual cost per chicken
         $ovkCostPerChicken = $stockAkhir > 0 ? round($ovkCost / $stockAkhir, 2) : 0;
+        $supplyUsageCostPerChicken = $stockAkhir > 0 ? round($supplyUsageCost / $stockAkhir, 2) : 0;
+        $feedCostPerChicken = $stockAkhir > 0 ? round($feedCost / $stockAkhir, 2) : 0;
 
         // Prepare summary statistics
         $summaryStats = [
@@ -159,6 +173,7 @@ class LivestockCostService
             // Daily costs
             'daily_feed_cost' => round($feedCost, 2),
             'daily_ovk_cost' => round($ovkCost, 2),
+            'daily_supply_usage_cost' => round($supplyUsageCost, 2),
             'daily_deplesi_cost' => round($deplesiCost, 2),
             'total_daily_added_cost' => round($totalDailyAddedCost, 2),
             'daily_added_cost_per_chicken' => $dailyAddedCostPerChicken,
@@ -166,6 +181,7 @@ class LivestockCostService
             // Cumulative costs
             'cumulative_feed_cost' => round($cumulativeData['cumulative_feed_cost'], 2),
             'cumulative_ovk_cost' => round($cumulativeData['cumulative_ovk_cost'], 2),
+            'cumulative_supply_usage_cost' => round($cumulativeData['cumulative_supply_usage_cost'], 2),
             'cumulative_deplesi_cost' => round($cumulativeData['cumulative_deplesi_cost'], 2),
             'total_cumulative_added_cost' => round($cumulativeData['total_cumulative_added_cost'], 2),
             'cumulative_added_cost_per_chicken' => $cumulativeCostPerChicken,
@@ -179,17 +195,21 @@ class LivestockCostService
             'stock_akhir' => $stockAkhir,
             'deplesi_qty' => $deplesiQty,
             'sales_qty' => $salesQty,
+
+            // Individual cost per chicken breakdown
+            'feed_cost_per_chicken' => $feedCostPerChicken,
             'ovk_cost_per_chicken' => $ovkCostPerChicken,
+            'supply_usage_cost_per_chicken' => $supplyUsageCostPerChicken,
 
             // Calculation metadata
-            'calculation_method' => 'business_flow_v2.0',
-            'version' => '2.0',
+            'calculation_method' => 'business_flow_v3.0_with_supply_usage',
+            'version' => '3.0',
             'timestamp' => now()->toIso8601String(),
         ];
 
         Log::info("💰 Cost calculation summary", $summaryStats);
 
-        // Save to LivestockCost with corrected structure
+        // Save to LivestockCost with enhanced structure
         $livestockCost = LivestockCost::updateOrCreate(
             [
                 'livestock_id' => $livestockId,
@@ -203,11 +223,14 @@ class LivestockCostService
                     // Daily costs
                     'pakan' => $feedCost,
                     'ovk' => $ovkCost,
+                    'supply_usage' => $supplyUsageCost, // NEW: Supply usage cost
                     'deplesi' => $deplesiCost,
                     'daily_total' => $totalDailyAddedCost,
 
                     // Per chicken costs
+                    'feed_per_ayam' => $feedCostPerChicken,
                     'ovk_per_ayam' => $ovkCostPerChicken,
+                    'supply_usage_per_ayam' => $supplyUsageCostPerChicken, // NEW: Supply usage cost per chicken
                     'daily_added_cost_per_chicken' => $dailyAddedCostPerChicken,
                     'cumulative_cost_per_chicken' => $totalCostPerChicken,
 
@@ -220,6 +243,7 @@ class LivestockCostService
                     // Detailed breakdowns
                     'feed_detail' => $feedDetails,
                     'ovk_detail' => $ovkDetails,
+                    'supply_usage_detail' => $supplyUsageDetails, // NEW: Supply usage details
 
                     // Summary and metadata
                     'summary' => $summaryStats,
@@ -228,8 +252,8 @@ class LivestockCostService
                         'cumulative_cost_per_chicken' => $cumulativeCostPerChickenPreviousDay,
                     ],
                     'calculations' => [
-                        'method' => 'business_flow_accurate',
-                        'version' => '2.0',
+                        'method' => 'business_flow_accurate_with_supply_usage',
+                        'version' => '3.0',
                         'timestamp' => now()->toIso8601String(),
                     ],
                     'initial_purchase_item_details' => [
@@ -247,7 +271,8 @@ class LivestockCostService
         Log::info("✅ Livestock cost calculation completed", [
             'livestock_cost_id' => $livestockCost->id,
             'total_cost' => $livestockCost->total_cost,
-            'cost_per_ayam' => $livestockCost->cost_per_ayam
+            'cost_per_ayam' => $livestockCost->cost_per_ayam,
+            'supply_usage_cost' => $supplyUsageCost
         ]);
 
         return $livestockCost;
@@ -348,7 +373,7 @@ class LivestockCostService
     }
 
     /**
-     * Calculate OVK costs for a specific date
+     * Calculate OVK costs for this date (legacy OVKRecord system)
      */
     private function calculateOVKCosts($livestockId, $tanggal, $livestock)
     {
@@ -408,6 +433,137 @@ class LivestockCostService
     }
 
     /**
+     * Calculate Supply Usage costs for this date (new SupplyUsage system)
+     * This method calculates costs from SupplyUsage and SupplyUsageDetail records
+     */
+    private function calculateSupplyUsageCosts($livestockId, $tanggal, $livestock)
+    {
+        // Get supply usage details for this date and livestock
+        $supplyUsageDetails = SupplyUsageDetail::whereHas('supplyUsage', function ($query) use ($livestockId, $tanggal) {
+            $query->where('livestock_id', $livestockId)
+                ->whereDate('usage_date', $tanggal);
+        })->with([
+            'supplyStock.supplyPurchase.unit',
+            'supply',
+            'supplyUsage'
+        ])->get();
+
+        $totalSupplyUsageCost = 0;
+        $supplyUsageDetails_array = [];
+
+        Log::info("🧪 Calculating supply usage costs", [
+            'livestock_id' => $livestockId,
+            'date' => $tanggal,
+            'details_count' => $supplyUsageDetails->count()
+        ]);
+
+        foreach ($supplyUsageDetails as $detail) {
+            $supply = $detail->supply;
+            $supplyStock = $detail->supplyStock;
+            $supplyPurchase = $supplyStock?->supplyPurchase;
+
+            if (!$supply || !$supplyStock || !$supplyPurchase) {
+                Log::warning("⚠️ Missing supply data for detail", [
+                    'detail_id' => $detail->id,
+                    'supply_exists' => $supply ? 'yes' : 'no',
+                    'stock_exists' => $supplyStock ? 'yes' : 'no',
+                    'purchase_exists' => $supplyPurchase ? 'yes' : 'no'
+                ]);
+                continue;
+            }
+
+            $supplyName = $supply->name ?? 'Unknown Supply';
+            $supplyId = $supply->id;
+
+            // Get unit conversion information from supply data
+            $conversionUnits = collect($supply->data['conversion_units'] ?? []);
+            $purchaseUnitId = $supplyPurchase->unit_id;
+            $convertedUnitId = $supplyPurchase->converted_unit;
+
+            $purchaseUnit = $supplyPurchase->unit?->name ?? 'Unknown';
+            $smallestUnitName = 'Unknown';
+            $conversionRate = 1;
+
+            // Calculate conversion rate and unit names
+            if (!empty($conversionUnits)) {
+                $purchaseUnitData = $conversionUnits->firstWhere('unit_id', $purchaseUnitId);
+                $smallestUnitData = $conversionUnits->firstWhere('unit_id', $convertedUnitId) ??
+                    $conversionUnits->firstWhere('is_smallest', true);
+
+                if ($purchaseUnitData && $smallestUnitData) {
+                    $purchaseUnitValue = floatval($purchaseUnitData['value']);
+                    $smallestUnitValue = floatval($smallestUnitData['value']);
+                    $conversionRate = $purchaseUnitValue / $smallestUnitValue;
+
+                    if ($convertedUnitId) {
+                        $smallestUnit = \App\Models\Unit::find($convertedUnitId);
+                        $smallestUnitName = $smallestUnit?->name ?? 'Unknown';
+                    } else {
+                        $smallestUnitName = $smallestUnitData['unit_name'] ?? 'Unknown';
+                    }
+                }
+            } else {
+                // Fallback to legacy conversion field
+                $conversionRate = floatval($supply->conversion ?? 1);
+                $smallestUnitName = $supply->data['unit_details']['name'] ?? 'Unknown';
+            }
+
+            // Calculate cost using the appropriate price
+            $pricePerSmallestUnit = $supplyPurchase->price_per_converted_unit ??
+                ($supplyPurchase->price_per_unit / $conversionRate);
+            $qtyInSmallestUnit = $detail->quantity_taken;
+            $subtotal = $qtyInSmallestUnit * $pricePerSmallestUnit;
+            $qtyInPurchaseUnit = $qtyInSmallestUnit / $conversionRate;
+
+            $totalSupplyUsageCost += $subtotal;
+
+            Log::info("💊 Supply usage cost calculated", [
+                'supply_name' => $supplyName,
+                'quantity_taken' => $qtyInSmallestUnit,
+                'price_per_unit' => $pricePerSmallestUnit,
+                'subtotal' => $subtotal,
+                'conversion_rate' => $conversionRate
+            ]);
+
+            // Aggregate by supply type
+            $key = $supplyName . ' (' . $supplyId . ')';
+            if (isset($supplyUsageDetails_array[$key])) {
+                $supplyUsageDetails_array[$key]['jumlah_smallest_unit'] += $qtyInSmallestUnit;
+                $supplyUsageDetails_array[$key]['jumlah_purchase_unit'] += $qtyInPurchaseUnit;
+                $supplyUsageDetails_array[$key]['subtotal'] += $subtotal;
+            } else {
+                $supplyUsageDetails_array[$key] = [
+                    'supply_id' => $supplyId,
+                    'supply_name' => $supplyName,
+                    'jumlah_smallest_unit' => $qtyInSmallestUnit,
+                    'smallest_unit' => $smallestUnitName,
+                    'jumlah_purchase_unit' => $qtyInPurchaseUnit,
+                    'purchase_unit' => $purchaseUnit,
+                    'conversion_rate' => $conversionRate,
+                    'price_per_smallest_unit' => $pricePerSmallestUnit,
+                    'price_per_purchase_unit' => $supplyPurchase->price_per_unit,
+                    'subtotal' => $subtotal,
+                    'purchase_date' => $supplyStock->date,
+                    'batch_info' => [
+                        'batch_id' => $supplyPurchase->supply_purchase_batch_id ?? null,
+                        'supplier' => $supplyPurchase->batch->supplier->name ?? 'Unknown',
+                    ]
+                ];
+            }
+        }
+
+        Log::info("🧪 Supply usage cost calculation completed", [
+            'total_cost' => $totalSupplyUsageCost,
+            'details_count' => count($supplyUsageDetails_array)
+        ]);
+
+        return [
+            'total_cost' => $totalSupplyUsageCost,
+            'details' => $supplyUsageDetails_array
+        ];
+    }
+
+    /**
      * Get previous day's cost data for accurate deplesi calculation
      */
     private function getPreviousDayCostData($livestockId, $tanggal)
@@ -439,8 +595,9 @@ class LivestockCostService
 
     /**
      * Calculate cumulative costs across all previous days
+     * Updated to include supply usage costs
      */
-    private function calculateCumulativeCosts($livestockId, $tanggal, $feedCost, $ovkCost, $deplesiCost, $initialPricePerUnit, $initialQuantity)
+    private function calculateCumulativeCosts($livestockId, $tanggal, $feedCost, $ovkCost, $supplyUsageCost, $deplesiCost, $initialPricePerUnit, $initialQuantity)
     {
         // Get all previous costs
         $previousCosts = LivestockCost::where('livestock_id', $livestockId)
@@ -450,25 +607,29 @@ class LivestockCostService
 
         $cumulativeFeedCost = 0;
         $cumulativeOvkCost = 0;
+        $cumulativeSupplyUsageCost = 0;
         $cumulativeDeplesiCost = 0;
 
         foreach ($previousCosts as $cost) {
             $breakdown = $cost->cost_breakdown ?? [];
             $cumulativeFeedCost += $breakdown['pakan'] ?? 0;
             $cumulativeOvkCost += $breakdown['ovk'] ?? 0;
+            $cumulativeSupplyUsageCost += $breakdown['supply_usage'] ?? 0; // NEW: Include supply usage
             $cumulativeDeplesiCost += $breakdown['deplesi'] ?? 0;
         }
 
         // Add today's costs
         $cumulativeFeedCost += $feedCost;
         $cumulativeOvkCost += $ovkCost;
+        $cumulativeSupplyUsageCost += $supplyUsageCost; // NEW: Include today's supply usage
         $cumulativeDeplesiCost += $deplesiCost;
 
-        $totalCumulativeAddedCost = $cumulativeFeedCost + $cumulativeOvkCost + $cumulativeDeplesiCost;
+        $totalCumulativeAddedCost = $cumulativeFeedCost + $cumulativeOvkCost + $cumulativeSupplyUsageCost + $cumulativeDeplesiCost;
 
         return [
             'cumulative_feed_cost' => $cumulativeFeedCost,
             'cumulative_ovk_cost' => $cumulativeOvkCost,
+            'cumulative_supply_usage_cost' => $cumulativeSupplyUsageCost, // NEW: Cumulative supply usage cost
             'cumulative_deplesi_cost' => $cumulativeDeplesiCost,
             'total_cumulative_added_cost' => $totalCumulativeAddedCost,
         ];
@@ -498,5 +659,78 @@ class LivestockCostService
         }
 
         Log::info("✅ Completed recalculating livestock costs for range");
+    }
+
+    /**
+     * Get comprehensive cost breakdown for a livestock over a date range
+     * This method provides detailed analysis of all cost components
+     */
+    public function getCostAnalysis($livestockId, $startDate = null, $endDate = null)
+    {
+        $query = LivestockCost::where('livestock_id', $livestockId);
+
+        if ($startDate) $query->whereDate('tanggal', '>=', $startDate);
+        if ($endDate) $query->whereDate('tanggal', '<=', $endDate);
+
+        $costs = $query->orderBy('tanggal')->get();
+
+        $analysis = [
+            'livestock_id' => $livestockId,
+            'period' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'days_count' => $costs->count()
+            ],
+            'totals' => [
+                'feed_cost' => 0,
+                'ovk_cost' => 0,
+                'supply_usage_cost' => 0,
+                'deplesi_cost' => 0,
+                'total_cost' => 0
+            ],
+            'averages' => [
+                'daily_feed_cost' => 0,
+                'daily_ovk_cost' => 0,
+                'daily_supply_usage_cost' => 0,
+                'daily_deplesi_cost' => 0,
+                'daily_total_cost' => 0
+            ],
+            'breakdown_by_date' => [],
+            'cost_trends' => []
+        ];
+
+        foreach ($costs as $cost) {
+            $breakdown = $cost->cost_breakdown ?? [];
+
+            // Accumulate totals
+            $analysis['totals']['feed_cost'] += $breakdown['pakan'] ?? 0;
+            $analysis['totals']['ovk_cost'] += $breakdown['ovk'] ?? 0;
+            $analysis['totals']['supply_usage_cost'] += $breakdown['supply_usage'] ?? 0;
+            $analysis['totals']['deplesi_cost'] += $breakdown['deplesi'] ?? 0;
+            $analysis['totals']['total_cost'] += $cost->total_cost ?? 0;
+
+            // Store daily breakdown
+            $analysis['breakdown_by_date'][] = [
+                'date' => $cost->tanggal,
+                'feed_cost' => $breakdown['pakan'] ?? 0,
+                'ovk_cost' => $breakdown['ovk'] ?? 0,
+                'supply_usage_cost' => $breakdown['supply_usage'] ?? 0,
+                'deplesi_cost' => $breakdown['deplesi'] ?? 0,
+                'total_cost' => $cost->total_cost ?? 0,
+                'cost_per_chicken' => $cost->cost_per_ayam ?? 0,
+                'stock_akhir' => $breakdown['stock_akhir'] ?? 0
+            ];
+        }
+
+        // Calculate averages
+        if ($costs->count() > 0) {
+            $analysis['averages']['daily_feed_cost'] = $analysis['totals']['feed_cost'] / $costs->count();
+            $analysis['averages']['daily_ovk_cost'] = $analysis['totals']['ovk_cost'] / $costs->count();
+            $analysis['averages']['daily_supply_usage_cost'] = $analysis['totals']['supply_usage_cost'] / $costs->count();
+            $analysis['averages']['daily_deplesi_cost'] = $analysis['totals']['deplesi_cost'] / $costs->count();
+            $analysis['averages']['daily_total_cost'] = $analysis['totals']['total_cost'] / $costs->count();
+        }
+
+        return $analysis;
     }
 }

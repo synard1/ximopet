@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Security Protection Debug v2.3</title>
+    <meta name="app-env" content="production">
+    <meta name="csrf-token" content="debug-token">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .debug-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .button-group {
+            margin: 10px 0;
+        }
+
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+
+        .status-good {
+            color: green;
+            font-weight: bold;
+        }
+
+        .status-bad {
+            color: red;
+            font-weight: bold;
+        }
+
+        .status-warning {
+            color: orange;
+            font-weight: bold;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            background: #f9f9f9;
+            border-left: 3px solid #007cba;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🛡️ Security Protection Debug v2.3</h1>
+
+    <div class="debug-section">
+        <h3>📊 Real-time Status</h3>
+        <div id="debug-info">Loading...</div>
+    </div>
+
+    <div class="debug-section">
+        <h3>🔧 Manual Controls</h3>
+        <div class="button-group">
+            <button onclick="testF12()" style="background: #ff6b6b; color: white;">Test F12 Detection</button>
+            <button onclick="testCtrlShiftI()" style="background: #ff6b6b; color: white;">Test Ctrl+Shift+I</button>
+            <button onclick="testDevTools()" style="background: #ff6b6b; color: white;">Manual DevTools Test</button>
+        </div>
+        <div class="button-group">
+            <button onclick="forceEnable()" style="background: #51cf66; color: white;">Force Enable</button>
+            <button onclick="forceDisable()" style="background: #868e96; color: white;">Force Disable</button>
+            <button onclick="resetSecurity()" style="background: #339af0; color: white;">Reset Security</button>
+        </div>
+        <div class="button-group">
+            <button onclick="showStats()">Show Console Stats</button>
+            <button onclick="clearStorage()">Clear Storage</button>
+            <button onclick="testServerConfig()">Test Server Config</button>
+        </div>
+    </div>
+
+    <div class="debug-section">
+        <h3>📝 Console Logs</h3>
+        <div id="console-logs"></div>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <script src="/assets/js/security-protection.js"></script>
+    <script>
+        let logEntries = [];
+
+        // Override console.log to capture security logs
+        const originalConsoleLog = console.log;
+        console.log = function (...args) {
+            originalConsoleLog.apply(console, args);
+
+            // Capture security-related logs
+            const message = args.join(' ');
+            if (message.includes('[Security]')) {
+                logEntries.push({
+                    timestamp: new Date().toLocaleTimeString(),
+                    message: message
+                });
+                updateConsoleLogs();
+            }
+        };
+
+        function updateDebugInfo() {
+            if (!window.SecurityProtection) {
+                document.getElementById('debug-info').innerHTML = '<span class="status-bad">❌ SecurityProtection not loaded</span>';
+                return;
+            }
+
+            const stats = window.SecurityProtection.getStatistics();
+            const hostname = window.location.hostname;
+
+            document.getElementById('debug-info').innerHTML = `
+                <h4>🌐 Environment Detection:</h4>
+                <p><strong>Hostname:</strong> ${hostname}</p>
+                <p><strong>Is Production:</strong> <span class="${stats.isProduction ? 'status-good' : 'status-bad'}">${stats.isProduction}</span></p>
+                <p><strong>Is Enabled:</strong> <span class="${stats.isEnabled ? 'status-good' : 'status-bad'}">${stats.isEnabled}</span></p>
+                <p><strong>Is Blacklisted:</strong> <span class="${stats.isBlacklisted ? 'status-bad' : 'status-good'}">${stats.isBlacklisted}</span></p>
+                <p><strong>Whitelist Hostnames:</strong> ${window.SecurityProtection.whitelistHostnames ? window.SecurityProtection.whitelistHostnames.join(', ') : 'Not loaded'}</p>
+                
+                <h4>🔒 Security Status:</h4>
+                <p><strong>Warning Count:</strong> <span class="${stats.warningCount > 0 ? 'status-warning' : 'status-good'}">${stats.warningCount}/${stats.maxWarnings}</span></p>
+                <p><strong>DevTools Detected:</strong> <span class="${stats.devToolsDetected ? 'status-bad' : 'status-good'}">${stats.devToolsDetected}</span></p>
+                <p><strong>Consecutive Detections:</strong> ${stats.consecutiveDetections}</p>
+                
+                <h4>⚙️ Detection Settings:</h4>
+                <p><strong>Window Threshold:</strong> ${window.SecurityProtection.detectionSettings ? window.SecurityProtection.detectionSettings.windowThreshold + 'px' : 'Not loaded'}</p>
+                <p><strong>Detection Interval:</strong> ${window.SecurityProtection.detectionSettings ? window.SecurityProtection.detectionSettings.detectionInterval + 'ms' : 'Not loaded'}</p>
+                <p><strong>Required Detections:</strong> ${window.SecurityProtection.detectionSettings ? window.SecurityProtection.detectionSettings.consecutiveDetections + 'x' : 'Not loaded'}</p>
+                <p><strong>Violation Cooldown:</strong> ${window.SecurityProtection.detectionSettings ? window.SecurityProtection.detectionSettings.violationCooldown + 'ms' : 'Not loaded'}</p>
+                
+                <h4>🔍 Detection Methods:</h4>
+                <p><strong>DevTools:</strong> <span class="${stats.detectionMethods.devtools ? 'status-good' : 'status-bad'}">${stats.detectionMethods.devtools}</span></p>
+                <p><strong>Keyboard Shortcuts:</strong> <span class="${stats.detectionMethods.keyboardShortcuts ? 'status-good' : 'status-bad'}">${stats.detectionMethods.keyboardShortcuts}</span></p>
+                <p><strong>Right Click:</strong> <span class="${stats.detectionMethods.rightClick ? 'status-good' : 'status-bad'}">${stats.detectionMethods.rightClick}</span></p>
+                <p><strong>Console Access:</strong> <span class="${stats.detectionMethods.consoleAccess ? 'status-good' : 'status-bad'}">${stats.detectionMethods.consoleAccess}</span></p>
+                <p><strong>Debugger:</strong> <span class="${stats.detectionMethods.debugger ? 'status-good' : 'status-bad'}">${stats.detectionMethods.debugger}</span></p>
+                
+                <h4>📐 Window Size Info:</h4>
+                <p><strong>Inner Size:</strong> ${window.innerWidth}x${window.innerHeight}</p>
+                <p><strong>Outer Size:</strong> ${window.outerWidth}x${window.outerHeight}</p>
+                <p><strong>Size Difference:</strong> <span class="${(window.outerWidth - window.innerWidth) > 160 ? 'status-warning' : 'status-good'}">${window.outerWidth - window.innerWidth}x${window.outerHeight - window.innerHeight}</span></p>
+                
+                <h4>📋 LocalStorage:</h4>
+                <p><strong>Warning Count:</strong> ${localStorage.getItem('security_warning_count') || '0'}</p>
+                
+                <h4>📊 Violation History:</h4>
+                <pre>${JSON.stringify(stats.violationHistory, null, 2)}</pre>
+            `;
+        }
+
+        function updateConsoleLogs() {
+            const logsContainer = document.getElementById('console-logs');
+            logsContainer.innerHTML = logEntries.slice(-20).map(entry =>
+                `<div class="log-entry"><strong>${entry.timestamp}:</strong> ${entry.message}</div>`
+            ).join('');
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function testF12() {
+            const event = new KeyboardEvent('keydown', {
+                keyCode: 123,
+                which: 123,
+                key: 'F12',
+                bubbles: true
+            });
+            document.dispatchEvent(event);
+            setTimeout(updateDebugInfo, 100);
+        }
+
+        function testCtrlShiftI() {
+            const event = new KeyboardEvent('keydown', {
+                keyCode: 73,
+                which: 73,
+                key: 'I',
+                ctrlKey: true,
+                shiftKey: true,
+                bubbles: true
+            });
+            document.dispatchEvent(event);
+            setTimeout(updateDebugInfo, 100);
+        }
+
+        function testDevTools() {
+            if (window.SecurityProtection) {
+                window.SecurityProtection.handleSecurityViolation('Manual DevTools test from debug page');
+                setTimeout(updateDebugInfo, 100);
+            }
+        }
+
+        function forceEnable() {
+            if (window.SecurityProtection) {
+                window.SecurityProtection.forceEnable();
+                setTimeout(updateDebugInfo, 100);
+            }
+        }
+
+        function forceDisable() {
+            if (window.SecurityProtection) {
+                window.SecurityProtection.forceDisable();
+                setTimeout(updateDebugInfo, 100);
+            }
+        }
+
+        function showStats() {
+            if (window.SecurityProtection) {
+                console.log('🔍 Security Protection Statistics:', window.SecurityProtection.getStatistics());
+                console.log('🔧 Detection Settings:', window.SecurityProtection.detectionSettings);
+                console.log('🌐 Server Config:', window.SecurityProtection.serverConfig);
+            }
+            updateDebugInfo();
+        }
+
+        function resetSecurity() {
+            if (window.SecurityProtection) {
+                window.SecurityProtection.reset();
+                setTimeout(updateDebugInfo, 100);
+            }
+        }
+
+        function clearStorage() {
+            localStorage.clear();
+            setTimeout(updateDebugInfo, 100);
+        }
+
+        function testServerConfig() {
+            fetch('/api/security/config')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('🔧 Server Config Response:', data);
+                    alert('Server config loaded! Check console for details.');
+                })
+                .catch(error => {
+                    console.error('❌ Server Config Error:', error);
+                    alert('Failed to load server config! Check console for details.');
+                });
+        }
+
+        function clearLogs() {
+            logEntries = [];
+            updateConsoleLogs();
+        }
+
+        // Update debug info every 2 seconds
+        setInterval(updateDebugInfo, 2000);
+
+        // Initial update after a delay to allow SecurityProtection to initialize
+        setTimeout(updateDebugInfo, 2000);
+
+        // Show initialization message
+        console.log('🚀 Debug page loaded. Security Protection should initialize shortly...');
+    </script>
+</body>
+
+</html>

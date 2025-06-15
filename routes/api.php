@@ -20,6 +20,7 @@ use App\Http\Controllers\SupplyController;
 use App\Http\Controllers\MutationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\SecurityController;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,7 +58,7 @@ Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
     // Reports Routes
     Route::prefix('reports')->group(function () {
         Route::post('/performa-mitra', [ReportsController::class, 'exportPerformancePartner']);
-        Route::post('/performa', [ReportsController::class, 'exportPerformance']);
+        Route::post('/performa', [ReportsController::class, 'exportPerformanceEnhanced']);
         Route::post('/penjualan', [ReportsController::class, 'exportPenjualan']);
         Route::post('/harian', [ReportsController::class, 'exportHarian']);
         Route::post('/livestock-cost', [ReportsController::class, 'exportCostHarian']);
@@ -146,7 +147,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::get('/{farm}/operators', [AppApi::class, 'getOperators']);
         Route::post('/{farm}/operators', [AppApi::class, 'farmOperator']);
         Route::delete('/{farm}/operators', [AppApi::class, 'deleteFarmOperator']);
-        Route::post('/{farm}/kandangs', [FarmController::class, 'getKandangs'])->name('kandangs');
+        Route::post('/{farm}/coops', [FarmController::class, 'getCoops'])->name('coops');
     });
 
     // Kandang Routes
@@ -196,6 +197,25 @@ Route::prefix('auth')->group(function () {
 
     // Password Reset
     Route::post('/password/reset', [AuthenticatedSessionController::class, 'resetPassword']);
+});
+
+// Security Routes
+Route::prefix('security')->group(function () {
+    // Record security violation (no auth required for blacklisted IPs)
+    Route::post('/violation', [SecurityController::class, 'recordViolation']);
+
+    // Security logout (no auth required as user might be logged out already)
+    Route::post('/logout', [SecurityController::class, 'securityLogout']);
+
+    // Get security status (no auth required for monitoring)
+    Route::get('/status', [SecurityController::class, 'getSecurityStatus']);
+
+    // Admin routes (require authentication and admin role)
+    Route::middleware(['auth:sanctum'])->group(function () {
+        Route::get('/blacklist', [SecurityController::class, 'getBlacklistEntries']);
+        Route::delete('/blacklist', [SecurityController::class, 'removeFromBlacklist']);
+        Route::post('/blacklist/clean', [SecurityController::class, 'cleanExpiredEntries']);
+    });
 });
 
 // New route for getting menu data

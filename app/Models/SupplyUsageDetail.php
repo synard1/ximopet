@@ -31,4 +31,9 @@ class SupplyUsageDetail extends BaseModel
     {
         return $this->belongsTo(Supply::class);
     }
+
+    public function supplyStock()
+    {
+        return $this->belongsTo(SupplyStock::class, 'supply_stock_id');
+    }
 }

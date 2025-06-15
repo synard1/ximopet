@@ -8,7 +8,55 @@
  * @updated 2024-12-19 - Complete refactor for universality
  */
 
-console.log("🚀 Loading UNIVERSAL Browser Notification Handler...");
+// Debug mode check - get from Laravel config or environment
+window.NotificationDebugMode = (function () {
+    // Check if Laravel config is available
+    if (
+        typeof window.Laravel !== "undefined" &&
+        window.Laravel.config &&
+        window.Laravel.config.app_debug !== undefined
+    ) {
+        return window.Laravel.config.app_debug;
+    }
+
+    // Check meta tag
+    const debugMeta = document.querySelector('meta[name="app-debug"]');
+    if (debugMeta) {
+        return debugMeta.getAttribute("content") === "true";
+    }
+
+    // Check if we're on localhost or development environment
+    const isDevelopment =
+        window.location.hostname === "localhost" ||
+        window.location.hostname.includes("demo51") ||
+        window.location.hostname.includes("127.0.0.1") ||
+        window.location.hostname.includes(".local");
+
+    return isDevelopment;
+})();
+
+// Custom console.log that respects debug mode
+function debugLog(...args) {
+    if (window.NotificationDebugMode) {
+        console.log(...args);
+    }
+}
+
+// Custom console.error that respects debug mode
+function debugError(...args) {
+    if (window.NotificationDebugMode) {
+        console.error(...args);
+    }
+}
+
+// Custom console.warn that respects debug mode
+function debugWarn(...args) {
+    if (window.NotificationDebugMode) {
+        console.warn(...args);
+    }
+}
+
+debugLog("🚀 Loading UNIVERSAL Browser Notification Handler...");
 
 // Global notification system state
 window.NotificationSystem = {
@@ -48,7 +96,7 @@ window.NotificationSystem = {
 
     // Initialize notification system
     init: function () {
-        console.log("🔔 Initializing UNIVERSAL Notification System...");
+        debugLog("🔔 Initializing UNIVERSAL Notification System...");
 
         // Get current user ID to exclude self-notifications
         this.getCurrentUserId();
@@ -68,8 +116,8 @@ window.NotificationSystem = {
         // DISABLED: Old polling system (replaced by SSE)
         // this.initializeRealtimeBridge();
 
-        console.log("✅ UNIVERSAL notification system initialized");
-        console.log(
+        debugLog("✅ UNIVERSAL notification system initialized");
+        debugLog(
             "📊 Initially detected tables:",
             this.tableConfig.detectedTables
         );
@@ -77,25 +125,25 @@ window.NotificationSystem = {
 
     // Setup delayed detection for tables that load after initial page load
     setupDelayedDetection: function () {
-        console.log("⏰ Setting up delayed table detection...");
+        debugLog("⏰ Setting up delayed table detection...");
 
         // Re-detect tables after 1 second (for DataTables that initialize after DOM ready)
         setTimeout(() => {
-            console.log("🔄 Running delayed table detection (1s)...");
+            debugLog("🔄 Running delayed table detection (1s)...");
             this.autoDetectTables();
         }, 1000);
 
         // Re-detect tables after 3 seconds (for slow-loading DataTables)
         setTimeout(() => {
-            console.log("🔄 Running delayed table detection (3s)...");
+            debugLog("🔄 Running delayed table detection (3s)...");
             this.autoDetectTables();
         }, 3000);
 
         // Re-detect tables after 5 seconds (final attempt)
         setTimeout(() => {
-            console.log("🔄 Running final delayed table detection (5s)...");
+            debugLog("🔄 Running final delayed table detection (5s)...");
             this.autoDetectTables();
-            console.log(
+            debugLog(
                 "📊 Final detected tables:",
                 this.tableConfig.detectedTables
             );
@@ -104,13 +152,13 @@ window.NotificationSystem = {
 
     // Auto-detect all DataTables on the page
     autoDetectTables: function () {
-        console.log("🔍 Auto-detecting DataTables on page...");
+        debugLog("🔍 Auto-detecting DataTables on page...");
 
         // Clear previous detections to avoid duplicates
         this.tableConfig.detectedTables = [];
 
         // Debug: Check environment
-        console.log("🔍 Environment check:", {
+        debugLog("🔍 Environment check:", {
             jQueryAvailable: typeof $ !== "undefined",
             dataTableAvailable: typeof $ !== "undefined" && $.fn.DataTable,
             laravelDataTablesAvailable: !!window.LaravelDataTables,
@@ -122,7 +170,7 @@ window.NotificationSystem = {
         // Method 1: Check known table IDs
         this.tableConfig.knownTables.forEach((tableId) => {
             const element = document.getElementById(tableId);
-            console.log(`🔍 Checking known table #${tableId}:`, {
+            debugLog(`🔍 Checking known table #${tableId}:`, {
                 elementExists: !!element,
                 isDataTable:
                     element &&
@@ -143,14 +191,14 @@ window.NotificationSystem = {
                     type: this.getTableType(tableId),
                     method: "known_id",
                 });
-                console.log(`✅ Detected known table: #${tableId}`);
+                debugLog(`✅ Detected known table: #${tableId}`);
             }
         });
 
         // Method 2: Check LaravelDataTables registry
         if (window.LaravelDataTables) {
             Object.keys(window.LaravelDataTables).forEach((tableId) => {
-                console.log(`🔍 Checking Laravel registry table #${tableId}`);
+                debugLog(`🔍 Checking Laravel registry table #${tableId}`);
 
                 // Avoid duplicates
                 if (
@@ -166,16 +214,16 @@ window.NotificationSystem = {
                             type: this.getTableType(tableId),
                             method: "laravel_registry",
                         });
-                        console.log(`✅ Detected Laravel table: #${tableId}`);
+                        debugLog(`✅ Detected Laravel table: #${tableId}`);
                     } else {
-                        console.log(
+                        debugLog(
                             `⚠️ Laravel table #${tableId} element not found in DOM`
                         );
                     }
                 }
             });
         } else {
-            console.log("⚠️ LaravelDataTables registry not available");
+            debugLog("⚠️ LaravelDataTables registry not available");
         }
 
         // Method 3: Scan all tables with DataTable class
@@ -185,7 +233,7 @@ window.NotificationSystem = {
                 domTableCount++;
                 const isDataTable =
                     $.fn.DataTable && $.fn.DataTable.isDataTable(element);
-                console.log(`🔍 DOM table ${index + 1}:`, {
+                debugLog(`🔍 DOM table ${index + 1}:`, {
                     id: element.id || `table-${index}`,
                     isDataTable: isDataTable,
                 });
@@ -204,16 +252,16 @@ window.NotificationSystem = {
                             type: this.getTableType(tableId),
                             method: "dom_scan",
                         });
-                        console.log(`✅ Detected DOM table: #${tableId}`);
+                        debugLog(`✅ Detected DOM table: #${tableId}`);
                     }
                 }
             });
-            console.log(`🔍 Total DOM tables scanned: ${domTableCount}`);
+            debugLog(`🔍 Total DOM tables scanned: ${domTableCount}`);
         } else {
-            console.log("⚠️ jQuery not available for DOM scanning");
+            debugLog("⚠️ jQuery not available for DOM scanning");
         }
 
-        console.log(
+        debugLog(
             `🔍 Auto-detection complete: ${this.tableConfig.detectedTables.length} tables found`,
             this.tableConfig.detectedTables
         );
@@ -233,7 +281,7 @@ window.NotificationSystem = {
     // Get current user ID to exclude self-notifications
     getCurrentUserId: function () {
         try {
-            console.log("👤 DEBUG: Attempting to get current user ID...");
+            debugLog("👤 DEBUG: Attempting to get current user ID...");
 
             // Method 1: Try Laravel window object
             if (
@@ -242,7 +290,7 @@ window.NotificationSystem = {
                 window.Laravel.user.id
             ) {
                 this.currentUserId = parseInt(window.Laravel.user.id);
-                console.log(
+                debugLog(
                     "👤 Got user ID from window.Laravel:",
                     this.currentUserId
                 );
@@ -252,7 +300,7 @@ window.NotificationSystem = {
             // Method 2: Try window.authUserId
             if (window.authUserId) {
                 this.currentUserId = parseInt(window.authUserId);
-                console.log(
+                debugLog(
                     "👤 Got user ID from window.authUserId:",
                     this.currentUserId
                 );
@@ -265,7 +313,7 @@ window.NotificationSystem = {
                 const userId = userMeta.getAttribute("content");
                 if (userId && userId !== "null" && userId !== "") {
                     this.currentUserId = parseInt(userId);
-                    console.log(
+                    debugLog(
                         "👤 Got user ID from meta tag:",
                         this.currentUserId
                     );
@@ -276,19 +324,17 @@ window.NotificationSystem = {
             // Method 4: Try to extract from page context (Laravel Blade)
             if (window.user_id) {
                 this.currentUserId = parseInt(window.user_id);
-                console.log(
+                debugLog(
                     "👤 Got user ID from window.user_id:",
                     this.currentUserId
                 );
                 return;
             }
 
-            console.log(
-                "⚠️ Could not determine current user ID from any source"
-            );
+            debugLog("⚠️ Could not determine current user ID from any source");
             this.currentUserId = null;
         } catch (error) {
-            console.log("⚠️ Error getting current user ID:", error.message);
+            debugLog("⚠️ Error getting current user ID:", error.message);
             this.currentUserId = null;
         }
     },
@@ -297,7 +343,7 @@ window.NotificationSystem = {
     initializeTimestamp: function () {
         // Set timestamp to current time to only get new notifications
         this.lastTimestamp = Math.floor(Date.now() / 1000) - 300; // 5 minutes ago for debugging
-        console.log(
+        debugLog(
             "⏰ Initialized timestamp for notifications from last 5 minutes:",
             this.lastTimestamp,
             "Current time:",
@@ -309,7 +355,7 @@ window.NotificationSystem = {
     requestNotificationPermission: function () {
         if ("Notification" in window && Notification.permission === "default") {
             Notification.requestPermission().then((permission) => {
-                console.log("🔔 Browser notification permission:", permission);
+                debugLog("🔔 Browser notification permission:", permission);
             });
         }
     },
@@ -319,20 +365,20 @@ window.NotificationSystem = {
         this.testBridgeConnection()
             .then((available) => {
                 if (available) {
-                    console.log(
+                    debugLog(
                         "🌉 Bridge available - starting real-time polling"
                     );
                     this.bridgeActive = true;
                     this.startRealtimePolling();
                 } else {
-                    console.log(
+                    debugLog(
                         "❌ Bridge not available - notifications disabled"
                     );
                     this.bridgeActive = false;
                 }
             })
             .catch((error) => {
-                console.log("❌ Bridge initialization failed:", error.message);
+                debugLog("❌ Bridge initialization failed:", error.message);
                 this.bridgeActive = false;
             });
     },
@@ -340,22 +386,22 @@ window.NotificationSystem = {
     // Test bridge connection
     testBridgeConnection: function () {
         const bridgeUrl = "/testing/notification_bridge.php?action=status";
-        console.log("🌉 Testing bridge connection at:", bridgeUrl);
+        debugLog("🌉 Testing bridge connection at:", bridgeUrl);
 
         return fetch(bridgeUrl, {
             method: "GET",
             cache: "no-cache",
         })
             .then((response) => {
-                console.log("🌉 Bridge response status:", response.status);
+                debugLog("🌉 Bridge response status:", response.status);
                 return response.json();
             })
             .then((data) => {
-                console.log("🌉 Bridge response data:", data);
+                debugLog("🌉 Bridge response data:", data);
                 return data && data.bridge_active === true;
             })
             .catch((error) => {
-                console.log("❌ Bridge connection failed:", error.message);
+                debugLog("❌ Bridge connection failed:", error.message);
                 return false;
             });
     },
@@ -367,7 +413,7 @@ window.NotificationSystem = {
         }
 
         this.connectionStatus = "connected";
-        console.log(
+        debugLog(
             "🔄 Starting UNIVERSAL real-time polling (2s interval, new notifications only)"
         );
 
@@ -382,7 +428,7 @@ window.NotificationSystem = {
 
         // Only get notifications after our last timestamp
         const url = `/testing/notification_bridge.php?since=${this.lastTimestamp}`;
-        console.log("📨 Polling for notifications:", url);
+        debugLog("📨 Polling for notifications:", url);
 
         fetch(url, {
             method: "GET",
@@ -392,21 +438,21 @@ window.NotificationSystem = {
             },
         })
             .then((response) => {
-                console.log("📨 Polling response status:", response.status);
+                debugLog("📨 Polling response status:", response.status);
                 return response.json();
             })
             .then((data) => {
-                console.log("📨 Polling response data:", data);
+                debugLog("📨 Polling response data:", data);
 
                 if (data.notifications && data.notifications.length > 0) {
-                    console.log(
+                    debugLog(
                         `📨 Received ${data.notifications.length} new notifications`
                     );
 
                     data.notifications.forEach((notification) => {
                         // Skip notifications from current user (exclude self)
                         if (this.shouldExcludeNotification(notification)) {
-                            console.log(
+                            debugLog(
                                 "🚫 Skipping self-notification:",
                                 notification.title
                             );
@@ -423,20 +469,20 @@ window.NotificationSystem = {
 
                     this.eventsReceived += data.notifications.length;
                 } else {
-                    console.log("📨 No new notifications");
+                    debugLog("📨 No new notifications");
                 }
 
                 this.connectionStatus = "connected";
             })
             .catch((error) => {
-                console.log("⚠️ Polling error:", error.message);
+                debugLog("⚠️ Polling error:", error.message);
                 this.connectionStatus = "error";
             });
     },
 
     // Check if notification should be excluded (self-notifications)
     shouldExcludeNotification: function (notification) {
-        console.log("🔍 DEBUG Self-exclusion check:", {
+        debugLog("🔍 DEBUG Self-exclusion check:", {
             currentUserId: this.currentUserId,
             currentUserIdType: typeof this.currentUserId,
             notificationData: notification.data,
@@ -444,14 +490,14 @@ window.NotificationSystem = {
         });
 
         if (!this.currentUserId) {
-            console.log("👤 No current user ID - showing notification");
+            debugLog("👤 No current user ID - showing notification");
             return false;
         }
 
         // Check if notification is from current user
         if (notification.data) {
             const updatedBy = notification.data.updated_by;
-            console.log(
+            debugLog(
                 `🔍 DETAILED CHECK: Notification from user: ${updatedBy} (type: ${typeof updatedBy}), current user: ${
                     this.currentUserId
                 } (type: ${typeof this.currentUserId})`
@@ -461,7 +507,7 @@ window.NotificationSystem = {
             const notificationUserId = parseInt(updatedBy);
             const currentUserId = parseInt(this.currentUserId);
 
-            console.log(
+            debugLog(
                 `🔍 CONVERTED IDs: Notification user: ${notificationUserId}, current user: ${currentUserId}`
             );
 
@@ -470,20 +516,18 @@ window.NotificationSystem = {
                 !isNaN(currentUserId) &&
                 notificationUserId === currentUserId
             ) {
-                console.log("🚫 EXCLUDING self-notification - user IDs match");
+                debugLog("🚫 EXCLUDING self-notification - user IDs match");
                 return true;
             }
         }
 
-        console.log(
-            "✅ SHOWING notification (not from current user or no data)"
-        );
+        debugLog("✅ SHOWING notification (not from current user or no data)");
         return false;
     },
 
     // Handle incoming notification
     handleNotification: function (notification) {
-        console.log("🎯 Processing notification:", notification.title);
+        debugLog("🎯 Processing notification:", notification.title);
 
         // Show universal data updated notification
         this.showDataUpdatedNotification(notification);
@@ -502,7 +546,7 @@ window.NotificationSystem = {
         // Always show refresh buttons for purchase notifications
         const requiresRefresh = this.isRefreshableNotification(notification);
 
-        console.log("🔍 Notification refresh requirements:", {
+        debugLog("🔍 Notification refresh requirements:", {
             requiresRefresh: requiresRefresh,
             notificationData: notification.data,
             notification: notification,
@@ -510,14 +554,14 @@ window.NotificationSystem = {
 
         // Try universal auto-refresh first
         let autoRefreshSuccess = false;
-        console.log(
+        debugLog(
             "🔄 Attempting universal auto-refresh before showing notification..."
         );
 
         try {
             autoRefreshSuccess = this.attemptUniversalAutoRefresh();
         } catch (error) {
-            console.log("❌ Universal auto-refresh failed:", error.message);
+            debugLog("❌ Universal auto-refresh failed:", error.message);
             autoRefreshSuccess = false;
         }
 
@@ -567,12 +611,12 @@ window.NotificationSystem = {
             setTimeout(() => {
                 this.closeNotification(notificationId);
             }, 8000);
-            console.log(
+            debugLog(
                 "✅ Data Updated notification shown with auto-close (refresh successful)"
             );
         } else {
             // Don't auto-close if refresh failed - user needs to manually refresh
-            console.log(
+            debugLog(
                 "⚠️ Data Updated notification shown WITHOUT auto-close (refresh failed - buttons visible)"
             );
         }
@@ -615,7 +659,7 @@ window.NotificationSystem = {
                 }
             }, 300);
 
-            console.log("✅ Notification closed:", notificationId);
+            debugLog("✅ Notification closed:", notificationId);
         }
     },
 
@@ -629,7 +673,7 @@ window.NotificationSystem = {
 
     // Universal auto-refresh that works with all detected tables
     attemptUniversalAutoRefresh: function () {
-        console.log(
+        debugLog(
             "🔄 Attempting universal auto-refresh for all detected tables..."
         );
 
@@ -638,14 +682,14 @@ window.NotificationSystem = {
 
         // If no tables detected, try immediate re-detection and fallback methods
         if (totalTables === 0) {
-            console.log(
+            debugLog(
                 "⚠️ No tables detected - attempting immediate re-detection..."
             );
             this.autoDetectTables();
             totalTables = this.tableConfig.detectedTables.length;
 
             if (totalTables === 0) {
-                console.log(
+                debugLog(
                     "⚠️ Still no tables detected - trying fallback refresh methods..."
                 );
                 return this.attemptFallbackRefresh();
@@ -664,7 +708,7 @@ window.NotificationSystem = {
                     $.fn.DataTable.isDataTable(`#${tableInfo.id}`)
                 ) {
                     $(`#${tableInfo.id}`).DataTable().ajax.reload(null, false);
-                    console.log(
+                    debugLog(
                         `✅ DataTable refreshed: #${tableInfo.id} (${tableInfo.type})`
                     );
                     refreshed = true;
@@ -680,7 +724,7 @@ window.NotificationSystem = {
                         null,
                         false
                     );
-                    console.log(
+                    debugLog(
                         `✅ Laravel DataTable refreshed: #${tableInfo.id} (${tableInfo.type})`
                     );
                     refreshed = true;
@@ -690,7 +734,7 @@ window.NotificationSystem = {
                     refreshedCount++;
                 }
             } catch (error) {
-                console.log(
+                debugLog(
                     `❌ Failed to refresh table #${tableInfo.id}:`,
                     error.message
                 );
@@ -699,14 +743,14 @@ window.NotificationSystem = {
 
         // If no tables were refreshed, try fallback methods
         if (refreshedCount === 0) {
-            console.log(
+            debugLog(
                 "⚠️ No detected tables were refreshed - trying fallback methods..."
             );
             return this.attemptFallbackRefresh();
         }
 
         const success = refreshedCount > 0;
-        console.log(
+        debugLog(
             `🔄 Universal auto-refresh result: ${refreshedCount}/${totalTables} tables refreshed - ${
                 success ? "SUCCESS" : "FAILED"
             }`
@@ -717,7 +761,7 @@ window.NotificationSystem = {
 
     // Fallback refresh methods when table detection fails
     attemptFallbackRefresh: function () {
-        console.log("🔄 Attempting fallback refresh methods...");
+        debugLog("🔄 Attempting fallback refresh methods...");
 
         let refreshedCount = 0;
 
@@ -731,13 +775,11 @@ window.NotificationSystem = {
                         $.fn.DataTable.isDataTable(`#${tableId}`)
                     ) {
                         $(`#${tableId}`).DataTable().ajax.reload(null, false);
-                        console.log(
-                            `✅ Fallback refresh successful: #${tableId}`
-                        );
+                        debugLog(`✅ Fallback refresh successful: #${tableId}`);
                         refreshedCount++;
                     }
                 } catch (error) {
-                    console.log(
+                    debugLog(
                         `❌ Fallback refresh failed for #${tableId}:`,
                         error.message
                     );
@@ -752,12 +794,12 @@ window.NotificationSystem = {
                             null,
                             false
                         );
-                        console.log(
+                        debugLog(
                             `✅ Fallback Laravel refresh successful: #${tableId}`
                         );
                         refreshedCount++;
                     } catch (error) {
-                        console.log(
+                        debugLog(
                             `❌ Fallback Laravel refresh failed for #${tableId}:`,
                             error.message
                         );
@@ -774,7 +816,7 @@ window.NotificationSystem = {
                             $.fn.DataTable.isDataTable(this)
                         ) {
                             $(this).DataTable().ajax.reload(null, false);
-                            console.log(
+                            debugLog(
                                 `✅ Fallback DOM refresh successful: #${
                                     this.id || "unnamed"
                                 }`
@@ -782,7 +824,7 @@ window.NotificationSystem = {
                             refreshedCount++;
                         }
                     } catch (error) {
-                        console.log(
+                        debugLog(
                             `❌ Fallback DOM refresh failed:`,
                             error.message
                         );
@@ -792,18 +834,16 @@ window.NotificationSystem = {
 
             // Method 4: Try Livewire fallback
             if (refreshedCount === 0 && typeof Livewire !== "undefined") {
-                console.log(
-                    "🔄 Final fallback: Refreshing Livewire components"
-                );
+                debugLog("🔄 Final fallback: Refreshing Livewire components");
                 Livewire.dispatch("$refresh");
                 refreshedCount = 1; // Assume success for Livewire
             }
         } catch (error) {
-            console.log("❌ Fallback refresh methods failed:", error.message);
+            debugLog("❌ Fallback refresh methods failed:", error.message);
         }
 
         const success = refreshedCount > 0;
-        console.log(
+        debugLog(
             `🔄 Fallback refresh result: ${refreshedCount} refreshes - ${
                 success ? "SUCCESS" : "FAILED"
             }`
@@ -814,7 +854,7 @@ window.NotificationSystem = {
 
     // Manual refresh DataTable (called from button click)
     manualRefreshDataTable: function (notificationId) {
-        console.log("🔄 Manual universal DataTable refresh triggered...");
+        debugLog("🔄 Manual universal DataTable refresh triggered...");
 
         const refreshed = this.attemptUniversalAutoRefresh();
 
@@ -841,11 +881,11 @@ window.NotificationSystem = {
                 this.closeNotification(notificationId);
             }, 3000);
 
-            console.log(
+            debugLog(
                 "✅ Manual refresh successful - notification will auto-close"
             );
         } else {
-            console.log("❌ Manual refresh failed - showing fallback options");
+            debugLog("❌ Manual refresh failed - showing fallback options");
 
             // Update notification to show failure
             const refreshStatus = document.getElementById(
@@ -861,7 +901,7 @@ window.NotificationSystem = {
 
     // Legacy refresh method (kept for compatibility)
     refreshDataTable: function () {
-        console.log(
+        debugLog(
             "🔄 Legacy refreshDataTable called - using universal auto-refresh"
         );
         return this.attemptUniversalAutoRefresh();
@@ -869,7 +909,7 @@ window.NotificationSystem = {
 
     // Show refresh suggestion if automatic refresh fails
     showRefreshSuggestion: function () {
-        console.log("💡 Showing manual refresh suggestion");
+        debugLog("💡 Showing manual refresh suggestion");
 
         const suggestionHtml = `
             <div class="alert alert-warning alert-dismissible fade show position-fixed" 
@@ -928,7 +968,7 @@ window.NotificationSystem = {
 
     // Test notification
     testNotification: function () {
-        console.log("🧪 Testing UNIVERSAL notification system");
+        debugLog("🧪 Testing UNIVERSAL notification system");
 
         const testNotification = {
             type: "info",
@@ -953,7 +993,7 @@ window.NotificationSystem = {
         notifications.forEach((notification) => {
             this.closeNotification(notification.id);
         });
-        console.log("🧹 All notifications cleared");
+        debugLog("🧹 All notifications cleared");
     },
 
     // Show system status
@@ -972,7 +1012,7 @@ window.NotificationSystem = {
             })),
         };
 
-        console.log("📊 UNIVERSAL Notification System Status:", status);
+        debugLog("📊 UNIVERSAL Notification System Status:", status);
 
         if (typeof Swal !== "undefined") {
             Swal.fire({
@@ -1043,15 +1083,15 @@ window.refreshAllTables = function () {
 
 // Auto-initialize when DOM is ready
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("🔔 DOM ready - initializing UNIVERSAL notification system");
+    debugLog("🔔 DOM ready - initializing UNIVERSAL notification system");
     window.NotificationSystem.init();
 });
 
 // Also initialize if DOM is already loaded
 if (document.readyState === "loading") {
-    console.log("📄 DOM still loading - waiting for DOMContentLoaded");
+    debugLog("📄 DOM still loading - waiting for DOMContentLoaded");
 } else {
-    console.log(
+    debugLog(
         "📄 DOM already loaded - initializing UNIVERSAL notification system immediately"
     );
     setTimeout(() => {

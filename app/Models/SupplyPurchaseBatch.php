@@ -110,6 +110,11 @@ class SupplyPurchaseBatch extends BaseModel
         return $this->hasMany(SupplyPurchase::class);
     }
 
+    public function farm()
+    {
+        return $this->belongsTo(\App\Models\Farm::class, 'farm_id', 'id');
+    }
+
     /**
      * Update status using the new SupplyStatusHistory system
      */

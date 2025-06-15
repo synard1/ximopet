@@ -56,6 +56,18 @@ use App\Events\SupplyPurchaseStatusChanged;
 use App\Events\FeedPurchaseStatusChanged;
 use App\Events\LivestockPurchaseStatusChanged;
 
+// Check debug mode
+$debugMode = config('app.debug', false);
+
+// Custom debug log function that respects APP_DEBUG
+function debugLog($message, $context = [])
+{
+    global $debugMode;
+    if ($debugMode) {
+        Log::info($message, $context);
+    }
+}
+
 // Set correct headers for Server-Sent Events
 header('Content-Type: text/event-stream; charset=utf-8');
 header('Cache-Control: no-cache, no-store, must-revalidate');
@@ -114,6 +126,7 @@ function getNotificationFilePath()
  */
 function initializeNotificationStorage()
 {
+    global $debugMode;
     $filePath = getNotificationFilePath();
 
     if (!file_exists($filePath)) {
@@ -127,7 +140,9 @@ function initializeNotificationStorage()
         ];
 
         if (file_put_contents($filePath, json_encode($initialData, JSON_PRETTY_PRINT)) === false) {
+            if ($debugMode) {
             error_log("Failed to create SSE notification file: {$filePath}");
+            }
             return false;
         }
     }
@@ -203,13 +218,15 @@ if (!sendSSE('connected', [
 
 // Log connection start
 try {
-    Log::info('SSE notification bridge started', [
+    debugLog('SSE notification bridge started', [
         'timestamp' => date('c'),
         'client_ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
         'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
     ]);
 } catch (Exception $e) {
+    if ($debugMode) {
     error_log('Failed to log SSE start: ' . $e->getMessage());
+    }
 }
 
 // Initialize notification storage
@@ -231,7 +248,9 @@ try {
         file_put_contents($filePath, json_encode($data, JSON_PRETTY_PRINT));
     }
 } catch (Exception $e) {
+    if ($debugMode) {
     error_log('Failed to update connection stats: ' . $e->getMessage());
+    }
 }
 
 // Connection management variables
@@ -253,7 +272,7 @@ sendSSE('status', [
 while (true) {
     // Check if client disconnected
     if (connection_aborted()) {
-        Log::info('SSE Bridge: Client disconnected');
+        debugLog('SSE Bridge: Client disconnected');
         break;
     }
 
@@ -307,7 +326,7 @@ while (true) {
                 }
 
                 // Log notification sent
-                Log::info('SSE Bridge: Notification sent', [
+                debugLog('SSE Bridge: Notification sent', [
                     'event_type' => $eventType,
                     'notification_id' => $notification['id'] ?? 'unknown',
                     'type' => $notification['type'] ?? 'unknown'
@@ -316,7 +335,7 @@ while (true) {
 
             $lastNotificationCheck = time();
         } catch (Exception $e) {
-            Log::error('SSE Bridge: Error checking notifications', [
+            debugLog('SSE Bridge: Error checking notifications', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
@@ -344,10 +363,12 @@ try {
         }
     }
 
-    Log::info('SSE Bridge: Connection closed', [
+    debugLog('SSE Bridge: Connection closed', [
         'uptime' => time() - $startTime,
         'timestamp' => date('c')
     ]);
 } catch (Exception $e) {
+    if ($debugMode) {
     error_log('SSE cleanup error: ' . $e->getMessage());
+    }
 }

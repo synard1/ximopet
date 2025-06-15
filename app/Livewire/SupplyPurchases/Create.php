@@ -46,15 +46,15 @@ class Create extends Component
 
     public bool $withHistory = false; // ← Tambahkan ini di atas class Livewire
 
-    protected $listeners = [
-        'deleteSupplyPurchaseBatch' => 'deleteSupplyPurchaseBatch',
-        'updateDoNumber' => 'updateDoNumber',
-        'showEditForm' => 'showEditForm',
-        'showCreateForm' => 'showCreateForm',
-        'cancel' => 'cancel',
-        'updateStatusSupplyPurchase' => 'updateStatusSupplyPurchase',
-        'echo:supply-purchases,status-changed' => 'handleStatusChanged',
-    ];
+    // protected $listeners = [
+    //     'deleteSupplyPurchaseBatch' => 'deleteSupplyPurchaseBatch',
+    //     'updateDoNumber' => 'updateDoNumber',
+    //     'showEditForm' => 'showEditForm',
+    //     'showCreateForm' => 'showCreateForm',
+    //     'cancel' => 'cancel',
+    //     'updateStatusSupplyPurchase' => 'updateStatusSupplyPurchase',
+    //     'echo:supply-purchases,status-changed' => 'handleStatusChanged',
+    // ];
 
     /**
      * Dynamic listeners untuk handle user-specific notifications
@@ -336,6 +336,8 @@ class Create extends Component
             ]);
             throw $e;
         }
+
+        // dd('supplyStock', $supplyStock);
     }
 
     /**
@@ -717,23 +719,27 @@ class Create extends Component
             'notes' => $notes
         ]);
 
+
+
         // If status is arrived, process stock arrival
         if ($status === \App\Models\SupplyPurchaseBatch::STATUS_ARRIVED) {
-            try {
-                // Process stock arrival - create SupplyStock and update CurrentSupply
-                $this->processStockArrival($batch);
+            // dd($status, $oldStatus);
 
-                Log::info("Stock arrival processed successfully for batch ID: {$batch->id}");
-            } catch (\Exception $e) {
-                Log::error("Failed to process stock arrival for batch ID: {$batch->id}", [
-                    'error' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]);
+            // try {
+            // Process stock arrival - create SupplyStock and update CurrentSupply
+            $this->processStockArrival($batch);
 
-                $this->dispatch('error', 'Gagal memproses kedatangan stock: ' . $e->getMessage());
-                return;
-            }
+            Log::info("Stock arrival processed successfully for batch ID: {$batch->id}");
+            // } catch (\Exception $e) {
+            //     Log::error("Failed to process stock arrival for batch ID: {$batch->id}", [
+            //         'error' => $e->getMessage(),
+            //         'file' => $e->getFile(),
+            //         'line' => $e->getLine()
+            //     ]);
+
+            //     $this->dispatch('error', 'Gagal memproses kedatangan stock: ' . $e->getMessage());
+            //     return;
+            // }
         }
 
         // If status is being changed from ARRIVED to something else, handle stock rollback

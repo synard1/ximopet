@@ -11,6 +11,7 @@ use App\Models\Expedition;
 use App\Models\Feed;
 use App\Models\Supply;
 use App\Models\Livestock;
+use App\Models\Coop;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -26,6 +27,16 @@ class PurchaseReportsController extends Controller
         $farms = Farm::all();
         $partners = Partner::where('type', 'Supplier')->get();
         $expeditions = Expedition::all();
+        $livestocks = Livestock::with(['farm', 'coop'])->get()->map(function ($l) {
+            return [
+                'id' => $l->id,
+                'farm_id' => $l->farm_id,
+                'coop_id' => $l->coop_id,
+                'coop_name' => $l->coop ? $l->coop->name : '-',
+                'name' => $l->name,
+                'start_date' => $l->start_date,
+            ];
+        })->values()->all();
 
         Log::info('Livestock Purchase Report Index accessed', [
             'user_id' => auth()->id(),
@@ -33,7 +44,7 @@ class PurchaseReportsController extends Controller
             'partners_count' => $partners->count()
         ]);
 
-        return view('pages.reports.index_report_pembelian_livestock', compact(['farms', 'partners', 'expeditions']));
+        return view('pages.reports.index_report_pembelian_livestock', compact(['farms', 'partners', 'expeditions', 'livestocks']));
     }
 
     /**
@@ -45,7 +56,16 @@ class PurchaseReportsController extends Controller
         $partners = Partner::where('type', 'Supplier')->get();
         $expeditions = Expedition::all();
         $feeds = Feed::all();
-        $livestocks = Livestock::with(['farm', 'coop'])->get();
+        $livestocks = Livestock::with(['farm', 'coop'])->get()->map(function ($l) {
+            return [
+                'id' => $l->id,
+                'farm_id' => $l->farm_id,
+                'coop_id' => $l->coop_id,
+                'coop_name' => $l->coop ? $l->coop->name : '-',
+                'name' => $l->name,
+                'start_date' => $l->start_date,
+            ];
+        })->values()->all();
 
         Log::info('Feed Purchase Report Index accessed', [
             'user_id' => auth()->id(),
@@ -65,7 +85,16 @@ class PurchaseReportsController extends Controller
         $partners = Partner::where('type', 'Supplier')->get();
         $expeditions = Expedition::all();
         $supplies = Supply::all();
-        $livestocks = Livestock::with(['farm', 'coop'])->get();
+        $livestocks = Livestock::with(['farm', 'coop'])->get()->map(function ($l) {
+            return [
+                'id' => $l->id,
+                'farm_id' => $l->farm_id,
+                'coop_id' => $l->coop_id,
+                'coop_name' => $l->coop ? $l->coop->name : '-',
+                'name' => $l->name,
+                'start_date' => $l->start_date,
+            ];
+        })->values()->all();
 
         Log::info('Supply Purchase Report Index accessed', [
             'user_id' => auth()->id(),
@@ -328,10 +357,13 @@ class PurchaseReportsController extends Controller
         $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'farm_id' => 'nullable|exists:farms,id',
-            'livestock_id' => 'nullable|exists:livestocks,id',
+            'farm' => 'nullable|exists:farms,id',
+            'coop' => 'nullable|exists:coops,id',
+            'tahun' => 'nullable|integer',
             'supplier_id' => 'nullable|exists:partners,id',
+            'supplier' => 'nullable|exists:partners,id',
             'supply_id' => 'nullable|exists:supplies,id',
+            'supply' => 'nullable|exists:supplies,id',
             'status' => 'nullable|in:draft,confirmed,arrived,completed',
             'export_format' => 'nullable|in:html,excel,pdf,csv'
         ]);
@@ -340,47 +372,50 @@ class PurchaseReportsController extends Controller
         $endDate = Carbon::parse($request->end_date);
         $exportFormat = $request->export_format ?? 'html';
 
+        $supplierId = $request->supplier_id ?? $request->supplier;
+        $supplyId = $request->supply_id ?? $request->supply;
+        $farmId = $request->farm;
+        $coopId = $request->coop;
+        $tahun = $request->tahun;
+
         Log::info('Export Supply Purchase Report', [
             'user_id' => auth()->id(),
             'start_date' => $startDate->format('Y-m-d'),
             'end_date' => $endDate->format('Y-m-d'),
             'export_format' => $exportFormat,
-            'filters' => $request->only(['farm_id', 'livestock_id', 'supplier_id', 'supply_id', 'status'])
+            'filters' => $request->all()
         ]);
 
         // Ambil data pembelian supply
         $batchesQuery = SupplyPurchaseBatch::with([
             'supplier',
             'expedition',
-            'supplyPurchases.livestock.farm',
-            'supplyPurchases.livestock.coop',
             'supplyPurchases.supply',
-            'supplyPurchases.unit'
+            'supplyPurchases.unit',
+            'supplyPurchases.farm',
         ])
             ->whereBetween('date', [$startDate, $endDate])
-            ->when($request->supplier_id, function ($query) use ($request) {
-                return $query->where('supplier_id', $request->supplier_id);
+            ->when($supplierId, function ($query) use ($supplierId) {
+                return $query->where('supplier_id', $supplierId);
             })
             ->when($request->status, function ($query) use ($request) {
                 return $query->where('status', $request->status);
             })
-            ->when($request->farm_id || $request->livestock_id || $request->supply_id, function ($query) use ($request) {
-                return $query->whereHas('supplyPurchases', function ($q) use ($request) {
-                    if ($request->farm_id) {
-                        $q->whereHas('livestock', function ($subQ) use ($request) {
-                            $subQ->where('farm_id', $request->farm_id);
-                        });
-                    }
-                    if ($request->livestock_id) {
-                        $q->where('livestock_id', $request->livestock_id);
-                    }
-                    if ($request->supply_id) {
-                        $q->where('supply_id', $request->supply_id);
-                    }
+            ->when($farmId, function ($query) use ($farmId) {
+                return $query->whereHas('supplyPurchases', function ($q) use ($farmId) {
+                    $q->where('farm_id', $farmId);
                 });
             })
-            ->orderBy('date', 'asc')
-            ->orderBy('invoice_number', 'asc');
+            ->when($tahun, function ($query) use ($tahun) {
+                return $query->whereHas('supplyPurchases', function ($q) use ($tahun) {
+                    $q->whereYear('date', $tahun);
+                });
+            })
+            ->when($supplyId, function ($query) use ($supplyId) {
+                return $query->whereHas('supplyPurchases', function ($q) use ($supplyId) {
+                    $q->where('supply_id', $supplyId);
+                });
+            });
 
         $batches = $batchesQuery->get();
 
@@ -388,7 +423,7 @@ class PurchaseReportsController extends Controller
             Log::warning('No Supply Purchase data found for export', [
                 'start_date' => $startDate->format('Y-m-d'),
                 'end_date' => $endDate->format('Y-m-d'),
-                'filters' => $request->only(['farm_id', 'livestock_id', 'supplier_id', 'supply_id', 'status'])
+                'filters' => $request->all()
             ]);
 
             return response()->json([
@@ -406,7 +441,7 @@ class PurchaseReportsController extends Controller
             }),
             'total_suppliers' => $batches->unique('supplier_id')->count(),
             'total_farms' => $batches->flatMap(function ($batch) {
-                return $batch->supplyPurchases->pluck('livestock.farm_id');
+                return $batch->supplyPurchases->pluck('farm_id');
             })->unique()->count(),
             'total_value' => $batches->sum(function ($batch) {
                 return $batch->supplyPurchases->sum(function ($purchase) {
@@ -427,10 +462,10 @@ class PurchaseReportsController extends Controller
             'filters' => [
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'farm' => $request->farm_id ? Farm::find($request->farm_id) : null,
-                'livestock' => $request->livestock_id ? Livestock::find($request->livestock_id) : null,
-                'supplier' => $request->supplier_id ? Partner::find($request->supplier_id) : null,
-                'supply' => $request->supply_id ? Supply::find($request->supply_id) : null,
+                'farm' => $farmId ? Farm::find($farmId) : null,
+                'coop' => $coopId ? Coop::find($coopId) : null,
+                'supplier' => $supplierId ? Partner::find($supplierId) : null,
+                'supply' => $supplyId ? Supply::find($supplyId) : null,
                 'status' => $request->status
             ]
         ];
@@ -448,6 +483,99 @@ class PurchaseReportsController extends Controller
         }
     }
 
+    /**
+     * Export Supply Purchase Report to HTML
+     */
+    public function exportPembelianSupplyHtml(Request $request)
+    {
+        $data = $this->getSupplyPurchaseData($request);
+        return view('pages.reports.pembelian-supply-html', $data);
+    }
+
+    /**
+     * Get Supply Purchase Data
+     */
+    private function getSupplyPurchaseData(Request $request)
+    {
+        $startDate = Carbon::parse($request->start_date);
+        $endDate = Carbon::parse($request->end_date);
+        $supplierId = $request->supplier_id ?? $request->supplier;
+        $supplyId = $request->supply_id ?? $request->supply;
+        $farmId = $request->farm;
+        $coopId = $request->coop;
+        $tahun = $request->tahun;
+
+        // Ambil data pembelian supply
+        $batchesQuery = SupplyPurchaseBatch::with([
+            'supplier',
+            'expedition',
+            'supplyPurchases.supply',
+            'supplyPurchases.unit',
+            'supplyPurchases.farm',
+        ])
+            ->whereBetween('date', [$startDate, $endDate])
+            ->when($supplierId, fn($q) => $q->where('supplier_id', $supplierId))
+            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($farmId, function ($q) use ($farmId) {
+                $q->whereHas('supplyPurchases', fn($sq) => $sq->where('farm_id', $farmId));
+            })
+            ->when($tahun, function ($q) use ($tahun) {
+                $q->whereHas('supplyPurchases', fn($sq) => $sq->whereYear('date', $tahun));
+            })
+            ->when($supplyId, function ($q) use ($supplyId) {
+                $q->whereHas('supplyPurchases', fn($sq) => $sq->where('supply_id', $supplyId));
+            })
+            ->when($request->invoice_number, fn($q) => $q->where('invoice_number', $request->invoice_number));
+
+        $batches = $batchesQuery->get();
+
+        if ($batches->isEmpty()) {
+            return response()->json([
+                'error' => 'Tidak ada data pembelian supply untuk periode ' .
+                    $startDate->format('d-M-Y') . ' s.d. ' . $endDate->format('d-M-Y')
+            ], 404);
+        }
+
+        // Hitung summary data
+        $summary = [
+            'period' => $startDate->format('d-M-Y') . ' s.d. ' . $endDate->format('d-M-Y'),
+            'total_batches' => $batches->count(),
+            'total_purchases' => $batches->sum(fn($batch) => $batch->supplyPurchases->count()),
+            'total_suppliers' => $batches->unique('supplier_id')->count(),
+            'total_farms' => $batches->flatMap(fn($batch) => $batch->supplyPurchases->pluck('farm_id'))->unique()->count(),
+            'total_value' => $batches->sum(
+                fn($batch) =>
+                $batch->supplyPurchases->sum(fn($purchase) => $purchase->quantity * $purchase->price_per_unit) + $batch->expedition_fee
+            ),
+            'total_quantity' => $batches->sum(fn($batch) => $batch->supplyPurchases->sum('converted_quantity')),
+            'by_status' => $batches->groupBy('status')->map->count(),
+            'by_supplier' => $batches->groupBy('supplier.name')->map->count(),
+            'by_supply' => $batches->flatMap->supplyPurchases->groupBy('supply.name')->map->count()
+        ];
+
+        $invoiceDetail = null;
+        if ($request->invoice_number) {
+            $invoiceDetail = SupplyPurchaseBatch::with(['supplier', 'supplyPurchases.supply', 'supplyPurchases.unit'])
+                ->where('invoice_number', $request->invoice_number)
+                ->first();
+        }
+
+        return [
+            'batches' => $batches,
+            'summary' => $summary,
+            'invoiceDetail' => $invoiceDetail,
+            'filters' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'farm' => $farmId ? Farm::find($farmId) : null,
+                'coop' => $coopId ? Coop::find($coopId) : null,
+                'supplier' => $supplierId ? Partner::find($supplierId) : null,
+                'supply' => $supplyId ? Supply::find($supplyId) : null,
+                'status' => $request->status
+            ]
+        ];
+    }
+
     // Helper methods for Livestock Purchase Export
     private function exportLivestockPurchaseToHtml($data)
     {
@@ -457,19 +585,19 @@ class PurchaseReportsController extends Controller
     private function exportLivestockPurchaseToExcel($data)
     {
         // Implement Excel export logic
-        return response()->json(['message' => 'Excel export akan segera tersedia'], 501);
+        return response()->json(['message' => 'Excel export akan segera tersedia, fitur ini dalam tahap pengembangan'], 200);
     }
 
     private function exportLivestockPurchaseToPdf($data)
     {
         // Implement PDF export logic  
-        return response()->json(['message' => 'PDF export akan segera tersedia'], 501);
+        return response()->json(['message' => 'PDF export akan segera tersedia, fitur ini dalam tahap pengembangan'], 200);
     }
 
     private function exportLivestockPurchaseToCsv($data)
     {
         // Implement CSV export logic
-        return response()->json(['message' => 'CSV export akan segera tersedia'], 501);
+        return response()->json(['message' => 'CSV export akan segera tersedia, fitur ini dalam tahap pengembangan'], 200);
     }
 
     // Helper methods for Feed Purchase Export
@@ -481,19 +609,25 @@ class PurchaseReportsController extends Controller
     private function exportFeedPurchaseToExcel($data)
     {
         // Implement Excel export logic
-        return response()->json(['message' => 'Excel export akan segera tersedia'], 501);
+        return response()->view('pages.reports.export_info', [
+            'message' => 'Excel export akan segera tersedia, fitur ini dalam tahap pengembangan'
+        ]);
     }
 
     private function exportFeedPurchaseToPdf($data)
     {
         // Implement PDF export logic
-        return response()->json(['message' => 'PDF export akan segera tersedia'], 501);
+        return response()->view('pages.reports.export_info', [
+            'message' => 'PDF export akan segera tersedia, fitur ini dalam tahap pengembangan'
+        ]);
     }
 
     private function exportFeedPurchaseToCsv($data)
     {
         // Implement CSV export logic
-        return response()->json(['message' => 'CSV export akan segera tersedia'], 501);
+        return response()->view('pages.reports.export_info', [
+            'message' => 'CSV export akan segera tersedia, fitur ini dalam tahap pengembangan'
+        ]);
     }
 
     // Helper methods for Supply Purchase Export
@@ -505,18 +639,18 @@ class PurchaseReportsController extends Controller
     private function exportSupplyPurchaseToExcel($data)
     {
         // Implement Excel export logic
-        return response()->json(['message' => 'Excel export akan segera tersedia'], 501);
+        return response()->json(['message' => 'Excel export akan segera tersedia, fitur ini dalam tahap pengembangan'], 200);
     }
 
     private function exportSupplyPurchaseToPdf($data)
     {
         // Implement PDF export logic
-        return response()->json(['message' => 'PDF export akan segera tersedia'], 501);
+        return response()->json(['message' => 'PDF export akan segera tersedia, fitur ini dalam tahap pengembangan'], 200);
     }
 
     private function exportSupplyPurchaseToCsv($data)
     {
         // Implement CSV export logic
-        return response()->json(['message' => 'CSV export akan segera tersedia'], 501);
+        return response()->json(['message' => 'CSV export akan segera tersedia, fitur ini dalam tahap pengembangan'], 200);
     }
 }

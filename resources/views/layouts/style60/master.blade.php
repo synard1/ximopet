@@ -6,6 +6,8 @@
     <base href="" />
     <title>{{ config('app.name', 'Laravel') }} | {{ config('app.info') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="app-debug" content="{{ config('app.debug') ? 'true' : 'false' }}">
+    <meta name="app-env" content="{{ config('app.env') }}">
     @auth
     <meta name="user-id" content="{{ auth()->id() }}">
     @endauth
@@ -45,6 +47,10 @@
     @endforeach
     <!--end::Custom Stylesheets-->
 
+    <!--begin::Sidebar Collapse Styles-->
+    <link rel="stylesheet" href="{{ asset('css/custom/sidebar-collapse.css') }}">
+    <!--end::Sidebar Collapse Styles-->
+
     @livewireStyles
     @stack('styles')
 
@@ -74,7 +80,8 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
             data-kt-app-header-fixed="true" data-kt-app-header-fixed-mobile="true" data-kt-app-header-stacked="true"
             data-kt-app-header-primary-enabled="true" data-kt-app-sidebar-enabled="true"
             data-kt-app-sidebar-fixed="true" data-kt-app-sidebar-push-toolbar="true"
-            data-kt-app-sidebar-push-footer="true" data-kt-app-toolbar-enabled="true" class="app-default">
+            data-kt-app-sidebar-push-footer="true" data-kt-app-toolbar-enabled="true"
+            data-kt-app-sidebar-collapsed="false" class="app-default">
 
 
 
@@ -87,6 +94,8 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
             @foreach(getGlobalAssets() as $path)
             {!! sprintf('<script src="%s"></script>', asset($path)) !!}
             @endforeach
+            <script src="{{ asset('assets/js/security-protection.js') }}"></script>
+            <script src="{{ asset('assets/js/security-blacklist-notification.js') }}"></script>
             <!--end::Global Javascript Bundle-->
 
             <!--begin::Vendors Javascript(used by this page)-->
@@ -100,6 +109,11 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
             {!! sprintf('<script src="%s"></script>', asset($path)) !!}
             @endforeach
             <!--end::Custom Javascript-->
+
+            <!--begin::Sidebar Collapse Script-->
+            <script src="{{ asset('js/custom/sidebar-collapse.js') }}"></script>
+            <!--end::Sidebar Collapse Script-->
+
             @stack('scripts')
             <!--begin::Laravel User Setup-->
             <script>

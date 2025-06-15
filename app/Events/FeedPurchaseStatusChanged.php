@@ -138,7 +138,7 @@ class FeedPurchaseStatusChanged implements ShouldBroadcast
     /**
      * Get farm ID from feed purchases
      */
-    private function getFarmId(FeedPurchaseBatch $batch): ?int
+    private function getFarmId(FeedPurchaseBatch $batch): ?string
     {
         $firstPurchase = $batch->feedPurchases->first();
         return $firstPurchase?->livestock?->farm_id;

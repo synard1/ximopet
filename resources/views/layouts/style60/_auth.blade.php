@@ -2,6 +2,14 @@
 
 @section('content')
 
+{{-- Security Blacklist Notification Support --}}
+@if(session('security_blacklisted'))
+<meta name="security-blacklisted" content="{{ json_encode(session('security_blacklisted')) }}">
+<script>
+    window.securityBlacklisted = @json(session('security_blacklisted'));
+</script>
+@endif
+
 <!--begin::App-->
 <div class="d-flex flex-column flex-root app-root" id="kt_app_root">
     <!--begin::Wrapper-->

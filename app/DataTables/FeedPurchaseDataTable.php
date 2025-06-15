@@ -59,19 +59,20 @@ class FeedPurchaseDataTable extends DataTable
             ->editColumn('status', function (FeedPurchaseBatch $transaction) {
                 $statuses = FeedPurchaseBatch::STATUS_LABELS;
                 $currentStatus = $transaction->status;
-                $isDisabled = in_array($currentStatus, ['cancelled', 'completed']) ? 'disabled' : '';
+                $isDisabled = in_array($currentStatus, ['cancelled']) ? 'disabled' : '';
 
                 // Check user role
                 $userRole = auth()->user()->roles->pluck('name')->toArray(); // Assuming 'role' is the field that contains user role
 
-                // return $userRole;
-                $canSeeCompleted = in_array('Supervisor', $userRole);
+                // Allow Operators to see 'completed' status if it's already set
+                $canSeeCompleted = in_array('Supervisor', $userRole) || ($currentStatus === 'completed' && in_array('Operator', $userRole));
+                $selectDisabled = $currentStatus === 'completed' ? 'disabled' : '';
 
                 $html = '<div class="d-flex align-items-center">';
-                $html .= '<select class="form-select form-select-sm status-select" data-kt-transaction-id="' . $transaction->id . '" data-kt-action="update_status" data-current="' . $currentStatus . '" ' . $isDisabled . '>';
+                $html .= '<select class="form-select form-select-sm status-select" data-kt-transaction-id="' . $transaction->id . '" data-kt-action="update_status" data-current="' . $currentStatus . '" ' . $isDisabled . ' ' . $selectDisabled . '>';
 
                 foreach ($statuses as $value => $label) {
-                    // Only show the 'completed' status option if the user is a Supervisor
+                    // Only show the 'completed' status option if the user is a Supervisor or if the current status is completed for Operators
                     if (!$canSeeCompleted && $value === 'completed') {
                         continue;
                     }

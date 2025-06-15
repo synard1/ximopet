@@ -37,6 +37,13 @@ use App\Models\Livestock;
 use App\Models\LivestockSalesItem;
 use App\Models\CurrentSupply;
 
+// OVK/Supply related imports
+use App\Models\Supply;
+use App\Models\SupplyStock;
+use App\Models\SupplyUsage;
+use App\Models\SupplyUsageDetail;
+use App\Models\Unit;
+
 class Records extends Component
 {
     public $recordings = [];
@@ -56,6 +63,15 @@ class Records extends Component
     public $deplesiData = null;
     public $hasChanged = false;
 
+    // Yesterday's data for better information
+    public $yesterday_weight;
+    public $yesterday_mortality;
+    public $yesterday_culling;
+    public $yesterday_feed_usage;
+    public $yesterday_supply_usage;
+    public $yesterday_stock_end;
+    public $yesterday_data = null;
+
     public $initial_stock;
     public $final_stock;
     public $weight;
@@ -65,6 +81,13 @@ class Records extends Component
     public $total_sales;
 
     public $feedUsageId, $usages;
+
+    // OVK/Supply properties
+    public $supplyQuantities = [];
+    public $availableSupplies = [];
+    public $supplyUsageId = null;
+    public $supplyUsages = [];
+    public $hasSupplyChanged = false;
 
     public $isEditing = false;
     public $showForm = false;
@@ -91,6 +114,7 @@ class Records extends Component
         $this->stocksService = $stocksService;
         $this->fifoService = $fifoService;
         $this->initializeItemQuantities();
+        $this->initializeSupplyItems();
         $this->loadRecordingData();
     }
 
@@ -102,6 +126,8 @@ class Records extends Component
         if ($this->livestockId) {
             $this->loadStockData();
             $this->initializeItemQuantities();
+            $this->loadAvailableSupplies();
+            $this->initializeSupplyItems();
             $this->checkCurrentLivestockStock();
             $this->loadRecordingData();
             $this->showForm = true;
@@ -141,6 +167,34 @@ class Records extends Component
             return true;
         }
         // dd('false');
+
+        return false;
+    }
+
+    /**
+     * Check if supply usage has changed
+     */
+    protected function hasSupplyUsageChanged(SupplyUsage $usage, array $newSupplyUsages): bool
+    {
+        $existingDetails = $usage->details()
+            ->select('supply_id', DB::raw('SUM(quantity_taken) as total'))
+            ->groupBy('supply_id')
+            ->get()
+            ->keyBy('supply_id');
+
+        foreach ($newSupplyUsages as $row) {
+            $supplyId = $row['supply_id'];
+            $qty = (float) $row['quantity'];
+
+            if (!isset($existingDetails[$supplyId]) || (float) $existingDetails[$supplyId]->total !== $qty) {
+                return true; // ada perubahan
+            }
+        }
+
+        // Cek apakah ada item yang dihapus dari data baru
+        if (count($existingDetails) !== count($newSupplyUsages)) {
+            return true;
+        }
 
         return false;
     }
@@ -211,7 +265,10 @@ class Records extends Component
     {
         return view('livewire.records', [
             'recordings' => $this->recordings,
-            'items' => $this->items
+            'items' => $this->items,
+            'supplyQuantities' => $this->supplyQuantities,
+            'availableSupplies' => $this->availableSupplies,
+            'yesterdayData' => $this->yesterday_data
         ]);
     }
 
@@ -319,6 +376,80 @@ class Records extends Component
             }
         }
     }
+
+    /**
+     * Initialize supply items with empty default entry
+     */
+    private function initializeSupplyItems()
+    {
+        $this->loadAvailableSupplies();
+
+        // Initialize empty quantities array for all available supplies
+        if (empty($this->supplyQuantities)) {
+            $this->supplyQuantities = [];
+        }
+    }
+
+    /**
+     * Load available supplies for the livestock
+     */
+    private function loadAvailableSupplies()
+    {
+        if (!$this->livestockId) {
+            $this->availableSupplies = [];
+            return;
+        }
+
+        $livestock = Livestock::find($this->livestockId);
+        if (!$livestock) {
+            $this->availableSupplies = [];
+            return;
+        }
+
+        // Get supplies that have stock in this farm
+        $this->availableSupplies = Supply::whereHas('supplyStocks', function ($query) use ($livestock) {
+            $query->where('farm_id', $livestock->farm_id)
+                ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0');
+        })
+            ->whereHas('supplyCategory', function ($query) {
+                $query->where('name', 'OVK');
+            })
+            ->with(['supplyCategory', 'unit'])
+            ->get();
+
+        // dd($this->availableSupplies, $this->livestockId, $livestock->farm_id);
+
+        // Supplies are now available for use in the form
+        // Available supplies loaded for the simple form
+    }
+
+    /**
+     * Check available stock for a specific supply
+     */
+    public function checkSupplyStock($supplyId, $livestockId)
+    {
+        $livestock = Livestock::find($livestockId);
+        if (!$livestock) {
+            return [];
+        }
+
+        $stocks = SupplyStock::where('farm_id', $livestock->farm_id)
+            ->where('supply_id', $supplyId)
+            ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
+            ->orderBy('date')
+            ->orderBy('created_at')
+            ->get();
+
+        $totalAvailable = $stocks->sum(fn($s) => $s->quantity_in - $s->quantity_used - $s->quantity_mutated);
+
+        return [
+            'livestock_id' => $livestockId,
+            'supply_id' => $supplyId,
+            'stock' => $totalAvailable,
+        ];
+    }
+
+
 
 
 
@@ -487,6 +618,16 @@ class Records extends Component
             $this->feedUsageId = null;
         }
 
+        // Check for supply usage
+        $supplyUsage = SupplyUsage::where('usage_date', $value)
+            ->where('livestock_id', $this->livestockId)
+            ->first();
+        if ($supplyUsage) {
+            $this->supplyUsageId = $supplyUsage->id;
+        } else {
+            $this->supplyUsageId = null;
+        }
+
 
         // --- Fetch Recording Data for the selected date ---
         $recordingData = Recording::where('livestock_id', $this->livestockId)
@@ -519,6 +660,16 @@ class Records extends Component
         //     ->where('livestock_id', $this->livestockId)
         //     ->first();
 
+        // --- Fetch Supply Usage Data for the selected date ---
+        $supplyUsage = SupplyUsageDetail::whereHas('supplyUsage', function ($query) use ($value) {
+            $query->where('livestock_id', $this->livestockId)
+                ->whereDate('usage_date', $value);
+        })
+            ->select('supply_id', DB::raw('SUM(quantity_taken) as quantity'))
+            ->groupBy('supply_id')
+            ->get()
+            ->keyBy('supply_id'); // hasil: [supply_id => total_quantity]
+
         // dd($itemUsage);
 
         // --- Update Component Properties ---
@@ -526,12 +677,20 @@ class Records extends Component
         // Reset item quantities based on current available items first
         $this->initializeItemQuantities();
 
-
         // Then, populate with usage data for the selected date
         foreach ($itemUsage as $itemId => $quantity) {
             // if (isset($this->itemQuantities[$itemId])) { // Ensure the item exists in the current list
             $this->itemQuantities[$itemId] = $quantity;
             // }
+        }
+
+        // Reset and populate supply quantities
+        $this->initializeSupplyItems();
+        if ($supplyUsage->isNotEmpty()) {
+            $this->supplyQuantities = [];
+            foreach ($supplyUsage as $supplyId => $usageData) {
+                $this->supplyQuantities[$supplyId] = $usageData->quantity;
+            }
         }
 
         // dd($this->itemQuantities);
@@ -564,6 +723,10 @@ class Records extends Component
 
         // dd($recordingData);
 
+        // --- Fetch Yesterday's Data for Better Information ---
+        $previousDate = Carbon::parse($value)->subDay()->format('Y-m-d');
+        $this->loadYesterdayData($previousDate);
+
         // Update Weight fields
         if ($recordingData) {
             $this->weight_yesterday = $recordingData->berat_semalam ?? 0;
@@ -577,12 +740,8 @@ class Records extends Component
             $this->total_sales = $recordingData->payload['total_sales'] ?? 0;
             $this->isEditing = true;
         } else {
-            // Fetch previous day's recording to get weight_yesterday if no recording for selected date
-            $previousDate = Carbon::parse($value)->subDay()->format('Y-m-d');
-            $previousRecording = Recording::where('livestock_id', $this->livestockId)
-                ->whereDate('tanggal', $previousDate)
-                ->first();
-            $this->weight_yesterday = $previousRecording ? $previousRecording->berat_hari_ini : 0;
+            // Use yesterday's weight as weight_yesterday if no recording for selected date
+            $this->weight_yesterday = $this->yesterday_weight ?? 0;
             $this->weight_today = null; // Reset today's weight
             $this->weight_gain = 0;     // Reset gain
 
@@ -600,6 +759,206 @@ class Records extends Component
             $selectedDate = Carbon::parse($value);
             $this->age = $startDate->diffInDays($selectedDate);
         }
+    }
+
+    /**
+     * Load yesterday's data for better information display
+     * 
+     * @param string $yesterdayDate Yesterday's date in Y-m-d format
+     * @return void
+     */
+    private function loadYesterdayData($yesterdayDate)
+    {
+        if (!$this->livestockId || !$yesterdayDate) {
+            $this->resetYesterdayData();
+            return;
+        }
+
+        try {
+            // --- Fetch Yesterday's Recording Data ---
+            $yesterdayRecording = Recording::where('livestock_id', $this->livestockId)
+                ->whereDate('tanggal', $yesterdayDate)
+                ->first();
+
+            // --- Fetch Yesterday's Depletion Data ---
+            $yesterdayDeplesi = LivestockDepletion::where('livestock_id', $this->livestockId)
+                ->whereDate('tanggal', $yesterdayDate)
+                ->get();
+
+            // --- Fetch Yesterday's Feed Usage Data ---
+            $yesterdayFeedUsage = FeedUsageDetail::whereHas('feedUsage', function ($query) use ($yesterdayDate) {
+                $query->where('livestock_id', $this->livestockId)
+                    ->whereDate('usage_date', $yesterdayDate);
+            })
+                ->with(['feedStock.feed'])
+                ->get();
+
+            // --- Fetch Yesterday's Supply Usage Data ---
+            $yesterdaySupplyUsage = SupplyUsageDetail::whereHas('supplyUsage', function ($query) use ($yesterdayDate) {
+                $query->where('livestock_id', $this->livestockId)
+                    ->whereDate('usage_date', $yesterdayDate);
+            })
+                ->with(['supplyStock.supply'])
+                ->get();
+
+            // --- Process and Store Yesterday's Data ---
+            if ($yesterdayRecording) {
+                $this->yesterday_weight = $yesterdayRecording->berat_hari_ini ?? 0;
+                $this->yesterday_stock_end = $yesterdayRecording->stock_akhir ?? 0;
+            } else {
+                $this->yesterday_weight = 0;
+                $this->yesterday_stock_end = 0;
+            }
+
+            // Process yesterday's depletion
+            if ($yesterdayDeplesi->isNotEmpty()) {
+                $this->yesterday_mortality = $yesterdayDeplesi->where('jenis', 'Mati')->sum('jumlah');
+                $this->yesterday_culling = $yesterdayDeplesi->where('jenis', 'Afkir')->sum('jumlah');
+            } else {
+                $this->yesterday_mortality = 0;
+                $this->yesterday_culling = 0;
+            }
+
+            // Process yesterday's feed usage
+            if ($yesterdayFeedUsage->isNotEmpty()) {
+                $feedUsageByType = $yesterdayFeedUsage->groupBy('feedStock.feed.name')
+                    ->map(function ($group) {
+                        return [
+                            'name' => $group->first()->feedStock->feed->name ?? 'Unknown',
+                            'code' => $group->first()->feedStock->feed->code ?? 'Unknown',
+                            'total_quantity' => $group->sum('quantity_taken'),
+                            'unit' => $group->first()->feedStock->feed->unit->name ?? 'Kg'
+                        ];
+                    })->values();
+
+                $this->yesterday_feed_usage = [
+                    'total_quantity' => $yesterdayFeedUsage->sum('quantity_taken'),
+                    'by_type' => $feedUsageByType->toArray(),
+                    'types_count' => $feedUsageByType->count()
+                ];
+            } else {
+                $this->yesterday_feed_usage = [
+                    'total_quantity' => 0,
+                    'by_type' => [],
+                    'types_count' => 0
+                ];
+            }
+
+            // Process yesterday's supply usage
+            if ($yesterdaySupplyUsage->isNotEmpty()) {
+                $supplyUsageByType = $yesterdaySupplyUsage->groupBy('supplyStock.supply.name')
+                    ->map(function ($group) {
+                        return [
+                            'name' => $group->first()->supplyStock->supply->name ?? 'Unknown',
+                            'code' => $group->first()->supplyStock->supply->code ?? 'Unknown',
+                            'total_quantity' => $group->sum('quantity_taken'),
+                            'unit' => $group->first()->supplyStock->supply->unit->name ?? 'Unit'
+                        ];
+                    })->values();
+
+                $this->yesterday_supply_usage = [
+                    'total_quantity' => $yesterdaySupplyUsage->sum('quantity_taken'),
+                    'by_type' => $supplyUsageByType->toArray(),
+                    'types_count' => $supplyUsageByType->count()
+                ];
+            } else {
+                $this->yesterday_supply_usage = [
+                    'total_quantity' => 0,
+                    'by_type' => [],
+                    'types_count' => 0
+                ];
+            }
+
+            // Create comprehensive yesterday data summary
+            $this->yesterday_data = [
+                'date' => $yesterdayDate,
+                'formatted_date' => Carbon::parse($yesterdayDate)->format('d/m/Y'),
+                'day_name' => Carbon::parse($yesterdayDate)->locale('id')->dayName,
+                'weight' => $this->yesterday_weight,
+                'stock_end' => $this->yesterday_stock_end,
+                'mortality' => $this->yesterday_mortality,
+                'culling' => $this->yesterday_culling,
+                'total_depletion' => $this->yesterday_mortality + $this->yesterday_culling,
+                'feed_usage' => $this->yesterday_feed_usage,
+                'supply_usage' => $this->yesterday_supply_usage,
+                'has_data' => $yesterdayRecording || $yesterdayDeplesi->isNotEmpty() ||
+                    $yesterdayFeedUsage->isNotEmpty() || $yesterdaySupplyUsage->isNotEmpty(),
+                'summary' => $this->generateYesterdaySummary()
+            ];
+
+            Log::info("Yesterday data loaded successfully", [
+                'livestock_id' => $this->livestockId,
+                'yesterday_date' => $yesterdayDate,
+                'has_recording' => $yesterdayRecording ? 'yes' : 'no',
+                'has_depletion' => $yesterdayDeplesi->isNotEmpty() ? 'yes' : 'no',
+                'has_feed_usage' => $yesterdayFeedUsage->isNotEmpty() ? 'yes' : 'no',
+                'has_supply_usage' => $yesterdaySupplyUsage->isNotEmpty() ? 'yes' : 'no',
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error loading yesterday data: " . $e->getMessage(), [
+                'livestock_id' => $this->livestockId,
+                'yesterday_date' => $yesterdayDate,
+                'error' => $e->getMessage()
+            ]);
+
+            $this->resetYesterdayData();
+        }
+    }
+
+    /**
+     * Generate a summary of yesterday's activities
+     * 
+     * @return string
+     */
+    private function generateYesterdaySummary()
+    {
+        $summary = [];
+
+        if ($this->yesterday_weight > 0) {
+            $summary[] = "Berat: " . number_format($this->yesterday_weight, 0) . "gr";
+        }
+
+        if ($this->yesterday_mortality > 0) {
+            $summary[] = "Mati: " . $this->yesterday_mortality . " ekor";
+        }
+
+        if ($this->yesterday_culling > 0) {
+            $summary[] = "Afkir: " . $this->yesterday_culling . " ekor";
+        }
+
+        if ($this->yesterday_feed_usage['total_quantity'] > 0) {
+            $summary[] = "Pakan: " . number_format($this->yesterday_feed_usage['total_quantity'], 1) . "kg";
+        }
+
+        if ($this->yesterday_supply_usage['total_quantity'] > 0) {
+            $summary[] = "OVK: " . $this->yesterday_supply_usage['types_count'] . " jenis";
+        }
+
+        return empty($summary) ? "Tidak ada data" : implode(", ", $summary);
+    }
+
+    /**
+     * Reset yesterday's data to default values
+     * 
+     * @return void
+     */
+    private function resetYesterdayData()
+    {
+        $this->yesterday_weight = 0;
+        $this->yesterday_mortality = 0;
+        $this->yesterday_culling = 0;
+        $this->yesterday_stock_end = 0;
+        $this->yesterday_feed_usage = [
+            'total_quantity' => 0,
+            'by_type' => [],
+            'types_count' => 0
+        ];
+        $this->yesterday_supply_usage = [
+            'total_quantity' => 0,
+            'by_type' => [],
+            'types_count' => 0
+        ];
+        $this->yesterday_data = null;
     }
 
     private function loadRecordingData()
@@ -788,6 +1147,58 @@ class Records extends Component
                 ->values()
                 ->toArray();
 
+            // --- Prepare supply usage data ---
+            $this->supplyUsages = collect($this->supplyQuantities)
+                ->map(function ($quantity, $supplyId) {
+                    if (empty($quantity) || $quantity <= 0) {
+                        return null;
+                    }
+
+                    $supply = Supply::with('unit')->find($supplyId);
+                    if (!$supply) {
+                        return null;
+                    }
+
+                    // Get detailed unit conversion information for supply
+                    $unitInfo = $this->getDetailedSupplyUnitInfo($supply, floatval($quantity));
+
+                    // Get supply stock details for traceability
+                    $stockInfo = $this->getSupplyStockDetails($supplyId, $this->livestockId);
+
+                    return [
+                        'supply_id' => $supplyId,
+                        'quantity' => (float) $quantity,
+                        'supply_name' => $supply->name,
+                        'supply_code' => $supply->code,
+                        'notes' => '', // Simple form doesn't have notes
+
+                        // Unit information
+                        'unit_id' => $unitInfo['smallest_unit_id'],
+                        'unit_name' => $unitInfo['smallest_unit_name'],
+                        'original_unit_id' => $unitInfo['original_unit_id'],
+                        'original_unit_name' => $unitInfo['original_unit_name'],
+                        'consumption_unit_id' => $unitInfo['consumption_unit_id'],
+                        'consumption_unit_name' => $unitInfo['consumption_unit_name'],
+
+                        // Conversion factors
+                        'conversion_factor' => $unitInfo['conversion_factor'],
+                        'converted_quantity' => $unitInfo['converted_quantity'],
+
+                        // Stock information for audit trail
+                        'available_stocks' => $stockInfo['available_stocks'],
+                        'stock_origins' => $stockInfo['stock_origins'],
+                        'stock_purchase_dates' => $stockInfo['stock_purchase_dates'],
+                        'stock_prices' => $stockInfo['stock_prices'],
+
+                        // Metadata
+                        'category' => $supply->supplyCategory->name ?? 'Uncategorized',
+                        'timestamp' => now()->toIso8601String(),
+                    ];
+                })
+                ->filter() // Remove null values
+                ->values()
+                ->toArray();
+
             // --- Validate livestock and data structure with enhanced checks ---
             $ternak = CurrentLivestock::with(['livestock.coop', 'livestock.farm'])->where('livestock_id', $this->livestockId)->first();
             if (!$ternak || !$ternak->livestock) {
@@ -947,6 +1358,10 @@ class Records extends Component
                 $this->hasChanged = $this->hasUsageChanged($usage, $this->usages);
             }
 
+            if ($this->supplyUsageId) {
+                $supplyUsage = SupplyUsage::findOrFail($this->supplyUsageId);
+                $this->hasSupplyChanged = $this->hasSupplyUsageChanged($supplyUsage, $this->supplyUsages);
+            }
 
             // dd($hasChanged);
 
@@ -977,6 +1392,66 @@ class Records extends Component
             } else {
 
                 // dd('kosong');
+            }
+
+            // --- Process supply usage with proper model structure ---
+            // Check if there's existing supply usage for this date
+            $existingSupplyUsage = SupplyUsage::where('livestock_id', $this->livestockId)
+                ->whereDate('usage_date', $this->date)
+                ->first();
+
+            if ($existingSupplyUsage) {
+                $this->supplyUsageId = $existingSupplyUsage->id;
+            }
+
+            // Prepare supply usage data from supplyQuantities
+            $this->supplyUsages = collect($this->supplyQuantities)
+                ->map(function ($quantity, $supplyId) {
+                    if (empty($quantity) || $quantity <= 0) {
+                        return null;
+                    }
+
+                    $supply = Supply::with('unit')->find($supplyId);
+                    if (!$supply) {
+                        return null;
+                    }
+
+                    return [
+                        'supply_id' => $supplyId,
+                        'quantity' => (float) $quantity,
+                        'supply_name' => $supply->name,
+                        'supply_code' => $supply->code,
+                    ];
+                })
+                ->filter() // Remove null values
+                ->values()
+                ->toArray();
+
+            if (!empty($this->supplyUsages) || $this->hasSupplyChanged === true) {
+                try {
+                    // Validate the usage date against supply stock entry dates
+                    $livestock = Livestock::find($this->livestockId);
+                    $earliestSupplyStockDate = SupplyStock::where('farm_id', $livestock->farm_id)->min('date');
+
+                    if ($earliestSupplyStockDate && $this->date < $earliestSupplyStockDate) {
+                        throw new \Exception("Supply usage date must be after the earliest supply stock entry date ({$earliestSupplyStockDate}) for this livestock");
+                    }
+
+                    // Save supply usage with proper model structure
+                    $supplyUsage = $this->saveSupplyUsageWithTracking($validatedData, $recording->id);
+
+                    Log::info("Supply usage processed successfully", [
+                        'usage_id' => $supplyUsage->id,
+                        'livestock_id' => $supplyUsage->livestock_id,
+                        'date' => $supplyUsage->usage_date,
+                        'total_quantity' => $supplyUsage->total_quantity ?? 0,
+                        'supplies_count' => count($this->supplyUsages),
+                    ]);
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    $this->dispatch('error', $e->getMessage());
+                    return;
+                }
             }
 
             // --- Record depletion data with cause tracking ---
@@ -1216,6 +1691,204 @@ class Records extends Component
                 'purchase_date' => $purchaseDate ? Carbon::parse($purchaseDate)->format('Y-m-d') : null,
                 'batch_id' => $stock->feedPurchase->batch->id ?? null,
                 'batch_number' => $stock->feedPurchase->batch->invoice_number ?? null,
+            ];
+        }
+
+        // Calculate price statistics
+        if (!empty($prices)) {
+            $result['stock_prices'] = [
+                'min_price' => min($prices),
+                'max_price' => max($prices),
+                'average_price' => array_sum($prices) / count($prices),
+            ];
+        }
+
+        // Format stock origins and purchase dates
+        foreach ($origins as $origin => $quantity) {
+            $result['stock_origins'][] = [
+                'origin' => $origin,
+                'quantity' => $quantity,
+            ];
+        }
+
+        foreach ($purchaseDates as $date => $quantity) {
+            $result['stock_purchase_dates'][] = [
+                'date' => $date,
+                'quantity' => $quantity,
+            ];
+        }
+
+        $result['available_stocks'] = $stockDetails;
+
+        return $result;
+    }
+
+    /**
+     * Get detailed unit information for a supply item
+     * 
+     * @param Supply $supply The supply item
+     * @param float $quantity The quantity to convert
+     * @return array Detailed unit information
+     */
+    private function getDetailedSupplyUnitInfo($supply, $quantity)
+    {
+        $result = [
+            'smallest_unit_id' => null,
+            'smallest_unit_name' => 'Unknown',
+            'original_unit_id' => null,
+            'original_unit_name' => 'Unknown',
+            'consumption_unit_id' => null,
+            'consumption_unit_name' => 'Unknown',
+            'conversion_factor' => 1,
+            'converted_quantity' => $quantity,
+        ];
+
+        if (!$supply) {
+            return $result;
+        }
+
+        // Get unit information from supply data
+        if (isset($supply->data['conversion_units']) && is_array($supply->data['conversion_units'])) {
+            $conversionUnits = collect($supply->data['conversion_units']);
+
+            // Get smallest unit (for storage)
+            $smallestUnit = $conversionUnits->firstWhere('is_smallest', true);
+            if ($smallestUnit) {
+                $result['smallest_unit_id'] = $smallestUnit['unit_id'];
+
+                // Get unit name from the database
+                $unit = Unit::find($smallestUnit['unit_id']);
+                $result['smallest_unit_name'] = $unit ? $unit->name : 'Unknown';
+
+                // Set conversion factor
+                $result['conversion_factor'] = floatval($smallestUnit['value'] ?? 1);
+            }
+
+            // Get original unit (for purchase)
+            $originalUnit = $conversionUnits->firstWhere('is_default_purchase', true);
+            if ($originalUnit) {
+                $result['original_unit_id'] = $originalUnit['unit_id'];
+
+                // Get unit name from the database
+                $unit = Unit::find($originalUnit['unit_id']);
+                $result['original_unit_name'] = $unit ? $unit->name : 'Unknown';
+            }
+
+            // Get consumption unit (for usage)
+            $consumptionUnit = $conversionUnits->firstWhere('is_default_mutation', true) ??
+                $conversionUnits->firstWhere('is_smallest', true);
+            if ($consumptionUnit) {
+                $result['consumption_unit_id'] = $consumptionUnit['unit_id'];
+
+                // Get unit name from the database
+                $unit = Unit::find($consumptionUnit['unit_id']);
+                $result['consumption_unit_name'] = $unit ? $unit->name : 'Unknown';
+
+                // Calculate converted quantity
+                if ($smallestUnit && $consumptionUnit) {
+                    $smallestValue = floatval($smallestUnit['value'] ?? 1);
+                    $consumptionValue = floatval($consumptionUnit['value'] ?? 1);
+
+                    if ($smallestValue > 0 && $consumptionValue > 0) {
+                        $result['converted_quantity'] = ($quantity * $consumptionValue) / $smallestValue;
+                    }
+                }
+            }
+        } else if ($supply->unit) {
+            // Fallback to basic unit information if conversion_units not available
+            $result['smallest_unit_id'] = $supply->unit->id;
+            $result['smallest_unit_name'] = $supply->unit->name;
+            $result['original_unit_id'] = $supply->unit->id;
+            $result['original_unit_name'] = $supply->unit->name;
+            $result['consumption_unit_id'] = $supply->unit->id;
+            $result['consumption_unit_name'] = $supply->unit->name;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get detailed stock information for a supply item
+     * 
+     * @param string $supplyId The supply ID
+     * @param string $livestockId The livestock ID
+     * @return array Detailed stock information
+     */
+    private function getSupplyStockDetails($supplyId, $livestockId)
+    {
+        $result = [
+            'available_stocks' => [],
+            'stock_origins' => [],
+            'stock_purchase_dates' => [],
+            'stock_prices' => [
+                'min_price' => 0,
+                'max_price' => 0,
+                'average_price' => 0,
+            ],
+        ];
+
+        $livestock = Livestock::find($livestockId);
+        if (!$livestock) {
+            return $result;
+        }
+
+        // Get available stocks for the supply and livestock
+        $stocks = SupplyStock::with(['supplyPurchase', 'supply'])
+            ->where('supply_id', $supplyId)
+            ->where('farm_id', $livestock->farm_id)
+            ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
+            ->orderBy('date')
+            ->get();
+
+        if ($stocks->isEmpty()) {
+            return $result;
+        }
+
+        // Prepare stock details
+        $stockDetails = [];
+        $prices = [];
+        $origins = [];
+        $purchaseDates = [];
+
+        foreach ($stocks as $stock) {
+            $available = $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated;
+
+            if ($available <= 0) {
+                continue;
+            }
+
+            // Get price information
+            $price = 0;
+            if ($stock->supplyPurchase) {
+                $price = $stock->supplyPurchase->price_per_converted_unit ??
+                    ($stock->supplyPurchase->price_per_unit ?? 0);
+
+                $prices[] = $price;
+            }
+
+            // Get origin information
+            $origin = 'Unknown';
+            if ($stock->supplyPurchase && $stock->supplyPurchase->batch && $stock->supplyPurchase->batch->supplier) {
+                $origin = $stock->supplyPurchase->batch->supplier->name ?? 'Unknown';
+                $origins[$origin] = ($origins[$origin] ?? 0) + $available;
+            }
+
+            // Get purchase date
+            $purchaseDate = $stock->date ?? ($stock->supplyPurchase->batch->date ?? null);
+            if ($purchaseDate) {
+                $formattedDate = Carbon::parse($purchaseDate)->format('Y-m-d');
+                $purchaseDates[$formattedDate] = ($purchaseDates[$formattedDate] ?? 0) + $available;
+            }
+
+            // Add stock detail
+            $stockDetails[] = [
+                'stock_id' => $stock->id,
+                'available' => $available,
+                'price' => $price,
+                'origin' => $origin,
+                'purchase_date' => $purchaseDate ? Carbon::parse($purchaseDate)->format('Y-m-d') : null,
+                'batch_id' => $stock->supplyPurchase->batch->id ?? null,
+                'batch_number' => $stock->supplyPurchase->batch->invoice_number ?? null,
             ];
         }
 
@@ -1729,6 +2402,196 @@ class Records extends Component
 
         // Return the usage record for further processing
         return $usage;
+    }
+
+    /**
+     * Save supply usage with proper model structure
+     * 
+     * @param array $data The validated data
+     * @param string $recordingId The recording ID for relation
+     * @return \App\Models\SupplyUsage The supply usage record
+     */
+    private function saveSupplyUsageWithTracking($data, $recordingId)
+    {
+        if ($this->supplyUsageId) {
+            // UPDATE - Handle existing supply usage
+            $usage = SupplyUsage::findOrFail($this->supplyUsageId);
+            $this->hasSupplyChanged = $this->hasSupplyUsageChanged($usage, $this->supplyUsages);
+
+            if (!$this->hasSupplyChanged) {
+                return $usage; // No changes, no need to update
+            }
+
+            // Ensure valid usage date
+            $livestock = Livestock::find($this->livestockId);
+            $earliestStockDate = SupplyStock::where('farm_id', $livestock->farm_id)->min('date');
+            if ($earliestStockDate && $this->date < $earliestStockDate) {
+                throw new \Exception("Supply usage date must be after the earliest stock entry date ({$earliestStockDate})");
+            }
+
+            // Update usage record according to model structure
+            $usage->update([
+                'usage_date' => $this->date,
+                'livestock_id' => $this->livestockId,
+                'total_quantity' => array_sum(array_column($this->supplyUsages, 'quantity')),
+                'updated_by' => auth()->id(),
+            ]);
+
+            // Revert old details
+            $oldDetails = SupplyUsageDetail::where('supply_usage_id', $usage->id)->get();
+
+            Log::info("Reverting {$oldDetails->count()} supply usage details for usage ID {$usage->id}");
+
+            // Track changes for CurrentSupply update
+            $currentSupplyChanges = [];
+
+            foreach ($oldDetails as $detail) {
+                $stock = SupplyStock::find($detail->supply_stock_id);
+                if ($stock) {
+                    // Store reversion details for audit trail
+                    Log::info("Reverting supply stock usage", [
+                        'stock_id' => $stock->id,
+                        'supply_id' => $stock->supply_id,
+                        'old_quantity_used' => $stock->quantity_used,
+                        'quantity_to_revert' => $detail->quantity_taken,
+                        'new_quantity_used' => max(0, $stock->quantity_used - $detail->quantity_taken),
+                        'detail_id' => $detail->id,
+                    ]);
+
+                    // Revert the used quantity
+                    $stock->quantity_used = max(0, $stock->quantity_used - $detail->quantity_taken);
+                    $stock->save();
+
+                    // Track changes for CurrentSupply
+                    if (!isset($currentSupplyChanges[$stock->supply_id])) {
+                        $currentSupplyChanges[$stock->supply_id] = 0;
+                    }
+                    $currentSupplyChanges[$stock->supply_id] += $detail->quantity_taken;
+                }
+
+                // Delete the detail
+                $detail->delete();
+            }
+
+            // Update CurrentSupply for reverted quantities
+            foreach ($currentSupplyChanges as $supplyId => $quantity) {
+                $currentSupply = CurrentSupply::where('livestock_id', $this->livestockId)
+                    ->where('item_id', $supplyId)
+                    ->first();
+
+                if ($currentSupply) {
+                    $oldQuantity = $currentSupply->quantity;
+                    $currentSupply->quantity += $quantity;
+                    $currentSupply->save();
+
+                    Log::info("Updated CurrentSupply after supply reversion", [
+                        'livestock_id' => $this->livestockId,
+                        'supply_id' => $supplyId,
+                        'old_quantity' => $oldQuantity,
+                        'added_quantity' => $quantity,
+                        'new_quantity' => $currentSupply->quantity
+                    ]);
+                }
+            }
+        } else {
+            // CREATE - Create new supply usage according to model structure
+            $livestock = Livestock::find($this->livestockId);
+            $earliestStockDate = SupplyStock::where('farm_id', $livestock->farm_id)->min('date');
+            if ($earliestStockDate && $this->date < $earliestStockDate) {
+                throw new \Exception("Supply usage date must be after the earliest stock entry date ({$earliestStockDate})");
+            }
+
+            // Create new usage record with correct fields
+            $usage = SupplyUsage::create([
+                'usage_date' => $this->date,
+                'livestock_id' => $this->livestockId,
+                'total_quantity' => array_sum(array_column($this->supplyUsages, 'quantity')),
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        // Process each supply usage and create details
+        foreach ($this->supplyUsages as $usageData) {
+            $this->processSupplyUsageDetail($usage, $usageData);
+        }
+
+        Log::info("Supply usage processed", [
+            'usage_id' => $usage->id,
+            'livestock_id' => $usage->livestock_id,
+            'date' => $usage->usage_date,
+            'total_quantity' => $usage->total_quantity,
+            'supplies_count' => count($this->supplyUsages),
+        ]);
+
+        // Return the usage record for further processing
+        return $usage;
+    }
+
+    /**
+     * Process individual supply usage detail with FIFO
+     */
+    private function processSupplyUsageDetail($usage, $usageData)
+    {
+        $livestock = Livestock::find($this->livestockId);
+        $quantityNeeded = $usageData['quantity'];
+
+        // Get available stocks using FIFO (oldest first)
+        $availableStocks = SupplyStock::where('farm_id', $livestock->farm_id)
+            ->where('supply_id', $usageData['supply_id'])
+            ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
+            ->orderBy('date')
+            ->orderBy('created_at')
+            ->get();
+
+        foreach ($availableStocks as $stock) {
+            if ($quantityNeeded <= 0) break;
+
+            $availableInStock = $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated;
+            $quantityToTake = min($quantityNeeded, $availableInStock);
+
+            if ($quantityToTake > 0) {
+                // Create supply usage detail
+                SupplyUsageDetail::create([
+                    'supply_usage_id' => $usage->id,
+                    'supply_id' => $usageData['supply_id'],
+                    'supply_stock_id' => $stock->id,
+                    'quantity_taken' => $quantityToTake,
+                    'created_by' => auth()->id(),
+                ]);
+
+                // Update stock quantity used
+                $stock->quantity_used += $quantityToTake;
+                $stock->save();
+
+                // Update CurrentSupply
+                $currentSupply = CurrentSupply::where('livestock_id', $this->livestockId)
+                    ->where('item_id', $usageData['supply_id'])
+                    ->first();
+
+                if ($currentSupply) {
+                    $currentSupply->quantity -= $quantityToTake;
+                    $currentSupply->save();
+                }
+
+                $quantityNeeded -= $quantityToTake;
+
+                Log::info("Supply usage detail created", [
+                    'usage_id' => $usage->id,
+                    'supply_id' => $usageData['supply_id'],
+                    'stock_id' => $stock->id,
+                    'quantity_taken' => $quantityToTake,
+                    'remaining_needed' => $quantityNeeded
+                ]);
+            }
+        }
+
+        if ($quantityNeeded > 0) {
+            Log::warning("Insufficient stock for supply usage", [
+                'supply_id' => $usageData['supply_id'],
+                'requested' => $usageData['quantity'],
+                'shortage' => $quantityNeeded
+            ]);
+        }
     }
 
     /**

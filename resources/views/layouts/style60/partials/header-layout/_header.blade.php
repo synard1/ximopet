@@ -3,14 +3,16 @@
 	<!--begin::Header primary-->
 	<div class="app-header-primary">
 		<!--begin::Header primary container-->
-		<div class="app-container container-fluid d-flex align-items-stretch justify-content-between" id="kt_app_header_primary_container">
+		<div class="app-container container-fluid d-flex align-items-stretch justify-content-between"
+			id="kt_app_header_primary_container">
 			<!--begin::Header primary wrapper-->
 			<div class="d-flex flex-stack flex-grow-1">
 				<div class="d-flex">
 					<!--begin::Logo-->
 					<div class="app-header-logo d-flex flex-center gap-2 me-lg-15">
 						<!--begin::Sidebar toggle-->
-						<button class="btn btn-icon btn-sm btn-custom d-flex d-lg-none ms-n2" id="kt_app_header_menu_toggle">
+						<button class="btn btn-icon btn-sm btn-custom d-flex d-lg-none ms-n2"
+							id="kt_app_header_menu_toggle">
 							<i class="ki-outline ki-abstract-14 fs-2"></i>
 						</button>
 						<!--end::Sidebar toggle-->
@@ -25,11 +27,19 @@
 					<!--begin::Menu wrapper-->
 					<div class="d-flex align-items-stretch" id="kt_app_header_menu_wrapper">
 						<!--begin::Menu holder-->
-						<div class="app-header-menu app-header-mobile-drawer align-items-stretch" data-kt-drawer="true" data-kt-drawer-name="app-header-menu" data-kt-drawer-activate="{default: true, lg: false}" data-kt-drawer-overlay="true" data-kt-drawer-width="{default:'200px', '300px': '250px'}" data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_app_header_menu_toggle" data-kt-swapper="true" data-kt-swapper-mode="{default: 'append', lg: 'prepend'}" data-kt-swapper-parent="{default: '#kt_app_body', lg: '#kt_app_header_menu_wrapper'}">
+						<div class="app-header-menu app-header-mobile-drawer align-items-stretch" data-kt-drawer="true"
+							data-kt-drawer-name="app-header-menu" data-kt-drawer-activate="{default: true, lg: false}"
+							data-kt-drawer-overlay="true" data-kt-drawer-width="{default:'200px', '300px': '250px'}"
+							data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_app_header_menu_toggle"
+							data-kt-swapper="true" data-kt-swapper-mode="{default: 'append', lg: 'prepend'}"
+							data-kt-swapper-parent="{default: '#kt_app_body', lg: '#kt_app_header_menu_wrapper'}">
 							<!--begin::Menu-->
-							<div class="menu menu-rounded menu-column menu-lg-row menu-active-bg menu-title-gray-700 menu-state-gray-900 menu-icon-gray-500 menu-arrow-gray-500 menu-state-icon-primary menu-state-bullet-primary fw-semibold fs-6 align-items-stretch my-5 my-lg-0 px-2 px-lg-0" id="#kt_app_header_menu" data-kt-menu="true">
+							<div class="menu menu-rounded menu-column menu-lg-row menu-active-bg menu-title-gray-700 menu-state-gray-900 menu-icon-gray-500 menu-arrow-gray-500 menu-state-icon-primary menu-state-bullet-primary fw-semibold fs-6 align-items-stretch my-5 my-lg-0 px-2 px-lg-0"
+								id="#kt_app_header_menu" data-kt-menu="true">
 								<!--begin:Menu item-->
-								<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start" class="menu-item here show menu-here-bg menu-lg-down-accordion me-0 me-lg-2">
+								<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+									data-kt-menu-placement="bottom-start"
+									class="menu-item here show menu-here-bg menu-lg-down-accordion me-0 me-lg-2">
 									<!--begin:Menu link-->
 									<span class="menu-link">
 										<span class="menu-title">Dashboards</span>
@@ -37,9 +47,11 @@
 									</span>
 									<!--end:Menu link-->
 									<!--begin:Menu sub-->
-									<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown p-0 w-100 w-lg-850px">
+									<div
+										class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown p-0 w-100 w-lg-850px">
 										<!--begin:Dashboards menu-->
-										<div class="menu-state-bg menu-extended overflow-hidden overflow-lg-visible" data-kt-menu-dismiss="true">
+										<div class="menu-state-bg menu-extended overflow-hidden overflow-lg-visible"
+											data-kt-menu-dismiss="true">
 											<!--begin:Row-->
 											<div class="row">
 												<!--begin:Col-->
@@ -52,12 +64,17 @@
 															<div class="menu-item p-0 m-0">
 																<!--begin:Menu link-->
 																<a href="index.html" class="menu-link active">
-																	<span class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																		<i class="ki-outline ki-element-11 text-primary fs-1"></i>
+																	<span
+																		class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
+																		<i
+																			class="ki-outline ki-element-11 text-primary fs-1"></i>
 																	</span>
 																	<span class="d-flex flex-column">
-																		<span class="fs-6 fw-bold text-gray-800">Default</span>
-																		<span class="fs-7 fw-semibold text-muted">Reports & statistics</span>
+																		<span
+																			class="fs-6 fw-bold text-gray-800">Default</span>
+																		<span
+																			class="fs-7 fw-semibold text-muted">Reports
+																			& statistics</span>
 																	</span>
 																</a>
 																<!--end:Menu link-->
@@ -71,12 +88,16 @@
 															<div class="menu-item p-0 m-0">
 																<!--begin:Menu link-->
 																<a href="dashboards/ecommerce.html" class="menu-link">
-																	<span class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																		<i class="ki-outline ki-basket text-danger fs-1"></i>
+																	<span
+																		class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
+																		<i
+																			class="ki-outline ki-basket text-danger fs-1"></i>
 																	</span>
 																	<span class="d-flex flex-column">
-																		<span class="fs-6 fw-bold text-gray-800">eCommerce</span>
-																		<span class="fs-7 fw-semibold text-muted">Sales reports</span>
+																		<span
+																			class="fs-6 fw-bold text-gray-800">eCommerce</span>
+																		<span class="fs-7 fw-semibold text-muted">Sales
+																			reports</span>
 																	</span>
 																</a>
 																<!--end:Menu link-->
@@ -90,12 +111,16 @@
 															<div class="menu-item p-0 m-0">
 																<!--begin:Menu link-->
 																<a href="dashboards/projects.html" class="menu-link">
-																	<span class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																		<i class="ki-outline ki-abstract-44 text-info fs-1"></i>
+																	<span
+																		class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
+																		<i
+																			class="ki-outline ki-abstract-44 text-info fs-1"></i>
 																	</span>
 																	<span class="d-flex flex-column">
-																		<span class="fs-6 fw-bold text-gray-800">Projects</span>
-																		<span class="fs-7 fw-semibold text-muted">Tasts, graphs & charts</span>
+																		<span
+																			class="fs-6 fw-bold text-gray-800">Projects</span>
+																		<span class="fs-7 fw-semibold text-muted">Tasts,
+																			graphs & charts</span>
 																	</span>
 																</a>
 																<!--end:Menu link-->
@@ -108,13 +133,19 @@
 															<!--begin:Menu item-->
 															<div class="menu-item p-0 m-0">
 																<!--begin:Menu link-->
-																<a href="dashboards/online-courses.html" class="menu-link">
-																	<span class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																		<i class="ki-outline ki-color-swatch text-success fs-1"></i>
+																<a href="dashboards/online-courses.html"
+																	class="menu-link">
+																	<span
+																		class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
+																		<i
+																			class="ki-outline ki-color-swatch text-success fs-1"></i>
 																	</span>
 																	<span class="d-flex flex-column">
-																		<span class="fs-6 fw-bold text-gray-800">Online Courses</span>
-																		<span class="fs-7 fw-semibold text-muted">Student progress</span>
+																		<span class="fs-6 fw-bold text-gray-800">Online
+																			Courses</span>
+																		<span
+																			class="fs-7 fw-semibold text-muted">Student
+																			progress</span>
 																	</span>
 																</a>
 																<!--end:Menu link-->
@@ -128,12 +159,17 @@
 															<div class="menu-item p-0 m-0">
 																<!--begin:Menu link-->
 																<a href="dashboards/marketing.html" class="menu-link">
-																	<span class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																		<i class="ki-outline ki-chart-simple text-gray-900 fs-1"></i>
+																	<span
+																		class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
+																		<i
+																			class="ki-outline ki-chart-simple text-gray-900 fs-1"></i>
 																	</span>
 																	<span class="d-flex flex-column">
-																		<span class="fs-6 fw-bold text-gray-800">Marketing</span>
-																		<span class="fs-7 fw-semibold text-muted">Campaings & conversions</span>
+																		<span
+																			class="fs-6 fw-bold text-gray-800">Marketing</span>
+																		<span
+																			class="fs-7 fw-semibold text-muted">Campaings
+																			& conversions</span>
 																	</span>
 																</a>
 																<!--end:Menu link-->
@@ -147,12 +183,17 @@
 															<div class="menu-item p-0 m-0">
 																<!--begin:Menu link-->
 																<a href="dashboards/bidding.html" class="menu-link">
-																	<span class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																		<i class="ki-outline ki-switch text-warning fs-1"></i>
+																	<span
+																		class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
+																		<i
+																			class="ki-outline ki-switch text-warning fs-1"></i>
 																	</span>
 																	<span class="d-flex flex-column">
-																		<span class="fs-6 fw-bold text-gray-800">Bidding</span>
-																		<span class="fs-7 fw-semibold text-muted">Campaings & conversions</span>
+																		<span
+																			class="fs-6 fw-bold text-gray-800">Bidding</span>
+																		<span
+																			class="fs-7 fw-semibold text-muted">Campaings
+																			& conversions</span>
 																	</span>
 																</a>
 																<!--end:Menu link-->
@@ -166,12 +207,17 @@
 															<div class="menu-item p-0 m-0">
 																<!--begin:Menu link-->
 																<a href="dashboards/pos.html" class="menu-link">
-																	<span class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																		<i class="ki-outline ki-abstract-42 text-danger fs-1"></i>
+																	<span
+																		class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
+																		<i
+																			class="ki-outline ki-abstract-42 text-danger fs-1"></i>
 																	</span>
 																	<span class="d-flex flex-column">
-																		<span class="fs-6 fw-bold text-gray-800">POS System</span>
-																		<span class="fs-7 fw-semibold text-muted">Campaings & conversions</span>
+																		<span class="fs-6 fw-bold text-gray-800">POS
+																			System</span>
+																		<span
+																			class="fs-7 fw-semibold text-muted">Campaings
+																			& conversions</span>
 																	</span>
 																</a>
 																<!--end:Menu link-->
@@ -185,12 +231,17 @@
 															<div class="menu-item p-0 m-0">
 																<!--begin:Menu link-->
 																<a href="dashboards/call-center.html" class="menu-link">
-																	<span class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
-																		<i class="ki-outline ki-call text-primary fs-1"></i>
+																	<span
+																		class="menu-custom-icon d-flex flex-center flex-shrink-0 rounded w-40px h-40px me-3">
+																		<i
+																			class="ki-outline ki-call text-primary fs-1"></i>
 																	</span>
 																	<span class="d-flex flex-column">
-																		<span class="fs-6 fw-bold text-gray-800">Call Center</span>
-																		<span class="fs-7 fw-semibold text-muted">Campaings & conversions</span>
+																		<span class="fs-6 fw-bold text-gray-800">Call
+																			Center</span>
+																		<span
+																			class="fs-7 fw-semibold text-muted">Campaings
+																			& conversions</span>
 																	</span>
 																</a>
 																<!--end:Menu link-->
@@ -204,18 +255,23 @@
 													<!--begin:Landing-->
 													<div class="d-flex flex-stack flex-wrap flex-lg-nowrap gap-2 mx-5">
 														<div class="d-flex flex-column me-5">
-															<div class="fs-6 fw-bold text-gray-800">Landing Page Template</div>
-															<div class="fs-7 fw-semibold text-muted">Onpe page landing template with pricing & others</div>
+															<div class="fs-6 fw-bold text-gray-800">Landing Page
+																Template</div>
+															<div class="fs-7 fw-semibold text-muted">Onpe page landing
+																template with pricing & others</div>
 														</div>
-														<a href="landing.html" class="btn btn-sm btn-primary fw-bold">Explore</a>
+														<a href="landing.html"
+															class="btn btn-sm btn-primary fw-bold">Explore</a>
 													</div>
 													<!--end:Landing-->
 												</div>
 												<!--end:Col-->
 												<!--begin:Col-->
-												<div class="menu-more bg-light col-lg-4 py-3 px-3 py-lg-6 px-lg-6 rounded-end">
+												<div
+													class="menu-more bg-light col-lg-4 py-3 px-3 py-lg-6 px-lg-6 rounded-end">
 													<!--begin:Heading-->
-													<h4 class="fs-6 fs-lg-4 text-gray-800 fw-bold mt-3 mb-3 ms-4">More Dashboards</h4>
+													<h4 class="fs-6 fs-lg-4 text-gray-800 fw-bold mt-3 mb-3 ms-4">More
+														Dashboards</h4>
 													<!--end:Heading-->
 													<!--begin:Menu item-->
 													<div class="menu-item p-0 m-0">
@@ -229,7 +285,8 @@
 													<!--begin:Menu item-->
 													<div class="menu-item p-0 m-0">
 														<!--begin:Menu link-->
-														<a href="dashboards/website-analytics.html" class="menu-link py-2">
+														<a href="dashboards/website-analytics.html"
+															class="menu-link py-2">
 															<span class="menu-title">Website Analytics</span>
 														</a>
 														<!--end:Menu link-->
@@ -238,7 +295,8 @@
 													<!--begin:Menu item-->
 													<div class="menu-item p-0 m-0">
 														<!--begin:Menu link-->
-														<a href="dashboards/finance-performance.html" class="menu-link py-2">
+														<a href="dashboards/finance-performance.html"
+															class="menu-link py-2">
 															<span class="menu-title">Finance Performance</span>
 														</a>
 														<!--end:Menu link-->
@@ -247,7 +305,8 @@
 													<!--begin:Menu item-->
 													<div class="menu-item p-0 m-0">
 														<!--begin:Menu link-->
-														<a href="dashboards/store-analytics.html" class="menu-link py-2">
+														<a href="dashboards/store-analytics.html"
+															class="menu-link py-2">
 															<span class="menu-title">Store Analytics</span>
 														</a>
 														<!--end:Menu link-->
@@ -309,7 +368,9 @@
 								</div>
 								<!--end:Menu item-->
 								<!--begin:Menu item-->
-								<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start" class="menu-item menu-lg-down-accordion me-0 me-lg-2">
+								<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+									data-kt-menu-placement="bottom-start"
+									class="menu-item menu-lg-down-accordion me-0 me-lg-2">
 									<!--begin:Menu link-->
 									<span class="menu-link">
 										<span class="menu-title">Pages</span>
@@ -322,30 +383,41 @@
 										<div class="menu-active-bg px-4 px-lg-0">
 											<!--begin:Tabs nav-->
 											<div class="d-flex w-100 overflow-auto">
-												<ul class="nav nav-stretch nav-line-tabs fw-bold fs-6 p-0 p-lg-10 flex-nowrap flex-grow-1">
+												<ul
+													class="nav nav-stretch nav-line-tabs fw-bold fs-6 p-0 p-lg-10 flex-nowrap flex-grow-1">
 													<!--begin:Nav item-->
 													<li class="nav-item mx-lg-1">
-														<a class="nav-link py-3 py-lg-6 active text-active-primary" href="#" data-bs-toggle="tab" data-bs-target="#kt_app_header_menu_pages_pages">General</a>
+														<a class="nav-link py-3 py-lg-6 active text-active-primary"
+															href="#" data-bs-toggle="tab"
+															data-bs-target="#kt_app_header_menu_pages_pages">General</a>
 													</li>
 													<!--end:Nav item-->
 													<!--begin:Nav item-->
 													<li class="nav-item mx-lg-1">
-														<a class="nav-link py-3 py-lg-6 text-active-primary" href="#" data-bs-toggle="tab" data-bs-target="#kt_app_header_menu_pages_account">Account</a>
+														<a class="nav-link py-3 py-lg-6 text-active-primary" href="#"
+															data-bs-toggle="tab"
+															data-bs-target="#kt_app_header_menu_pages_account">Account</a>
 													</li>
 													<!--end:Nav item-->
 													<!--begin:Nav item-->
 													<li class="nav-item mx-lg-1">
-														<a class="nav-link py-3 py-lg-6 text-active-primary" href="#" data-bs-toggle="tab" data-bs-target="#kt_app_header_menu_pages_authentication">Authentication</a>
+														<a class="nav-link py-3 py-lg-6 text-active-primary" href="#"
+															data-bs-toggle="tab"
+															data-bs-target="#kt_app_header_menu_pages_authentication">Authentication</a>
 													</li>
 													<!--end:Nav item-->
 													<!--begin:Nav item-->
 													<li class="nav-item mx-lg-1">
-														<a class="nav-link py-3 py-lg-6 text-active-primary" href="#" data-bs-toggle="tab" data-bs-target="#kt_app_header_menu_pages_utilities">Utilities</a>
+														<a class="nav-link py-3 py-lg-6 text-active-primary" href="#"
+															data-bs-toggle="tab"
+															data-bs-target="#kt_app_header_menu_pages_utilities">Utilities</a>
 													</li>
 													<!--end:Nav item-->
 													<!--begin:Nav item-->
 													<li class="nav-item mx-lg-1">
-														<a class="nav-link py-3 py-lg-6 text-active-primary" href="#" data-bs-toggle="tab" data-bs-target="#kt_app_header_menu_pages_widgets">Widgets</a>
+														<a class="nav-link py-3 py-lg-6 text-active-primary" href="#"
+															data-bs-toggle="tab"
+															data-bs-target="#kt_app_header_menu_pages_widgets">Widgets</a>
 													</li>
 													<!--end:Nav item-->
 												</ul>
@@ -354,7 +426,8 @@
 											<!--begin:Tab content-->
 											<div class="tab-content py-4 py-lg-8 px-lg-7">
 												<!--begin:Tab pane-->
-												<div class="tab-pane active w-lg-1000px" id="kt_app_header_menu_pages_pages">
+												<div class="tab-pane active w-lg-1000px"
+													id="kt_app_header_menu_pages_pages">
 													<!--begin:Row-->
 													<div class="row">
 														<!--begin:Col-->
@@ -364,12 +437,14 @@
 																<!--begin:Col-->
 																<div class="col-lg-3 mb-6 mb-lg-0">
 																	<!--begin:Menu heading-->
-																	<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">User Profile</h4>
+																	<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">User
+																		Profile</h4>
 																	<!--end:Menu heading-->
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="pages/user-profile/overview.html" class="menu-link">
+																		<a href="pages/user-profile/overview.html"
+																			class="menu-link">
 																			<span class="menu-title">Overview</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -378,7 +453,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="pages/user-profile/projects.html" class="menu-link">
+																		<a href="pages/user-profile/projects.html"
+																			class="menu-link">
 																			<span class="menu-title">Projects</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -387,7 +463,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="pages/user-profile/campaigns.html" class="menu-link">
+																		<a href="pages/user-profile/campaigns.html"
+																			class="menu-link">
 																			<span class="menu-title">Campaigns</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -396,7 +473,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="pages/user-profile/documents.html" class="menu-link">
+																		<a href="pages/user-profile/documents.html"
+																			class="menu-link">
 																			<span class="menu-title">Documents</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -405,7 +483,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="pages/user-profile/followers.html" class="menu-link">
+																		<a href="pages/user-profile/followers.html"
+																			class="menu-link">
 																			<span class="menu-title">Followers</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -414,7 +493,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="pages/user-profile/activity.html" class="menu-link">
+																		<a href="pages/user-profile/activity.html"
+																			class="menu-link">
 																			<span class="menu-title">Activity</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -427,12 +507,14 @@
 																	<!--begin:Menu section-->
 																	<div class="mb-6">
 																		<!--begin:Menu heading-->
-																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Corporate</h4>
+																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">
+																			Corporate</h4>
 																		<!--end:Menu heading-->
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/about.html" class="menu-link">
+																			<a href="pages/about.html"
+																				class="menu-link">
 																				<span class="menu-title">About</span>
 																			</a>
 																			<!--end:Menu link-->
@@ -450,8 +532,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/contact.html" class="menu-link">
-																				<span class="menu-title">Contact Us</span>
+																			<a href="pages/contact.html"
+																				class="menu-link">
+																				<span class="menu-title">Contact
+																					Us</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -459,7 +543,8 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/licenses.html" class="menu-link">
+																			<a href="pages/licenses.html"
+																				class="menu-link">
 																				<span class="menu-title">Licenses</span>
 																			</a>
 																			<!--end:Menu link-->
@@ -468,7 +553,8 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/sitemap.html" class="menu-link">
+																			<a href="pages/sitemap.html"
+																				class="menu-link">
 																				<span class="menu-title">Sitemap</span>
 																			</a>
 																			<!--end:Menu link-->
@@ -479,13 +565,16 @@
 																	<!--begin:Menu section-->
 																	<div class="mb-0">
 																		<!--begin:Menu heading-->
-																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Careers</h4>
+																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">
+																			Careers</h4>
 																		<!--end:Menu heading-->
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/careers/list.html" class="menu-link">
-																				<span class="menu-title">Careers List</span>
+																			<a href="pages/careers/list.html"
+																				class="menu-link">
+																				<span class="menu-title">Careers
+																					List</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -493,8 +582,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/careers/apply.html" class="menu-link">
-																				<span class="menu-title">Careers Apply</span>
+																			<a href="pages/careers/apply.html"
+																				class="menu-link">
+																				<span class="menu-title">Careers
+																					Apply</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -508,13 +599,16 @@
 																	<!--begin:Menu section-->
 																	<div class="mb-6">
 																		<!--begin:Menu heading-->
-																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">FAQ</h4>
+																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">FAQ
+																		</h4>
 																		<!--end:Menu heading-->
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/faq/classic.html" class="menu-link">
-																				<span class="menu-title">FAQ Classic</span>
+																			<a href="pages/faq/classic.html"
+																				class="menu-link">
+																				<span class="menu-title">FAQ
+																					Classic</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -522,8 +616,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/faq/extended.html" class="menu-link">
-																				<span class="menu-title">FAQ Extended</span>
+																			<a href="pages/faq/extended.html"
+																				class="menu-link">
+																				<span class="menu-title">FAQ
+																					Extended</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -533,13 +629,16 @@
 																	<!--begin:Menu section-->
 																	<div class="mb-6">
 																		<!--begin:Menu heading-->
-																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Blog</h4>
+																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Blog
+																		</h4>
 																		<!--end:Menu heading-->
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/blog/home.html" class="menu-link">
-																				<span class="menu-title">Blog Home</span>
+																			<a href="pages/blog/home.html"
+																				class="menu-link">
+																				<span class="menu-title">Blog
+																					Home</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -547,8 +646,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/blog/post.html" class="menu-link">
-																				<span class="menu-title">Blog Post</span>
+																			<a href="pages/blog/post.html"
+																				class="menu-link">
+																				<span class="menu-title">Blog
+																					Post</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -558,13 +659,16 @@
 																	<!--begin:Menu section-->
 																	<div class="mb-0">
 																		<!--begin:Menu heading-->
-																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Pricing</h4>
+																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">
+																			Pricing</h4>
 																		<!--end:Menu heading-->
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/pricing.html" class="menu-link">
-																				<span class="menu-title">Column Pricing</span>
+																			<a href="pages/pricing.html"
+																				class="menu-link">
+																				<span class="menu-title">Column
+																					Pricing</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -572,8 +676,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/pricing/table.html" class="menu-link">
-																				<span class="menu-title">Table Pricing</span>
+																			<a href="pages/pricing/table.html"
+																				class="menu-link">
+																				<span class="menu-title">Table
+																					Pricing</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -587,12 +693,14 @@
 																	<!--begin:Menu section-->
 																	<div class="mb-0">
 																		<!--begin:Menu heading-->
-																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Social</h4>
+																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">
+																			Social</h4>
 																		<!--end:Menu heading-->
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/social/feeds.html" class="menu-link">
+																			<a href="pages/social/feeds.html"
+																				class="menu-link">
 																				<span class="menu-title">Feeds</span>
 																			</a>
 																			<!--end:Menu link-->
@@ -601,7 +709,8 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/social/activity.html" class="menu-link">
+																			<a href="pages/social/activity.html"
+																				class="menu-link">
 																				<span class="menu-title">Activty</span>
 																			</a>
 																			<!--end:Menu link-->
@@ -610,8 +719,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/social/followers.html" class="menu-link">
-																				<span class="menu-title">Followers</span>
+																			<a href="pages/social/followers.html"
+																				class="menu-link">
+																				<span
+																					class="menu-title">Followers</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -619,7 +730,8 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="pages/social/settings.html" class="menu-link">
+																			<a href="pages/social/settings.html"
+																				class="menu-link">
 																				<span class="menu-title">Settings</span>
 																			</a>
 																			<!--end:Menu link-->
@@ -635,7 +747,8 @@
 														<!--end:Col-->
 														<!--begin:Col-->
 														<div class="col-lg-4">
-															<img src="assets/media/stock/600x600/img-82.jpg" class="rounded mw-100" alt="" />
+															<img src="assets/media/stock/600x600/img-82.jpg"
+																class="rounded mw-100" alt="" />
 														</div>
 														<!--end:Col-->
 													</div>
@@ -655,7 +768,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="account/overview.html" class="menu-link">
+																		<a href="account/overview.html"
+																			class="menu-link">
 																			<span class="menu-title">Overview</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -664,7 +778,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="account/settings.html" class="menu-link">
+																		<a href="account/settings.html"
+																			class="menu-link">
 																			<span class="menu-title">Settings</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -673,7 +788,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="account/security.html" class="menu-link">
+																		<a href="account/security.html"
+																			class="menu-link">
 																			<span class="menu-title">Security</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -682,7 +798,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="account/activity.html" class="menu-link">
+																		<a href="account/activity.html"
+																			class="menu-link">
 																			<span class="menu-title">Activity</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -691,7 +808,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="account/billing.html" class="menu-link">
+																		<a href="account/billing.html"
+																			class="menu-link">
 																			<span class="menu-title">Billing</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -704,7 +822,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="account/statements.html" class="menu-link">
+																		<a href="account/statements.html"
+																			class="menu-link">
 																			<span class="menu-title">Statements</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -713,7 +832,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="account/referrals.html" class="menu-link">
+																		<a href="account/referrals.html"
+																			class="menu-link">
 																			<span class="menu-title">Referrals</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -722,7 +842,8 @@
 																	<!--begin:Menu item-->
 																	<div class="menu-item p-0 m-0">
 																		<!--begin:Menu link-->
-																		<a href="account/api-keys.html" class="menu-link">
+																		<a href="account/api-keys.html"
+																			class="menu-link">
 																			<span class="menu-title">API Keys</span>
 																		</a>
 																		<!--end:Menu link-->
@@ -745,7 +866,8 @@
 														<!--end:Col-->
 														<!--begin:Col-->
 														<div class="col-lg-7">
-															<img src="assets/media/stock/900x600/46.jpg" class="rounded mw-100" alt="" />
+															<img src="assets/media/stock/900x600/46.jpg"
+																class="rounded mw-100" alt="" />
 														</div>
 														<!--end:Col-->
 													</div>
@@ -753,7 +875,8 @@
 												</div>
 												<!--end:Tab pane-->
 												<!--begin:Tab pane-->
-												<div class="tab-pane w-lg-1000px" id="kt_app_header_menu_pages_authentication">
+												<div class="tab-pane w-lg-1000px"
+													id="kt_app_header_menu_pages_authentication">
 													<!--begin:Row-->
 													<div class="row">
 														<!--begin:Col-->
@@ -761,12 +884,14 @@
 															<!--begin:Menu section-->
 															<div class="mb-6">
 																<!--begin:Menu heading-->
-																<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Corporate Layout</h4>
+																<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Corporate
+																	Layout</h4>
 																<!--end:Menu heading-->
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/corporate/sign-in.html" class="menu-link">
+																	<a href="authentication/layouts/corporate/sign-in.html"
+																		class="menu-link">
 																		<span class="menu-title">Sign-In</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -775,7 +900,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/corporate/sign-up.html" class="menu-link">
+																	<a href="authentication/layouts/corporate/sign-up.html"
+																		class="menu-link">
 																		<span class="menu-title">Sign-Up</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -784,7 +910,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/corporate/two-factor.html" class="menu-link">
+																	<a href="authentication/layouts/corporate/two-factor.html"
+																		class="menu-link">
 																		<span class="menu-title">Two-Factor</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -793,7 +920,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/corporate/reset-password.html" class="menu-link">
+																	<a href="authentication/layouts/corporate/reset-password.html"
+																		class="menu-link">
 																		<span class="menu-title">Reset Password</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -802,7 +930,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/corporate/new-password.html" class="menu-link">
+																	<a href="authentication/layouts/corporate/new-password.html"
+																		class="menu-link">
 																		<span class="menu-title">New Password</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -813,12 +942,14 @@
 															<!--begin:Menu section-->
 															<div class="mb-0">
 																<!--begin:Menu heading-->
-																<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Overlay Layout</h4>
+																<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Overlay
+																	Layout</h4>
 																<!--end:Menu heading-->
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/overlay/sign-in.html" class="menu-link">
+																	<a href="authentication/layouts/overlay/sign-in.html"
+																		class="menu-link">
 																		<span class="menu-title">Sign-In</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -827,7 +958,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/overlay/sign-up.html" class="menu-link">
+																	<a href="authentication/layouts/overlay/sign-up.html"
+																		class="menu-link">
 																		<span class="menu-title">Sign-Up</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -836,7 +968,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/overlay/two-factor.html" class="menu-link">
+																	<a href="authentication/layouts/overlay/two-factor.html"
+																		class="menu-link">
 																		<span class="menu-title">Two-Factor</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -845,7 +978,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/overlay/reset-password.html" class="menu-link">
+																	<a href="authentication/layouts/overlay/reset-password.html"
+																		class="menu-link">
 																		<span class="menu-title">Reset Password</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -854,7 +988,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/overlay/new-password.html" class="menu-link">
+																	<a href="authentication/layouts/overlay/new-password.html"
+																		class="menu-link">
 																		<span class="menu-title">New Password</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -869,12 +1004,14 @@
 															<!--begin:Menu section-->
 															<div class="mb-6">
 																<!--begin:Menu heading-->
-																<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Creative Layout</h4>
+																<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Creative
+																	Layout</h4>
 																<!--end:Menu heading-->
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/creative/sign-in.html" class="menu-link">
+																	<a href="authentication/layouts/creative/sign-in.html"
+																		class="menu-link">
 																		<span class="menu-title">Sign-in</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -883,7 +1020,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/creative/sign-up.html" class="menu-link">
+																	<a href="authentication/layouts/creative/sign-up.html"
+																		class="menu-link">
 																		<span class="menu-title">Sign-up</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -892,7 +1030,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/creative/two-factor.html" class="menu-link">
+																	<a href="authentication/layouts/creative/two-factor.html"
+																		class="menu-link">
 																		<span class="menu-title">Two-Factor</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -901,7 +1040,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/creative/reset-password.html" class="menu-link">
+																	<a href="authentication/layouts/creative/reset-password.html"
+																		class="menu-link">
 																		<span class="menu-title">Reset Password</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -910,7 +1050,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/creative/new-password.html" class="menu-link">
+																	<a href="authentication/layouts/creative/new-password.html"
+																		class="menu-link">
 																		<span class="menu-title">New Password</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -921,12 +1062,14 @@
 															<!--begin:Menu section-->
 															<div class="mb-6">
 																<!--begin:Menu heading-->
-																<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Fancy Layout</h4>
+																<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Fancy Layout
+																</h4>
 																<!--end:Menu heading-->
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/fancy/sign-in.html" class="menu-link">
+																	<a href="authentication/layouts/fancy/sign-in.html"
+																		class="menu-link">
 																		<span class="menu-title">Sign-In</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -935,7 +1078,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/fancy/sign-up.html" class="menu-link">
+																	<a href="authentication/layouts/fancy/sign-up.html"
+																		class="menu-link">
 																		<span class="menu-title">Sign-Up</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -944,7 +1088,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/fancy/two-factor.html" class="menu-link">
+																	<a href="authentication/layouts/fancy/two-factor.html"
+																		class="menu-link">
 																		<span class="menu-title">Two-Factor</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -953,7 +1098,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/fancy/reset-password.html" class="menu-link">
+																	<a href="authentication/layouts/fancy/reset-password.html"
+																		class="menu-link">
 																		<span class="menu-title">Reset Password</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -962,7 +1108,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/layouts/fancy/new-password.html" class="menu-link">
+																	<a href="authentication/layouts/fancy/new-password.html"
+																		class="menu-link">
 																		<span class="menu-title">New Password</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -982,8 +1129,10 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/extended/multi-steps-sign-up.html" class="menu-link">
-																		<span class="menu-title">Multi-Steps Sign-Up</span>
+																	<a href="authentication/extended/multi-steps-sign-up.html"
+																		class="menu-link">
+																		<span class="menu-title">Multi-Steps
+																			Sign-Up</span>
 																	</a>
 																	<!--end:Menu link-->
 																</div>
@@ -991,7 +1140,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/general/welcome.html" class="menu-link">
+																	<a href="authentication/general/welcome.html"
+																		class="menu-link">
 																		<span class="menu-title">Welcome Message</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -1000,7 +1150,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/general/verify-email.html" class="menu-link">
+																	<a href="authentication/general/verify-email.html"
+																		class="menu-link">
 																		<span class="menu-title">Verify Email</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -1009,7 +1160,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/general/coming-soon.html" class="menu-link">
+																	<a href="authentication/general/coming-soon.html"
+																		class="menu-link">
 																		<span class="menu-title">Coming Soon</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -1018,8 +1170,10 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/general/password-confirmation.html" class="menu-link">
-																		<span class="menu-title">Password Confirmation</span>
+																	<a href="authentication/general/password-confirmation.html"
+																		class="menu-link">
+																		<span class="menu-title">Password
+																			Confirmation</span>
 																	</a>
 																	<!--end:Menu link-->
 																</div>
@@ -1027,8 +1181,10 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/general/account-deactivated.html" class="menu-link">
-																		<span class="menu-title">Account Deactivation</span>
+																	<a href="authentication/general/account-deactivated.html"
+																		class="menu-link">
+																		<span class="menu-title">Account
+																			Deactivation</span>
 																	</a>
 																	<!--end:Menu link-->
 																</div>
@@ -1036,7 +1192,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/general/error-404.html" class="menu-link">
+																	<a href="authentication/general/error-404.html"
+																		class="menu-link">
 																		<span class="menu-title">Error 404</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -1045,7 +1202,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/general/error-500.html" class="menu-link">
+																	<a href="authentication/general/error-500.html"
+																		class="menu-link">
 																		<span class="menu-title">Error 500</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -1060,12 +1218,14 @@
 															<!--begin:Menu section-->
 															<div class="mb-0">
 																<!--begin:Menu heading-->
-																<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Email Templates</h4>
+																<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Email
+																	Templates</h4>
 																<!--end:Menu heading-->
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/email/welcome-message.html" class="menu-link">
+																	<a href="authentication/email/welcome-message.html"
+																		class="menu-link">
 																		<span class="menu-title">Welcome Message</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -1074,7 +1234,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/email/reset-password.html" class="menu-link">
+																	<a href="authentication/email/reset-password.html"
+																		class="menu-link">
 																		<span class="menu-title">Reset Password</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -1083,8 +1244,10 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/email/subscription-confirmed.html" class="menu-link">
-																		<span class="menu-title">Subscription Confirmed</span>
+																	<a href="authentication/email/subscription-confirmed.html"
+																		class="menu-link">
+																		<span class="menu-title">Subscription
+																			Confirmed</span>
 																	</a>
 																	<!--end:Menu link-->
 																</div>
@@ -1092,8 +1255,10 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/email/card-declined.html" class="menu-link">
-																		<span class="menu-title">Credit Card Declined</span>
+																	<a href="authentication/email/card-declined.html"
+																		class="menu-link">
+																		<span class="menu-title">Credit Card
+																			Declined</span>
 																	</a>
 																	<!--end:Menu link-->
 																</div>
@@ -1101,7 +1266,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/email/promo-1.html" class="menu-link">
+																	<a href="authentication/email/promo-1.html"
+																		class="menu-link">
 																		<span class="menu-title">Promo 1</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -1110,7 +1276,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/email/promo-2.html" class="menu-link">
+																	<a href="authentication/email/promo-2.html"
+																		class="menu-link">
 																		<span class="menu-title">Promo 2</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -1119,7 +1286,8 @@
 																<!--begin:Menu item-->
 																<div class="menu-item p-0 m-0">
 																	<!--begin:Menu link-->
-																	<a href="authentication/email/promo-3.html" class="menu-link">
+																	<a href="authentication/email/promo-3.html"
+																		class="menu-link">
 																		<span class="menu-title">Promo 3</span>
 																	</a>
 																	<!--end:Menu link-->
@@ -1134,7 +1302,8 @@
 												</div>
 												<!--end:Tab pane-->
 												<!--begin:Tab pane-->
-												<div class="tab-pane w-lg-1000px" id="kt_app_header_menu_pages_utilities">
+												<div class="tab-pane w-lg-1000px"
+													id="kt_app_header_menu_pages_utilities">
 													<!--begin:Row-->
 													<div class="row">
 														<!--begin:Col-->
@@ -1146,13 +1315,16 @@
 																	<!--begin:Menu section-->
 																	<div class="mb-0">
 																		<!--begin:Menu heading-->
-																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">General Modals</h4>
+																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">
+																			General Modals</h4>
 																		<!--end:Menu heading-->
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/general/invite-friends.html" class="menu-link">
-																				<span class="menu-title">Invite Friends</span>
+																			<a href="utilities/modals/general/invite-friends.html"
+																				class="menu-link">
+																				<span class="menu-title">Invite
+																					Friends</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1160,8 +1332,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/general/view-users.html" class="menu-link">
-																				<span class="menu-title">View Users</span>
+																			<a href="utilities/modals/general/view-users.html"
+																				class="menu-link">
+																				<span class="menu-title">View
+																					Users</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1169,8 +1343,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/general/select-users.html" class="menu-link">
-																				<span class="menu-title">Select Users</span>
+																			<a href="utilities/modals/general/select-users.html"
+																				class="menu-link">
+																				<span class="menu-title">Select
+																					Users</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1178,8 +1354,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/general/upgrade-plan.html" class="menu-link">
-																				<span class="menu-title">Upgrade Plan</span>
+																			<a href="utilities/modals/general/upgrade-plan.html"
+																				class="menu-link">
+																				<span class="menu-title">Upgrade
+																					Plan</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1187,8 +1365,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/general/share-earn.html" class="menu-link">
-																				<span class="menu-title">Share & Earn</span>
+																			<a href="utilities/modals/general/share-earn.html"
+																				class="menu-link">
+																				<span class="menu-title">Share &
+																					Earn</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1196,8 +1376,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/forms/new-target.html" class="menu-link">
-																				<span class="menu-title">New Target</span>
+																			<a href="utilities/modals/forms/new-target.html"
+																				class="menu-link">
+																				<span class="menu-title">New
+																					Target</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1205,7 +1387,8 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/forms/new-card.html" class="menu-link">
+																			<a href="utilities/modals/forms/new-card.html"
+																				class="menu-link">
 																				<span class="menu-title">New Card</span>
 																			</a>
 																			<!--end:Menu link-->
@@ -1214,8 +1397,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/forms/new-address.html" class="menu-link">
-																				<span class="menu-title">New Address</span>
+																			<a href="utilities/modals/forms/new-address.html"
+																				class="menu-link">
+																				<span class="menu-title">New
+																					Address</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1223,8 +1408,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/forms/create-api-key.html" class="menu-link">
-																				<span class="menu-title">Create API Key</span>
+																			<a href="utilities/modals/forms/create-api-key.html"
+																				class="menu-link">
+																				<span class="menu-title">Create API
+																					Key</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1232,7 +1419,8 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/forms/bidding.html" class="menu-link">
+																			<a href="utilities/modals/forms/bidding.html"
+																				class="menu-link">
 																				<span class="menu-title">Bidding</span>
 																			</a>
 																			<!--end:Menu link-->
@@ -1247,13 +1435,16 @@
 																	<!--begin:Menu section-->
 																	<div class="mb-6">
 																		<!--begin:Menu heading-->
-																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Advanced Modals</h4>
+																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">
+																			Advanced Modals</h4>
 																		<!--end:Menu heading-->
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/wizards/create-app.html" class="menu-link">
-																				<span class="menu-title">Create App</span>
+																			<a href="utilities/modals/wizards/create-app.html"
+																				class="menu-link">
+																				<span class="menu-title">Create
+																					App</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1261,8 +1452,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/wizards/create-campaign.html" class="menu-link">
-																				<span class="menu-title">Create Campaign</span>
+																			<a href="utilities/modals/wizards/create-campaign.html"
+																				class="menu-link">
+																				<span class="menu-title">Create
+																					Campaign</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1270,8 +1463,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/wizards/create-account.html" class="menu-link">
-																				<span class="menu-title">Create Business Acc</span>
+																			<a href="utilities/modals/wizards/create-account.html"
+																				class="menu-link">
+																				<span class="menu-title">Create Business
+																					Acc</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1279,8 +1474,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/wizards/create-project.html" class="menu-link">
-																				<span class="menu-title">Create Project</span>
+																			<a href="utilities/modals/wizards/create-project.html"
+																				class="menu-link">
+																				<span class="menu-title">Create
+																					Project</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1288,8 +1485,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/wizards/top-up-wallet.html" class="menu-link">
-																				<span class="menu-title">Top Up Wallet</span>
+																			<a href="utilities/modals/wizards/top-up-wallet.html"
+																				class="menu-link">
+																				<span class="menu-title">Top Up
+																					Wallet</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1297,8 +1496,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/wizards/offer-a-deal.html" class="menu-link">
-																				<span class="menu-title">Offer a Deal</span>
+																			<a href="utilities/modals/wizards/offer-a-deal.html"
+																				class="menu-link">
+																				<span class="menu-title">Offer a
+																					Deal</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1306,8 +1507,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/wizards/two-factor-authentication.html" class="menu-link">
-																				<span class="menu-title">Two Factor Auth</span>
+																			<a href="utilities/modals/wizards/two-factor-authentication.html"
+																				class="menu-link">
+																				<span class="menu-title">Two Factor
+																					Auth</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1317,13 +1520,16 @@
 																	<!--begin:Menu section-->
 																	<div class="mb-0">
 																		<!--begin:Menu heading-->
-																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Search</h4>
+																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">
+																			Search</h4>
 																		<!--end:Menu heading-->
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/search/horizontal.html" class="menu-link">
-																				<span class="menu-title">Horizontal</span>
+																			<a href="utilities/search/horizontal.html"
+																				class="menu-link">
+																				<span
+																					class="menu-title">Horizontal</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1331,7 +1537,8 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/search/vertical.html" class="menu-link">
+																			<a href="utilities/search/vertical.html"
+																				class="menu-link">
 																				<span class="menu-title">Vertical</span>
 																			</a>
 																			<!--end:Menu link-->
@@ -1340,7 +1547,8 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/search/users.html" class="menu-link">
+																			<a href="utilities/modals/search/users.html"
+																				class="menu-link">
 																				<span class="menu-title">Users</span>
 																			</a>
 																			<!--end:Menu link-->
@@ -1349,8 +1557,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/search/select-location.html" class="menu-link">
-																				<span class="menu-title">Select Location</span>
+																			<a href="utilities/modals/search/select-location.html"
+																				class="menu-link">
+																				<span class="menu-title">Select
+																					Location</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1364,13 +1574,16 @@
 																	<!--begin:Menu section-->
 																	<div class="mb-0">
 																		<!--begin:Menu heading-->
-																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">Wizards</h4>
+																		<h4 class="fs-6 fs-lg-4 fw-bold mb-3 ms-4">
+																			Wizards</h4>
 																		<!--end:Menu heading-->
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/wizards/horizontal.html" class="menu-link">
-																				<span class="menu-title">Horizontal</span>
+																			<a href="utilities/wizards/horizontal.html"
+																				class="menu-link">
+																				<span
+																					class="menu-title">Horizontal</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1378,7 +1591,8 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/wizards/vertical.html" class="menu-link">
+																			<a href="utilities/wizards/vertical.html"
+																				class="menu-link">
 																				<span class="menu-title">Vertical</span>
 																			</a>
 																			<!--end:Menu link-->
@@ -1387,8 +1601,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/wizards/two-factor-authentication.html" class="menu-link">
-																				<span class="menu-title">Two Factor Auth</span>
+																			<a href="utilities/wizards/two-factor-authentication.html"
+																				class="menu-link">
+																				<span class="menu-title">Two Factor
+																					Auth</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1396,8 +1612,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/wizards/create-app.html" class="menu-link">
-																				<span class="menu-title">Create App</span>
+																			<a href="utilities/wizards/create-app.html"
+																				class="menu-link">
+																				<span class="menu-title">Create
+																					App</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1405,8 +1623,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/wizards/create-campaign.html" class="menu-link">
-																				<span class="menu-title">Create Campaign</span>
+																			<a href="utilities/wizards/create-campaign.html"
+																				class="menu-link">
+																				<span class="menu-title">Create
+																					Campaign</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1414,8 +1634,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/wizards/create-account.html" class="menu-link">
-																				<span class="menu-title">Create Account</span>
+																			<a href="utilities/wizards/create-account.html"
+																				class="menu-link">
+																				<span class="menu-title">Create
+																					Account</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1423,8 +1645,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/wizards/create-project.html" class="menu-link">
-																				<span class="menu-title">Create Project</span>
+																			<a href="utilities/wizards/create-project.html"
+																				class="menu-link">
+																				<span class="menu-title">Create
+																					Project</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1432,8 +1656,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/modals/wizards/top-up-wallet.html" class="menu-link">
-																				<span class="menu-title">Top Up Wallet</span>
+																			<a href="utilities/modals/wizards/top-up-wallet.html"
+																				class="menu-link">
+																				<span class="menu-title">Top Up
+																					Wallet</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1441,8 +1667,10 @@
 																		<!--begin:Menu item-->
 																		<div class="menu-item p-0 m-0">
 																			<!--begin:Menu link-->
-																			<a href="utilities/wizards/offer-a-deal.html" class="menu-link">
-																				<span class="menu-title">Offer a Deal</span>
+																			<a href="utilities/wizards/offer-a-deal.html"
+																				class="menu-link">
+																				<span class="menu-title">Offer a
+																					Deal</span>
 																			</a>
 																			<!--end:Menu link-->
 																		</div>
@@ -1457,7 +1685,8 @@
 														<!--end:Col-->
 														<!--begin:Col-->
 														<div class="col-lg-5 pe-lg-5">
-															<img src="assets/media/stock/600x600/img-84.jpg" class="rounded mw-100" alt="" />
+															<img src="assets/media/stock/600x600/img-84.jpg"
+																class="rounded mw-100" alt="" />
 														</div>
 														<!--end:Col-->
 													</div>
@@ -1528,7 +1757,8 @@
 														<!--end:Col-->
 														<!--begin:Col-->
 														<div class="col-lg-8">
-															<img src="assets/media/stock/900x600/44.jpg" class="rounded mw-100" alt="" />
+															<img src="assets/media/stock/900x600/44.jpg"
+																class="rounded mw-100" alt="" />
 														</div>
 														<!--end:Col-->
 													</div>
@@ -1544,7 +1774,9 @@
 								</div>
 								<!--end:Menu item-->
 								<!--begin:Menu item-->
-								<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start" class="menu-item menu-lg-down-accordion menu-sub-lg-down-indention me-0 me-lg-2">
+								<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+									data-kt-menu-placement="bottom-start"
+									class="menu-item menu-lg-down-accordion menu-sub-lg-down-indention me-0 me-lg-2">
 									<!--begin:Menu link-->
 									<span class="menu-link">
 										<span class="menu-title">Apps</span>
@@ -1552,9 +1784,12 @@
 									</span>
 									<!--end:Menu link-->
 									<!--begin:Menu sub-->
-									<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-lg-2 py-lg-4 w-lg-250px">
+									<div
+										class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-lg-2 py-lg-4 w-lg-250px">
 										<!--begin:Menu item-->
-										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+											data-kt-menu-placement="right-start"
+											class="menu-item menu-lg-down-accordion">
 											<!--begin:Menu link-->
 											<span class="menu-link">
 												<span class="menu-icon">
@@ -1565,7 +1800,8 @@
 											</span>
 											<!--end:Menu link-->
 											<!--begin:Menu sub-->
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 												<!--begin:Menu item-->
 												<div class="menu-item">
 													<!--begin:Menu link-->
@@ -1667,7 +1903,9 @@
 										</div>
 										<!--end:Menu item-->
 										<!--begin:Menu item-->
-										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+											data-kt-menu-placement="right-start"
+											class="menu-item menu-lg-down-accordion">
 											<!--begin:Menu link-->
 											<span class="menu-link">
 												<span class="menu-icon">
@@ -1678,9 +1916,12 @@
 											</span>
 											<!--end:Menu link-->
 											<!--begin:Menu sub-->
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 												<!--begin:Menu item-->
-												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+													data-kt-menu-placement="right-start"
+													class="menu-item menu-lg-down-accordion">
 													<!--begin:Menu link-->
 													<span class="menu-link">
 														<span class="menu-bullet">
@@ -1691,11 +1932,13 @@
 													</span>
 													<!--end:Menu link-->
 													<!--begin:Menu sub-->
-													<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+													<div
+														class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/catalog/products.html">
+															<a class="menu-link"
+																href="apps/ecommerce/catalog/products.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1707,7 +1950,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/catalog/categories.html">
+															<a class="menu-link"
+																href="apps/ecommerce/catalog/categories.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1719,7 +1963,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/catalog/add-product.html">
+															<a class="menu-link"
+																href="apps/ecommerce/catalog/add-product.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1731,7 +1976,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/catalog/edit-product.html">
+															<a class="menu-link"
+																href="apps/ecommerce/catalog/edit-product.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1743,7 +1989,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/catalog/add-category.html">
+															<a class="menu-link"
+																href="apps/ecommerce/catalog/add-category.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1755,7 +2002,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/catalog/edit-category.html">
+															<a class="menu-link"
+																href="apps/ecommerce/catalog/edit-category.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1769,7 +2017,8 @@
 												</div>
 												<!--end:Menu item-->
 												<!--begin:Menu item-->
-												<div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
+												<div data-kt-menu-trigger="click"
+													class="menu-item menu-accordion menu-sub-indention">
 													<!--begin:Menu link-->
 													<span class="menu-link">
 														<span class="menu-bullet">
@@ -1784,7 +2033,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/sales/listing.html">
+															<a class="menu-link"
+																href="apps/ecommerce/sales/listing.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1796,7 +2046,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/sales/details.html">
+															<a class="menu-link"
+																href="apps/ecommerce/sales/details.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1808,7 +2059,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/sales/add-order.html">
+															<a class="menu-link"
+																href="apps/ecommerce/sales/add-order.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1820,7 +2072,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/sales/edit-order.html">
+															<a class="menu-link"
+																href="apps/ecommerce/sales/edit-order.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1834,7 +2087,8 @@
 												</div>
 												<!--end:Menu item-->
 												<!--begin:Menu item-->
-												<div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
+												<div data-kt-menu-trigger="click"
+													class="menu-item menu-accordion menu-sub-indention">
 													<!--begin:Menu link-->
 													<span class="menu-link">
 														<span class="menu-bullet">
@@ -1849,7 +2103,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/customers/listing.html">
+															<a class="menu-link"
+																href="apps/ecommerce/customers/listing.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1861,7 +2116,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/customers/details.html">
+															<a class="menu-link"
+																href="apps/ecommerce/customers/details.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1875,7 +2131,8 @@
 												</div>
 												<!--end:Menu item-->
 												<!--begin:Menu item-->
-												<div data-kt-menu-trigger="click" class="menu-item menu-accordion menu-sub-indention">
+												<div data-kt-menu-trigger="click"
+													class="menu-item menu-accordion menu-sub-indention">
 													<!--begin:Menu link-->
 													<span class="menu-link">
 														<span class="menu-bullet">
@@ -1890,7 +2147,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/reports/view.html">
+															<a class="menu-link"
+																href="apps/ecommerce/reports/view.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1902,7 +2160,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/reports/sales.html">
+															<a class="menu-link"
+																href="apps/ecommerce/reports/sales.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1914,7 +2173,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/reports/returns.html">
+															<a class="menu-link"
+																href="apps/ecommerce/reports/returns.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1926,7 +2186,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/reports/customer-orders.html">
+															<a class="menu-link"
+																href="apps/ecommerce/reports/customer-orders.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1938,7 +2199,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/ecommerce/reports/shipping.html">
+															<a class="menu-link"
+																href="apps/ecommerce/reports/shipping.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -1968,7 +2230,9 @@
 										</div>
 										<!--end:Menu item-->
 										<!--begin:Menu item-->
-										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+											data-kt-menu-placement="right-start"
+											class="menu-item menu-lg-down-accordion">
 											<!--begin:Menu link-->
 											<span class="menu-link">
 												<span class="menu-icon">
@@ -1979,7 +2243,8 @@
 											</span>
 											<!--end:Menu link-->
 											<!--begin:Menu sub-->
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 												<!--begin:Menu item-->
 												<div class="menu-item">
 													<!--begin:Menu link-->
@@ -1993,7 +2258,9 @@
 												</div>
 												<!--end:Menu item-->
 												<!--begin:Menu item-->
-												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+													data-kt-menu-placement="right-start"
+													class="menu-item menu-lg-down-accordion">
 													<!--begin:Menu link-->
 													<span class="menu-link">
 														<span class="menu-bullet">
@@ -2004,11 +2271,13 @@
 													</span>
 													<!--end:Menu link-->
 													<!--begin:Menu sub-->
-													<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+													<div
+														class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/support-center/tickets/list.html">
+															<a class="menu-link"
+																href="apps/support-center/tickets/list.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -2020,7 +2289,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/support-center/tickets/view.html">
+															<a class="menu-link"
+																href="apps/support-center/tickets/view.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -2034,7 +2304,9 @@
 												</div>
 												<!--end:Menu item-->
 												<!--begin:Menu item-->
-												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+													data-kt-menu-placement="right-start"
+													class="menu-item menu-lg-down-accordion">
 													<!--begin:Menu link-->
 													<span class="menu-link">
 														<span class="menu-bullet">
@@ -2045,11 +2317,13 @@
 													</span>
 													<!--end:Menu link-->
 													<!--begin:Menu sub-->
-													<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+													<div
+														class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/support-center/tutorials/list.html">
+															<a class="menu-link"
+																href="apps/support-center/tutorials/list.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -2061,7 +2335,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/support-center/tutorials/post.html">
+															<a class="menu-link"
+																href="apps/support-center/tutorials/post.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -2115,7 +2390,9 @@
 										</div>
 										<!--end:Menu item-->
 										<!--begin:Menu item-->
-										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+											data-kt-menu-placement="right-start"
+											class="menu-item menu-lg-down-accordion">
 											<!--begin:Menu link-->
 											<span class="menu-link">
 												<span class="menu-icon">
@@ -2126,9 +2403,12 @@
 											</span>
 											<!--end:Menu link-->
 											<!--begin:Menu sub-->
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 												<!--begin:Menu item-->
-												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+													data-kt-menu-placement="right-start"
+													class="menu-item menu-lg-down-accordion">
 													<!--begin:Menu link-->
 													<span class="menu-link">
 														<span class="menu-bullet">
@@ -2139,11 +2419,13 @@
 													</span>
 													<!--end:Menu link-->
 													<!--begin:Menu sub-->
-													<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+													<div
+														class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/user-management/users/list.html">
+															<a class="menu-link"
+																href="apps/user-management/users/list.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -2155,7 +2437,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/user-management/users/view.html">
+															<a class="menu-link"
+																href="apps/user-management/users/view.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -2169,7 +2452,9 @@
 												</div>
 												<!--end:Menu item-->
 												<!--begin:Menu item-->
-												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+													data-kt-menu-placement="right-start"
+													class="menu-item menu-lg-down-accordion">
 													<!--begin:Menu link-->
 													<span class="menu-link">
 														<span class="menu-bullet">
@@ -2180,11 +2465,13 @@
 													</span>
 													<!--end:Menu link-->
 													<!--begin:Menu sub-->
-													<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+													<div
+														class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/user-management/roles/list.html">
+															<a class="menu-link"
+																href="apps/user-management/roles/list.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -2196,7 +2483,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/user-management/roles/view.html">
+															<a class="menu-link"
+																href="apps/user-management/roles/view.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -2226,7 +2514,9 @@
 										</div>
 										<!--end:Menu item-->
 										<!--begin:Menu item-->
-										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+											data-kt-menu-placement="right-start"
+											class="menu-item menu-lg-down-accordion">
 											<!--begin:Menu link-->
 											<span class="menu-link">
 												<span class="menu-icon">
@@ -2237,7 +2527,8 @@
 											</span>
 											<!--end:Menu link-->
 											<!--begin:Menu sub-->
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 												<!--begin:Menu item-->
 												<div class="menu-item">
 													<!--begin:Menu link-->
@@ -2291,7 +2582,9 @@
 										</div>
 										<!--end:Menu item-->
 										<!--begin:Menu item-->
-										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+											data-kt-menu-placement="right-start"
+											class="menu-item menu-lg-down-accordion">
 											<!--begin:Menu link-->
 											<span class="menu-link">
 												<span class="menu-icon">
@@ -2302,7 +2595,8 @@
 											</span>
 											<!--end:Menu link-->
 											<!--begin:Menu sub-->
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 												<!--begin:Menu item-->
 												<div class="menu-item">
 													<!--begin:Menu link-->
@@ -2356,7 +2650,9 @@
 										</div>
 										<!--end:Menu item-->
 										<!--begin:Menu item-->
-										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+											data-kt-menu-placement="right-start"
+											class="menu-item menu-lg-down-accordion">
 											<!--begin:Menu link-->
 											<span class="menu-link">
 												<span class="menu-icon">
@@ -2367,7 +2663,8 @@
 											</span>
 											<!--end:Menu link-->
 											<!--begin:Menu sub-->
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 												<!--begin:Menu item-->
 												<div class="menu-item">
 													<!--begin:Menu link-->
@@ -2409,7 +2706,9 @@
 										</div>
 										<!--end:Menu item-->
 										<!--begin:Menu item-->
-										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+											data-kt-menu-placement="right-start"
+											class="menu-item menu-lg-down-accordion">
 											<!--begin:Menu link-->
 											<span class="menu-link">
 												<span class="menu-icon">
@@ -2420,9 +2719,12 @@
 											</span>
 											<!--end:Menu link-->
 											<!--begin:Menu sub-->
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 												<!--begin:Menu item-->
-												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+												<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+													data-kt-menu-placement="right-start"
+													class="menu-item menu-lg-down-accordion">
 													<!--begin:Menu link-->
 													<span class="menu-link">
 														<span class="menu-bullet">
@@ -2433,11 +2735,13 @@
 													</span>
 													<!--end:Menu link-->
 													<!--begin:Menu sub-->
-													<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+													<div
+														class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/invoices/view/invoice-1.html">
+															<a class="menu-link"
+																href="apps/invoices/view/invoice-1.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -2449,7 +2753,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/invoices/view/invoice-2.html">
+															<a class="menu-link"
+																href="apps/invoices/view/invoice-2.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -2461,7 +2766,8 @@
 														<!--begin:Menu item-->
 														<div class="menu-item">
 															<!--begin:Menu link-->
-															<a class="menu-link" href="apps/invoices/view/invoice-3.html">
+															<a class="menu-link"
+																href="apps/invoices/view/invoice-3.html">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
@@ -2491,7 +2797,9 @@
 										</div>
 										<!--end:Menu item-->
 										<!--begin:Menu item-->
-										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+											data-kt-menu-placement="right-start"
+											class="menu-item menu-lg-down-accordion">
 											<!--begin:Menu link-->
 											<span class="menu-link">
 												<span class="menu-icon">
@@ -2502,7 +2810,8 @@
 											</span>
 											<!--end:Menu link-->
 											<!--begin:Menu sub-->
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 												<!--begin:Menu item-->
 												<div class="menu-item">
 													<!--begin:Menu link-->
@@ -2556,7 +2865,9 @@
 										</div>
 										<!--end:Menu item-->
 										<!--begin:Menu item-->
-										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+											data-kt-menu-placement="right-start"
+											class="menu-item menu-lg-down-accordion">
 											<!--begin:Menu link-->
 											<span class="menu-link">
 												<span class="menu-icon">
@@ -2567,7 +2878,8 @@
 											</span>
 											<!--end:Menu link-->
 											<!--begin:Menu sub-->
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 												<!--begin:Menu item-->
 												<div class="menu-item">
 													<!--begin:Menu link-->
@@ -2612,7 +2924,9 @@
 										</div>
 										<!--end:Menu item-->
 										<!--begin:Menu item-->
-										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}" data-kt-menu-placement="right-start" class="menu-item menu-lg-down-accordion">
+										<div data-kt-menu-trigger="{default:'click', lg: 'hover'}"
+											data-kt-menu-placement="right-start"
+											class="menu-item menu-lg-down-accordion">
 											<!--begin:Menu link-->
 											<span class="menu-link">
 												<span class="menu-icon">
@@ -2623,7 +2937,8 @@
 											</span>
 											<!--end:Menu link-->
 											<!--begin:Menu sub-->
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-active-bg px-lg-2 py-lg-4 w-lg-225px">
 												<!--begin:Menu item-->
 												<div class="menu-item">
 													<!--begin:Menu link-->
@@ -2681,7 +2996,9 @@
 								</div>
 								<!--end:Menu item-->
 								<!--begin:Menu item-->
-								<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start" class="menu-item menu-lg-down-accordion menu-sub-lg-down-indention me-0 me-lg-2">
+								<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+									data-kt-menu-placement="bottom-start"
+									class="menu-item menu-lg-down-accordion menu-sub-lg-down-indention me-0 me-lg-2">
 									<!--begin:Menu link-->
 									<span class="menu-link">
 										<span class="menu-title">Help</span>
@@ -2689,11 +3006,17 @@
 									</span>
 									<!--end:Menu link-->
 									<!--begin:Menu sub-->
-									<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-lg-2 py-lg-4 w-lg-200px">
+									<div
+										class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-lg-2 py-lg-4 w-lg-200px">
 										<!--begin:Menu item-->
 										<div class="menu-item">
 											<!--begin:Menu link-->
-											<a class="menu-link" href="https://preview.keenthemes.com/html/metronic/docs/base/utilities" target="_blank" title="Check out over 200 in-house components, plugins and ready for use solutions" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-dismiss="click" data-bs-placement="right">
+											<a class="menu-link"
+												href="https://preview.keenthemes.com/html/metronic/docs/base/utilities"
+												target="_blank"
+												title="Check out over 200 in-house components, plugins and ready for use solutions"
+												data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-dismiss="click"
+												data-bs-placement="right">
 												<span class="menu-icon">
 													<i class="ki-outline ki-rocket fs-2"></i>
 												</span>
@@ -2705,7 +3028,11 @@
 										<!--begin:Menu item-->
 										<div class="menu-item">
 											<!--begin:Menu link-->
-											<a class="menu-link" href="https://preview.keenthemes.com/html/metronic/docs" target="_blank" title="Check out the complete documentation" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-dismiss="click" data-bs-placement="right">
+											<a class="menu-link"
+												href="https://preview.keenthemes.com/html/metronic/docs" target="_blank"
+												title="Check out the complete documentation" data-bs-toggle="tooltip"
+												data-bs-trigger="hover" data-bs-dismiss="click"
+												data-bs-placement="right">
 												<span class="menu-icon">
 													<i class="ki-outline ki-abstract-26 fs-2"></i>
 												</span>
@@ -2717,7 +3044,11 @@
 										<!--begin:Menu item-->
 										<div class="menu-item">
 											<!--begin:Menu link-->
-											<a class="menu-link" href="https://preview.keenthemes.com/metronic8/demo60/layout-builder.html" title="Build your layout and export HTML for server side integration" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-dismiss="click" data-bs-placement="right">
+											<a class="menu-link"
+												href="https://preview.keenthemes.com/metronic8/demo60/layout-builder.html"
+												title="Build your layout and export HTML for server side integration"
+												data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-dismiss="click"
+												data-bs-placement="right">
 												<span class="menu-icon">
 													<i class="ki-outline ki-switch fs-2"></i>
 												</span>
@@ -2729,7 +3060,9 @@
 										<!--begin:Menu item-->
 										<div class="menu-item">
 											<!--begin:Menu link-->
-											<a class="menu-link" href="https://preview.keenthemes.com/html/metronic/docs/getting-started/changelog" target="_blank">
+											<a class="menu-link"
+												href="https://preview.keenthemes.com/html/metronic/docs/getting-started/changelog"
+												target="_blank">
 												<span class="menu-icon">
 													<i class="ki-outline ki-code fs-2"></i>
 												</span>
@@ -2753,7 +3086,8 @@
 				<div class="app-navbar flex-shrink-0 gap-2">
 					<!--begin::Quick links-->
 					<div class="app-navbar-item me-lg-3">
-						<a href="#" data-bs-toggle="modal" data-bs-target="#kt_modal_share_earn" class="btn btn-sm btn-flex flex-center border border-300 bg-light-light btn-active-color-gray-900 px-0 px-lg-3 min-w-35px h-35px">
+						<a href="#" data-bs-toggle="modal" data-bs-target="#kt_modal_share_earn"
+							class="btn btn-sm btn-flex flex-center border border-300 bg-light-light btn-active-color-gray-900 px-0 px-lg-3 min-w-35px h-35px">
 							<i class="ki-outline ki-share pe-0 pe-lg-2 fs-3"></i>
 							<span class="d-none d-lg-inline">Share</span>
 						</a>
@@ -2762,7 +3096,9 @@
 					<!--begin::My apps-->
 					<div class="app-navbar-item ms-1">
 						<!--begin::Menu- wrapper-->
-						<div class="btn btn-sm btn-icon btn-custom h-35px w-35px" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent" data-kt-menu-placement="bottom-end">
+						<div class="btn btn-sm btn-icon btn-custom h-35px w-35px"
+							data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
+							data-kt-menu-placement="bottom-end">
 							<i class="ki-outline ki-notification-status fs-3"></i>
 						</div>
 						<!--begin::My apps-->
@@ -2777,14 +3113,18 @@
 									<!--begin::Card toolbar-->
 									<div class="card-toolbar">
 										<!--begin::Menu-->
-										<button type="button" class="btn btn-sm btn-icon btn-active-light-primary me-n3" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-end">
+										<button type="button" class="btn btn-sm btn-icon btn-active-light-primary me-n3"
+											data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+											data-kt-menu-placement="bottom-end">
 											<i class="ki-outline ki-setting-3 fs-2"></i>
 										</button>
 										<!--begin::Menu 3-->
-										<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold w-200px py-3" data-kt-menu="true">
+										<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold w-200px py-3"
+											data-kt-menu="true">
 											<!--begin::Heading-->
 											<div class="menu-item px-3">
-												<div class="menu-content text-muted pb-2 px-3 fs-7 text-uppercase">Payments</div>
+												<div class="menu-content text-muted pb-2 px-3 fs-7 text-uppercase">
+													Payments</div>
 											</div>
 											<!--end::Heading-->
 											<!--begin::Menu item-->
@@ -2794,10 +3134,11 @@
 											<!--end::Menu item-->
 											<!--begin::Menu item-->
 											<div class="menu-item px-3">
-												<a href="#" class="menu-link flex-stack px-3">Create Payment 
-												<span class="ms-2" data-bs-toggle="tooltip" title="Specify a target name for future usage and reference">
-													<i class="ki-outline ki-information fs-6"></i>
-												</span></a>
+												<a href="#" class="menu-link flex-stack px-3">Create Payment
+													<span class="ms-2" data-bs-toggle="tooltip"
+														title="Specify a target name for future usage and reference">
+														<i class="ki-outline ki-information fs-6"></i>
+													</span></a>
 											</div>
 											<!--end::Menu item-->
 											<!--begin::Menu item-->
@@ -2806,7 +3147,8 @@
 											</div>
 											<!--end::Menu item-->
 											<!--begin::Menu item-->
-											<div class="menu-item px-3" data-kt-menu-trigger="hover" data-kt-menu-placement="right-end">
+											<div class="menu-item px-3" data-kt-menu-trigger="hover"
+												data-kt-menu-placement="right-end">
 												<a href="#" class="menu-link px-3">
 													<span class="menu-title">Subscription</span>
 													<span class="menu-arrow"></span>
@@ -2835,12 +3177,16 @@
 													<div class="menu-item px-3">
 														<div class="menu-content px-3">
 															<!--begin::Switch-->
-															<label class="form-check form-switch form-check-custom form-check-solid">
+															<label
+																class="form-check form-switch form-check-custom form-check-solid">
 																<!--begin::Input-->
-																<input class="form-check-input w-30px h-20px" type="checkbox" value="1" checked="checked" name="notifications" />
+																<input class="form-check-input w-30px h-20px"
+																	type="checkbox" value="1" checked="checked"
+																	name="notifications" />
 																<!--end::Input-->
 																<!--end::Label-->
-																<span class="form-check-label text-muted fs-6">Recuring</span>
+																<span
+																	class="form-check-label text-muted fs-6">Recuring</span>
 																<!--end::Label-->
 															</label>
 															<!--end::Switch-->
@@ -2871,128 +3217,160 @@
 										<div class="row g-2">
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/amazon.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/amazon.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">AWS</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/angular-icon-1.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/angular-icon-1.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">AngularJS</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/atica.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/atica.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Atica</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/beats-electronics.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/beats-electronics.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Music</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/codeigniter.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/codeigniter.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Codeigniter</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/bootstrap-4.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/bootstrap-4.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Bootstrap</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/google-tag-manager.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/google-tag-manager.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">GTM</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/disqus.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/disqus.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Disqus</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/dribbble-icon-1.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/dribbble-icon-1.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Dribble</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/google-play-store.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/google-play-store.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Play Store</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/google-podcasts.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/google-podcasts.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Podcasts</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/figma-1.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/figma-1.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Figma</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/github.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/github.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Github</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/gitlab.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/gitlab.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Gitlab</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/instagram-2-1.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/instagram-2-1.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Instagram</span>
 												</a>
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-4">
-												<a href="#" class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
-													<img src="assets/media/svg/brand-logos/pinterest-p.svg" class="w-25px h-25px mb-2" alt="" />
+												<a href="#"
+													class="d-flex flex-column flex-center text-center text-gray-800 text-hover-primary bg-hover-light rounded py-4 px-3 mb-3">
+													<img src="assets/media/svg/brand-logos/pinterest-p.svg"
+														class="w-25px h-25px mb-2" alt="" />
 													<span class="fw-semibold">Pinterest</span>
 												</a>
 											</div>
@@ -3013,27 +3391,35 @@
 					<!--begin::Notifications-->
 					<div class="app-navbar-item ms-1">
 						<!--begin::Menu- wrapper-->
-						<div class="btn btn-sm btn-icon btn-custom h-35px w-35px" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent" data-kt-menu-placement="bottom-end">
+						<div class="btn btn-sm btn-icon btn-custom h-35px w-35px"
+							data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
+							data-kt-menu-placement="bottom-end">
 							<i class="ki-outline ki-category fs-3"></i>
 						</div>
 						<!--begin::Menu-->
-						<div class="menu menu-sub menu-sub-dropdown menu-column w-350px w-lg-375px" data-kt-menu="true" id="kt_menu_notifications">
+						<div class="menu menu-sub menu-sub-dropdown menu-column w-350px w-lg-375px" data-kt-menu="true"
+							id="kt_menu_notifications">
 							<!--begin::Heading-->
-							<div class="d-flex flex-column bgi-no-repeat rounded-top" style="background-image:url('assets/media/misc/menu-header-bg.jpg')">
+							<div class="d-flex flex-column bgi-no-repeat rounded-top"
+								style="background-image:url('assets/media/misc/menu-header-bg.jpg')">
 								<!--begin::Title-->
-								<h3 class="text-white fw-semibold px-9 mt-10 mb-6">Notifications 
-								<span class="fs-8 opacity-75 ps-3">24 reports</span></h3>
+								<h3 class="text-white fw-semibold px-9 mt-10 mb-6">Notifications
+									<span class="fs-8 opacity-75 ps-3">24 reports</span>
+								</h3>
 								<!--end::Title-->
 								<!--begin::Tabs-->
 								<ul class="nav nav-line-tabs nav-line-tabs-2x nav-stretch fw-semibold px-9">
 									<li class="nav-item">
-										<a class="nav-link text-white opacity-75 opacity-state-100 pb-4" data-bs-toggle="tab" href="#kt_topbar_notifications_1">Alerts</a>
+										<a class="nav-link text-white opacity-75 opacity-state-100 pb-4"
+											data-bs-toggle="tab" href="#kt_topbar_notifications_1">Alerts</a>
 									</li>
 									<li class="nav-item">
-										<a class="nav-link text-white opacity-75 opacity-state-100 pb-4 active" data-bs-toggle="tab" href="#kt_topbar_notifications_2">Updates</a>
+										<a class="nav-link text-white opacity-75 opacity-state-100 pb-4 active"
+											data-bs-toggle="tab" href="#kt_topbar_notifications_2">Updates</a>
 									</li>
 									<li class="nav-item">
-										<a class="nav-link text-white opacity-75 opacity-state-100 pb-4" data-bs-toggle="tab" href="#kt_topbar_notifications_3">Logs</a>
+										<a class="nav-link text-white opacity-75 opacity-state-100 pb-4"
+											data-bs-toggle="tab" href="#kt_topbar_notifications_3">Logs</a>
 									</li>
 								</ul>
 								<!--end::Tabs-->
@@ -3058,7 +3444,9 @@
 												<!--end::Symbol-->
 												<!--begin::Title-->
 												<div class="mb-0 me-2">
-													<a href="#" class="fs-6 text-gray-800 text-hover-primary fw-bold">Project Alice</a>
+													<a href="#"
+														class="fs-6 text-gray-800 text-hover-primary fw-bold">Project
+														Alice</a>
 													<div class="text-gray-500 fs-7">Phase 1 development</div>
 												</div>
 												<!--end::Title-->
@@ -3082,7 +3470,8 @@
 												<!--end::Symbol-->
 												<!--begin::Title-->
 												<div class="mb-0 me-2">
-													<a href="#" class="fs-6 text-gray-800 text-hover-primary fw-bold">HR Confidential</a>
+													<a href="#" class="fs-6 text-gray-800 text-hover-primary fw-bold">HR
+														Confidential</a>
 													<div class="text-gray-500 fs-7">Confidential staff documents</div>
 												</div>
 												<!--end::Title-->
@@ -3106,7 +3495,9 @@
 												<!--end::Symbol-->
 												<!--begin::Title-->
 												<div class="mb-0 me-2">
-													<a href="#" class="fs-6 text-gray-800 text-hover-primary fw-bold">Company HR</a>
+													<a href="#"
+														class="fs-6 text-gray-800 text-hover-primary fw-bold">Company
+														HR</a>
 													<div class="text-gray-500 fs-7">Corporeate staff profiles</div>
 												</div>
 												<!--end::Title-->
@@ -3130,7 +3521,9 @@
 												<!--end::Symbol-->
 												<!--begin::Title-->
 												<div class="mb-0 me-2">
-													<a href="#" class="fs-6 text-gray-800 text-hover-primary fw-bold">Project Redux</a>
+													<a href="#"
+														class="fs-6 text-gray-800 text-hover-primary fw-bold">Project
+														Redux</a>
 													<div class="text-gray-500 fs-7">New frontend admin theme</div>
 												</div>
 												<!--end::Title-->
@@ -3154,7 +3547,9 @@
 												<!--end::Symbol-->
 												<!--begin::Title-->
 												<div class="mb-0 me-2">
-													<a href="#" class="fs-6 text-gray-800 text-hover-primary fw-bold">Project Breafing</a>
+													<a href="#"
+														class="fs-6 text-gray-800 text-hover-primary fw-bold">Project
+														Breafing</a>
 													<div class="text-gray-500 fs-7">Product launch status update</div>
 												</div>
 												<!--end::Title-->
@@ -3178,7 +3573,9 @@
 												<!--end::Symbol-->
 												<!--begin::Title-->
 												<div class="mb-0 me-2">
-													<a href="#" class="fs-6 text-gray-800 text-hover-primary fw-bold">Banner Assets</a>
+													<a href="#"
+														class="fs-6 text-gray-800 text-hover-primary fw-bold">Banner
+														Assets</a>
 													<div class="text-gray-500 fs-7">Collection of banner images</div>
 												</div>
 												<!--end::Title-->
@@ -3202,7 +3599,9 @@
 												<!--end::Symbol-->
 												<!--begin::Title-->
 												<div class="mb-0 me-2">
-													<a href="#" class="fs-6 text-gray-800 text-hover-primary fw-bold">Icon Assets</a>
+													<a href="#"
+														class="fs-6 text-gray-800 text-hover-primary fw-bold">Icon
+														Assets</a>
 													<div class="text-gray-500 fs-7">Collection of SVG icons</div>
 												</div>
 												<!--end::Title-->
@@ -3217,8 +3616,9 @@
 									<!--end::Items-->
 									<!--begin::View more-->
 									<div class="py-3 text-center border-top">
-										<a href="pages/user-profile/activity.html" class="btn btn-color-gray-600 btn-active-color-primary">View All 
-										<i class="ki-outline ki-arrow-right fs-5"></i></a>
+										<a href="pages/user-profile/activity.html"
+											class="btn btn-color-gray-600 btn-active-color-primary">View All
+											<i class="ki-outline ki-arrow-right fs-5"></i></a>
 									</div>
 									<!--end::View more-->
 								</div>
@@ -3233,18 +3633,21 @@
 											<h3 class="text-gray-900 text-center fw-bold">Get Pro Access</h3>
 											<!--end::Title-->
 											<!--begin::Text-->
-											<div class="text-center text-gray-600 fw-semibold pt-1">Outlines keep you honest. They stoping you from amazing poorly about drive</div>
+											<div class="text-center text-gray-600 fw-semibold pt-1">Outlines keep you
+												honest. They stoping you from amazing poorly about drive</div>
 											<!--end::Text-->
 											<!--begin::Action-->
 											<div class="text-center mt-5 mb-9">
-												<a href="#" class="btn btn-sm btn-primary px-6" data-bs-toggle="modal" data-bs-target="#kt_modal_upgrade_plan">Upgrade</a>
+												<a href="#" class="btn btn-sm btn-primary px-6" data-bs-toggle="modal"
+													data-bs-target="#kt_modal_upgrade_plan">Upgrade</a>
 											</div>
 											<!--end::Action-->
 										</div>
 										<!--end::Section-->
 										<!--begin::Illustration-->
 										<div class="text-center px-4">
-											<img class="mw-100 mh-200px" alt="image" src="assets/media/illustrations/sketchy-1/1.png" />
+											<img class="mw-100 mh-200px" alt="image"
+												src="assets/media/illustrations/sketchy-1/1.png" />
 										</div>
 										<!--end::Illustration-->
 									</div>
@@ -3263,7 +3666,8 @@
 												<span class="w-70px badge badge-light-success me-4">200 OK</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">New order</a>
+												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">New
+													order</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3280,7 +3684,8 @@
 												<span class="w-70px badge badge-light-danger me-4">500 ERR</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">New customer</a>
+												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">New
+													customer</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3297,7 +3702,8 @@
 												<span class="w-70px badge badge-light-success me-4">200 OK</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Payment process</a>
+												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Payment
+													process</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3314,7 +3720,8 @@
 												<span class="w-70px badge badge-light-warning me-4">300 WRN</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Search query</a>
+												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Search
+													query</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3331,7 +3738,8 @@
 												<span class="w-70px badge badge-light-success me-4">200 OK</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">API connection</a>
+												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">API
+													connection</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3348,7 +3756,9 @@
 												<span class="w-70px badge badge-light-success me-4">200 OK</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Database restore</a>
+												<a href="#"
+													class="text-gray-800 text-hover-primary fw-semibold">Database
+													restore</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3365,7 +3775,8 @@
 												<span class="w-70px badge badge-light-warning me-4">300 WRN</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">System update</a>
+												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">System
+													update</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3382,7 +3793,8 @@
 												<span class="w-70px badge badge-light-warning me-4">300 WRN</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Server OS update</a>
+												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Server
+													OS update</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3399,7 +3811,8 @@
 												<span class="w-70px badge badge-light-warning me-4">300 WRN</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">API rollback</a>
+												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">API
+													rollback</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3416,7 +3829,8 @@
 												<span class="w-70px badge badge-light-danger me-4">500 ERR</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Refund process</a>
+												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Refund
+													process</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3433,7 +3847,9 @@
 												<span class="w-70px badge badge-light-danger me-4">500 ERR</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Withdrawal process</a>
+												<a href="#"
+													class="text-gray-800 text-hover-primary fw-semibold">Withdrawal
+													process</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3450,7 +3866,8 @@
 												<span class="w-70px badge badge-light-danger me-4">500 ERR</span>
 												<!--end::Code-->
 												<!--begin::Title-->
-												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Mail tasks</a>
+												<a href="#" class="text-gray-800 text-hover-primary fw-semibold">Mail
+													tasks</a>
 												<!--end::Title-->
 											</div>
 											<!--end::Section-->
@@ -3463,8 +3880,9 @@
 									<!--end::Items-->
 									<!--begin::View more-->
 									<div class="py-3 text-center border-top">
-										<a href="pages/user-profile/activity.html" class="btn btn-color-gray-600 btn-active-color-primary">View All 
-										<i class="ki-outline ki-arrow-right fs-5"></i></a>
+										<a href="pages/user-profile/activity.html"
+											class="btn btn-color-gray-600 btn-active-color-primary">View All
+											<i class="ki-outline ki-arrow-right fs-5"></i></a>
 									</div>
 									<!--end::View more-->
 								</div>
@@ -3479,12 +3897,16 @@
 					<!--begin::User menu-->
 					<div class="app-navbar-item ms-1">
 						<!--begin::Menu wrapper-->
-						<div class="cursor-pointer symbol position-relative symbol-35px" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent" data-kt-menu-placement="bottom-end">
+						<div class="cursor-pointer symbol position-relative symbol-35px"
+							data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
+							data-kt-menu-placement="bottom-end">
 							<img src="assets/media/avatars/300-2.jpg" alt="user" />
-							<span class="bullet bullet-dot bg-success h-6px w-6px position-absolute translate-middle mb-1 bottom-0 start-100 animation-blink"></span>
+							<span
+								class="bullet bullet-dot bg-success h-6px w-6px position-absolute translate-middle mb-1 bottom-0 start-100 animation-blink"></span>
 						</div>
 						<!--begin::User account menu-->
-						<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-275px" data-kt-menu="true">
+						<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-275px"
+							data-kt-menu="true">
 							<!--begin::Menu item-->
 							<div class="menu-item px-3">
 								<div class="menu-content d-flex align-items-center px-3">
@@ -3495,9 +3917,12 @@
 									<!--end::Avatar-->
 									<!--begin::Username-->
 									<div class="d-flex flex-column">
-										<div class="fw-bold d-flex align-items-center fs-5">Ana Fox 
-										<span class="badge badge-light-success fw-bold fs-8 px-2 py-1 ms-2">Pro</span></div>
-										<a href="#" class="fw-semibold text-muted text-hover-primary fs-7">ana@nio.com</a>
+										<div class="fw-bold d-flex align-items-center fs-5">Ana Fox
+											<span
+												class="badge badge-light-success fw-bold fs-8 px-2 py-1 ms-2">Pro</span>
+										</div>
+										<a href="#"
+											class="fw-semibold text-muted text-hover-primary fs-7">ana@nio.com</a>
 									</div>
 									<!--end::Username-->
 								</div>
@@ -3522,7 +3947,8 @@
 							</div>
 							<!--end::Menu item-->
 							<!--begin::Menu item-->
-							<div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
+							<div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+								data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
 								<a href="#" class="menu-link px-5">
 									<span class="menu-title">My Subscription</span>
 									<span class="menu-arrow"></span>
@@ -3546,10 +3972,12 @@
 									<!--end::Menu item-->
 									<!--begin::Menu item-->
 									<div class="menu-item px-3">
-										<a href="account/statements.html" class="menu-link d-flex flex-stack px-5">Statements 
-										<span class="ms-2 lh-0" data-bs-toggle="tooltip" title="View your statements">
-											<i class="ki-outline ki-information-5 fs-5"></i>
-										</span></a>
+										<a href="account/statements.html"
+											class="menu-link d-flex flex-stack px-5">Statements
+											<span class="ms-2 lh-0" data-bs-toggle="tooltip"
+												title="View your statements">
+												<i class="ki-outline ki-information-5 fs-5"></i>
+											</span></a>
 									</div>
 									<!--end::Menu item-->
 									<!--begin::Menu separator-->
@@ -3559,7 +3987,8 @@
 									<div class="menu-item px-3">
 										<div class="menu-content px-3">
 											<label class="form-check form-switch form-check-custom form-check-solid">
-												<input class="form-check-input w-30px h-20px" type="checkbox" value="1" checked="checked" name="notifications" />
+												<input class="form-check-input w-30px h-20px" type="checkbox" value="1"
+													checked="checked" name="notifications" />
 												<span class="form-check-label text-muted fs-7">Notifications</span>
 											</label>
 										</div>
@@ -3578,19 +4007,22 @@
 							<div class="separator my-2"></div>
 							<!--end::Menu separator-->
 							<!--begin::Menu item-->
-							<div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
+							<div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+								data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
 								<a href="#" class="menu-link px-5">
-									<span class="menu-title position-relative">Mode 
-									<span class="ms-5 position-absolute translate-middle-y top-50 end-0">
-										<i class="ki-outline ki-night-day theme-light-show fs-2"></i>
-										<i class="ki-outline ki-moon theme-dark-show fs-2"></i>
-									</span></span>
+									<span class="menu-title position-relative">Mode
+										<span class="ms-5 position-absolute translate-middle-y top-50 end-0">
+											<i class="ki-outline ki-night-day theme-light-show fs-2"></i>
+											<i class="ki-outline ki-moon theme-dark-show fs-2"></i>
+										</span></span>
 								</a>
 								<!--begin::Menu-->
-								<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-title-gray-700 menu-icon-gray-500 menu-active-bg menu-state-color fw-semibold py-4 fs-base w-150px" data-kt-menu="true" data-kt-element="theme-mode-menu">
+								<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-title-gray-700 menu-icon-gray-500 menu-active-bg menu-state-color fw-semibold py-4 fs-base w-150px"
+									data-kt-menu="true" data-kt-element="theme-mode-menu">
 									<!--begin::Menu item-->
 									<div class="menu-item px-3 my-0">
-										<a href="#" class="menu-link px-3 py-2" data-kt-element="mode" data-kt-value="light">
+										<a href="#" class="menu-link px-3 py-2" data-kt-element="mode"
+											data-kt-value="light">
 											<span class="menu-icon" data-kt-element="icon">
 												<i class="ki-outline ki-night-day fs-2"></i>
 											</span>
@@ -3600,7 +4032,8 @@
 									<!--end::Menu item-->
 									<!--begin::Menu item-->
 									<div class="menu-item px-3 my-0">
-										<a href="#" class="menu-link px-3 py-2" data-kt-element="mode" data-kt-value="dark">
+										<a href="#" class="menu-link px-3 py-2" data-kt-element="mode"
+											data-kt-value="dark">
 											<span class="menu-icon" data-kt-element="icon">
 												<i class="ki-outline ki-moon fs-2"></i>
 											</span>
@@ -3610,7 +4043,8 @@
 									<!--end::Menu item-->
 									<!--begin::Menu item-->
 									<div class="menu-item px-3 my-0">
-										<a href="#" class="menu-link px-3 py-2" data-kt-element="mode" data-kt-value="system">
+										<a href="#" class="menu-link px-3 py-2" data-kt-element="mode"
+											data-kt-value="system">
 											<span class="menu-icon" data-kt-element="icon">
 												<i class="ki-outline ki-screen fs-2"></i>
 											</span>
@@ -3623,52 +4057,56 @@
 							</div>
 							<!--end::Menu item-->
 							<!--begin::Menu item-->
-							<div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
+							<div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+								data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
 								<a href="#" class="menu-link px-5">
-									<span class="menu-title position-relative">Language 
-									<span class="fs-8 rounded bg-light px-3 py-2 position-absolute translate-middle-y top-50 end-0">English 
-									<img class="w-15px h-15px rounded-1 ms-2" src="assets/media/flags/united-states.svg" alt="" /></span></span>
+									<span class="menu-title position-relative">Language
+										<span
+											class="fs-8 rounded bg-light px-3 py-2 position-absolute translate-middle-y top-50 end-0">English
+											<img class="w-15px h-15px rounded-1 ms-2"
+												src="assets/media/flags/united-states.svg" alt="" /></span></span>
 								</a>
 								<!--begin::Menu sub-->
 								<div class="menu-sub menu-sub-dropdown w-175px py-4">
 									<!--begin::Menu item-->
 									<div class="menu-item px-3">
 										<a href="account/settings.html" class="menu-link d-flex px-5 active">
-										<span class="symbol symbol-20px me-4">
-											<img class="rounded-1" src="assets/media/flags/united-states.svg" alt="" />
-										</span>English</a>
+											<span class="symbol symbol-20px me-4">
+												<img class="rounded-1" src="assets/media/flags/united-states.svg"
+													alt="" />
+											</span>English</a>
 									</div>
 									<!--end::Menu item-->
 									<!--begin::Menu item-->
 									<div class="menu-item px-3">
 										<a href="account/settings.html" class="menu-link d-flex px-5">
-										<span class="symbol symbol-20px me-4">
-											<img class="rounded-1" src="assets/media/flags/spain.svg" alt="" />
-										</span>Spanish</a>
+											<span class="symbol symbol-20px me-4">
+												<img class="rounded-1" src="assets/media/flags/spain.svg" alt="" />
+											</span>Spanish</a>
 									</div>
 									<!--end::Menu item-->
 									<!--begin::Menu item-->
 									<div class="menu-item px-3">
 										<a href="account/settings.html" class="menu-link d-flex px-5">
-										<span class="symbol symbol-20px me-4">
-											<img class="rounded-1" src="assets/media/flags/germany.svg" alt="" />
-										</span>German</a>
+											<span class="symbol symbol-20px me-4">
+												<img class="rounded-1" src="assets/media/flags/germany.svg" alt="" />
+											</span>German</a>
 									</div>
 									<!--end::Menu item-->
 									<!--begin::Menu item-->
 									<div class="menu-item px-3">
 										<a href="account/settings.html" class="menu-link d-flex px-5">
-										<span class="symbol symbol-20px me-4">
-											<img class="rounded-1" src="assets/media/flags/japan.svg" alt="" />
-										</span>Japanese</a>
+											<span class="symbol symbol-20px me-4">
+												<img class="rounded-1" src="assets/media/flags/japan.svg" alt="" />
+											</span>Japanese</a>
 									</div>
 									<!--end::Menu item-->
 									<!--begin::Menu item-->
 									<div class="menu-item px-3">
 										<a href="account/settings.html" class="menu-link d-flex px-5">
-										<span class="symbol symbol-20px me-4">
-											<img class="rounded-1" src="assets/media/flags/france.svg" alt="" />
-										</span>French</a>
+											<span class="symbol symbol-20px me-4">
+												<img class="rounded-1" src="assets/media/flags/france.svg" alt="" />
+											</span>French</a>
 									</div>
 									<!--end::Menu item-->
 								</div>
@@ -3682,7 +4120,8 @@
 							<!--end::Menu item-->
 							<!--begin::Menu item-->
 							<div class="menu-item px-5">
-								<a href="authentication/layouts/corporate/sign-in.html" class="menu-link px-5">Sign Out</a>
+								<a href="authentication/layouts/corporate/sign-in.html" class="menu-link px-5">Sign
+									Out</a>
 							</div>
 							<!--end::Menu item-->
 						</div>
@@ -3690,28 +4129,33 @@
 						<!--end::Menu wrapper-->
 					</div>
 					<!--end::User menu-->
+					{{--
 					<!--begin::Header menu toggle-->
 					<div class="app-navbar-item d-lg-none" title="Show header menu">
-						<button class="btn btn-sm btn-icon btn-custom h-35px w-35px" id="kt_header_secondary_mobile_toggle">
+						<button class="btn btn-sm btn-icon btn-custom h-35px w-35px"
+							id="kt_header_secondary_mobile_toggle">
 							<i class="ki-outline ki-element-4 fs-2"></i>
 						</button>
 					</div>
-					<!--end::Header menu toggle-->
+					<!--end::Header menu toggle--> --}}
+					{{--
 					<!--begin::Header menu toggle-->
 					<div class="app-navbar-item d-lg-none me-n3" title="Show header menu">
 						<button class="btn btn-sm btn-icon btn-custom h-35px w-35px" id="kt_app_sidebar_mobile_toggle">
 							<i class="ki-outline ki-setting-3 fs-2"></i>
 						</button>
 					</div>
-					<!--end::Header menu toggle-->
+					<!--end::Header menu toggle--> --}}
 				</div>
 				<!--end::Navbar-->
 			</div>
 			<!--end::Header primary wrapper-->
-			{{-- <!--begin::Logo-->
+			{{--
+			<!--begin::Logo-->
 			<div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0 me-lg-15">
 				<a href="{{ route('dashboard') }}">
-					<img alt="Logo" src="{{ image('logos/default-dark.svg') }}" class="h-20px h-lg-30px app-sidebar-logo-default" />
+					<img alt="Logo" src="{{ image('logos/default-dark.svg') }}"
+						class="h-20px h-lg-30px app-sidebar-logo-default" />
 				</a>
 			</div>
 			<!--end::Logo-->

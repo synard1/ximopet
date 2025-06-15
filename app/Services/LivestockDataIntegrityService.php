@@ -877,6 +877,8 @@ class LivestockDataIntegrityService
                 ];
             }
 
+            // dd($preview);
+
             // Preview orphaned CurrentLivestock records that would be removed
             $orphanedCurrentLivestock = CurrentLivestock::whereDoesntHave('livestock')->get();
 
@@ -905,6 +907,8 @@ class LivestockDataIntegrityService
                     'impact' => 'medium' // Removing orphaned data
                 ];
             }
+
+            // dd($preview);
 
             return [
                 'success' => true,

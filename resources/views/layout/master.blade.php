@@ -6,6 +6,8 @@
     <base href="" />
     <title>{{ config('app.name', 'Laravel') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="app-debug" content="{{ config('app.debug') ? 'true' : 'false' }}">
+    <meta name="app-env" content="{{ config('app.env') }}">
     @auth
     <meta name="user-id" content="{{ auth()->id() }}">
     @endauth
@@ -62,6 +64,8 @@
     @foreach(getGlobalAssets() as $path)
     {!! sprintf('<script src="%s"></script>', asset($path)) !!}
     @endforeach
+    <script src="{{ asset('assets/js/security-protection.js') }}"></script>
+    <script src="{{ asset('assets/js/security-blacklist-notification.js') }}"></script>
     <!--end::Global Javascript Bundle-->
 
     <!--begin::Vendors Javascript(used by this page)-->

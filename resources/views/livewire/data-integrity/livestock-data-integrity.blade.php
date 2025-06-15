@@ -156,6 +156,7 @@
                         <div class="p-3 bg-red-50 rounded" style="background: #fef2f2; border-radius: 0.5rem;">
                             <h4 class="font-semibold text-red-700 mb-2" style="color: #b91c1c;">Before</h4>
                             <div class="space-y-1">
+                                @if(isset($change['before']))
                                 @foreach($change['before'] as $key => $value)
                                 <div class="text-sm">
                                     <span class="font-medium">{{ str_replace('_', ' ', ucfirst($key)) }}:</span>
@@ -168,11 +169,15 @@
                                     </span>
                                 </div>
                                 @endforeach
+                                @else
+                                <div class="text-sm text-gray-500">No previous data available.</div>
+                                @endif
                             </div>
                         </div>
                         <div class="p-3 bg-green-50 rounded" style="background: #f0fdf4; border-radius: 0.5rem;">
                             <h4 class="font-semibold text-green-700 mb-2" style="color: #15803d;">After</h4>
                             <div class="space-y-1">
+                                @if(isset($change['after']))
                                 @foreach($change['after'] as $key => $value)
                                 <div class="text-sm">
                                     <span class="font-medium">{{ str_replace('_', ' ', ucfirst($key)) }}:</span>
@@ -185,6 +190,9 @@
                                     </span>
                                 </div>
                                 @endforeach
+                                @else
+                                <div class="text-sm text-gray-500">No updated data available.</div>
+                                @endif
                             </div>
                         </div>
                     </div>

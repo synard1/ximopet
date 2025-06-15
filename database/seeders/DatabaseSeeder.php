@@ -35,6 +35,7 @@ class DatabaseSeeder extends Seeder
             QaTodoMasterDataSeeder::class,
             // QaChecklistSeeder::class,
             ExpeditionSeeder::class,
+            VerificationRuleSeeder::class,
         ]);
 
         // \App\Models\User::factory(20)->create();

@@ -203,31 +203,29 @@ class FarmController extends Controller
         }
     }
 
-    public function getKandangs(Request $request)
+    public function getCoops(Request $request)
     {
-        $farm = Farm::find($request->farm_id);
-        // dd($request->farm_id);
-        $kandangs = $farm->kandangs()->with(['livestock' => function ($query) {
-            // $query->where('status', 'active')->orWhere('status', 'Locked');
-        }])->get()->map(function ($kandang) {
-            $livestock = $kandang->livestock;
-            return [
-                'id' => $kandang->id,
-                'nama' => $kandang->nama,
-                'kode' => $kandang->kode,
-                'kapasitas' => $kandang->kapasitas,
-                'status' => $kandang->status,
-                'livestock' => $livestock ? [
-                    'id' => $livestock->id,
-                    'name' => $livestock->name,
-                    'breed' => $livestock->breed,
-                    'populasi_awal' => $livestock->populasi_awal,
-                    'berat_awal' => $livestock->berat_awal,
-                    'start_date' => $livestock->start_date,
-                ] : null,
-            ];
-        });
+        $coops = Farm::with(['coops.livestocks'])
+            ->findOrFail($request->farm_id)
+            ->coops
+            ->map(function ($coop) {
+                $livestock = $coop->livestocks->first(); // Get the first livestock if exists
+                return [
+                    'id' => $coop->id,
+                    'nama' => $coop->name,
+                    'kode' => $coop->code,
+                    'kapasitas' => $coop->capacity,
+                    'status' => $coop->status,
+                    'livestock' => $livestock ? [
+                        'id' => $livestock->id,
+                        'name' => $livestock->name,
+                        'populasi_awal' => $livestock->initial_quantity,
+                        'berat_awal' => $livestock->initial_weight,
+                        'start_date' => $livestock->start_date,
+                    ] : null,
+                ];
+            });
 
-        return response()->json($kandangs);
+        return response()->json($coops);
     }
 }

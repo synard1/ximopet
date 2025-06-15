@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="test-token">
+    <meta name="app-env" content="local">
+    <meta name="security-config" content='{"enabled":true,"debug":true}'>
+    <title>Security Fix Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .test-button:hover {
+            background: #0056b3;
+        }
+
+        .test-button.success {
+            background: #28a745;
+        }
+
+        .test-button.danger {
+            background: #dc3545;
+        }
+
+        .status-card {
+            background: #e9ecef;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+
+        .log-output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 20px 0;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
+        .result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .result.pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result.fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .result.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔒 Security Fix Verification Test</h1>
+        <p><strong>Purpose:</strong> Verify that the infinite recursion loophole in console protection has been fixed.
+        </p>
+
+        <div class="status-card">
+            <h3>Test Status</h3>
+            <p><strong>Violation Count:</strong> <span id="violation-count">0</span></p>
+            <p><strong>System Status:</strong> <span id="system-status">Unknown</span></p>
+            <p><strong>Recursion Test:</strong> <span id="recursion-status">Not Started</span></p>
+        </div>
+
+        <div>
+            <h3>Test Suite</h3>
+            <button class="test-button" onclick="testNoRecursion()">1. Test No Infinite Recursion</button>
+            <button class="test-button" onclick="testDOMWarnings()">2. Test DOM Warning Display</button>
+            <button class="test-button" onclick="testViolationCounting()">3. Test Violation Counting</button>
+            <button class="test-button" onclick="testDebugLogSafety()">4. Test Debug Log Safety</button>
+            <button class="test-button success" onclick="runAllTests()">Run All Tests</button>
+            <button class="test-button danger" onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div id="test-results">
+            <h3>Test Results</h3>
+            <div id="results-container"></div>
+        </div>
+
+        <div class="log-output" id="log-output">
+            <div>Security Fix Verification initialized...</div>
+        </div>
+    </div>
+
+    <script src="/assets/js/security-protection.js"></script>
+    <script>
+        let testResults = [];
+        let violationsBefore = 0;
+        let recursionDetected = false;
+
+        function log(message, type = 'info') {
+            const logOutput = document.getElementById('log-output');
+            const entry = document.createElement('div');
+            entry.style.margin = '2px 0';
+            entry.style.padding = '4px';
+            entry.style.borderRadius = '3px';
+
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${message}`;
+
+            if (type === 'error') entry.style.background = '#ffebee';
+            if (type === 'success') entry.style.background = '#e8f5e8';
+            if (type === 'warning') entry.style.background = '#fff3cd';
+
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function addResult(testName, passed, message) {
+            testResults.push({testName, passed, message});
+            const container = document.getElementById('results-container');
+            const result = document.createElement('div');
+            result.className = `result ${passed ? 'pass' : 'fail'}`;
+            result.innerHTML = `
+                <strong>${testName}:</strong> ${passed ? '✅ PASS' : '❌ FAIL'}<br>
+                <small>${message}</small>
+            `;
+            container.appendChild(result);
+        }
+
+        function testNoRecursion() {
+            log('🧪 Testing: No Infinite Recursion', 'info');
+
+            const startTime = Date.now();
+            const startViolations = window.SecurityProtection ? window.SecurityProtection.state.violationCount : 0;
+
+            // This should NOT cause infinite recursion
+            console.log('Test message that should trigger security system');
+            console.warn('Test warning message');
+            console.error('Test error message');
+
+            // Wait a bit to see if recursion occurs
+            setTimeout(() => {
+                const endTime = Date.now();
+                const timeTaken = endTime - startTime;
+                const endViolations = window.SecurityProtection ? window.SecurityProtection.state.violationCount : 0;
+
+                if (timeTaken < 1000 && endViolations > startViolations) {
+                    addResult('No Infinite Recursion', true, `Completed in ${timeTaken}ms, violations increased from ${startViolations} to ${endViolations}`);
+                    log('✅ No infinite recursion detected', 'success');
+                    document.getElementById('recursion-status').textContent = 'PASS - No Recursion';
+                } else if (timeTaken >= 1000) {
+                    addResult('No Infinite Recursion', false, `Took too long (${timeTaken}ms), possible infinite loop`);
+                    log('❌ Possible infinite recursion detected', 'error');
+                    document.getElementById('recursion-status').textContent = 'FAIL - Possible Recursion';
+                } else {
+                    addResult('No Infinite Recursion', false, `No violations recorded, security system may not be working`);
+                    log('❌ Security system not detecting violations', 'error');
+                    document.getElementById('recursion-status').textContent = 'FAIL - No Detection';
+                }
+            }, 500);
+        }
+
+        function testDOMWarnings() {
+            log('🧪 Testing: DOM Warning Display', 'info');
+
+            // Count existing warning toasts
+            const existingWarnings = document.querySelectorAll('#security-warning-toast').length;
+
+            // Trigger console access
+            console.log('This should show a DOM warning toast');
+
+            setTimeout(() => {
+                const newWarnings = document.querySelectorAll('#security-warning-toast').length;
+                if (newWarnings > existingWarnings) {
+                    addResult('DOM Warning Display', true, `DOM toast warning displayed successfully`);
+                    log('✅ DOM warning toast displayed', 'success');
+                } else {
+                    addResult('DOM Warning Display', false, `No DOM warning toast detected`);
+                    log('❌ No DOM warning toast found', 'error');
+                }
+            }, 100);
+        }
+
+        function testViolationCounting() {
+            log('🧪 Testing: Violation Counting', 'info');
+
+            if (!window.SecurityProtection) {
+                addResult('Violation Counting', false, 'SecurityProtection not available');
+                log('❌ SecurityProtection not loaded', 'error');
+                return;
+            }
+
+            const beforeCount = window.SecurityProtection.state.violationCount;
+
+            // Trigger violations
+            console.log('Violation test 1');
+            console.warn('Violation test 2');
+
+            setTimeout(() => {
+                const afterCount = window.SecurityProtection.state.violationCount;
+                if (afterCount > beforeCount) {
+                    addResult('Violation Counting', true, `Violations increased from ${beforeCount} to ${afterCount}`);
+                    log(`✅ Violations counted: ${beforeCount} → ${afterCount}`, 'success');
+                    document.getElementById('violation-count').textContent = afterCount;
+                } else {
+                    addResult('Violation Counting', false, `Violation count unchanged: ${beforeCount}`);
+                    log('❌ Violations not being counted', 'error');
+                }
+            }, 200);
+        }
+
+        function testDebugLogSafety() {
+            log('🧪 Testing: Debug Log Safety', 'info');
+
+            if (!window.SecurityProtection) {
+                addResult('Debug Log Safety', false, 'SecurityProtection not available');
+                return;
+            }
+
+            const startTime = Date.now();
+
+            // This should use original console methods and not cause recursion
+            window.SecurityProtection.debugLog('Test debug message', {test: true});
+            window.SecurityProtection.debugLog('Another debug message');
+
+            const endTime = Date.now();
+            const timeTaken = endTime - startTime;
+
+            if (timeTaken < 100) {
+                addResult('Debug Log Safety', true, `Debug logging completed safely in ${timeTaken}ms`);
+                log('✅ Debug logging safe from recursion', 'success');
+            } else {
+                addResult('Debug Log Safety', false, `Debug logging took too long (${timeTaken}ms)`);
+                log('❌ Debug logging may have recursion issues', 'error');
+            }
+        }
+
+        function runAllTests() {
+            log('🚀 Running all tests...', 'info');
+            clearResults();
+
+            testNoRecursion();
+            setTimeout(() => testDOMWarnings(), 600);
+            setTimeout(() => testViolationCounting(), 1200);
+            setTimeout(() => testDebugLogSafety(), 1800);
+
+            setTimeout(() => {
+                const passedTests = testResults.filter(r => r.passed).length;
+                const totalTests = testResults.length;
+                log(`🏁 All tests completed: ${passedTests}/${totalTests} passed`,
+                    passedTests === totalTests ? 'success' : 'error');
+            }, 2500);
+        }
+
+        function clearResults() {
+            testResults = [];
+            document.getElementById('results-container').innerHTML = '';
+            document.getElementById('log-output').innerHTML = '<div>Logs cleared...</div>';
+        }
+
+        function updateStatus() {
+            if (window.SecurityProtection) {
+                const state = window.SecurityProtection.state;
+                document.getElementById('violation-count').textContent = state.violationCount;
+                document.getElementById('system-status').textContent = state.isEnabled ? 'Enabled' : 'Disabled';
+            } else {
+                document.getElementById('system-status').textContent = 'Not Loaded';
+            }
+        }
+
+        // Initialize
+        setTimeout(() => {
+            updateStatus();
+            log('✅ Security Fix Verification ready', 'success');
+            log('📋 Run tests to verify the infinite recursion fix', 'info');
+        }, 1000);
+
+        // Periodic status update
+        setInterval(updateStatus, 2000);
+    </script>
+</body>
+
+</html>

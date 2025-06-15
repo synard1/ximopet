@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="app-env" content="production">
+    <meta name="csrf-token" content="test-token">
+    <title>Security Protection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .enabled {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .disabled {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .test-instructions {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🛡️ Security Protection Test</h1>
+
+        <div class="test-instructions">
+            <h3>📋 Testing Instructions:</h3>
+            <ol>
+                <li><strong>Open DevTools</strong> (F12 or Ctrl+Shift+I)</li>
+                <li><strong>Watch the status</strong> - should change to "DETECTED"</li>
+                <li><strong>Check console logs</strong> for detailed detection info</li>
+                <li><strong>Try keyboard shortcuts</strong> (F12, Ctrl+Shift+I/J/U)</li>
+                <li><strong>Expect warnings</strong> after 2-3 violations</li>
+            </ol>
+        </div>
+
+        <div id="status-container">
+            <div class="status info">
+                <strong>Status:</strong> <span id="status">Loading...</span>
+            </div>
+            <div class="status info">
+                <strong>Environment:</strong> <span id="environment">Loading...</span>
+            </div>
+            <div class="status info">
+                <strong>Enabled:</strong> <span id="enabled">Loading...</span>
+            </div>
+            <div class="status info">
+                <strong>Violations:</strong> <span id="violations">0</span>
+            </div>
+        </div>
+
+        <div>
+            <h3>🔧 Control Panel:</h3>
+            <button onclick="forceEnable()">Force Enable</button>
+            <button onclick="forceDisable()">Force Disable</button>
+            <button onclick="resetSecurity()">Reset System</button>
+            <button onclick="checkStatus()">Check Status</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+
+        <div>
+            <h3>📊 Real-time Status:</h3>
+            <div id="realtime-status" class="log">
+                Waiting for security system to initialize...
+            </div>
+        </div>
+
+        <div>
+            <h3>📝 Console Logs:</h3>
+            <div id="console-logs" class="log">
+                Console logs will appear here...
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Security Protection -->
+    <script src="/assets/js/security-protection.js"></script>
+
+    <script>
+        let logContainer = document.getElementById('console-logs');
+        let statusContainer = document.getElementById('realtime-status');
+
+        // Override console.log to capture security logs
+        const originalLog = console.log;
+        console.log = function (...args) {
+            originalLog.apply(console, args);
+
+            // Only capture security logs
+            if (args[0] && args[0].includes && args[0].includes('[Security]')) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${args.join(' ')}`;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+        };
+
+        // Update status every second
+        function updateStatus() {
+            if (window.SecurityProtection) {
+                const stats = window.SecurityProtection.getStatistics();
+
+                document.getElementById('status').textContent =
+                    stats.devToolsDetected ? 'DETECTED ⚠️' : 'Normal ✅';
+                document.getElementById('environment').textContent =
+                    stats.isProduction ? 'Production 🔒' : 'Development 🔓';
+                document.getElementById('enabled').textContent =
+                    stats.isEnabled ? 'Active 🟢' : 'Inactive 🔴';
+                document.getElementById('violations').textContent =
+                    `${stats.warningCount}/${stats.maxWarnings}`;
+
+                // Update status container class
+                const statusEl = document.getElementById('status').parentElement;
+                if (stats.devToolsDetected) {
+                    statusEl.className = 'status enabled';
+                } else {
+                    statusEl.className = 'status info';
+                }
+
+                // Update realtime status
+                statusContainer.innerHTML = `
+                    <strong>Security Protection Status:</strong><br>
+                    • Production Mode: ${stats.isProduction}<br>
+                    • Protection Enabled: ${stats.isEnabled}<br>
+                    • DevTools Detected: ${stats.devToolsDetected}<br>
+                    • Blacklisted: ${stats.isBlacklisted}<br>
+                    • Warning Count: ${stats.warningCount}/${stats.maxWarnings}<br>
+                    • Consecutive Detections: ${stats.consecutiveDetections}<br>
+                    • Detection Methods: ${JSON.stringify(stats.detectionMethods, null, 2)}
+                `;
+            }
+        }
+
+        // Control functions
+        function forceEnable() {
+            if (window.SecurityProtection) {
+                window.SecurityProtection.forceEnable();
+                updateStatus();
+            }
+        }
+
+        function forceDisable() {
+            if (window.SecurityProtection) {
+                window.SecurityProtection.forceDisable();
+                updateStatus();
+            }
+        }
+
+        function resetSecurity() {
+            if (window.SecurityProtection) {
+                window.SecurityProtection.reset();
+                updateStatus();
+            }
+        }
+
+        function checkStatus() {
+            if (window.SecurityProtection) {
+                console.log('[Security] Current Status:', window.SecurityProtection.getStatistics());
+                updateStatus();
+            }
+        }
+
+        function clearLogs() {
+            logContainer.innerHTML = 'Console logs cleared...';
+            statusContainer.innerHTML = 'Status cleared...';
+        }
+
+        // Start status updates
+        setInterval(updateStatus, 1000);
+
+        // Initial status update after a delay
+        setTimeout(updateStatus, 2000);
+
+        // Log page load
+        console.log('[Security] Test page loaded - DevTools detection should be active');
+    </script>
+</body>
+
+</html>

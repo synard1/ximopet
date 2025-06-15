@@ -15,6 +15,8 @@ use App\Models\LivestockSalesItem;
 use App\Models\Ternak;
 use App\Models\Reports;
 use App\Models\Recording;
+use App\Models\SupplyUsage;
+use App\Models\SupplyUsageDetail;
 use App\Models\TernakJual;
 use Illuminate\Http\Request;
 use App\Models\TransaksiJual;
@@ -22,6 +24,13 @@ use App\Models\TernakDepletion;
 use App\Models\TransaksiHarianDetail;
 use App\Models\LivestockCost;
 use App\Models\LivestockPurchaseItem;
+use App\Models\Partner;
+use App\Models\Expedition;
+use App\Models\Feed;
+use App\Models\Supply;
+use App\Models\LivestockPurchase;
+use App\Models\FeedPurchaseBatch;
+use App\Models\SupplyPurchaseBatch;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -30,6 +39,9 @@ use App\Models\Coop;
 use App\Models\Worker;
 use App\Services\Report\DaillyReportExcelExportService;
 use Exception;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 
 
@@ -72,22 +84,22 @@ class ReportsController extends Controller
     {
         $livestock = Livestock::all();
         $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->get();
-        $kandangs = Kandang::whereIn('id', $livestock->pluck('kandang_id'))->get();
+        $coops = Coop::whereIn('id', $livestock->pluck('coop_id'))->get();
 
         $livestock = $livestock->map(function ($item) {
             return [
                 'id' => $item->id,
                 'farm_id' => $item->farm_id,
                 'farm_name' => $item->farm->name,
-                'kandang_id' => $item->kandang_id,
-                'kandang_name' => $item->kandang->nama,
+                'coop_id' => $item->coop_id,
+                'coop_name' => $item->coop->name,
                 'name' => $item->name,
                 'start_date' => $item->start_date,
                 'year' => $item->start_date->format('Y'),
             ];
         })->toArray();
 
-        return view('pages.reports.index_report_batch_worker', compact(['farms', 'kandangs', 'livestock']));
+        return view('pages.reports.index_report_batch_worker', compact(['farms', 'coops', 'livestock']));
     }
 
     public function indexDailyCost()
@@ -177,13 +189,15 @@ class ReportsController extends Controller
                 'farm_id' => $item->farm_id,
                 'farm_name' => $item->farm->name,
                 'coop_id' => $item->coop_id,
-                'coop_name' => $item->coop->nama,
+                'coop_name' => $item->coop->name,
                 'name' => $item->name,
                 'start_date' => $item->start_date,
                 'year' => $item->start_date->format('Y'),
                 'tanggal_surat' => $allData['tanggal_laporan'] ?? null,
             ];
         })->toArray();
+
+        // dd($ternak);
 
         return view('pages.reports.index_report_performa', compact(['farms', 'coops', 'ternak']));
     }
@@ -932,7 +946,7 @@ class ReportsController extends Controller
 
         $initialPurchasePrice = $initialPurchaseItem->price_per_unit ?? 0;
         $initialPurchaseQuantity = $initialPurchaseItem->quantity ?? $livestock->initial_quantity ?? 0;
-        $initialPurchaseDate = $initialPurchaseItem->created_at ?? $livestock->start_date ?? null;
+        $initialPurchaseDate = $initialPurchaseItem->start_date ?? $livestock->start_date ?? null;
         $initialPurchaseTotalCost = $initialPurchasePrice * $initialPurchaseQuantity;
 
         Log::info("📦 Initial purchase data for report", [
@@ -956,6 +970,7 @@ class ReportsController extends Controller
             'livestock' => $livestock->name,
             'umur' => $age,
             'total_cost' => $totalCost, // Daily added cost
+            'daily_cost_per_ayam' => $summary['daily_added_cost_per_chicken'] ?? 0, // Daily cost per chicken
             'cost_per_ayam' => $costPerAyam, // Total cost per chicken (initial + accumulated)
             'breakdown' => [],
         ];
@@ -1005,6 +1020,34 @@ class ReportsController extends Controller
                 ];
             }
 
+            // Add Supply Usage Cost (from supply_usage_detail)
+            $supplyUsageDetail = $breakdown['supply_usage_detail'] ?? [];
+            foreach ($supplyUsageDetail as $supplyKey => $supplyItem) {
+                $detailedBreakdown[] = [
+                    'kategori' => $supplyItem['supply_name'] ?? 'Supply',
+                    'jumlah' => $supplyItem['jumlah_purchase_unit'] ?? 0,
+                    'satuan' => $supplyItem['purchase_unit'] ?? '-',
+                    'harga_satuan' => $supplyItem['price_per_purchase_unit'] ?? 0,
+                    'subtotal' => $supplyItem['subtotal'] ?? 0,
+                    'tanggal' => $tanggal->format('d/m/Y'),
+                    'is_initial_purchase' => false,
+                ];
+            }
+
+            // Add OVK Details (from ovk_detail if exists)
+            $ovkDetails = $breakdown['ovk_detail'] ?? [];
+            foreach ($ovkDetails as $ovkKey => $ovkItem) {
+                $detailedBreakdown[] = [
+                    'kategori' => $ovkItem['supply_name'] ?? 'Supply',
+                    'jumlah' => $ovkItem['quantity'] ?? 0,
+                    'satuan' => $ovkItem['unit'] ?? '-',
+                    'harga_satuan' => $ovkItem['price_per_unit'] ?? 0,
+                    'subtotal' => $ovkItem['subtotal'] ?? 0,
+                    'tanggal' => $tanggal->format('d/m/Y'),
+                    'is_initial_purchase' => false,
+                ];
+            }
+
             // Add Deplesi Cost
             $deplesiCost = $breakdown['deplesi'] ?? 0;
             $deplesiEkor = $breakdown['deplesi_ekor'] ?? 0;
@@ -1042,11 +1085,15 @@ class ReportsController extends Controller
                 ];
             }
 
+            // Calculate total supply cost from multiple sources
             $ovkCost = $breakdown['ovk'] ?? 0;
-            if ($ovkCost > 0) {
+            $supplyUsageCost = $breakdown['supply_usage'] ?? 0; // Use 'supply_usage' instead of 'daily_supply_usage_cost'
+            $totalSupplyCost = $ovkCost + $supplyUsageCost;
+
+            if ($totalSupplyCost > 0) {
                 $simpleBreakdown[] = [
-                    'kategori' => 'OVK',
-                    'subtotal' => $ovkCost,
+                    'kategori' => 'Supply',
+                    'subtotal' => $totalSupplyCost,
                 ];
             }
 
@@ -1062,11 +1109,14 @@ class ReportsController extends Controller
             $totalCumulativeCostCalculated = 0; // Not calculated for simple report
         }
 
+
+
         $costs[] = $mainCost;
 
         // Calculate totals
         $totals['total_cost'] += $totalCost;
         $totals['total_ayam'] += $stockAkhir;
+        $totals['daily_cost_per_ayam'] = $summary['daily_added_cost_per_chicken'] ?? 0;
         $totals['total_cost_per_ayam'] = $totals['total_ayam'] > 0
             ? round($totals['total_cost'] / $totals['total_ayam'], 2)
             : 0;
@@ -1081,6 +1131,14 @@ class ReportsController extends Controller
         $prevCostData = $breakdown['prev_cost'] ?? [];
         $summaryData = $breakdown['summary'] ?? [];
 
+        $initial_purchase_data = [
+            'price_per_unit' => $initialPurchasePrice,
+            'quantity' => $initialPurchaseQuantity,
+            'total_cost' => $initialPurchaseTotalCost,
+            'date' => $initialPurchaseDate ? $initialPurchaseDate->format('d M Y') : '-',
+            'found' => $initialPurchaseItem !== null,
+        ];
+
         return view('pages.reports.livestock-cost', [
             'farm' => $farm->name,
             'tanggal' => $tanggal->format('d M Y'),
@@ -1088,15 +1146,9 @@ class ReportsController extends Controller
             'totals' => $totals,
             'report_type' => $request->report_type,
             'prev_cost_data' => $prevCostData,
-            'summary_data' => $summaryData,
+            'summary_data' => $summary,
             'total_cumulative_cost_calculated' => $totalCumulativeCostCalculated ?? 0,
-            'initial_purchase_data' => [
-                'price_per_unit' => $initialPurchasePrice,
-                'quantity' => $initialPurchaseQuantity,
-                'total_cost' => $initialPurchaseTotalCost,
-                'date' => $initialPurchaseDate ? $initialPurchaseDate->format('d/m/Y') : '-',
-                'found' => $initialPurchaseItem !== null,
-            ],
+            'initial_purchase_data' => $initial_purchase_data,
         ]);
     }
 
@@ -1312,8 +1364,6 @@ class ReportsController extends Controller
         if ($request->tanggal_surat) {
             $tanggalSurat = Carbon::parse($request->tanggal_surat)->translatedFormat('d F Y');
 
-
-
             // Check if there's no existing data or if the tanggal_surat is different
             if (!isset($data['administrasi']['tanggal_laporan']) || $data['administrasi']['tanggal_laporan'] !== $request->tanggal_surat) {
                 // Add or update the tanggal_surat
@@ -1323,60 +1373,54 @@ class ReportsController extends Controller
                 $ternak->update([
                     'data' => json_encode($existingData)
                 ]);
-        } else {
-            $tanggalSurat = Carbon::now()->translatedFormat('d F Y');
+            } else {
+                $tanggalSurat = Carbon::now()->translatedFormat('d F Y');
 
-            // If no tanggal_surat is provided, store the current date
-            $existingData = json_decode($ternak->data, true) ?? [];
-            $data['administrasi']['tanggal_laporan'] = $tanggalSurat;
+                // If no tanggal_surat is provided, store the current date
+                $existingData = json_decode($ternak->data, true) ?? [];
+                $data['administrasi']['tanggal_laporan'] = $tanggalSurat;
 
-            // Update the data column
-            $ternak->update([
-                'data' => json_encode($existingData)
-            ]);
+                // Update the data column
+                $ternak->update([
+                    'data' => json_encode($existingData)
+                ]);
+            }
+
+            //variable hitung akhir
+            $biayaDoc = $ternak->populasi_awal * $ternak->harga_beli;
+
+            // Add totalBiayaPakan to the $data array
+            $data['totalBiayaPakan'] = $totalBiayaPakan;
+            $data['biayaPakanDetails'] = $biayaPakanDetails;
+            $data['totalBiayaOvk'] = $totalBiayaOvk;
+            $data['tanggal_surat'] = $tanggalSurat;
+            $data['bonus'] = $existingData['bonus'] ?? null;
+            $data['total_hpp'] = $biayaDoc + $totalBiayaPakan + $totalBiayaOvk;
+            if (isset($existingData['bonus'])) {
+                $bonusTotal = array_column($existingData['bonus'], 'jumlah');
+                $bonusTotal = $existingData['bonus']['jumlah'];
+                $data['total_hpp'] += $bonusTotal;
+
+                // dd($bonusTotal);
+
+            }
+
+            $data['hpp_per_ekor'] = $data['total_hpp'] / $penjualan;
+            $data['hpp_per_kg'] = $data['total_hpp'] / $totalBerat;
+            $data['total_penghasilan'] = ($data['beratJual'] * $penjualanData->avg('detail.harga_jual')) - $data['total_hpp'];
+            $data['penghasilan_per_ekor'] = $data['total_penghasilan'] / $penjualan;
+
+            if (isset($existingData['administrasi'])) {
+                $data['administrasi'] = $existingData['administrasi'];
+                $data['administrasi']['tanggal_laporan'] = Carbon::parse($data['administrasi']['tanggal_laporan'])->translatedFormat('d F Y');
+            }
+
+            // dd($biayaPakanDetails->toArray());
+            $kandang = $ternak->kandang->nama;
+            return view('pages.reports.performance_kemitraan', compact(['penjualanData', 'ternak', 'periode', 'kandang', 'kematian', 'persentaseKematian', 'penjualan', 'penjualanKilo', 'konsumsiPakan', 'umurPanen', 'fcr', 'ip', 'data']));
         }
-
-        //variable hitung akhir
-        $biayaDoc = $ternak->populasi_awal * $ternak->harga_beli;
-
-        // Add totalBiayaPakan to the $data array
-        $data['totalBiayaPakan'] = $totalBiayaPakan;
-        $data['biayaPakanDetails'] = $biayaPakanDetails;
-        $data['totalBiayaOvk'] = $totalBiayaOvk;
-        $data['tanggal_surat'] = $tanggalSurat;
-        $data['bonus'] = $existingData['bonus'] ?? null;
-        $data['total_hpp'] = $biayaDoc + $totalBiayaPakan + $totalBiayaOvk;
-        if (isset($existingData['bonus'])) {
-            $bonusTotal = array_column($existingData['bonus'], 'jumlah');
-            $bonusTotal = $existingData['bonus']['jumlah'];
-            $data['total_hpp'] += $bonusTotal;
-
-            // dd($bonusTotal);
-
-        }
-
-        $data['hpp_per_ekor'] = $data['total_hpp'] / $penjualan;
-        $data['hpp_per_kg'] = $data['total_hpp'] / $totalBerat;
-        $data['total_penghasilan'] = ($data['beratJual'] * $penjualanData->avg('detail.harga_jual')) - $data['total_hpp'];
-        $data['penghasilan_per_ekor'] = $data['total_penghasilan'] / $penjualan;
-
-        if (isset($existingData['administrasi'])) {
-            $data['administrasi'] = $existingData['administrasi'];
-            $data['administrasi']['tanggal_laporan'] = Carbon::parse($data['administrasi']['tanggal_laporan'])->translatedFormat('d F Y');
-        }
-
-
-
-
-
-        // dd($biayaPakanDetails->toArray());
-        $kandang = $ternak->kandang->nama;
-        return view('pages.reports.performance_kemitraan', compact(['penjualanData', 'ternak', 'periode', 'kandang', 'kematian', 'persentaseKematian', 'penjualan', 'penjualanKilo', 'konsumsiPakan', 'umurPanen', 'fcr', 'ip', 'data']));
     }
 
-    /**
-     * Export Livestock Purchase Report
-     */
     public function exportPembelianLivestock(Request $request)
     {
         // Validasi input
@@ -1404,9 +1448,9 @@ class ReportsController extends Controller
 
         // Ambil data pembelian livestock
         $purchasesQuery = LivestockPurchase::with([
-            'farm', 
-            'supplier', 
-            'expedition', 
+            'farm',
+            'supplier',
+            'expedition',
             'livestockPurchaseItems.livestockBreed',
             'livestockPurchaseItems.unit'
         ])
@@ -1436,8 +1480,8 @@ class ReportsController extends Controller
             ]);
 
             return response()->json([
-                'error' => 'Tidak ada data pembelian livestock untuk periode ' . 
-                          $startDate->format('d-M-Y') . ' s.d. ' . $endDate->format('d-M-Y')
+                'error' => 'Tidak ada data pembelian livestock untuk periode ' .
+                    $startDate->format('d-M-Y') . ' s.d. ' . $endDate->format('d-M-Y')
             ], 404);
         }
 
@@ -1559,8 +1603,8 @@ class ReportsController extends Controller
             ]);
 
             return response()->json([
-                'error' => 'Tidak ada data pembelian pakan untuk periode ' . 
-                          $startDate->format('d-M-Y') . ' s.d. ' . $endDate->format('d-M-Y')
+                'error' => 'Tidak ada data pembelian pakan untuk periode ' .
+                    $startDate->format('d-M-Y') . ' s.d. ' . $endDate->format('d-M-Y')
             ], 404);
         }
 
@@ -1688,8 +1732,8 @@ class ReportsController extends Controller
             ]);
 
             return response()->json([
-                'error' => 'Tidak ada data pembelian supply untuk periode ' . 
-                          $startDate->format('d-M-Y') . ' s.d. ' . $endDate->format('d-M-Y')
+                'error' => 'Tidak ada data pembelian supply untuk periode ' .
+                    $startDate->format('d-M-Y') . ' s.d. ' . $endDate->format('d-M-Y')
             ], 404);
         }
 
@@ -1816,52 +1860,54 @@ class ReportsController extends Controller
         return response()->json(['message' => 'CSV export not implemented yet'], 501);
     }
 
-        //variable hitung akhir
-        $biayaDoc = $ternak->populasi_awal * $ternak->harga_beli;
+    //     //variable hitung akhir
+    //     $biayaDoc = $ternak->populasi_awal * $ternak->harga_beli;
 
-        // Add totalBiayaPakan to the $data array
-        $data['totalBiayaPakan'] = $totalBiayaPakan;
-        $data['biayaPakanDetails'] = $biayaPakanDetails;
-        $data['totalBiayaOvk'] = $totalBiayaOvk;
-        $data['tanggal_surat'] = $tanggalSurat;
-        $data['bonus'] = $existingData['bonus'] ?? null;
-        $data['total_hpp'] = $biayaDoc + $totalBiayaPakan + $totalBiayaOvk;
-        if (isset($existingData['bonus'])) {
-            $bonusTotal = array_column($existingData['bonus'], 'jumlah');
-            $bonusTotal = $existingData['bonus']['jumlah'];
-            $data['total_hpp'] += $bonusTotal;
+    //     // Add totalBiayaPakan to the $data array
+    //     $data['totalBiayaPakan'] = $totalBiayaPakan;
+    //     $data['biayaPakanDetails'] = $biayaPakanDetails;
+    //     $data['totalBiayaOvk'] = $totalBiayaOvk;
+    //     $data['tanggal_surat'] = $tanggalSurat;
+    //     $data['bonus'] = $existingData['bonus'] ?? null;
+    //     $data['total_hpp'] = $biayaDoc + $totalBiayaPakan + $totalBiayaOvk;
+    //     if (isset($existingData['bonus'])) {
+    //         $bonusTotal = array_column($existingData['bonus'], 'jumlah');
+    //         $bonusTotal = $existingData['bonus']['jumlah'];
+    //         $data['total_hpp'] += $bonusTotal;
 
-            // dd($bonusTotal);
+    //         // dd($bonusTotal);
 
-        }
+    //     }
 
-        $data['hpp_per_ekor'] = $data['total_hpp'] / $penjualan;
-        $data['hpp_per_kg'] = $data['total_hpp'] / $totalBerat;
-        $data['total_penghasilan'] = ($data['beratJual'] * $penjualanData->avg('detail.harga_jual')) - $data['total_hpp'];
-        $data['penghasilan_per_ekor'] = $data['total_penghasilan'] / $penjualan;
+    //     $data['hpp_per_ekor'] = $data['total_hpp'] / $penjualan;
+    //     $data['hpp_per_kg'] = $data['total_hpp'] / $totalBerat;
+    //     $data['total_penghasilan'] = ($data['beratJual'] * $penjualanData->avg('detail.harga_jual')) - $data['total_hpp'];
+    //     $data['penghasilan_per_ekor'] = $data['total_penghasilan'] / $penjualan;
 
-        if (isset($existingData['administrasi'])) {
-            $data['administrasi'] = $existingData['administrasi'];
-            $data['administrasi']['tanggal_laporan'] = Carbon::parse($data['administrasi']['tanggal_laporan'])->translatedFormat('d F Y');
-        }
-
-
+    //     if (isset($existingData['administrasi'])) {
+    //         $data['administrasi'] = $existingData['administrasi'];
+    //         $data['administrasi']['tanggal_laporan'] = Carbon::parse($data['administrasi']['tanggal_laporan'])->translatedFormat('d F Y');
+    //     }
 
 
 
-        // dd($biayaPakanDetails->toArray());
-        $kandang = $ternak->kandang->nama;
-        return view('pages.reports.performance_kemitraan', compact(['penjualanData', 'ternak', 'periode', 'kandang', 'kematian', 'persentaseKematian', 'penjualan', 'penjualanKilo', 'konsumsiPakan', 'umurPanen', 'fcr', 'ip', 'data']));
-    }
+
+
+    //     // dd($biayaPakanDetails->toArray());
+    //     $kandang = $ternak->kandang->nama;
+    //     return view('pages.reports.performance_kemitraan', compact(['penjualanData', 'ternak', 'periode', 'kandang', 'kematian', 'persentaseKematian', 'penjualan', 'penjualanKilo', 'konsumsiPakan', 'umurPanen', 'fcr', 'ip', 'data']));
+    // }
 
     public function exportPerformance(Request $request)
     {
         if (!$request->periode) {
+            Log::debug('No periode provided in the request.');
             return;
         }
 
         $currentLivestock = CurrentLivestock::where('livestock_id', $request->periode)->first();
         if (!$currentLivestock) {
+            Log::debug('No current livestock found for periode: ' . $request->periode);
             return;
         }
 
@@ -1872,15 +1918,18 @@ class ReportsController extends Controller
         $feedNames = collect(); // Untuk nama pakan unik
 
         $currentDate = $startDate->copy();
-        $stockAwal = $currentLivestock->livestock->populasi_awal;
+        $stockAwal = $currentLivestock->livestock->initial_quantity;
         $totalPakanUsage = 0;
         $pakanAktualTotal = 0;
+
+        // dd($stockAwal);
 
         $data = json_decode($currentLivestock->livestock->data, true);
         $standarData = $data[0]['livestock_breed_standard'] ?? [];
 
         while ($currentDate <= $today) {
             $dateStr = $currentDate->format('Y-m-d');
+            Log::debug('Processing date: ' . $dateStr);
 
             // Penjualan ternak
             $sales = LivestockSalesItem::whereHas('livestockSale', function ($query) use ($dateStr) {
@@ -1888,6 +1937,7 @@ class ReportsController extends Controller
             })->where('livestock_id', $request->periode)->first();
 
             $totalSales = $sales->quantity ?? 0;
+            Log::debug('Total sales for date ' . $dateStr . ': ' . $totalSales);
 
             // Deplesi
             $deplesi = LivestockDepletion::where('livestock_id', $request->periode)
@@ -1897,6 +1947,7 @@ class ReportsController extends Controller
             $mortality = $deplesi->where('jenis', 'Mati')->sum('jumlah');
             $culling = $deplesi->where('jenis', 'Afkir')->sum('jumlah');
             $totalDeplesi = $mortality + $culling;
+            Log::debug('Total depletion for date ' . $dateStr . ': ' . $totalDeplesi);
 
             $age = $startDate->diffInDays($currentDate);
 
@@ -1916,6 +1967,7 @@ class ReportsController extends Controller
                 ->first();
 
             $beratHarian = $recording->berat_hari_ini ?? 0;
+            Log::debug('Daily weight for date ' . $dateStr . ': ' . $beratHarian);
 
             // Hitung penggunaan per jenis pakan
             $feedUsageMap = [];
@@ -1926,14 +1978,10 @@ class ReportsController extends Controller
                 $feedName = $detail->feedStock->feed->name;
                 $feedUsageMap[$feedName] = ($feedUsageMap[$feedName] ?? 0) + $detail->quantity_taken;
             }
-            // foreach ($pakanUsageDetails as $detail) {
-            //     $feedName = $detail->feedStock->feed->name;
-            //     $feedNames->push($feedName); // simpan ke koleksi unik
-            //     $feedUsageMap[$feedName] = ($feedUsageMap[$feedName] ?? 0) + $detail->quantity_taken;
-            // }
 
             $pakanHarian = array_sum($feedUsageMap);
             $totalPakanUsage += $pakanHarian;
+            Log::debug('Daily feed usage for date ' . $dateStr . ': ' . $pakanHarian);
 
             $stock_akhir = $stockAwal - $totalDeplesi - $totalSales;
             $pakanAktual = $pakanHarian > 0 && $stock_akhir > 0 ? ($pakanHarian / $stock_akhir * 1000) : 0;
@@ -1981,6 +2029,8 @@ class ReportsController extends Controller
         // Ambil daftar feed unik sebagai header (untuk ditampilkan di view)
         $feedHeaders = $feedNames->unique()->values();
 
+        Log::debug('Final records: ', $records->toArray());
+
         // dd($records);
 
         return view('pages.reports.performance', compact([
@@ -1990,79 +2040,437 @@ class ReportsController extends Controller
         ]));
     }
 
-    public function exportBatchWorker(Request $request)
+    /**
+     * Export Performance Report with Dynamic Feed Data and Accurate FCR/IP Calculations
+     * Based on industry standards from internet research
+     */
+    public function exportPerformanceEnhanced(Request $request)
     {
-        // Validate request
-        // $request->validate([
-        //     // 'start_date' => 'required|date',
-        //     // 'end_date' => 'required|date',
-        //     'farm_id' => 'nullable|exists:farms,id',
-        //     'worker_id' => 'nullable|exists:workers,id',
-        //     'status' => 'nullable|in:active,completed,terminated'
-        // ]);
+        if (!$request->periode) {
+            Log::warning('No periode provided in the request.');
+            return redirect()->back()->with('error', 'Periode harus dipilih');
+        }
 
-        // Get data
-        $query = BatchWorker::query()
-            ->with(['livestock', 'worker', 'creator', 'updater'])
-            ->when($request->start_date, function ($query) use ($request) {
-                return $query->where('start_date', '>=', $request->start_date);
+        $currentLivestock = CurrentLivestock::where('livestock_id', $request->periode)->first();
+        if (!$currentLivestock) {
+            Log::warning('No current livestock found for periode: ' . $request->periode);
+            return redirect()->back()->with('error', 'Data ternak tidak ditemukan');
+        }
+
+        $livestock = $currentLivestock->livestock;
+        $startDate = Carbon::parse($livestock->start_date);
+        $today = Carbon::today();
+
+        // Get strain information for FCR standards
+        $strain = $livestock->strain->name ?? 'Unknown';
+        $isRoss = stripos($strain, 'ross') !== false;
+        $isCobb = stripos($strain, 'cobb') !== false;
+
+        // FCR Standards based on research (per week)
+        $fcrStandards = $this->getFCRStandards($isRoss, $isCobb);
+
+        // Get all unique feed names used by this livestock
+        $allFeedNames = FeedUsageDetail::whereHas('feedUsage', function ($query) use ($livestock) {
+            $query->where('livestock_id', $livestock->id);
+        })
+            ->whereHas('feedStock.feed')
+            ->with('feedStock.feed')
+            ->get()
+            ->pluck('feedStock.feed.name')
+            ->unique()
+            ->sort()
+            ->values();
+
+        $records = collect();
+        $currentDate = $startDate->copy();
+
+        // Initialize cumulative values
+        $initialQuantity = (int) $livestock->initial_quantity;
+        $cumulativeFeedConsumption = 0;
+        $cumulativeDepletion = 0;
+        $cumulativeSales = 0;
+        $cumulativeOVKCost = 0;
+
+        while ($currentDate <= $today) {
+            $dateStr = $currentDate->format('Y-m-d');
+            $age = $startDate->diffInDays($currentDate);
+
+            // Calculate current stock
+            $currentStock = $initialQuantity - $cumulativeDepletion - $cumulativeSales;
+
+            // Get daily depletion data
+            $deplesi = LivestockDepletion::where('livestock_id', $livestock->id)
+                ->whereDate('tanggal', $dateStr)
+                ->get();
+
+            $dailyMortality = $deplesi->where('jenis', 'Mati')->sum('jumlah');
+            $dailyCulling = $deplesi->where('jenis', 'Afkir')->sum('jumlah');
+            $dailyDepletion = $dailyMortality + $dailyCulling;
+            $cumulativeDepletion += $dailyDepletion;
+
+            // Get daily sales data
+            $sales = LivestockSalesItem::whereHas('livestockSale', function ($query) use ($dateStr) {
+                $query->whereDate('tanggal', $dateStr);
+            })->where('livestock_id', $livestock->id)->first();
+
+            $dailySalesCount = $sales->quantity ?? 0;
+            $dailySalesWeight = $sales->total_berat ?? 0;
+            $avgSalesWeight = $dailySalesCount > 0 ? ($dailySalesWeight / $dailySalesCount) : 0;
+            $cumulativeSales += $dailySalesCount;
+
+            // Get daily feed usage with dynamic feed types
+            $feedUsageDetails = FeedUsageDetail::whereHas('feedUsage', function ($query) use ($dateStr, $livestock) {
+                $query->whereDate('usage_date', $dateStr)
+                    ->where('livestock_id', $livestock->id);
             })
-            ->when($request->end_date, function ($query) use ($request) {
-                return $query->where('start_date', '<=', $request->end_date);
-            })
-            ->when($request->worker_id, function ($query) use ($request) {
-                return $query->where('worker_id', $request->worker_id);
-            })
-            ->when($request->status, function ($query) use ($request) {
-                return $query->where('status', $request->status);
-            });
+                ->with('feedStock.feed')
+                ->get();
 
-        $data = $query->get();
+            // Calculate feed usage by type
+            $feedUsageByType = [];
+            $dailyFeedTotal = 0;
 
-        // Get farm name
-        $farm = $request->farm_id ? Farm::find($request->farm_id)->name : 'Semua Farm';
+            foreach ($allFeedNames as $feedName) {
+                $feedUsage = $feedUsageDetails->where('feedStock.feed.name', $feedName)->sum('quantity_taken');
+                $feedUsageByType[$feedName] = $feedUsage;
+                $dailyFeedTotal += $feedUsage;
+            }
 
-        // Get worker name
-        $worker = $request->worker_id ? Worker::find($request->worker_id)->name : 'Semua Worker';
+            $cumulativeFeedConsumption += $dailyFeedTotal;
 
-        // Set locale to Indonesian
-        setlocale(LC_TIME, 'id_ID');
-        Carbon::setLocale('id');
+            // Get daily OVK/Supply usage
+            $ovkUsage = SupplyUsageDetail::whereHas('supplyUsage', function ($query) use ($dateStr, $livestock) {
+                $query->whereDate('usage_date', $dateStr)
+                    ->where('livestock_id', $livestock->id);
+            })->with('supplyUsage', 'supply')->get();
 
-        // Format dates
-        $startDate = Carbon::parse($request->start_date);
-        $endDate = Carbon::parse($request->end_date);
+            $dailyOVKDetails = [];
+            $dailyOVKTotal = 0;
 
-        // Calculate summary
-        $summary = [
-            'total_assignments' => $data->count(),
-            'unique_workers' => $data->unique('worker_id')->count(),
-            'unique_batches' => $data->unique('livestock_id')->count(),
-            'unique_farms' => $data->unique('farm_id')->count()
+            foreach ($ovkUsage as $usage) {
+                $supplyName = $usage->supply->name ?? 'Unknown';
+                $quantity = $usage->quantity_taken;
+                $dailyOVKDetails[] = [
+                    'name' => $supplyName,
+                    'quantity' => $quantity
+                ];
+                $dailyOVKTotal += $quantity;
+            }
+
+            // Get daily weight data
+            $recording = Recording::where('livestock_id', $livestock->id)
+                ->whereDate('tanggal', $dateStr)
+                ->first();
+
+            $dailyWeight = $recording->berat_hari_ini ?? 0;
+            $standardWeight = $this->getStandardWeight($age, $strain);
+
+            // Calculate stock after depletion and sales
+            $stockAfter = $currentStock - $dailyDepletion - $dailySalesCount;
+
+            // Calculate FCR (Feed Conversion Ratio)
+            // FCR = Total Feed Consumed (kg) / Total Weight Gained (kg)
+            $totalLiveWeight = $stockAfter > 0 && $dailyWeight > 0 ? ($stockAfter * $dailyWeight / 1000) : 0;
+            $fcrActual = $totalLiveWeight > 0 ? round($cumulativeFeedConsumption / $totalLiveWeight, 3) : 0;
+
+            // Get FCR standard for current age
+            $weekNumber = ceil($age / 7);
+            $fcrStandard = $fcrStandards[$weekNumber] ?? $fcrStandards[6]; // Default to week 6 if beyond
+
+            // Calculate IP (Index Performance)
+            // IP = (Survival Rate % × Average Weight kg) / (FCR × Age in days) × 100
+            $survivalRate = $initialQuantity > 0 ? (($stockAfter / $initialQuantity) * 100) : 0;
+            $ipActual = 0;
+
+            if ($fcrActual > 0 && $age > 0 && $dailyWeight > 0) {
+                $ipActual = round(($survivalRate * ($dailyWeight / 1000)) / ($fcrActual * $age) * 100, 0);
+            }
+
+            // IP Standard calculation (target IP is typically 300-400 for good performance)
+            $ipStandard = 0;
+            if ($fcrStandard > 0 && $age > 0 && $standardWeight > 0) {
+                $targetSurvivalRate = 95; // Target 95% survival rate
+                $ipStandard = round(($targetSurvivalRate * ($standardWeight / 1000)) / ($fcrStandard * $age) * 100, 0);
+            }
+
+            // Calculate depletion percentage
+            $depletionPercentage = $initialQuantity > 0 ? round(($cumulativeDepletion / $initialQuantity) * 100, 2) : 0;
+
+            $record = [
+                'tanggal' => $currentDate->format('Y-m-d'),
+                'umur' => $age,
+                'stock_awal' => $currentStock,
+                'mati' => $dailyMortality,
+                'afkir' => $dailyCulling,
+                'total_deplesi' => $dailyDepletion,
+                'deplesi_percentage' => $depletionPercentage,
+                'jual_ekor' => $dailySalesCount,
+                'jual_kg' => $dailySalesWeight,
+                'jual_rata' => round($avgSalesWeight, 0),
+                'stock_akhir' => $stockAfter,
+                'bw_actual' => round($dailyWeight, 0),
+                'bw_standard' => round($standardWeight, 0),
+                'fcr_actual' => $fcrActual,
+                'fcr_standard' => $fcrStandard,
+                'fcr_difference' => round($fcrActual - $fcrStandard, 3),
+                'ip_actual' => $ipActual,
+                'ip_standard' => $ipStandard,
+                'ip_difference' => $ipActual - $ipStandard,
+                'ovk_details' => $dailyOVKDetails,
+                'ovk_total' => $dailyOVKTotal,
+                'feed_total' => $dailyFeedTotal,
+                'cumulative_feed' => $cumulativeFeedConsumption,
+            ];
+
+            // Add dynamic feed columns
+            foreach ($allFeedNames as $feedName) {
+                $record[$feedName] = $feedUsageByType[$feedName] ?? 0;
+            }
+
+            $records->push($record);
+            $currentDate->addDay();
+        }
+
+        Log::info('Performance report generated', [
+            'livestock_id' => $livestock->id,
+            'strain' => $strain,
+            'records_count' => $records->count(),
+            'feed_types' => $allFeedNames->toArray()
+        ]);
+
+        return view('pages.reports.performance', compact([
+            'records',
+            'currentLivestock',
+            'allFeedNames',
+            'strain'
+        ]));
+    }
+
+    /**
+     * Get FCR standards based on strain and age
+     * Based on research from industry sources
+     */
+    private function getFCRStandards($isRoss = false, $isCobb = false)
+    {
+        // FCR standards by week based on research
+        if ($isRoss) {
+            return [
+                1 => 1.272, // 0-7 days
+                2 => 1.229, // 7-14 days  
+                3 => 1.312, // 14-21 days
+                4 => 1.385, // 21-28 days
+                5 => 1.445, // 28-35 days
+                6 => 1.775, // 35-42 days
+            ];
+        } elseif ($isCobb) {
+            return [
+                1 => 1.267, // 0-7 days
+                2 => 1.242, // 7-14 days
+                3 => 1.330, // 14-21 days
+                4 => 1.398, // 21-28 days
+                5 => 1.447, // 28-35 days
+                6 => 1.801, // 35-42 days
+            ];
+        } else {
+            // Generic standards (average of Ross and Cobb)
+            return [
+                1 => 1.270,
+                2 => 1.236,
+                3 => 1.321,
+                4 => 1.392,
+                5 => 1.446,
+                6 => 1.788,
+            ];
+        }
+    }
+
+    /**
+     * Get standard weight based on age and strain
+     */
+    private function getStandardWeight($age, $strain)
+    {
+        // Standard weight targets (in grams) based on age
+        // These are approximate values, should be adjusted based on actual strain data
+        $weightStandards = [
+            0 => 42,    // Day 0 (DOC)
+            7 => 180,   // Week 1
+            14 => 450,  // Week 2
+            21 => 900,  // Week 3
+            28 => 1500, // Week 4
+            35 => 2200, // Week 5
+            42 => 2800, // Week 6
         ];
 
-        // Group by status for detailed summary
-        $statusSummary = $data->groupBy('status')
-            ->map(function ($group) {
-                return [
-                    'count' => $group->count(),
-                    'workers' => $group->unique('worker_id')->count(),
-                    'batches' => $group->unique('livestock_id')->count(),
-                    'farms' => $group->unique('farm_id')->count()
-                ];
-            });
+        // Find the closest age in standards
+        $closestAge = 0;
+        foreach ($weightStandards as $standardAge => $weight) {
+            if ($age >= $standardAge) {
+                $closestAge = $standardAge;
+            }
+        }
 
-        return view('pages.reports.batch-worker-pdf', [
-            'data' => $data,
-            'startDate' => $startDate->format('d F Y'),
-            'endDate' => $endDate->format('d F Y'),
-            'farm' => $farm,
-            'worker' => $worker,
-            'status' => $request->status ? ucfirst($request->status) : 'Semua Status',
-            'summary' => $summary,
-            'statusSummary' => $statusSummary,
-            'diketahui' => 'RIA NARSO',
-            'dibuat' => 'HENDRA'
-        ]);
+        return $weightStandards[$closestAge] ?? 42;
+    }
+
+    public function exportBatchWorker(Request $request)
+    {
+        try {
+            $request->validate([
+                'farm_id' => 'required|uuid|exists:farms,id',
+                'coop_id' => 'required|uuid|exists:coops,id',
+                'tahun' => 'required|integer',
+                'periode' => 'required|uuid|exists:livestocks,id',
+                'report_type' => 'required|in:detail,simple'
+            ]);
+
+            $farm = Farm::findOrFail($request->farm_id);
+            $coop = Coop::findOrFail($request->coop_id);
+            $livestock = Livestock::findOrFail($request->periode);
+
+            $batchWorkers = BatchWorker::with(['worker', 'livestock.kandang'])
+                ->whereHas('livestock', function ($query) use ($farm) {
+                    $query->where('farm_id', $farm->id);
+                })
+                ->where(function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('start_date', [$startDate, $endDate])
+                        ->orWhereBetween('end_date', [$startDate, $endDate])
+                        ->orWhere(function ($q) use ($startDate, $endDate) {
+                            $q->where('start_date', '<=', $startDate)
+                                ->where(function ($q) use ($endDate) {
+                                    $q->whereNull('end_date')
+                                        ->orWhere('end_date', '>=', $endDate);
+                                });
+                        });
+                })
+                ->orderBy('start_date')
+                ->get();
+
+            $data = [
+                'farm' => $farm,
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'batchWorkers' => $batchWorkers
+            ];
+
+            switch ($request->format) {
+                case 'html':
+                    return view('pages.reports.batch-worker', $data);
+                case 'excel':
+                    return $this->exportBatchWorkerToExcel($data);
+                case 'pdf':
+                    return $this->exportBatchWorkerToPdf($data);
+                case 'csv':
+                    return $this->exportBatchWorkerToCsv($data);
+                default:
+                    throw new \Exception('Format tidak valid');
+            }
+        } catch (\Exception $e) {
+            Log::error("[" . __CLASS__ . "::" . __FUNCTION__ . "] Error: " . $e->getMessage());
+            Log::debug("[" . __CLASS__ . "::" . __FUNCTION__ . "] Stack trace: " . $e->getTraceAsString());
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    private function exportBatchWorkerToExcel($data)
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set header
+        $sheet->setCellValue('A1', 'LAPORAN PENUGASAN PEKERJA');
+        $sheet->setCellValue('A3', 'FARM');
+        $sheet->setCellValue('B3', ': ' . $data['farm']->nama);
+        $sheet->setCellValue('D3', 'PERIODE');
+        $sheet->setCellValue('E3', ': ' . $data['startDate']->format('d F Y') . ' - ' . $data['endDate']->format('d F Y'));
+
+        // Set table headers
+        $headers = ['No', 'Nama Pekerja', 'Kandang', 'Periode', 'Peran', 'Status', 'Catatan'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . '5', $header);
+            $col++;
+        }
+
+        // Fill data
+        $row = 6;
+        foreach ($data['batchWorkers'] as $index => $worker) {
+            $sheet->setCellValue('A' . $row, $index + 1);
+            $sheet->setCellValue('B' . $row, $worker->worker->name);
+            $sheet->setCellValue('C' . $row, $worker->livestock->kandang->nama);
+            $sheet->setCellValue('D' . $row, $worker->start_date->format('d/m/Y') . ' - ' .
+                ($worker->end_date ? $worker->end_date->format('d/m/Y') : 'Sekarang'));
+            $sheet->setCellValue('E' . $row, $worker->role ?? '-');
+            $sheet->setCellValue('F' . $row, $worker->status);
+            $sheet->setCellValue('G' . $row, $worker->notes ?? '-');
+            $row++;
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'G') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Create Excel file
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'Laporan_Penugasan_Pekerja_' . date('Y-m-d_His') . '.xlsx';
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer->save('php://output');
+        exit;
+    }
+
+    private function exportBatchWorkerToPdf($data)
+    {
+        $pdf = PDF::loadView('pages.reports.batch-worker', $data);
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->download('Laporan_Penugasan_Pekerja_' . date('Y-m-d_His') . '.pdf');
+    }
+
+    private function exportBatchWorkerToCsv($data)
+    {
+        $filename = 'Laporan_Penugasan_Pekerja_' . date('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($data) {
+            $file = fopen('php://output', 'w');
+
+            // Add BOM for Excel UTF-8 compatibility
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // Headers
+            fputcsv($file, ['LAPORAN PENUGASAN PEKERJA']);
+            fputcsv($file, ['']);
+            fputcsv($file, ['FARM', $data['farm']->nama]);
+            fputcsv($file, ['PERIODE', $data['startDate']->format('d F Y') . ' - ' . $data['endDate']->format('d F Y')]);
+            fputcsv($file, ['']);
+
+            // Table headers
+            fputcsv($file, ['No', 'Nama Pekerja', 'Kandang', 'Periode', 'Peran', 'Status', 'Catatan']);
+
+            // Data
+            foreach ($data['batchWorkers'] as $index => $worker) {
+                fputcsv($file, [
+                    $index + 1,
+                    $worker->worker->name,
+                    $worker->livestock->kandang->nama,
+                    $worker->start_date->format('d/m/Y') . ' - ' . ($worker->end_date ? $worker->end_date->format('d/m/Y') : 'Sekarang'),
+                    $worker->role ?? '-',
+                    $worker->status,
+                    $worker->notes ?? '-'
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

@@ -16,7 +16,17 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        // Clean expired security blacklist entries every hour
+        $schedule->command('security:clean-blacklist --force')
+            ->hourly()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Clean old violation records every day at 2 AM
+        $schedule->command('security:clean-blacklist --force --days=30')
+            ->dailyAt('02:00')
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**
@@ -26,7 +36,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands()
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }

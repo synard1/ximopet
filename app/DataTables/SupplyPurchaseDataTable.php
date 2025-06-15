@@ -59,17 +59,21 @@ class SupplyPurchaseDataTable extends DataTable
             ->editColumn('status', function (SupplyPurchaseBatch $transaction) {
                 $statuses = SupplyPurchaseBatch::STATUS_LABELS;
                 $currentStatus = $transaction->status;
-                $isDisabled = in_array($currentStatus, ['cancelled', 'completed']) ? 'disabled' : '';
+                $isDisabled = in_array($currentStatus, ['cancelled']) ? 'disabled' : '';
 
-                // Check if user is Supervisor
-                $isSupervisor = auth()->user()->hasRole('Supervisor');
+                // Check user role
+                $userRole = auth()->user()->roles->pluck('name')->toArray(); // Assuming 'role' is the field that contains user role
+
+                // Allow Operators to see 'completed' status if it's already set
+                $canSeeCompleted = in_array('Supervisor', $userRole) || ($currentStatus === 'completed' && in_array('Operator', $userRole));
+                $selectDisabled = $currentStatus === 'completed' ? 'disabled' : '';
 
                 $html = '<div class="d-flex align-items-center">';
-                $html .= '<select class="form-select form-select-sm status-select" data-kt-transaction-id="' . $transaction->id . '" data-kt-action="update_status" data-current="' . $currentStatus . '" ' . $isDisabled . '>';
+                $html .= '<select class="form-select form-select-sm status-select" data-kt-transaction-id="' . $transaction->id . '" data-kt-action="update_status" data-current="' . $currentStatus . '" ' . $isDisabled . ' ' . $selectDisabled . '>';
 
                 foreach ($statuses as $value => $label) {
-                    // Show 'completed' and 'confirmed' only for Supervisors
-                    if (!$isSupervisor && in_array($value, ['completed', 'confirmed'])) {
+                    // Only show the 'completed' status option if the user is a Supervisor or if the current status is completed for Operators
+                    if (!$canSeeCompleted && $value === 'completed') {
                         continue;
                     }
                     $selected = $value === $currentStatus ? 'selected' : '';
@@ -83,6 +87,33 @@ class SupplyPurchaseDataTable extends DataTable
 
                 return $html;
             })
+            // ->editColumn('status', function (SupplyPurchaseBatch $transaction) {
+            //     $statuses = SupplyPurchaseBatch::STATUS_LABELS;
+            //     $currentStatus = $transaction->status;
+            //     $isDisabled = in_array($currentStatus, ['cancelled', 'completed']) ? 'disabled' : '';
+
+            //     // Check if user is Supervisor
+            //     $isSupervisor = auth()->user()->hasRole('Supervisor');
+
+            //     $html = '<div class="d-flex align-items-center">';
+            //     $html .= '<select class="form-select form-select-sm status-select" data-kt-transaction-id="' . $transaction->id . '" data-kt-action="update_status" data-current="' . $currentStatus . '" ' . $isDisabled . '>';
+
+            //     foreach ($statuses as $value => $label) {
+            //         // Show 'completed' and 'confirmed' only for Supervisors
+            //         if (!$isSupervisor && in_array($value, ['completed', 'confirmed'])) {
+            //             continue;
+            //         }
+            //         $selected = $value === $currentStatus ? 'selected' : '';
+            //         $optionDisabled = ($currentStatus === 'arrived' && $value !== 'completed' && $value !== 'arrived') ? 'disabled' : '';
+            //         $optionStyle = ($currentStatus === 'arrived' && $value !== 'completed' && $value !== 'arrived') ? 'style="background-color: #f5f5f5; color: #999;"' : '';
+            //         $html .= "<option value='{$value}' {$selected} {$optionDisabled} {$optionStyle}>{$label}</option>";
+            //     }
+
+            //     $html .= '</select>';
+            //     $html .= '</div>';
+
+            //     return $html;
+            // })
             ->addColumn('action', function (SupplyPurchaseBatch $transaction) {
                 return view('pages.transaction.supply-purchases._actions', compact('transaction'));
             })
