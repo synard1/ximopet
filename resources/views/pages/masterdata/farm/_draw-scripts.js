@@ -80,7 +80,7 @@ $(document).on("click", ".farm-detail", function (e) {
     var modal = $("#farmDetailsModal");
 
     $.ajax({
-        url: `/api/v1/farms/${farmId}/kandangs`,
+        url: `/api/v1/farms/${farmId}/coops`,
         type: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -92,71 +92,44 @@ $(document).on("click", ".farm-detail", function (e) {
         }),
         contentType: "application/json",
         success: function (response) {
-            var tableBody = modal.find("#kandangsTable tbody");
+            var tableBody = modal.find("#kandangsTable tbody"); // Changed from #coopsTable to #kandangsTable
             tableBody.empty();
 
-            // console.log(response);
-
             if (response && response.length > 0) {
-                $.each(response, function (index, kandang) {
-                    var formattedDate =
-                        kandang.livestock && kandang.livestock.start_date
-                            ? moment(kandang.livestock.start_date).format(
-                                  "DD-MM-YYYY"
-                              )
-                            : "-";
+                console.log(response);
+                $.each(response, function (index, coop) {
+                    var formattedDate = coop.livestock && coop.livestock.start_date
+                        ? moment(coop.livestock.start_date).format("DD-MM-YYYY")
+                        : "-";
 
                     var row = `
                         <tr>
-                            <td>${kandang.kode}</td>
-                            <td>${kandang.nama}</td>
-                            <td>${parseFloat(kandang.kapasitas).toLocaleString(
-                                "id-ID"
-                            )}</td>
+                            <td>${coop.kode}</td>
+                            <td>${coop.nama}</td>
+                            <td>${parseFloat(coop.kapasitas).toLocaleString("id-ID")}</td>
                             <td>
-                                <span class="badge badge-light-${
-                                    kandang.status === "Digunakan"
-                                        ? "success"
-                                        : "warning"
-                                }">
-                                    ${kandang.status}
+                                <span class="badge badge-light-${coop.status === "in_use" ? "success" : "warning"}">
+                                    ${coop.status === "in_use" ? "Digunakan" : "Aktif"}
                                 </span>
                             </td>
                             <td>${formattedDate}</td>
-                            <td>${
-                                kandang.livestock
-                                    ? kandang.livestock.populasi_awal.toLocaleString(
-                                          "id-ID"
-                                      )
-                                    : "-"
-                            }</td>
-                            <td>${
-                                kandang.livestock
-                                    ? parseFloat(
-                                          kandang.livestock.berat_awal
-                                      ).toLocaleString("id-ID") + " gr"
-                                    : "-"
-                            }</td>
+                            <td>${coop.livestock ? coop.livestock.populasi_awal.toLocaleString("id-ID") : "-"}</td>
+                            <td>${coop.livestock ? parseFloat(coop.livestock.berat_awal).toLocaleString("id-ID") + " gr" : "-"}</td>
                         </tr>
                     `;
                     tableBody.append(row);
                 });
             } else {
-                tableBody.append(
-                    '<tr><td colspan="8" class="text-center">Tidak ada data kandang</td></tr>'
-                );
+                tableBody.append('<tr><td colspan="7" class="text-center">Tidak ada data Kandang</td></tr>'); // Adjusted colspan to 7
             }
 
             modal.modal("show");
         },
         error: function (xhr) {
             if (xhr.status === 401) {
-                toastr.warning(
-                    "Sesi Anda telah berakhir. Silakan login ulang."
-                );
-                // window.location.href = "/login";
+                toastr.warning("Sesi Anda telah berakhir. Silakan login ulang.");
             } else {
-                toastr.error("Terjadi kesalahan saat mengambil data kandang");
+                toastr.error("Terjadi kesalahan saat mengambil data Kandang");
             }
         },
     });

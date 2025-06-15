@@ -36,6 +36,9 @@
                         </thead>
                         <tbody>
                             <!-- Data will be populated by JavaScript -->
+                            <tr>
+                                <td colspan="7" class="text-center">Tidak ada data Kandang</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>

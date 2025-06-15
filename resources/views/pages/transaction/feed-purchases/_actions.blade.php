@@ -9,7 +9,7 @@ purchasing')||auth()->user()->can('delete feed purchasing'))
 <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4"
     data-kt-menu="true">
 
-    @if(auth()->user()->can('update feed purchasing'))
+    @if(auth()->user()->can('update feed purchasing') && $transaction->status !== 'completed')
     <!--begin::Menu item-->
     <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" onclick="Livewire.dispatch('showEditForm', [@js($transaction->id)])">
@@ -23,7 +23,7 @@ purchasing')||auth()->user()->can('delete feed purchasing'))
     <!--begin::Menu item-->
     <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" data-kt-transaction-id="{{ $transaction->id }}"
-            data-kt-action="view_details">
+            data-kt-status="{{ $transaction->status }}" data-kt-action="view_details">
             View
         </a>
 
@@ -43,7 +43,7 @@ purchasing')||auth()->user()->can('delete feed purchasing'))
 
 
 
-    @if(auth()->user()->can('delete feed purchasing'))
+    @if(auth()->user()->can('delete feed purchasing') && $transaction->status !== 'completed')
     <!--begin::Menu item-->
     <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" data-transaction-id="{{ $transaction->id }}" data-kt-action="delete_row">

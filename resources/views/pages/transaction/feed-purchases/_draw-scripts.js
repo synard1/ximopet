@@ -24,10 +24,12 @@ document
         element.addEventListener("change", function (e) {
             if (this.disabled) return;
             const purchaseId = this.getAttribute("data-kt-transaction-id");
+            console.log("Purchase ID: " + purchaseId);
             const status = this.value;
             const current = this.getAttribute("data-current");
 
             if (status === "cancelled" || status === "completed") {
+                // console.log(purchaseId, status, current);
                 lastStatusSelect = this;
                 document.getElementById("statusIdInput").value = purchaseId;
                 document.getElementById("statusValueInput").value = status;
@@ -35,6 +37,7 @@ document
                 $("#notesModal").modal("show");
                 this.value = current;
             } else {
+                console.log("Updating status to " + status);
                 Livewire.dispatch("updateStatusFeedPurchase", {
                     purchaseId: purchaseId,
                     status: status,
@@ -43,6 +46,44 @@ document
             }
         });
     });
+
+// Submit modal catatan
+document.getElementById("notesForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const id = document.getElementById("statusIdInput").value;
+    const status = document.getElementById("statusValueInput").value;
+    const notes = document.getElementById("notesInput").value;
+    if (!notes) {
+        alert("Catatan wajib diisi!");
+        return;
+    }
+
+    // Show immediate feedback notification if available
+    if (
+        typeof window.FeedPurchaseDataTableNotifications !== "undefined" &&
+        typeof window.FeedPurchaseDataTableNotifications
+            .showStatusChangeNotification === "function"
+    ) {
+        window.FeedPurchaseDataTableNotifications.showStatusChangeNotification({
+            transactionId: id,
+            oldStatus: lastStatusSelect
+                ? lastStatusSelect.getAttribute("data-current")
+                : "unknown",
+            newStatus: status,
+            type: "warning",
+            title: "Status Change Processing",
+            message: `Updating status to ${status} with notes...`,
+        });
+    }
+
+    Livewire.dispatch("updateStatusFeedPurchase", {
+        purchaseId: id,
+        status: status,
+        notes: notes,
+    });
+    $("#notesModal").modal("hide");
+    lastStatusSelect = null;
+});
 
 // Add click event listener to delete buttons
 document
@@ -171,6 +212,8 @@ document
             const transaksiId = event.currentTarget.getAttribute(
                 "data-kt-transaction-id"
             );
+            const statusData =
+                event.currentTarget.getAttribute("data-kt-status");
 
             // Get suppliers name
             const transaksiSupplier =
@@ -190,11 +233,15 @@ document
                     var button = event.relatedTarget;
                     // Extract info from data-* attributes
                     var title = `${transaksiFaktur} - ${transaksiSupplier} Detail Data`;
+                    var status = statusData;
+                    var statusLabel = document.getElementById("statusLabel");
+                    statusLabel.textContent = status;
                     // Update the modal's title
                     var modalTitle = modal.querySelector(".modal-title");
                     modalTitle.textContent = title;
+                    // console.log("status", status);
                 });
-                getDetails(transaksiId);
+                getDetails(transaksiId, statusData);
                 // console.log(transaksiId);
 
                 $("#kt_modal_pembelian_details").modal("show");

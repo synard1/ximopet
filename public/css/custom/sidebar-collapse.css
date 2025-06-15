@@ -1,0 +1,230 @@
+/* Sidebar Collapse Custom Styles */
+
+/* Toggle Button Styles */
+.sidebar-toggle-btn {
+    position: absolute;
+    top: 20px;
+    right: -15px;
+    width: 30px;
+    height: 30px;
+    background: #fff;
+    border: 1px solid #e4e6ef;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.sidebar-toggle-btn:hover {
+    background: #f5f8fa;
+    border-color: #3f4254;
+}
+
+.sidebar-toggle-btn i {
+    color: #3f4254;
+    transition: transform 0.3s ease;
+}
+
+/* Sidebar States */
+.app-sidebar {
+    transition: all 0.3s ease;
+    overflow: visible;
+}
+
+/* Collapsed State */
+[data-kt-app-sidebar-collapsed="true"] .app-sidebar {
+    width: 70px !important;
+    min-width: 70px !important;
+}
+
+[data-kt-app-sidebar-collapsed="true"] .app-sidebar .sidebar-toggle-btn i {
+    transform: rotate(180deg);
+}
+
+[data-kt-app-sidebar-collapsed="true"] #kt_app_sidebar_wrapper {
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+    margin-left: 5px !important;
+    margin-right: 5px !important;
+}
+
+/* Hide text in collapsed state */
+[data-kt-app-sidebar-collapsed="true"] .menu-title,
+[data-kt-app-sidebar-collapsed="true"] .menu-arrow,
+[data-kt-app-sidebar-collapsed="true"] .menu-bullet {
+    display: none !important;
+}
+
+/* Center icons in collapsed state */
+[data-kt-app-sidebar-collapsed="true"] .menu-link {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+[data-kt-app-sidebar-collapsed="true"] .menu-icon {
+    margin-right: 0 !important;
+}
+
+/* Tooltip for collapsed menu items */
+[data-kt-app-sidebar-collapsed="true"] .menu-item {
+    position: relative;
+}
+
+[data-kt-app-sidebar-collapsed="true"] .menu-link:hover::after {
+    content: attr(data-title);
+    position: absolute;
+    left: 65px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #1e1e2d;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+[data-kt-app-sidebar-collapsed="true"] .menu-link:hover::before {
+    content: "";
+    position: absolute;
+    left: 55px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-right: 5px solid #1e1e2d;
+    z-index: 1001;
+}
+
+/* Close all accordion menus when sidebar is collapsed */
+[data-kt-app-sidebar-collapsed="true"] .menu-sub-accordion {
+    display: none !important;
+}
+
+[data-kt-app-sidebar-collapsed="true"] .menu-toggle.active,
+[data-kt-app-sidebar-collapsed="true"] .menu-toggle.show {
+    background-color: transparent !important;
+}
+
+[data-kt-app-sidebar-collapsed="true"] .menu-arrow {
+    display: none !important;
+}
+
+/* Main content area adjustments - SIMPLIFIED APPROACH */
+[data-kt-app-sidebar-collapsed="true"] .app-wrapper {
+    margin-left: 70px !important;
+}
+
+[data-kt-app-sidebar-collapsed="true"] .app-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+}
+
+/* Fix footer positioning when sidebar collapsed */
+[data-kt-app-sidebar-collapsed="true"] .app-footer {
+    margin-left: 70px !important;
+    transition: margin-left 0.3s ease;
+}
+
+[data-kt-app-sidebar-collapsed="false"] .app-footer {
+    margin-left: 225px !important;
+    transition: margin-left 0.3s ease;
+}
+
+/* Footer when sidebar is completely hidden */
+[data-kt-app-sidebar-fixed="false"] .app-footer {
+    margin-left: 0 !important;
+    transition: margin-left 0.3s ease;
+}
+
+[data-kt-app-sidebar-collapsed="true"] .app-footer .container-fluid {
+    margin-left: 0 !important;
+    padding-left: 15px !important;
+}
+
+/* Ensure footer takes proper width */
+.app-footer {
+    transition: margin-left 0.3s ease;
+}
+
+/* Mobile responsive */
+@media (max-width: 991.98px) {
+    .sidebar-toggle-btn {
+        display: none;
+    }
+
+    [data-kt-app-sidebar-collapsed="true"] .app-sidebar {
+        width: 225px !important;
+        min-width: 225px !important;
+    }
+
+    [data-kt-app-sidebar-collapsed="true"] .menu-title,
+    [data-kt-app-sidebar-collapsed="true"] .menu-arrow,
+    [data-kt-app-sidebar-collapsed="true"] .menu-bullet {
+        display: block !important;
+    }
+
+    [data-kt-app-sidebar-collapsed="true"] .menu-link {
+        justify-content: flex-start !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    [data-kt-app-sidebar-collapsed="true"] .menu-icon {
+        margin-right: 0.75rem !important;
+    }
+
+    [data-kt-app-sidebar-collapsed="true"] .app-main {
+        margin-left: 0 !important;
+    }
+
+    /* Mobile footer positioning */
+    [data-kt-app-sidebar-collapsed="true"] .app-footer {
+        margin-left: 0 !important;
+    }
+
+    [data-kt-app-sidebar-collapsed="false"] .app-footer {
+        margin-left: 0 !important;
+    }
+}
+
+/* Animation for smooth transitions */
+.app-sidebar,
+.app-main,
+#kt_app_sidebar_wrapper,
+.menu-link,
+.menu-title,
+.menu-arrow,
+.menu-bullet {
+    transition: all 0.3s ease;
+}
+
+/* Hidden state - when sidebar is completely hidden */
+[data-kt-app-sidebar-hidden="true"] .app-sidebar {
+    transform: translateX(-100%);
+    width: 0 !important;
+    min-width: 0 !important;
+    opacity: 0;
+}
+
+[data-kt-app-sidebar-hidden="true"] .app-main {
+    margin-left: 0 !important;
+}
+
+/* Drawer state for mobile */
+.app-sidebar.drawer-end {
+    transform: translateX(-100%);
+}
+
+.app-sidebar.drawer-on {
+    transform: translateX(0);
+}

@@ -67,6 +67,33 @@
     {{--
     <livewire:transaksi.pembelian-list /> --}}
     @include('pages.transaction.feed-purchases._modal_pembelian_details')
+    <div wire:ignore.self class="modal fade" id="notesModal" tabindex="-1" aria-labelledby="notesModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <form id="notesForm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="notesModalLabel">Catatan Wajib</h5>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning mb-4">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Status <span id="statusLabel"></span> tidak dapat dibatalkan atau diubah kembali setelah
+                            disimpan.
+                        </div>
+                        <textarea class="form-control" id="notesInput" name="notes" required
+                            placeholder="Masukkan catatan..."></textarea>
+                        <input type="hidden" id="statusIdInput" name="id">
+                        <input type="hidden" id="statusValueInput" name="status">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary">Simpan</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
     @push('scripts')
     {{ $dataTable->scripts() }}

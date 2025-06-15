@@ -22,10 +22,17 @@
                         </tr>
                     </thead>
                 </table>
-                @if(auth()->user()->can('update feed purchasing'))
-                <p>* Hanya <b>Jumlah</b> dan <b>Harga</b> yang bisa di ubah secara langsung</br>
-                    * Data hanya bisa diubah jika belum memiliki data transaksi</br>
-                    * Klik pada kolom data yang akan di ubah untuk membuka fungsi ubah secara langsung</p>
+                @if(auth()->user()->can('update feed purchasing') )
+                <div class="alert alert-warning mb-4" id="statusAlert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Status <span id="statusLabel"></span> tidak dapat dibatalkan atau diubah kembali setelah
+                    disimpan.
+                </div>
+                <div id="editableAlert">
+                    <p>* Hanya <b>Jumlah</b> dan <b>Harga</b> yang bisa di ubah secara langsung</br>
+                        * Data hanya bisa diubah jika belum memiliki data transaksi</br>
+                        * Klik pada kolom data yang akan di ubah untuk membuka fungsi ubah secara langsung</p>
+                </div>
                 @endif
             </div>
             <div class="modal-footer">
@@ -40,71 +47,84 @@
 
                 @push('scripts')
                 <script>
-                    function getDetails(param) {
-            // console.log(param);
-            // Get the Sanctum token from the session
-            const token = '{{ Session::get('auth_token') }}';
+                    function getDetails(param, statusData) {
+                        // console.log(param);
+                        // Get the Sanctum token from the session
+                        const token = '{{ Session::get('auth_token') }}';
 
-            // Set up headers with the token
-            const headers = {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json'
-            };
+                        // Set up headers with the token
+                        const headers = {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        };
 
-            const table = new DataTable('#detailsTable', {
-                ajax: {
-                    url: `/api/v2/feed/purchase/details/${param}`,
-                    headers: headers
-                },
-                columns: [{
-                        data: 'id',
-                        title: '#',
-                        render: function(data, type, row, meta) {
-                            return meta.row + meta.settings._iDisplayStart + 1;
-                        }
-                    },
-                    {
-                        data: 'name'
-                    },
-                    {
-                        data: 'quantity',
-                        className: 'editable text-center', // Add text-end class for right alignment
-                        // render: $.fn.dataTable.render.number(',', '.', 2)
-                    },
-                    {
-                        data: 'total_terpakai',
-                        className: 'text-center', // Add text-end class for right alignment
-                        // render: $.fn.dataTable.render.number(',', '.', 0)
-                    },
-                    {
-                        data: 'mutated',
-                        className: 'text-center', // Add text-end class for right alignment
-                        // render: $.fn.dataTable.render.number(',', '.', 0)
-                    },
-                    {
-                        data: 'sisa',
-                        className: 'text-center', // Add text-end class for right alignment
-                        // render: $.fn.dataTable.render.number(',', '.', 0)
-                    },
-                    {
-                        data: 'unit'
-                    },
-                    {
-                        data: 'price_per_unit',
-                        className: 'editable text-end',
-                        render: $.fn.dataTable.render.number(',', '.', 0, 'Rp')
-                    },
-                    {
-                        data: 'total',
-                        className: 'text-end', // Add text-end class for right alignment
-                        render: $.fn.dataTable.render.number(',', '.', 0, 'Rp')
-                    }
-                ]
-            });
+                        const table = new DataTable('#detailsTable', {
+                            ajax: {
+                                url: `/api/v2/feed/purchase/details/${param}`,
+                                headers: headers
+                            },
+                            columns: [{
+                                    data: 'id',
+                                    title: '#',
+                                    render: function(data, type, row, meta) {
+                                        return meta.row + meta.settings._iDisplayStart + 1;
+                                    }
+                                },
+                                {
+                                    data: 'name'
+                                },
+                                {
+                                    data: 'quantity',
+                                    className: 'editable text-center', // Add text-end class for right alignment
+                                    // render: $.fn.dataTable.render.number(',', '.', 2)
+                                    
+                                },
+                                {
+                                    data: 'total_terpakai',
+                                    className: 'text-center', // Add text-end class for right alignment
+                                    // render: $.fn.dataTable.render.number(',', '.', 0)
+                                },
+                                {
+                                    data: 'mutated',
+                                    className: 'text-center', // Add text-end class for right alignment
+                                    // render: $.fn.dataTable.render.number(',', '.', 0)
+                                },
+                                {
+                                    data: 'sisa',
+                                    className: 'text-center', // Add text-end class for right alignment
+                                    // render: $.fn.dataTable.render.number(',', '.', 0)
+                                },
+                                {
+                                    data: 'unit'
+                                },
+                                {
+                                    data: 'price_per_unit',
+                                    className: 'editable text-end',
+                                    render: $.fn.dataTable.render.number(',', '.', 0, 'Rp')
+                                },
+                                {
+                                    data: 'total',
+                                    className: 'text-end', // Add text-end class for right alignment
+                                    render: $.fn.dataTable.render.number(',', '.', 0, 'Rp')
+                                }
+                            ]
+                        });
+
+
+            if (statusData === 'completed') {
+                $('#statusAlert').show();
+                $('#editableAlert').hide();
+            } else {
+                $('#statusAlert').hide();
+                $('#editableAlert').show();
+            }
+
+            // console.log('statusData', status);
 
             // Enable inline editing
             // Make cells editable (using a simple approach for now)
             @if(auth()->user()->can('update feed purchasing'))
+            if (statusData !== 'completed') {
             table.on('click', 'tbody td.editable', function() {
                 var cell = $(this);
                 var originalValueText = cell.text();
@@ -204,6 +224,7 @@
                 });
 
                 });
+            }
             @endif
         }
 
