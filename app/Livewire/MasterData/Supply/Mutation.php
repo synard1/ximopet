@@ -84,9 +84,16 @@ class Mutation extends Component
     {
         $this->dstFarms = Farm::all();
         $this->farms = SupplyStock::distinct('farm_id')
-            ->with('farm:id,name') // Eager load the 'farm' relationship to access the name
+            ->when(auth()->user()->hasRole('Operator'), function ($query) {
+                $query->whereHas('farm.farmOperators', function ($q) {
+                    $q->where('user_id', auth()->id());
+                });
+            })
+            ->with('farm:id,name')
             ->get()
             ->pluck('farm');
+
+        // dd($this->farms);
     }
 
     public function addConversion()
@@ -660,8 +667,17 @@ class Mutation extends Component
 
     private function loadFarms()
     {
-        $this->dstFarms = Farm::all();
+        $this->dstFarms = Farm::when(auth()->user()->hasRole('Operator'), function ($query) {
+            $query->whereHas('farmOperators', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        })->get();
         $this->farms = SupplyStock::distinct('farm_id')
+            ->when(auth()->user()->hasRole('Operator'), function ($query) {
+                $query->whereHas('farm.farmOperators', function ($q) {
+                    $q->where('user_id', auth()->id());
+                });
+            })
             ->with('farm:id,name')
             ->get()
             ->pluck('farm');

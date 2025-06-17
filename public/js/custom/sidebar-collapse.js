@@ -19,7 +19,7 @@ class SidebarCollapse {
     init() {
         // Check if elements exist
         if (!this.body || !this.sidebar || !this.toggleBtn) {
-            console.warn("Sidebar collapse: Required elements not found");
+            console.warn("Sidebar collapse: Required elements not found"); // Keep warning in all environments
             return;
         }
 
@@ -32,7 +32,7 @@ class SidebarCollapse {
         // Initialize tooltips for collapsed menu items
         this.initTooltips();
 
-        console.log("✅ Sidebar collapse initialized");
+        log("✅ Sidebar collapse initialized");
     }
 
     addEventListeners() {
@@ -100,7 +100,7 @@ class SidebarCollapse {
         // Add tooltip data attributes to menu links
         this.addTooltipAttributes();
 
-        console.log("📌 Sidebar collapsed");
+        log("📌 Sidebar collapsed");
     }
 
     expand() {
@@ -116,7 +116,7 @@ class SidebarCollapse {
             this.restoreMenuState();
         }, 100);
 
-        console.log("📖 Sidebar expanded");
+        log("📖 Sidebar expanded");
     }
 
     hide() {
@@ -127,7 +127,7 @@ class SidebarCollapse {
         this.sidebar.classList.add("drawer-end");
         this.sidebar.classList.remove("app-sidebar");
 
-        console.log("🫥 Sidebar hidden");
+        log("🫥 Sidebar hidden");
     }
 
     show() {
@@ -138,7 +138,7 @@ class SidebarCollapse {
         this.sidebar.classList.remove("drawer-end");
         this.sidebar.classList.add("app-sidebar");
 
-        console.log("👁️ Sidebar shown");
+        log("👁️ Sidebar shown");
     }
 
     saveMenuState() {
@@ -159,7 +159,7 @@ class SidebarCollapse {
         });
 
         this.savedMenuState = openMenus;
-        console.log("💾 Menu state saved:", this.savedMenuState);
+        log("💾 Menu state saved:", this.savedMenuState);
     }
 
     restoreMenuState() {
@@ -191,7 +191,7 @@ class SidebarCollapse {
             }
         });
 
-        console.log("🔄 Menu state restored:", this.savedMenuState);
+        log("🔄 Menu state restored:", this.savedMenuState);
     }
 
     closeAllAccordionMenus() {
@@ -325,7 +325,7 @@ document.addEventListener("livewire:init", () => {
 
 // Global event listener for sidebar state changes
 document.addEventListener("sidebar-toggled", (e) => {
-    console.log("🔄 Sidebar state changed:", e.detail);
+    log("🔄 Sidebar state changed:", e.detail);
 
     // Trigger window resize event to update other components
     setTimeout(() => {

@@ -1,7 +1,7 @@
 <div>
     <!-- Debug: TempAuthorization component loaded -->
     <script>
-        console.log('TempAuthorization ENHANCED component loaded', {
+        log('TempAuthorization ENHANCED component loaded', {
             showModal: @json($showModal), 
             authorized: @json($authorized),
             authMode: @json($authMode),
@@ -164,20 +164,20 @@
     </div>
 
     <script>
-        console.log('Enhanced modal is now visible!');
+        log('Enhanced modal is now visible!');
         // Auto focus pada field pertama yang visible
         setTimeout(() => {
             @if($selectedAuthMethod === 'password')
             const passwordInput = document.querySelector('input[type="password"]');
             if (passwordInput) {
                 passwordInput.focus();
-                console.log('Password field focused');
+                log('Password field focused');
             }
             @elseif($selectedAuthMethod === 'user')
             const emailInput = document.querySelector('input[type="text"]');
             if (emailInput) {
                 emailInput.focus();
-                console.log('Email input field focused');
+                log('Email input field focused');
             }
             @endif
         }, 100);
@@ -187,37 +187,37 @@
     <!-- JavaScript Event Listeners -->
     <script>
         document.addEventListener('livewire:init', function () {
-            console.log('TempAuthorization ENHANCED: Livewire initialized');
+            log('TempAuthorization ENHANCED: Livewire initialized');
             
             // Listen for requestTempAuth event
             Livewire.on('requestTempAuth', function (targetComponent) {
-                console.log('TempAuthorization ENHANCED: requestTempAuth event received', {targetComponent: targetComponent});
+                log('TempAuthorization ENHANCED: requestTempAuth event received', {targetComponent: targetComponent});
             });
             
             // Listen for auth events
             Livewire.on('tempAuthGranted', function (data) {
-                console.log('TempAuthorization ENHANCED: tempAuthGranted event received', data);
+                log('TempAuthorization ENHANCED: tempAuthGranted event received', data);
             });
 
             Livewire.on('tempAuthRevoked', function () {
-                console.log('TempAuthorization ENHANCED: tempAuthRevoked event received');
+                log('TempAuthorization ENHANCED: tempAuthRevoked event received');
             });
 
             // Listen for close modal event
             Livewire.on('closeAuthModal', function () {
-                console.log('TempAuthorization: closeAuthModal event received');
+                log('TempAuthorization: closeAuthModal event received');
                 setTimeout(() => {
                     @this.call('forceCloseModal');
-                    console.log('Modal force closed');
+                    log('Modal force closed');
                 }, 1000); // Delay 1 second to show success message
             });
 
             // Listen for authorization success and auto-close modal
             Livewire.on('authorizationSuccess', function (data) {
-                console.log('Authorization success event received:', data);
+                log('Authorization success event received:', data);
                 setTimeout(() => {
                     @this.call('closeModal');
-                    console.log('Modal closed after authorization success');
+                    log('Modal closed after authorization success');
                 }, data.closeDelay || 1500);
             });
         });

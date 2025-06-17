@@ -27,6 +27,14 @@ class LivestockController extends Controller
         return $dataTable->render('pages.masterdata.livestock.list');
     }
 
+    public function mutasi(LivestockMutationDataTable $dataTable)
+    {
+        //
+        addVendors(['datatables']);
+
+        return $dataTable->render('pages.masterdata.livestock.mutasi');
+    }
+
     public function livestockStrainIndex(LivestockStrainDataTable $dataTable)
     {
         addVendors(['datatables']);

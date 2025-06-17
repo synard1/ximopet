@@ -28,6 +28,12 @@ class AddUserModal extends Component
     public $edit_mode = false;
     public $isOpen = 0;
 
+    public $generate_length = 12;
+    public $generate_uppercase = true;
+    public $generate_lowercase = true;
+    public $generate_numbers = true;
+    public $generate_symbols = true;
+
     protected $rules = [
         'name' => 'required|string',
         'email' => 'required|email',
@@ -46,24 +52,13 @@ class AddUserModal extends Component
         'new_user' => 'create',
         'suspendUser' => 'suspendUser',
         'cancelSuspension' => 'cancelSuspension',
+        'new_user_company' => 'createCompanyUser',
     ];
 
     public function render()
     {
-        // $roles = Role::all();
-        // Get roles, exclude 'SuperAdmin' if current user is not one
-        $rolesQuery = Role::query();
-        if (! auth()->user()->hasRole('SuperAdmin')) {
-            $rolesQuery->where('name', '!=', 'SuperAdmin');
-        }
-        $roles = $rolesQuery->get();
-
-        $roles_description = [
-            'Administrator' => 'Best for business owners and company administrators',
-            'Supervisor' => 'Best for developers or people primarily using the API',
-            'Operator' => 'Best for employees who regularly refund payments and respond to disputes',
-            'trial' => 'Best for people who need to preview content data, but don\'t need to make any updates',
-        ];
+        $roles = auth()->user()->getAvailableRoles();
+        $roles_description = config('xolution.company_role_descriptions', []);
 
         foreach ($roles as $i => $role) {
             $roles[$i]->description = $roles_description[$role->name] ?? '';
@@ -125,6 +120,8 @@ class AddUserModal extends Component
         // Validate the form input data
         $this->validate();
 
+        // dd($this->all());
+
         DB::transaction(function () {
             // Prepare the data for creating a new user
             $data = [
@@ -148,20 +145,37 @@ class AddUserModal extends Component
                 $user->save();
             }
 
+            // Handle role assignment
             if ($this->edit_mode) {
-                // Assign selected role for user
                 $user->syncRoles($this->role);
+            } else {
+                $user->assignRole($this->role);
+            }
 
-                // Emit a success event with a message
+            // Handle CompanyUser data for Administrator users
+            if (auth()->user()->hasRole('Administrator')) {
+                $currentUserMapping = \App\Models\CompanyUser::getUserMapping();
+
+                if ($currentUserMapping) {
+                    // Update or create CompanyUser record
+                    \App\Models\CompanyUser::updateOrCreate(
+                        [
+                            'user_id' => $user->id,
+                            'company_id' => $currentUserMapping->company_id,
+                        ],
+                        [
+                            'isAdmin' => $this->role === 'Administrator',
+                            'status' => 'active',
+                            'created_by' => auth()->id(),
+                            'updated_by' => auth()->id(),
+                        ]
+                    );
+                }
+            }
+
+            if ($this->edit_mode) {
                 $this->dispatch('success', __('User updated'));
             } else {
-                // Assign selected role for user
-                $user->assignRole($this->role);
-
-                // Send a password reset link to the user's email
-                // Password::sendResetLink($user->only('email'));
-
-                // Emit a success event with a message
                 $this->dispatch('success', __('New user created'));
             }
         });
@@ -262,5 +276,47 @@ class AddUserModal extends Component
         $this->user = $user;
 
         $this->openModal();
+    }
+
+    public function createCompanyUser()
+    {
+        $this->isOpen = true;
+
+        // $this->openModal();
+
+    }
+
+    public function generatePassword()
+    {
+        $length = $this->generate_length;
+        $useUpper = $this->generate_uppercase;
+        $useLower = $this->generate_lowercase;
+        $useNumbers = $this->generate_numbers;
+        $useSymbols = $this->generate_symbols;
+
+        $upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $lower = 'abcdefghijklmnopqrstuvwxyz';
+        $numbers = '0123456789';
+        $symbols = '!@#$%^&*()-_=+[]{}|;:,.<>?';
+
+        $all = '';
+        if ($useUpper) $all .= $upper;
+        if ($useLower) $all .= $lower;
+        if ($useNumbers) $all .= $numbers;
+        if ($useSymbols) $all .= $symbols;
+
+        if ($all === '') {
+            $this->dispatch('error', 'Pilih minimal satu opsi karakter!');
+            return;
+        }
+
+        $password = '';
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $all[random_int(0, strlen($all) - 1)];
+        }
+
+        $this->password = $password;
+        $this->passwordConfirmation = $password;
+        $this->dispatch('success', 'Password berhasil digenerate!');
     }
 }

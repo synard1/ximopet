@@ -106,6 +106,12 @@ class FeedPurchaseDataTable extends DataTable
     {
         $query = $model->newQuery();
 
+        if (auth()->user()->hasRole('Operator')) {
+            $query->whereHas('feedPurchases.livestock.farm.farmOperators', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
+
         // if (auth()->user()->hasRole('Operator')) {
         //     $farmOperator = auth()->user()->farmOperators;
         //     if ($farmOperator) {
@@ -167,7 +173,7 @@ class FeedPurchaseDataTable extends DataTable
                         // ✅ PRODUCTION REAL-TIME NOTIFICATION SYSTEM INTEGRATION
                         window.FeedPurchaseDataTableNotifications = window.FeedPurchaseDataTableNotifications || {
                             init: function() {
-                                console.log("[DataTable] Initializing real-time notifications for Feed Purchase DataTable");
+                                log("[DataTable] Initializing real-time notifications for Feed Purchase DataTable");
                                 this.setupRealtimePolling();
                                 this.setupUIHandlers();
                                 this.setupBroadcastListeners();
@@ -175,16 +181,16 @@ class FeedPurchaseDataTable extends DataTable
                             
                             // Real-time polling integration with production notification bridge
                             setupRealtimePolling: function() {
-                                console.log("[DataTable] Setting up real-time polling integration");
+                                log("[DataTable] Setting up real-time polling integration");
                                 
                                 // Connect to production notification system if available
                                 if (typeof window.NotificationSystem !== "undefined") {
-                                    console.log("[DataTable] Production notification system found - integrating...");
+                                    log("[DataTable] Production notification system found - integrating...");
                                     
                                     // Hook into the notification system polling
                                     this.integrateWithProductionBridge();
                                 } else {
-                                    console.log("[DataTable] Production notification system not found - setting up fallback");
+                                    log("[DataTable] Production notification system not found - setting up fallback");
                                     this.setupFallbackPolling();
                                 }
                             },
@@ -195,7 +201,7 @@ class FeedPurchaseDataTable extends DataTable
                                 const originalHandleNotification = window.NotificationSystem.handleNotification;
                                 
                                 window.NotificationSystem.handleNotification = function(notification) {
-                                    console.log("[DataTable] Intercepted notification:", notification);
+                                    log("[DataTable] Intercepted notification:", notification);
                                     
                                     // Call original notification handler
                                     originalHandleNotification.call(this, notification);
@@ -215,26 +221,26 @@ class FeedPurchaseDataTable extends DataTable
                                         (notification.data && notification.data.batch_id)
                                     );
                                     
-                                    console.log("[DataTable] Notification analysis:", {
+                                    log("[DataTable] Notification analysis:", {
                                         requiresRefresh: requiresRefresh,
                                         isFeedPurchaseRelated: isFeedPurchaseRelated,
                                         notificationData: notification.data
                                     });
                                     
                                     if (isFeedPurchaseRelated && requiresRefresh) {
-                                        console.log("[DataTable] Auto-refreshing table due to feed purchase notification");
+                                        log("[DataTable] Auto-refreshing table due to feed purchase notification");
                                         setTimeout(() => {
                                             window.FeedPurchaseDataTableNotifications.refreshDataTable();
                                         }, 500); // Small delay to ensure notification is processed first
                                     }
                                 };
                                 
-                                console.log("[DataTable] Successfully integrated with production notification bridge");
+                                log("[DataTable] Successfully integrated with production notification bridge");
                             },
                             
                             // Fallback polling for environments without production bridge
                             setupFallbackPolling: function() {
-                                console.log("[DataTable] Setting up fallback notification polling");
+                                log("[DataTable] Setting up fallback notification polling");
                                 
                                 this.fallbackInterval = setInterval(() => {
                                     this.checkForDataUpdates();
@@ -248,45 +254,45 @@ class FeedPurchaseDataTable extends DataTable
                                     .then(response => response.json())
                                     .then(data => {
                                         if (data.success && data.total_notifications > this.lastNotificationCount) {
-                                            console.log("[DataTable] New notifications detected - refreshing table");
+                                            log("[DataTable] New notifications detected - refreshing table");
                                             this.refreshDataTable();
                                             this.lastNotificationCount = data.total_notifications;
                                         }
                                     })
                                     .catch(error => {
-                                        console.log("[DataTable] Fallback polling error:", error.message);
+                                        log("[DataTable] Fallback polling error:", error.message);
                                     });
                             },
                             
                             // Setup traditional broadcast listeners (Echo/Pusher)
                             setupBroadcastListeners: function() {
                                 if (typeof window.Echo !== "undefined") {
-                                    console.log("[DataTable] Setting up Echo broadcast listeners");
+                                    log("[DataTable] Setting up Echo broadcast listeners");
                                     
                                     // Listen to general feed purchase channel
                                     window.Echo.channel("feed-purchases")
                                         .listen("status-changed", (e) => {
-                                            console.log("[DataTable] Echo status change received:", e);
+                                            log("[DataTable] Echo status change received:", e);
                                             this.handleStatusChange(e);
                                         });
                                     
-                                                                     // Listen to user-specific notifications
-                                     if (window.Laravel && window.Laravel.user && window.Laravel.user.id) {
-                                         window.Echo.private(`App.Models.User.${window.Laravel.user.id}`)
-                                             .notification((notification) => {
-                                                console.log("[DataTable] User notification received:", notification);
-                                                 this.handleUserNotification(notification);
-                                             });
-                                     }
+                                    // Listen to user-specific notifications
+                                    if (window.Laravel && window.Laravel.user && window.Laravel.user.id) {
+                                        window.Echo.private(`App.Models.User.${window.Laravel.user.id}`)
+                                            .notification((notification) => {
+                                                log("[DataTable] User notification received:", notification);
+                                                this.handleUserNotification(notification);
+                                            });
+                                    }
                                 } else {
-                                    console.log("[DataTable] Laravel Echo not available - relying on bridge notifications");
+                                    log("[DataTable] Laravel Echo not available - relying on bridge notifications");
                                 }
                             },
                             
                             setupUIHandlers: function() {
                                 // Handle refresh button clicks
                                 $(document).on("click", ".refresh-data-btn", function() {
-                                    console.log("[DataTable] Manual refresh triggered");
+                                    log("[DataTable] Manual refresh triggered");
                                     window.FeedPurchaseDataTableNotifications.refreshDataTable();
                                 });
                                 
@@ -302,7 +308,7 @@ class FeedPurchaseDataTable extends DataTable
                                     const newStatus = $select.val();
                                     const currentStatus = $select.data("current");
                                     
-                                    console.log(`[DataTable] Status change initiated: ${currentStatus} → ${newStatus} for transaction ${transactionId}`);
+                                    log(`[DataTable] Status change initiated: ${currentStatus} → ${newStatus} for transaction ${transactionId}`);
                                     
                                     // Show immediate feedback
                                     window.FeedPurchaseDataTableNotifications.showStatusChangeNotification({
@@ -318,25 +324,25 @@ class FeedPurchaseDataTable extends DataTable
                             
                             // Handle broadcast status changes (FIXED: No duplicate notifications)
                             handleStatusChange: function(event) {
-                                console.log("[DataTable] Processing broadcast status change:", event);
+                                log("[DataTable] Processing broadcast status change:", event);
                                 
                                 const requiresRefresh = (event.metadata && event.metadata.requires_refresh);
                                 
                                 // Only auto-refresh data - notification handled by production system
                                 if (requiresRefresh) {
-                                    console.log("[DataTable] Auto-refreshing table for critical change");
+                                    log("[DataTable] Auto-refreshing table for critical change");
                                     this.refreshDataTable();
                                 }
                             },
                             
                             // Handle user-specific notifications (FIXED: No duplicate notifications)
                             handleUserNotification: function(notification) {
-                                console.log("[DataTable] Processing user notification:", notification);
+                                log("[DataTable] Processing user notification:", notification);
                                 
                                 if (notification.type === "feed_purchase_status_changed") {
                                     // Only refresh data - notification handled by production system
                                     if (notification.action_required && notification.action_required.includes("refresh_data")) {
-                                        console.log("[DataTable] Auto-refreshing table for user notification");
+                                        log("[DataTable] Auto-refreshing table for user notification");
                                         this.refreshDataTable();
                                     }
                                 }
@@ -344,7 +350,7 @@ class FeedPurchaseDataTable extends DataTable
                             
                             // Refresh DataTable
                             refreshDataTable: function() {
-                                console.log("[DataTable] Attempting to refresh DataTable...");
+                                log("[DataTable] Attempting to refresh DataTable...");
                                 
                                 try {
                                     let refreshed = false;
@@ -352,7 +358,7 @@ class FeedPurchaseDataTable extends DataTable
                                     // Method 1: Try specific Feed Purchase table ID
                                     if ($.fn.DataTable && $.fn.DataTable.isDataTable("#feedPurchasing-table")) {
                                         $("#feedPurchasing-table").DataTable().ajax.reload(null, false);
-                                        console.log("[DataTable] ✅ DataTable refreshed via specific ID: #feedPurchasing-table");
+                                        log("[DataTable] ✅ DataTable refreshed via specific ID: #feedPurchasing-table");
                                         refreshed = true;
                                     }
                                     
@@ -361,7 +367,7 @@ class FeedPurchaseDataTable extends DataTable
                                         $(".table").each(function() {
                                             if ($.fn.DataTable && $.fn.DataTable.isDataTable(this)) {
                                                 $(this).DataTable().ajax.reload(null, false);
-                                                console.log("[DataTable] ✅ DataTable refreshed via class selector:", this.id || "unnamed");
+                                                log("[DataTable] ✅ DataTable refreshed via class selector:", this.id || "unnamed");
                                                 refreshed = true;
                                             }
                                         });
@@ -372,16 +378,16 @@ class FeedPurchaseDataTable extends DataTable
                                         Object.keys(window.LaravelDataTables).forEach(tableId => {
                                             try {
                                                 window.LaravelDataTables[tableId].ajax.reload(null, false);
-                                                console.log("[DataTable] ✅ DataTable refreshed via LaravelDataTables:", tableId);
+                                                log("[DataTable] ✅ DataTable refreshed via LaravelDataTables:", tableId);
                                                 refreshed = true;
                                             } catch (e) {
-                                                console.log("[DataTable] ⚠️ Failed to refresh table via LaravelDataTables:", tableId, e.message);
+                                                log("[DataTable] ⚠️ Failed to refresh table via LaravelDataTables:", tableId, e.message);
                                             }
                                         });
                                     }
                                     
                                     if (!refreshed) {
-                                        console.log("[DataTable] ⚠️ No DataTable found to refresh");
+                                        log("[DataTable] ⚠️ No DataTable found to refresh");
                                         
                                         // Fallback: show manual refresh suggestion
                                         this.showRefreshSuggestion();
@@ -395,7 +401,7 @@ class FeedPurchaseDataTable extends DataTable
                             
                             // Show manual refresh suggestion
                             showRefreshSuggestion: function() {
-                                console.log("[DataTable] 💡 Showing manual refresh suggestion");
+                                log("[DataTable] 💡 Showing manual refresh suggestion");
                                 
                                 const suggestionHtml = `
                                     <div class="alert alert-warning alert-dismissible fade show position-fixed" 
@@ -431,21 +437,6 @@ class FeedPurchaseDataTable extends DataTable
                                 }, 12000);
                             },
                             
-                            // REMOVED: DataTable-specific notifications (replaced by production notification system)
-                            // All notifications now handled by production notification system to avoid duplicates
-                            
-                            // REMOVED: Status change notifications (handled by production system)
-                            // No need for additional notifications as production system handles all notifications
-                            
-                            getNotificationType: function(priority) {
-                                const types = {
-                                    "high": "warning",
-                                    "medium": "info", 
-                                    "low": "success"
-                                };
-                                return types[priority] || "info";
-                            },
-                            
                             // Cleanup function
                             destroy: function() {
                                 if (this.fallbackInterval) {
@@ -456,7 +447,7 @@ class FeedPurchaseDataTable extends DataTable
                                 
                         // Initialize DataTable notifications
                         window.FeedPurchaseDataTableNotifications.init();
-                        console.log("[DataTable] ✅ Feed Purchase DataTable real-time notifications initialized");
+                        log("[DataTable] ✅ Feed Purchase DataTable real-time notifications initialized");
                     }'
             ]);
     }

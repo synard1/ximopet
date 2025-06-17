@@ -62,7 +62,7 @@
     <script>
         // Initialize any additional JavaScript functionality if needed
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Smart Analytics page loaded');
+            log('Smart Analytics page loaded');
         });
     </script>
     @endpush

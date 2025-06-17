@@ -1,11 +1,12 @@
 <x-default-layout>
 
     @section('title')
-        Data Mutasi Feed
+    Data Mutasi Feed
     @endsection
 
     @section('breadcrumbs')
     @endsection
+    @if(auth()->user()->can('read feed mutation'))
     <div class="card">
         <!--begin::Card header-->
         <div class="card-header border-0 pt-6">
@@ -14,6 +15,7 @@
             </div>
             <!--begin::Card title-->
 
+            @if(auth()->user()->can('create feed mutation'))
             <!--begin::Card toolbar-->
             <div class="card-toolbar" id="cardToolbar">
                 <!--begin::Toolbar-->
@@ -28,7 +30,7 @@
                 <!--end::Toolbar-->
             </div>
             <!--end::Card toolbar-->
-
+            @endif
         </div>
         <!--end::Card header-->
 
@@ -41,18 +43,28 @@
                 </div>
                 <!--end::Table-->
             </div>
-            <livewire:master-data.feed.mutation/>
+            <livewire:master-data.feed.mutation />
         </div>
         <!--end::Card body-->
 
     </div>
     @include('pages.masterdata.feed._modal_mutation_details')
-
+    @else
+    <div class="card">
+        <div class="card-body">
+            <div class="text-center">
+                <i class="fas fa-lock fa-3x text-danger mb-3"></i>
+                <h3 class="text-danger">Unauthorized Access</h3>
+                <p class="text-muted">You do not have permission to view feed master data.</p>
+            </div>
+        </div>
+    </div>
+    @endif
 
     @push('scripts')
-        {{ $dataTable->scripts() }}
-        <script>
-            document.addEventListener('livewire:init', function () {
+    {{ $dataTable->scripts() }}
+    <script>
+        document.addEventListener('livewire:init', function () {
                 window.addEventListener('hide-datatable', () => {
                     $('#datatable-container').hide();
                     $('#cardToolbar').hide();
@@ -65,7 +77,6 @@
                 
             });
 
-        </script>
+    </script>
     @endpush
 </x-default-layout>
-

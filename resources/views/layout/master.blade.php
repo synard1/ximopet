@@ -91,10 +91,10 @@
             name: "{{ auth()->user()->name }}",
             email: "{{ auth()->user()->email }}"
         };
-        console.log('✅ Laravel user info set:', window.Laravel.user);
+        log('✅ Laravel user info set:', window.Laravel.user);
         @else
         window.Laravel.user = null;
-        console.log('👤 No authenticated user');
+        log('👤 No authenticated user');
         @endauth
     </script> --}}
     <!--end::Laravel User Setup-->
@@ -113,7 +113,15 @@
     <!--end::Javascript-->
 
     <script>
-        console.log('confirm');
+        // Add production environment check
+        const isProduction = document.querySelector('meta[name="app-env"]')?.content === 'production';
+        const log = (message, ...args) => {
+            if (!isProduction) {
+                console.log(message, ...args);
+            }
+        };
+
+        log('confirm');
         document.addEventListener('livewire:init', () => {
         Livewire.on('success', (message) => {
             toastr.success(message);
@@ -141,7 +149,7 @@
         });
 
         Livewire.on('confirm', (message, params) => {
-            console.log('confirm');
+            log('confirm');
             Swal.fire({
                 title: params.title,
                 text: params.text,
@@ -169,9 +177,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
         if (typeof Livewire !== 'undefined') {
-            console.log('Livewire is running');
+            log('Livewire is running');
         } else {
-            console.log('Livewire is not defined');
+            log('Livewire is not defined');
         }
     });
     </script>

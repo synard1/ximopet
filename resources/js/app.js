@@ -14,7 +14,7 @@ if (typeof window.Laravel === "undefined") {
 }
 
 // Additional global configurations can be added here
-console.log("🚀 Application JavaScript initialized");
+log("🚀 Application JavaScript initialized");
 
 // Supply Purchase Notification System - Global Setup
 window.SupplyPurchaseGlobal = {
@@ -23,17 +23,17 @@ window.SupplyPurchaseGlobal = {
      */
     testNotification: function () {
         if (!window.Echo) {
-            console.error("❌ Laravel Echo not available for testing");
+            console.error("❌ Laravel Echo not available for testing"); // Keep error logging in all environments
             return;
         }
 
-        console.log("🧪 Testing Supply Purchase notification system...");
+        log("🧪 Testing Supply Purchase notification system...");
 
         // Test general channel
         window.Echo.channel("supply-purchases").listen(
             "status-changed",
             (e) => {
-                console.log("✅ General channel test received:", e);
+                log("✅ General channel test received:", e);
             }
         );
 
@@ -42,14 +42,11 @@ window.SupplyPurchaseGlobal = {
             window.Echo.private(
                 `App.Models.User.${window.Laravel.user.id}`
             ).notification((notification) => {
-                console.log(
-                    "✅ Private notification test received:",
-                    notification
-                );
+                log("✅ Private notification test received:", notification);
             });
         }
 
-        console.log("🔄 Notification listeners setup complete");
+        log("🔄 Notification listeners setup complete");
     },
 
     /**
@@ -64,12 +61,10 @@ window.SupplyPurchaseGlobal = {
             user: !!(window.Laravel && window.Laravel.user),
         };
 
-        console.log("🔍 System Readiness Check:", checks);
+        log("🔍 System Readiness Check:", checks);
 
         const allReady = Object.values(checks).every((check) => check);
-        console.log(
-            allReady ? "✅ System fully ready" : "⚠️ Some components missing"
-        );
+        log(allReady ? "✅ System fully ready" : "⚠️ Some components missing");
 
         return checks;
     },

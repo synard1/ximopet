@@ -69,15 +69,22 @@ class FeedStockDataTable extends DataTable
      */
     public function query(FeedStock $model): QueryBuilder
     {
-        return $model->newQuery()
-            ->selectRaw('
+        $query = $model->newQuery();
+        
+        if (auth()->user()->hasRole('Operator')) {
+            $query->whereHas('livestock.farm.farmOperators', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
+
+        return $query->selectRaw('
                 livestock_id,
                 feed_id,
                 SUM(quantity_in) as total_in,
                 SUM(quantity_used) as total_used,
                 SUM(quantity_mutated) as total_mutated
             ')
-            ->with('feed')
+            ->with(['feed', 'livestock.farm'])
             ->groupBy('livestock_id', 'feed_id');
     }
 

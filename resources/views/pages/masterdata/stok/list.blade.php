@@ -1,7 +1,7 @@
 <x-default-layout>
 
     @section('title')
-        Master Data Stok
+    Master Data Stok
     @endsection
 
     @section('breadcrumbs')
@@ -14,7 +14,9 @@
                 <!--begin::Search-->
                 <div class="d-flex align-items-center position-relative my-1">
                     {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
-                    <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Cari Stok" id="mySearchInput"/>
+                    <input type="text" data-kt-user-table-filter="search"
+                        class="form-control form-control-solid w-250px ps-13" placeholder="Cari Stok"
+                        id="mySearchInput" />
                 </div>
                 <!--end::Search-->
             </div>
@@ -46,18 +48,17 @@
 
 
     @push('scripts')
-        {{ $dataTable->scripts() }}
-        <script>
-            document.getElementById('mySearchInput').addEventListener('keyup', function () {
-                window.LaravelDataTables['stoks-table'].search(this.value).draw();
-            });
+    {{ $dataTable->scripts() }}
+    <script>
+        // document.getElementById('mySearchInput').addEventListener('keyup', function () {
+            //     window.LaravelDataTables['stoks-table'].search(this.value).draw();
+            // });
             document.addEventListener('livewire:init', function () {
                 Livewire.on('success', function () {
                     $('#kt_modal_add_user').modal('hide');
                     window.LaravelDataTables['stoks-table'].ajax.reload();
                 });
             });
-        </script>
+    </script>
     @endpush
 </x-default-layout>
-

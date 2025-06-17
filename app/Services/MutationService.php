@@ -23,6 +23,9 @@ use Throwable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\FeedPurchase;
+use App\Models\CurrentLivestock;
+use App\Models\LivestockBatch;
+use App\Events\LivestockMutated;
 
 class MutationService
 {
@@ -1176,6 +1179,173 @@ class MutationService
                     date: $mutation->date,
                     dryRun: false
                 );
+            }
+
+            return $mutation;
+        });
+    }
+
+    public static function livestockMutation(array $data, array $items, ?string $mutationId = null, bool $withHistory = true): Mutation
+    {
+        return DB::transaction(function () use ($data, $items, $mutationId, $withHistory) {
+            // Get company mutation config
+            $company = auth()->user()->company;
+            $mutationConfig = $company->getMutationConfig();
+            $livestockConfig = $mutationConfig['livestock_mutation'];
+            $notificationConfig = $company->getNotificationConfig();
+
+            Log::info('Starting livestock mutation process', [
+                'mutationId' => $mutationId,
+                'withHistory' => $withHistory,
+                'data' => $data,
+                'items' => $items,
+                'config' => [
+                    'mutation' => $livestockConfig,
+                    'notification' => $notificationConfig
+                ]
+            ]);
+
+            $isUpdate = !empty($mutationId);
+
+            // Find or create mutation
+            $mutation = $isUpdate
+                ? Mutation::findOrFail($mutationId)
+                : new Mutation();
+
+            // Fill mutation data
+            $mutation->fill([
+                'id' => $mutationId ?? Str::uuid(),
+                'type' => 'livestock',
+                'mutation_scope' => 'internal',
+                'date' => $data['date'],
+                'from_livestock_id' => $data['source_livestock_id'],
+                'to_livestock_id' => $data['destination_livestock_id'],
+                'notes' => $data['notes'] ?? null,
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+            ]);
+
+            if (!$isUpdate) {
+                $mutation->save();
+                Log::info('New livestock mutation created', ['mutationId' => $mutation->id]);
+            } else {
+                $mutation->update();
+                Log::info('Existing livestock mutation updated', ['mutationId' => $mutation->id]);
+
+                // Handle old mutation items based on history preference
+                $oldMutationItems = MutationItem::where('mutation_id', $mutation->id)->get();
+
+                if ($withHistory) {
+                    // Soft delete old items
+                    foreach ($oldMutationItems as $oldItem) {
+                        // Update source livestock
+                        $sourceLivestock = Livestock::find($oldItem->item_id);
+                        if ($sourceLivestock) {
+                            $sourceLivestock->quantity_mutated -= $oldItem->quantity;
+                            $sourceLivestock->save();
+                        }
+
+                        // Update destination livestock
+                        $destLivestock = Livestock::find($mutation->to_livestock_id);
+                        if ($destLivestock) {
+                            $destLivestock->quantity_mutated -= $oldItem->quantity;
+                            $destLivestock->save();
+                        }
+
+                        // Soft delete the mutation item
+                        $oldItem->delete();
+                        Log::info('Soft deleted livestock mutation item', ['itemId' => $oldItem->id]);
+                    }
+                }
+            }
+
+            // Process items based on configuration
+            foreach ($items as $item) {
+                // Validate based on config
+                if ($livestockConfig['validation_rules']['require_weight'] && empty($item['weight'])) {
+                    throw new \Exception('Berat harus diisi');
+                }
+
+                if ($livestockConfig['validation_rules']['require_quantity'] && empty($item['quantity'])) {
+                    throw new \Exception('Jumlah harus diisi');
+                }
+
+                // Create mutation item
+                $mutationItem = MutationItem::create([
+                    'id' => Str::uuid(),
+                    'mutation_id' => $mutation->id,
+                    'item_type' => 'livestock',
+                    'item_id' => $item['livestock_id'],
+                    'quantity' => $item['quantity'],
+                    'weight' => $item['weight'],
+                    'created_by' => auth()->id(),
+                ]);
+
+                // Handle batch if enabled
+                if ($livestockConfig['type'] === 'batch' && $livestockConfig['batch_settings']['tracking_enabled']) {
+                    $mutationItem->batch_id = $item['batch_id'] ?? null;
+                    $mutationItem->batch_metadata = $item['batch_metadata'] ?? null;
+                    $mutationItem->save();
+
+                    // Update batch records
+                    if ($item['batch_id']) {
+                        $sourceBatch = LivestockBatch::find($item['batch_id']);
+                        if ($sourceBatch) {
+                            $sourceBatch->quantity_mutated += $item['quantity'];
+                            $sourceBatch->save();
+                        }
+                    }
+                }
+
+                // Handle FIFO if enabled
+                if ($livestockConfig['type'] === 'fifo' && $livestockConfig['fifo_settings']['enabled']) {
+                    // Get oldest batch first
+                    $oldestBatch = LivestockBatch::where('livestock_id', $item['livestock_id'])
+                        ->where('status', 'active')
+                        ->orderBy('entry_date', 'asc')
+                        ->first();
+
+                    if ($oldestBatch) {
+                        $mutationItem->batch_id = $oldestBatch->id;
+                        $mutationItem->batch_metadata = [
+                            'entry_date' => $oldestBatch->entry_date,
+                            'age' => $oldestBatch->age,
+                            'batch_number' => $oldestBatch->batch_number
+                        ];
+                        $mutationItem->save();
+
+                        $oldestBatch->quantity_mutated += $item['quantity'];
+                        $oldestBatch->save();
+                    }
+                }
+
+                // Update CurrentLivestock records
+                $sourceCurrent = CurrentLivestock::where('livestock_id', $item['livestock_id'])
+                    ->where('status', 'active')
+                    ->first();
+                if ($sourceCurrent) {
+                    $sourceCurrent->quantity -= $item['quantity'];
+                    $sourceCurrent->weight_total -= $item['weight'];
+                    $sourceCurrent->save();
+                }
+
+                $destCurrent = CurrentLivestock::where('livestock_id', $mutation->to_livestock_id)
+                    ->where('status', 'active')
+                    ->first();
+                if ($destCurrent) {
+                    $destCurrent->quantity += $item['quantity'];
+                    $destCurrent->weight_total += $item['weight'];
+                    $destCurrent->save();
+                }
+
+                // Handle notifications if enabled
+                if ($notificationConfig['events']['mutation']['enabled']) {
+                    $channels = $notificationConfig['events']['mutation']['channels'];
+                    if (in_array('broadcast', $channels)) {
+                        event(new LivestockMutated($mutation, $mutationItem));
+                    }
+                    // Handle other notification channels...
+                }
             }
 
             return $mutation;

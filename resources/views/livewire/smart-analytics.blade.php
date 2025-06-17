@@ -927,14 +927,14 @@
             window.advancedMortalityChart = null;
 
             // Check Chart.js availability at startup
-            console.log('[Analytics Debug] Chart.js Status:', {
+            log('[Analytics Debug] Chart.js Status:', {
                 available: typeof Chart !== 'undefined',
                 version: typeof Chart !== 'undefined' ? Chart.version : 'N/A'
             });
 
                     // Enhanced Livewire event listeners for chart updates
         Livewire.on('mortality-chart-updated', (data) => {
-            console.log('[Mortality Chart Debug] Chart update event received - ENHANCED', {
+            log('[Mortality Chart Debug] Chart update event received - ENHANCED', {
                 trigger: data?.trigger || 'unknown',
                 force_refresh: data?.force_refresh || false,
                 chart_type: data?.chart_type,
@@ -946,7 +946,7 @@
             const isLivestockChange = data?.trigger === 'livestock_filter_change';
             const forceRefresh = data?.force_refresh || isLivestockChange;
             
-            console.log('[Mortality Chart Debug] Chart refresh strategy:', {
+            log('[Mortality Chart Debug] Chart refresh strategy:', {
                 isLivestockChange: isLivestockChange,
                 forceRefresh: forceRefresh,
                 delay: forceRefresh ? 100 : 200
@@ -960,8 +960,8 @@
 
         // NEW: Listen for fresh chart data from server (AJAX refresh)
         Livewire.on('mortality-chart-data-refreshed', (freshChartData) => {
-            // console.log(freshChartData);
-            console.log('[Mortality Chart Debug] Fresh chart data received from server - AJAX REFRESH', {
+            // log(freshChartData);
+            log('[Mortality Chart Debug] Fresh chart data received from server - AJAX REFRESH', {
                 type: freshChartData[0]?.type,
                 title: freshChartData[0]?.title,
                 labels_count: freshChartData[0]?.labels?.length || 0,
@@ -977,7 +977,7 @@
             // If we're on mortality tab, immediately update the chart with fresh data
             const mortalityTab = document.querySelector('.nav-link[wire\\:click\\.prevent*="mortality"]');
             if (mortalityTab && mortalityTab.classList.contains('active')) {
-                console.log('[Mortality Chart Debug] Updating chart with fresh data immediately');
+                log('[Mortality Chart Debug] Updating chart with fresh data immediately');
                 
                 // Destroy existing chart
                 if (window.advancedMortalityChart) {
@@ -990,17 +990,17 @@
                     initializeAdvancedMortalityChartWithData(freshChartData[0]);
                 }, 100);
             } else {
-                console.log('[Mortality Chart Debug] Fresh data stored for later use');
+                log('[Mortality Chart Debug] Fresh data stored for later use');
             }
         });
 
 
 
-            console.log('[Analytics Debug] Livewire initialized');
+            log('[Analytics Debug] Livewire initialized');
 
             // Enhanced loading timeout with multiple clear layers
             function startLoadingTimeout() {
-                console.log('[Analytics Debug] Starting loading timeout with multiple protection layers');
+                log('[Analytics Debug] Starting loading timeout with multiple protection layers');
 
                 loadingStartTime = Date.now();
 
@@ -1009,11 +1009,11 @@
 
                 // Layer 1: Quick timeout for tab changes and immediate clearing (2 seconds)
                 loadingTimeout = setTimeout(() => {
-                    console.log('[Analytics Debug] Layer 1 timeout (2s) - Quick clear for responsive UI');
+                    log('[Analytics Debug] Layer 1 timeout (2s) - Quick clear for responsive UI');
                     const loadingOverlay = document.getElementById('loadingOverlay');
                     if (loadingOverlay && loadingOverlay.offsetParent !== null) {
                         // Check if this might be a tab change (should clear immediately)
-                        console.log('[Analytics Debug] Layer 1: Clearing loading overlay');
+                        log('[Analytics Debug] Layer 1: Clearing loading overlay');
                         loadingOverlay.style.display = 'none';
                         loadingOverlay.classList.add('d-none');
                     }
@@ -1021,10 +1021,10 @@
 
                 // Layer 2: Standard timeout for data loading (5 seconds)
                 setTimeout(() => {
-                    console.log('[Analytics Debug] Layer 2 timeout (5s) - Standard data loading timeout');
+                    log('[Analytics Debug] Layer 2 timeout (5s) - Standard data loading timeout');
                     const loadingOverlay = document.getElementById('loadingOverlay');
                     if (loadingOverlay && loadingOverlay.offsetParent !== null) {
-                        console.log(
+                        log(
                             '[Analytics Debug] Layer 2: Loading still active after 5s, forcing clear');
                         loadingOverlay.style.display = 'none';
                         loadingOverlay.classList.add('d-none');
@@ -1037,10 +1037,10 @@
 
                 // Layer 3: Maximum timeout for any operation (10 seconds)
                 setTimeout(() => {
-                    console.log('[Analytics Debug] Layer 3 timeout (10s) - Maximum operation timeout');
+                    log('[Analytics Debug] Layer 3 timeout (10s) - Maximum operation timeout');
                     const loadingOverlay = document.getElementById('loadingOverlay');
                     if (loadingOverlay && loadingOverlay.offsetParent !== null) {
-                        console.log('[Analytics Debug] Layer 3: Force clearing after 10s maximum');
+                        log('[Analytics Debug] Layer 3: Force clearing after 10s maximum');
                         loadingOverlay.style.display = 'none';
                         loadingOverlay.classList.add('d-none');
 
@@ -1063,13 +1063,13 @@
                 if (loadingOverlay) {
                     loadingOverlay.style.display = 'block';
                     loadingOverlay.classList.remove('d-none');
-                    console.log('[Analytics Debug] Loading overlay shown with multi-layer timeout protection');
+                    log('[Analytics Debug] Loading overlay shown with multi-layer timeout protection');
                 }
             }
 
             // Enhanced clear loading timeout with immediate overlay hide
             function clearLoadingTimeout() {
-                console.log('[Analytics Debug] Clearing loading timeout and overlay immediately');
+                log('[Analytics Debug] Clearing loading timeout and overlay immediately');
 
                 clearTimeout(loadingTimeout);
                 loadingStartTime = null;
@@ -1082,7 +1082,7 @@
                     loadingOverlay.style.visibility = 'hidden';
                     loadingOverlay.style.opacity = '0';
 
-                    console.log('[Analytics Debug] Loading overlay immediately hidden with all methods');
+                    log('[Analytics Debug] Loading overlay immediately hidden with all methods');
                 }
 
                 // Hide error state if it was shown
@@ -1090,14 +1090,14 @@
                 if (errorState && !errorState.classList.contains('d-none')) {
                     errorState.classList.add('d-none');
                     errorState.style.display = 'none';
-                    console.log('[Analytics Debug] Error state hidden');
+                    log('[Analytics Debug] Error state hidden');
                 }
 
-                console.log('[Analytics Debug] All loading states cleared');
+                log('[Analytics Debug] All loading states cleared');
             }
 
             function initializeCharts(forceReinit = false) {
-                console.log('[Analytics Debug] Chart initialization requested', {
+                log('[Analytics Debug] Chart initialization requested', {
                     forceReinit: forceReinit
                 });
 
@@ -1105,14 +1105,14 @@
                 const isOverviewTab = document.querySelector('.nav-link[wire\\:click\\.prevent*="overview"]')
                     ?.classList.contains('active');
 
-                console.log('[Analytics Debug] Overview tab status:', isOverviewTab);
+                log('[Analytics Debug] Overview tab status:', isOverviewTab);
 
                 if (!isOverviewTab) {
-                    console.log('[Analytics Debug] Not on overview tab, skipping chart initialization');
+                    log('[Analytics Debug] Not on overview tab, skipping chart initialization');
                     return;
                 }
 
-                console.log('[Analytics Debug] Initializing charts with fresh data', {
+                log('[Analytics Debug] Initializing charts with fresh data', {
                     forceReinit: forceReinit,
                     existingCharts: {
                         mortality: !!mortalityChart,
@@ -1129,7 +1129,7 @@
                     const fcrData = @json($this->getChartData('fcr'));
                     const revenueData = @json($this->getChartData('revenue'));
 
-                    console.log('[Analytics Debug] Fresh chart data loaded:', {
+                    log('[Analytics Debug] Fresh chart data loaded:', {
                         mortality: mortalityData,
                         efficiency: efficiencyData,
                         fcr: fcrData,
@@ -1140,27 +1140,27 @@
                     if (mortalityChart) {
                         mortalityChart.destroy();
                         mortalityChart = null;
-                        console.log('[Analytics Debug] Destroyed existing mortality chart');
+                        log('[Analytics Debug] Destroyed existing mortality chart');
                     }
                     if (efficiencyChart) {
                         efficiencyChart.destroy();
                         efficiencyChart = null;
-                        console.log('[Analytics Debug] Destroyed existing efficiency chart');
+                        log('[Analytics Debug] Destroyed existing efficiency chart');
                     }
                     if (fcrChart) {
                         fcrChart.destroy();
                         fcrChart = null;
-                        console.log('[Analytics Debug] Destroyed existing FCR chart');
+                        log('[Analytics Debug] Destroyed existing FCR chart');
                     }
                     if (revenueChart) {
                         revenueChart.destroy();
                         revenueChart = null;
-                        console.log('[Analytics Debug] Destroyed existing revenue chart');
+                        log('[Analytics Debug] Destroyed existing revenue chart');
                     }
 
                     // Create all charts with fresh data
                     if (document.getElementById('mortalityChart')) {
-                        console.log('[Analytics Debug] Creating fresh mortality chart');
+                        log('[Analytics Debug] Creating fresh mortality chart');
                         const ctx1 = document.getElementById('mortalityChart').getContext('2d');
                         mortalityChart = new Chart(ctx1, {
                             type: 'line',
@@ -1192,11 +1192,11 @@
                                 }
                             }
                         });
-                        console.log('[Analytics Debug] Mortality chart created successfully');
+                        log('[Analytics Debug] Mortality chart created successfully');
                     }
 
                     if (document.getElementById('efficiencyChart')) {
-                        console.log('[Analytics Debug] Creating fresh efficiency chart');
+                        log('[Analytics Debug] Creating fresh efficiency chart');
                         const ctx2 = document.getElementById('efficiencyChart').getContext('2d');
                         efficiencyChart = new Chart(ctx2, {
                             type: 'line',
@@ -1229,11 +1229,11 @@
                                 }
                             }
                         });
-                        console.log('[Analytics Debug] Efficiency chart created successfully');
+                        log('[Analytics Debug] Efficiency chart created successfully');
                     }
 
                     if (document.getElementById('fcrChart')) {
-                        console.log('[Analytics Debug] Creating fresh FCR chart');
+                        log('[Analytics Debug] Creating fresh FCR chart');
                         const ctx3 = document.getElementById('fcrChart').getContext('2d');
                         fcrChart = new Chart(ctx3, {
                             type: 'line',
@@ -1264,11 +1264,11 @@
                                 }
                             }
                         });
-                        console.log('[Analytics Debug] FCR chart created successfully');
+                        log('[Analytics Debug] FCR chart created successfully');
                     }
 
                     if (document.getElementById('revenueChart')) {
-                        console.log('[Analytics Debug] Creating fresh revenue chart');
+                        log('[Analytics Debug] Creating fresh revenue chart');
                         const ctx4 = document.getElementById('revenueChart').getContext('2d');
                         revenueChart = new Chart(ctx4, {
                             type: 'line',
@@ -1300,10 +1300,10 @@
                                 }
                             }
                         });
-                        console.log('[Analytics Debug] Revenue chart created successfully');
+                        log('[Analytics Debug] Revenue chart created successfully');
                     }
 
-                    console.log('[Analytics Debug] All charts created successfully with fresh data');
+                    log('[Analytics Debug] All charts created successfully with fresh data');
                 } catch (error) {
                     console.error('[Analytics Debug] Error initializing charts:', error);
                     if (typeof toastr !== 'undefined') {
@@ -1313,12 +1313,12 @@
             }
 
             // Initialize charts on page load
-            console.log('[Analytics Debug] Scheduling initial chart initialization');
+            log('[Analytics Debug] Scheduling initial chart initialization');
             setTimeout(initializeCharts, 100);
 
             // Enhanced Livewire event listeners with comprehensive tab change detection
             document.addEventListener('livewire:request', (event) => {
-                console.log('[Analytics Debug] Livewire request started:', event);
+                log('[Analytics Debug] Livewire request started:', event);
 
                 // Multiple methods to detect tab change requests
                 const requestMethod = event.detail?.method;
@@ -1333,7 +1333,7 @@
                         (call.params && JSON.stringify(call.params).includes('setActiveTab'))
                     ));
 
-                console.log('[Analytics Debug] Request analysis:', {
+                log('[Analytics Debug] Request analysis:', {
                     method: requestMethod,
                     isTabChange: isTabChange,
                     payloadContainsTab: requestPayload ? JSON.stringify(requestPayload).includes(
@@ -1342,38 +1342,38 @@
                 });
 
                 if (isTabChange) {
-                    console.log('[Analytics Debug] Tab change request detected - BLOCKING loading timeout');
+                    log('[Analytics Debug] Tab change request detected - BLOCKING loading timeout');
                     return;
                 }
 
-                console.log('[Analytics Debug] Filter/data request detected - STARTING loading timeout');
+                log('[Analytics Debug] Filter/data request detected - STARTING loading timeout');
                 startLoadingTimeout();
             });
 
             document.addEventListener('livewire:finished', (event) => {
-                console.log('[Analytics Debug] Livewire request finished:', event);
+                log('[Analytics Debug] Livewire request finished:', event);
                 clearLoadingTimeout();
             });
 
             // Additional Livewire 3 event listeners
             document.addEventListener('livewire:load', (event) => {
-                console.log('[Analytics Debug] Livewire component loaded:', event);
+                log('[Analytics Debug] Livewire component loaded:', event);
                 clearLoadingTimeout();
             });
 
             document.addEventListener('livewire:update', (event) => {
-                console.log('[Analytics Debug] Livewire component updated:', event);
+                log('[Analytics Debug] Livewire component updated:', event);
                 clearLoadingTimeout();
             });
 
             // Fallback timeout that runs independent of Livewire events
             let fallbackTimeout = setTimeout(() => {
-                console.log('[Analytics Debug] Fallback timeout triggered after 20 seconds');
+                log('[Analytics Debug] Fallback timeout triggered after 20 seconds');
                 const loadingOverlay = document.getElementById('loadingOverlay');
                 const errorState = document.getElementById('errorState');
 
                 if (loadingOverlay && loadingOverlay.offsetParent !== null) {
-                    console.log('[Analytics Debug] Fallback: Forcing overlay hide');
+                    log('[Analytics Debug] Fallback: Forcing overlay hide');
                     loadingOverlay.style.display = 'none';
                     loadingOverlay.classList.add('d-none');
 
@@ -1390,7 +1390,7 @@
 
             // Reinitialize charts when analytics are updated - FORCE chart refresh for new data
             Livewire.on('analytics-updated', (data) => {
-                console.log('[Analytics Debug] Analytics updated event received - FORCING chart refresh:',
+                log('[Analytics Debug] Analytics updated event received - FORCING chart refresh:',
                     data);
                 clearLoadingTimeout();
                 setTimeout(() => {
@@ -1400,11 +1400,11 @@
 
             // Handle tab changes - ENSURE DATA AVAILABILITY and preserve charts
             Livewire.on('tab-changed', (event) => {
-                console.log('[Analytics Debug] Tab changed event received:', event);
+                log('[Analytics Debug] Tab changed event received:', event);
                 clearLoadingTimeout();
 
                 const tab = event[0]?.tab || event.tab;
-                console.log('[Analytics Debug] Switching to tab:', tab);
+                log('[Analytics Debug] Switching to tab:', tab);
 
                 if (tab === 'overview') {
                     // Initialize overview charts after small delay to ensure DOM is ready
@@ -1413,14 +1413,14 @@
                     }, 100);
                 } else if (tab === 'mortality') {
                     // Initialize advanced mortality chart for mortality tab
-                    console.log('[Analytics Debug] Mortality tab detected, initializing advanced chart');
+                    log('[Analytics Debug] Mortality tab detected, initializing advanced chart');
                     initializeMortalityChartOnTabChange();
                 }
             });
 
             // Enhanced data refreshed event with livestock filter support
             Livewire.on('data-refreshed', (event) => {
-                console.log('[Analytics Debug] Data refreshed event received - ENHANCED FOR LIVESTOCK:', event);
+                log('[Analytics Debug] Data refreshed event received - ENHANCED FOR LIVESTOCK:', event);
                 clearLoadingTimeout();
 
                 // Check for livestock filter specific changes
@@ -1428,7 +1428,7 @@
                 const isLivestockChange = trigger === 'livestock_filter_change';
                 const livestockId = event?.livestock_id;
 
-                console.log('[Analytics Debug] Data refresh analysis:', {
+                log('[Analytics Debug] Data refresh analysis:', {
                     trigger: trigger,
                     isLivestockChange: isLivestockChange,
                     livestock_id: livestockId,
@@ -1438,23 +1438,23 @@
                 // Get current active tab
                 const activeTab = document.querySelector('.nav-link.active')?.getAttribute(
                     'wire:click.prevent');
-                console.log('[Analytics Debug] Current active tab for refresh:', activeTab);
+                log('[Analytics Debug] Current active tab for refresh:', activeTab);
 
                 if (activeTab && activeTab.includes('overview')) {
-                    console.log('[Analytics Debug] Overview tab - forcing chart refresh for livestock change');
+                    log('[Analytics Debug] Overview tab - forcing chart refresh for livestock change');
                     setTimeout(() => {
                         initializeCharts(true);
                     }, isLivestockChange ? 50 : 100); // Faster for livestock changes
                 } else if (activeTab && activeTab.includes('mortality')) {
-                    console.log('[Analytics Debug] Mortality tab - reinitializing chart for livestock change');
+                    log('[Analytics Debug] Mortality tab - reinitializing chart for livestock change');
                     
                     // For livestock changes, force complete reinitialization
                     if (isLivestockChange) {
-                        console.log('[Analytics Debug] Livestock filter change detected - FORCE CHART REFRESH');
+                        log('[Analytics Debug] Livestock filter change detected - FORCE CHART REFRESH');
                         setTimeout(() => {
                             // Destroy existing chart first
                             if (window.advancedMortalityChart) {
-                                console.log('[Analytics Debug] Destroying existing mortality chart for livestock change');
+                                log('[Analytics Debug] Destroying existing mortality chart for livestock change');
                                 window.advancedMortalityChart.destroy();
                                 window.advancedMortalityChart = null;
                             }
@@ -1467,12 +1467,12 @@
                     }
                 }
 
-                console.log('[Analytics Debug] Data refresh handling completed for:', trigger);
+                log('[Analytics Debug] Data refresh handling completed for:', trigger);
             });
 
             // Handle analytics errors
             Livewire.on('analytics-error', (event) => {
-                console.log('[Analytics Debug] Analytics error event received:', event);
+                log('[Analytics Debug] Analytics error event received:', event);
                 clearLoadingTimeout();
                 if (typeof toastr !== 'undefined') {
                     toastr.error(event.message || 'Failed to load analytics data');
@@ -1483,7 +1483,7 @@
 
             // Show notifications
             Livewire.on('alert-resolved', (event) => {
-                console.log('[Analytics Debug] Alert resolved event:', event);
+                log('[Analytics Debug] Alert resolved event:', event);
                 if (typeof toastr !== 'undefined') {
                     if (event.type === 'success') {
                         toastr.success(event.message);
@@ -1494,7 +1494,7 @@
             });
 
             Livewire.on('calculation-complete', (event) => {
-                console.log('[Analytics Debug] Calculation complete event:', event);
+                log('[Analytics Debug] Calculation complete event:', event);
                 if (typeof toastr !== 'undefined') {
                     if (event.type === 'success') {
                         toastr.success(event.message);
@@ -1509,7 +1509,7 @@
                 const loadingOverlay = document.getElementById('loadingOverlay');
                 const errorState = document.getElementById('errorState');
 
-                console.log('[Analytics Debug] Manual debug check:', {
+                log('[Analytics Debug] Manual debug check:', {
                     loadingOverlay: loadingOverlay,
                     overlayVisible: loadingOverlay ? loadingOverlay.offsetParent !== null : false,
                     overlayDisplay: loadingOverlay ? loadingOverlay.style.display : null,
@@ -1530,20 +1530,20 @@
             };
 
             window.forceHideLoading = function() {
-                console.log('[Analytics Debug] Force hiding loading overlay');
+                log('[Analytics Debug] Force hiding loading overlay');
                 const loadingOverlay = document.getElementById('loadingOverlay');
                 const errorState = document.getElementById('errorState');
 
                 if (loadingOverlay) {
                     loadingOverlay.style.display = 'none';
                     loadingOverlay.classList.add('d-none');
-                    console.log('[Analytics Debug] Loading overlay forcefully hidden');
+                    log('[Analytics Debug] Loading overlay forcefully hidden');
                 }
 
                 if (errorState) {
                     errorState.classList.remove('d-none');
                     errorState.style.display = 'block';
-                    console.log('[Analytics Debug] Error state shown');
+                    log('[Analytics Debug] Error state shown');
                 }
 
                 clearTimeout(loadingTimeout);
@@ -1558,7 +1558,7 @@
             document.addEventListener('DOMContentLoaded', function() {
                 // Use more specific selector to target our exact tab links
                 const tabLinks = document.querySelectorAll('a[wire\\:click\\.prevent*="setActiveTab"]');
-                console.log('[Analytics Debug] Setting up comprehensive tab click listeners for', tabLinks
+                log('[Analytics Debug] Setting up comprehensive tab click listeners for', tabLinks
                     .length, 'tabs');
 
                 tabLinks.forEach((link, index) => {
@@ -1566,7 +1566,7 @@
                     link.setAttribute('data-tab-link', 'true');
 
                     link.addEventListener('click', function(e) {
-                        console.log(
+                        log(
                             `[Analytics Debug] Tab click #${index} detected - COMPREHENSIVE PREVENTION`
                             );
 
@@ -1581,7 +1581,7 @@
                             loadingOverlay.style.visibility = 'hidden';
                             loadingOverlay.style.opacity = '0';
                             loadingOverlay.style.zIndex = '-1';
-                            console.log(
+                            log(
                                 '[Analytics Debug] Tab click: Loading overlay completely hidden'
                                 );
                         }
@@ -1605,7 +1605,7 @@
 
                     // Pre-emptive prevention on mousedown
                     link.addEventListener('mousedown', function(e) {
-                        console.log(
+                        log(
                             `[Analytics Debug] Tab mousedown #${index} - PRE-EMPTIVE prevention`
                             );
                         clearLoadingTimeout();
@@ -1622,7 +1622,7 @@
 
                     // Additional prevention on focus
                     link.addEventListener('focus', function(e) {
-                        console.log(
+                        log(
                             `[Analytics Debug] Tab focus #${index} - FOCUS prevention`);
                         clearLoadingTimeout();
                     });
@@ -1631,7 +1631,7 @@
 
             // Force clear loading event - Additional safety layer
             Livewire.on('force-clear-loading', () => {
-                console.log('[Analytics Debug] Force clear loading event received - IMMEDIATE ACTION');
+                log('[Analytics Debug] Force clear loading event received - IMMEDIATE ACTION');
                 clearLoadingTimeout();
 
                 // Aggressive overlay clearing
@@ -1642,35 +1642,35 @@
                     loadingOverlay.style.visibility = 'hidden';
                     loadingOverlay.style.opacity = '0';
                     loadingOverlay.style.zIndex = '-1';
-                    console.log('[Analytics Debug] Force clear: Loading overlay aggressively hidden');
+                    log('[Analytics Debug] Force clear: Loading overlay aggressively hidden');
                 }
             });
 
-            console.log('[Analytics Debug] All event listeners registered');
+            log('[Analytics Debug] All event listeners registered');
         });
 
         // Initialize advanced mortality chart with comprehensive logging
         function initializeAdvancedMortalityChart() {
-            console.log('[Mortality Chart Debug] ========== INITIALIZATION START ==========');
-            console.log('[Mortality Chart Debug] Starting advanced mortality chart initialization');
+            log('[Mortality Chart Debug] ========== INITIALIZATION START ==========');
+            log('[Mortality Chart Debug] Starting advanced mortality chart initialization');
 
             // Check if we're on the mortality tab
             const mortalityTab = document.querySelector('.nav-link[wire\\:click\\.prevent*="mortality"]');
             const isActive = mortalityTab?.classList.contains('active');
-            console.log('[Mortality Chart Debug] Mortality tab active:', isActive);
+            log('[Mortality Chart Debug] Mortality tab active:', isActive);
 
             if (!isActive) {
-                console.log('[Mortality Chart Debug] Not on mortality tab, skipping initialization');
+                log('[Mortality Chart Debug] Not on mortality tab, skipping initialization');
                 return;
             }
 
             // Try to use fresh data first, fallback to Blade data
             let chartData;
             if (window.currentMortalityChartData) {
-                console.log('[Mortality Chart Debug] Using fresh data from server');
+                log('[Mortality Chart Debug] Using fresh data from server');
                 chartData = window.currentMortalityChartData;
             } else {
-                console.log('[Mortality Chart Debug] Using Blade template data as fallback');
+                log('[Mortality Chart Debug] Using Blade template data as fallback');
                 chartData = @json($this->getMortalityChartData());
             }
 
@@ -1680,20 +1680,20 @@
 
         // NEW: Initialize mortality chart with specific data (fresh from server or Blade)
         function initializeAdvancedMortalityChartWithData(chartData) {
-            // console.log(chartData);
-            console.log('[Mortality Chart Debug] ========== CHART WITH DATA INITIALIZATION START ==========');
-            console.log('[Mortality Chart Debug] Starting chart initialization with provided data');
+            // log(chartData);
+            log('[Mortality Chart Debug] ========== CHART WITH DATA INITIALIZATION START ==========');
+            log('[Mortality Chart Debug] Starting chart initialization with provided data');
 
             // Check Chart.js availability
             if (typeof Chart === 'undefined') {
                 console.error('[Mortality Chart Debug] ❌ Chart.js not loaded!');
                 setTimeout(() => {
-                    console.log('[Mortality Chart Debug] Retrying chart initialization in 1 second...');
+                    log('[Mortality Chart Debug] Retrying chart initialization in 1 second...');
                     initializeAdvancedMortalityChartWithData(chartData);
                 }, 1000);
                 return;
             }
-            console.log('[Mortality Chart Debug] ✅ Chart.js available, version:', Chart.version);
+            log('[Mortality Chart Debug] ✅ Chart.js available, version:', Chart.version);
 
             // Check all required elements
             const elements = checkMortalityChartElements();
@@ -1708,7 +1708,7 @@
 
             // Check if canvas is visible and has dimensions
             const canvasRect = elements.canvas.getBoundingClientRect();
-            console.log('[Mortality Chart Debug] Canvas dimensions:', {
+            log('[Mortality Chart Debug] Canvas dimensions:', {
                 width: canvasRect.width,
                 height: canvasRect.height,
                 visible: canvasRect.width > 0 && canvasRect.height > 0
@@ -1728,7 +1728,7 @@
             }
 
             try {
-                console.log('[Mortality Chart Debug] Using provided chart data:', chartData);
+                log('[Mortality Chart Debug] Using provided chart data:', chartData);
 
                 // Detailed data validation
                 const dataValidation = {
@@ -1740,18 +1740,18 @@
                     chartType: chartData?.type,
                     hasOptions: !!chartData?.options
                 };
-                console.log('[Mortality Chart Debug] Data validation:', dataValidation);
+                log('[Mortality Chart Debug] Data validation:', dataValidation);
 
                 // Check if we have data
                 if (!chartData || !chartData.labels || chartData.labels.length === 0) {
                     console.warn('[Mortality Chart Debug] ⚠️ No data available for chart');
                     if (elements.container) {
                         elements.container.style.display = 'none';
-                        console.log('[Mortality Chart Debug] Chart container hidden');
+                        log('[Mortality Chart Debug] Chart container hidden');
                     }
                     if (elements.noData) {
                         elements.noData.classList.remove('d-none');
-                        console.log('[Mortality Chart Debug] No data message shown');
+                        log('[Mortality Chart Debug] No data message shown');
                     }
                     return;
                 }
@@ -1759,25 +1759,25 @@
                 // Show chart container and hide no data message
                 if (elements.container) {
                     elements.container.style.display = 'block';
-                    console.log('[Mortality Chart Debug] Chart container shown');
+                    log('[Mortality Chart Debug] Chart container shown');
                 }
                 if (elements.noData) {
                     elements.noData.classList.add('d-none');
-                    console.log('[Mortality Chart Debug] No data message hidden');
+                    log('[Mortality Chart Debug] No data message hidden');
                 }
 
                 // Destroy existing chart safely
                 if (window.advancedMortalityChart && typeof window.advancedMortalityChart.destroy === 'function') {
-                    console.log('[Mortality Chart Debug] Destroying existing chart');
+                    log('[Mortality Chart Debug] Destroying existing chart');
                     window.advancedMortalityChart.destroy();
                     window.advancedMortalityChart = null;
-                    console.log('[Mortality Chart Debug] ✅ Existing chart destroyed');
+                    log('[Mortality Chart Debug] ✅ Existing chart destroyed');
                 }
 
                 // Update chart title
                 if (elements.title && chartData.title) {
                     elements.title.textContent = chartData.title;
-                    console.log('[Mortality Chart Debug] Chart title updated:', chartData.title);
+                    log('[Mortality Chart Debug] Chart title updated:', chartData.title);
                 }
 
                 // Prepare chart configuration with modern styling
@@ -1895,7 +1895,7 @@
                     }
                 };
 
-                console.log('[Mortality Chart Debug] Chart configuration prepared:', {
+                log('[Mortality Chart Debug] Chart configuration prepared:', {
                     type: chartConfig.type,
                     labelsCount: chartConfig.data.labels.length,
                     datasetsCount: chartConfig.data.datasets.length,
@@ -1903,21 +1903,21 @@
                 });
 
                 // Create chart context
-                console.log('[Mortality Chart Debug] Creating chart context...');
+                log('[Mortality Chart Debug] Creating chart context...');
                 const ctx = elements.canvas.getContext('2d');
 
                 if (!ctx) {
                     console.error('[Mortality Chart Debug] ❌ Failed to get 2D context from canvas');
                     return;
                 }
-                console.log('[Mortality Chart Debug] ✅ Chart context created');
+                log('[Mortality Chart Debug] ✅ Chart context created');
 
                 // Create the chart
-                console.log('[Mortality Chart Debug] Creating Chart.js instance...');
+                log('[Mortality Chart Debug] Creating Chart.js instance...');
                 window.advancedMortalityChart = new Chart(ctx, chartConfig);
 
-                console.log('[Mortality Chart Debug] ✅ Chart created successfully!');
-                console.log('[Mortality Chart Debug] Chart instance:', {
+                log('[Mortality Chart Debug] ✅ Chart created successfully!');
+                log('[Mortality Chart Debug] Chart instance:', {
                     id: window.advancedMortalityChart.id,
                     type: window.advancedMortalityChart.config.type,
                     canvas: window.advancedMortalityChart.canvas.id,
@@ -1935,7 +1935,7 @@
                         try {
                             window.advancedMortalityChart.update('none');
                             window.advancedMortalityChart.render();
-                            console.log('[Mortality Chart Debug] ✅ Chart forced update and render completed');
+                            log('[Mortality Chart Debug] ✅ Chart forced update and render completed');
                         } catch (renderError) {
                             console.error('[Mortality Chart Debug] ❌ Error during chart render:', renderError);
                         }
@@ -1949,11 +1949,11 @@
                 // Show no data state on error
                 if (elements.container) {
                     elements.container.style.display = 'none';
-                    console.log('[Mortality Chart Debug] Chart container hidden due to error');
+                    log('[Mortality Chart Debug] Chart container hidden due to error');
                 }
                 if (elements.noData) {
                     elements.noData.classList.remove('d-none');
-                    console.log('[Mortality Chart Debug] No data message shown due to error');
+                    log('[Mortality Chart Debug] No data message shown due to error');
 
                     // Add error message to no data div
                     const errorMsg = elements.noData.querySelector('.text-center h5');
@@ -1963,7 +1963,7 @@
                 }
             }
 
-            console.log('[Mortality Chart Debug] ========== CHART WITH DATA INITIALIZATION END ==========');
+            log('[Mortality Chart Debug] ========== CHART WITH DATA INITIALIZATION END ==========');
         }
 
         // Check required DOM elements for mortality chart
@@ -1976,7 +1976,7 @@
                 selector: document.getElementById('mortalityChartType')
             };
 
-            console.log('[Mortality Chart Debug] Required elements check:', {
+            log('[Mortality Chart Debug] Required elements check:', {
                 canvas: !!elements.canvas,
                 container: !!elements.container,
                 noData: !!elements.noData,
@@ -1989,7 +1989,7 @@
 
         // Enhanced chart type selector handler with logging
         function handleMortalityChartTypeChange() {
-            console.log('[Mortality Chart Debug] Setting up chart type selector handler');
+            log('[Mortality Chart Debug] Setting up chart type selector handler');
 
             const selector = document.getElementById('mortalityChartType');
             if (!selector) {
@@ -1997,21 +1997,21 @@
                 return;
             }
 
-            console.log('[Mortality Chart Debug] Chart type selector found, adding event listener');
+            log('[Mortality Chart Debug] Chart type selector found, adding event listener');
             selector.addEventListener('change', function(e) {
                 const selectedType = e.target.value;
-                console.log('[Mortality Chart Debug] Chart type changed to:', selectedType);
+                log('[Mortality Chart Debug] Chart type changed to:', selectedType);
 
                 if (selectedType === 'auto') {
-                    console.log('[Mortality Chart Debug] Auto type selected, reinitializing chart');
+                    log('[Mortality Chart Debug] Auto type selected, reinitializing chart');
                     initializeAdvancedMortalityChart();
                 } else {
-                    console.log('[Mortality Chart Debug] Manual type selected:', selectedType);
+                    log('[Mortality Chart Debug] Manual type selected:', selectedType);
                     if (advancedMortalityChart && advancedMortalityChart.config) {
-                        console.log('[Mortality Chart Debug] Updating existing chart type');
+                        log('[Mortality Chart Debug] Updating existing chart type');
                         advancedMortalityChart.config.type = selectedType;
                         advancedMortalityChart.update();
-                        console.log('[Mortality Chart Debug] ✅ Chart type updated successfully');
+                        log('[Mortality Chart Debug] ✅ Chart type updated successfully');
                     } else {
                         console.warn('[Mortality Chart Debug] No existing chart to update, initializing new one');
                         initializeAdvancedMortalityChart();
@@ -2019,25 +2019,25 @@
                 }
             });
 
-            console.log('[Mortality Chart Debug] ✅ Chart type selector handler registered');
+            log('[Mortality Chart Debug] ✅ Chart type selector handler registered');
         }
 
         // Enhanced mortality chart initialization on tab change
         function initializeMortalityChartOnTabChange() {
-            console.log('[Mortality Chart Debug] Initializing mortality chart for tab change');
+            log('[Mortality Chart Debug] Initializing mortality chart for tab change');
 
             // Small delay to ensure DOM is ready
             setTimeout(() => {
-                console.log('[Mortality Chart Debug] Delayed initialization starting');
+                log('[Mortality Chart Debug] Delayed initialization starting');
                 initializeAdvancedMortalityChart();
                 handleMortalityChartTypeChange();
-                console.log('[Mortality Chart Debug] Delayed initialization completed');
+                log('[Mortality Chart Debug] Delayed initialization completed');
             }, 200);
         }
 
         // Enhanced debug helper function
         function debugMortalityChartState() {
-            console.log('[Mortality Chart Debug] ========== CHART STATE DEBUG ==========');
+            log('[Mortality Chart Debug] ========== CHART STATE DEBUG ==========');
 
             const debugInfo = {
                 chartJs: {
@@ -2062,7 +2062,7 @@
                 }
             };
 
-            console.log('[Mortality Chart Debug] Debug info:', debugInfo);
+            log('[Mortality Chart Debug] Debug info:', debugInfo);
 
             // Show debug info in UI
             const debugPanel = document.getElementById('mortalityChartDebug');
@@ -2097,27 +2097,27 @@
                         }
                     });
                     testChart.destroy();
-                    console.log('[Mortality Chart Debug] ✅ Chart.js test successful');
+                    log('[Mortality Chart Debug] ✅ Chart.js test successful');
                 } catch (error) {
                     console.error('[Mortality Chart Debug] ❌ Chart.js test failed:', error);
                 }
             }
 
-            console.log('[Mortality Chart Debug] ========================================');
+            log('[Mortality Chart Debug] ========================================');
         }
 
         // Force chart initialization with extensive logging
         function forceInitializeMortalityChart() {
-            console.log('[Mortality Chart Debug] FORCE INITIALIZATION REQUESTED');
+            log('[Mortality Chart Debug] FORCE INITIALIZATION REQUESTED');
 
             // Wait for a moment to ensure DOM is ready
             setTimeout(() => {
-                console.log('[Mortality Chart Debug] Starting forced initialization');
+                log('[Mortality Chart Debug] Starting forced initialization');
 
                 // Ensure we're on mortality tab
                 const mortalityTab = document.querySelector('.nav-link[wire\\:click\\.prevent*="mortality"]');
                 if (mortalityTab && !mortalityTab.classList.contains('active')) {
-                    console.log('[Mortality Chart Debug] Switching to mortality tab first');
+                    log('[Mortality Chart Debug] Switching to mortality tab first');
                     mortalityTab.click();
 
                     // Wait for tab switch then initialize
@@ -2132,7 +2132,7 @@
 
         // Test Chart.js loading
         function testChartJsLoading() {
-            console.log('[Mortality Chart Debug] Testing Chart.js loading...');
+            log('[Mortality Chart Debug] Testing Chart.js loading...');
 
             if (typeof Chart === 'undefined') {
                 console.warn('[Mortality Chart Debug] Chart.js not found, attempting to load...');
@@ -2141,7 +2141,7 @@
                 const script = document.createElement('script');
                 script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
                 script.onload = function() {
-                    console.log('[Mortality Chart Debug] Chart.js loaded successfully');
+                    log('[Mortality Chart Debug] Chart.js loaded successfully');
                     setTimeout(() => {
                         initializeAdvancedMortalityChart();
                     }, 100);
@@ -2151,7 +2151,7 @@
                 };
                 document.head.appendChild(script);
             } else {
-                console.log('[Mortality Chart Debug] Chart.js already available');
+                log('[Mortality Chart Debug] Chart.js already available');
                 initializeAdvancedMortalityChart();
             }
         }
@@ -2163,14 +2163,14 @@
         
         // NEW: Manual refresh chart data function
         window.refreshMortalityChartData = function() {
-            console.log('[Mortality Chart Debug] Manual refresh chart data requested');
+            log('[Mortality Chart Debug] Manual refresh chart data requested');
             
             if (typeof Livewire !== 'undefined') {
-                console.log('[Mortality Chart Debug] Calling Livewire refreshMortalityChartData method');
+                log('[Mortality Chart Debug] Calling Livewire refreshMortalityChartData method');
                 
                 // Use wire:click equivalent for programmatic call
                 @this.call('refreshMortalityChartData').then(() => {
-                    console.log('[Mortality Chart Debug] Livewire refresh method completed');
+                    log('[Mortality Chart Debug] Livewire refresh method completed');
                     if (typeof toastr !== 'undefined') {
                         toastr.success('Chart data refreshed');
                     }
@@ -2190,14 +2190,14 @@
 
         // Initial chart initialization on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[Analytics Debug] DOM Content Loaded - checking initial tab');
+            log('[Analytics Debug] DOM Content Loaded - checking initial tab');
 
             // Check if mortality tab is initially active
             setTimeout(() => {
                 const mortalityTab = document.querySelector(
                     '.nav-link[wire\\:click\\.prevent*="mortality"]');
                 if (mortalityTab && mortalityTab.classList.contains('active')) {
-                    console.log('[Analytics Debug] Mortality tab initially active, initializing chart');
+                    log('[Analytics Debug] Mortality tab initially active, initializing chart');
                     testChartJsLoading(); // Use comprehensive test instead
                 }
             }, 1000); // Increased delay to ensure all resources loaded
@@ -2205,12 +2205,12 @@
 
         // Add window load event as backup
         window.addEventListener('load', function() {
-            console.log('[Analytics Debug] Window fully loaded');
+            log('[Analytics Debug] Window fully loaded');
             setTimeout(() => {
                 const mortalityTab = document.querySelector(
                     '.nav-link[wire\\:click\\.prevent*="mortality"]');
                 if (mortalityTab && mortalityTab.classList.contains('active')) {
-                    console.log('[Analytics Debug] Window load: Mortality tab active, initializing chart');
+                    log('[Analytics Debug] Window load: Mortality tab active, initializing chart');
                     testChartJsLoading();
                 }
             }, 500);
@@ -2220,7 +2220,7 @@
         document.addEventListener('click', function(e) {
             const tabLink = e.target.closest('.nav-link[wire\\:click\\.prevent*="mortality"]');
             if (tabLink) {
-                console.log('[Analytics Debug] Manual mortality tab click detected');
+                log('[Analytics Debug] Manual mortality tab click detected');
                 setTimeout(() => {
                     testChartJsLoading(); // Use comprehensive test
                 }, 300);
@@ -2231,37 +2231,37 @@
 
         // Enhanced chart type selector handler (remove old method and use Livewire instead)
         function handleMortalityChartTypeChange() {
-            console.log('[Mortality Chart Debug] Chart type handler setup - using Livewire model binding');
+            log('[Mortality Chart Debug] Chart type handler setup - using Livewire model binding');
             // No need for manual event listeners since we're using wire:model.live
         }
 
         // Override the old chart type change handler to use Livewire
         function handleChartTypeChange(newType) {
-            console.log('[Mortality Chart Debug] Chart type changed via JavaScript to:', newType);
+            log('[Mortality Chart Debug] Chart type changed via JavaScript to:', newType);
 
             if (window.advancedMortalityChart && window.advancedMortalityChart.config) {
-                console.log('[Mortality Chart Debug] Updating existing chart type from', window.advancedMortalityChart
+                log('[Mortality Chart Debug] Updating existing chart type from', window.advancedMortalityChart
                     .config.type, 'to', newType);
 
                 // Only update if the type is different
                 if (window.advancedMortalityChart.config.type !== newType) {
                     try {
                         // For Chart.js, we need to destroy and recreate for type changes
-                        console.log('[Mortality Chart Debug] Recreating chart with new type');
+                        log('[Mortality Chart Debug] Recreating chart with new type');
                         initializeAdvancedMortalityChart();
                     } catch (error) {
                         console.error('[Mortality Chart Debug] Error updating chart type:', error);
                     }
                 }
             } else {
-                console.log('[Mortality Chart Debug] No existing chart, initializing new one');
+                log('[Mortality Chart Debug] No existing chart, initializing new one');
                 initializeAdvancedMortalityChart();
             }
         }
 
         // Global debug functions (enhanced)
         window.debugMortalityChart = function() {
-            console.log('[Mortality Chart Debug] ========== ENHANCED CHART STATE DEBUG ==========');
+            log('[Mortality Chart Debug] ========== ENHANCED CHART STATE DEBUG ==========');
 
             const debugInfo = {
                 chartJs: {
@@ -2291,7 +2291,7 @@
                 }
             };
 
-            console.log('[Mortality Chart Debug] Enhanced debug info:', debugInfo);
+            log('[Mortality Chart Debug] Enhanced debug info:', debugInfo);
 
             // Show debug info in UI
             const debugPanel = document.getElementById('mortalityChartDebug');
@@ -2329,7 +2329,7 @@
                         }
                     });
                     testChart.destroy();
-                    console.log('[Mortality Chart Debug] ✅ Chart.js functionality test successful');
+                    log('[Mortality Chart Debug] ✅ Chart.js functionality test successful');
                 } catch (error) {
                     console.error('[Mortality Chart Debug] ❌ Chart.js functionality test failed:', error);
                 }
@@ -2339,16 +2339,16 @@
         };
 
         window.forceInitializeMortalityChart = function() {
-            console.log('[Mortality Chart Debug] FORCE INITIALIZATION REQUESTED');
+            log('[Mortality Chart Debug] FORCE INITIALIZATION REQUESTED');
 
             // Wait for a moment to ensure DOM is ready
             setTimeout(() => {
-                console.log('[Mortality Chart Debug] Starting forced initialization');
+                log('[Mortality Chart Debug] Starting forced initialization');
 
                 // Ensure we're on mortality tab
                 const mortalityTab = document.querySelector('.nav-link[wire\\:click\\.prevent*="mortality"]');
                 if (mortalityTab && !mortalityTab.classList.contains('active')) {
-                    console.log('[Mortality Chart Debug] Switching to mortality tab first');
+                    log('[Mortality Chart Debug] Switching to mortality tab first');
                     mortalityTab.click();
 
                     // Wait for tab switch then initialize
@@ -2406,7 +2406,7 @@
                 }
             }
             
-            console.log('[Mortality Stats] Updated statistics:', {
+            log('[Mortality Stats] Updated statistics:', {
                 totalDeaths,
                 activeSources,
                 avgDeaths,
@@ -2424,7 +2424,7 @@
                 selector: document.getElementById('mortalityChartType')
             };
 
-            console.log('[Mortality Chart Debug] Required elements check:', {
+            log('[Mortality Chart Debug] Required elements check:', {
                 canvas: !!elements.canvas,
                 container: !!elements.container,
                 noData: !!elements.noData,
@@ -2439,7 +2439,7 @@
 
 
 
-        console.log('[Analytics Debug] Livewire initialized');
+        log('[Analytics Debug] Livewire initialized');
 </script>
 @endpush
 </rewritten_file>

@@ -26,6 +26,21 @@ return [
         'Volume' => 'Volume',
     ],
 
+    // Dipakai untuk menentukan role yang akan ditampilkan di dropdown role pada model CompanyRole
+    'company_roles' => [
+        'Administrator' => 'Administrator',
+        'Manager' => 'Manager',
+        'Supervisor' => 'Supervisor',
+        'Operator' => 'Operator',
+    ],
+
+    'company_role_descriptions' => [
+        'Administrator' => 'Administrator bertugas untuk mengelola master data, user, dan role',
+        'Manager' => 'Manager hanya bisa melihat semua jenis transaksi dan data yang ada',
+        'Supervisor' => 'Supervisor bertugas untuk melakukan verifikasi data pembelian, pemakaian supply, dan pembelian pakan, dan juga pencatatan harian ayam',
+        'Operator' => 'Operator bertugas untuk melakukan pencatatan harian ayam, pembelian pakan, dan pemakaian supply, dan pembelian ayam',
+    ],
+
     'menu' => [
         'General' => [
             'order' => 1,

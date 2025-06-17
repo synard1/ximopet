@@ -30,20 +30,20 @@ window.Echo = new Echo({
     },
 
     // Enable stats addons for debugging
-    enableStats: true,
-    logToConsole: true,
+    enableStats: !isProduction, // Only enable stats in non-production
+    logToConsole: !isProduction, // Only log to console in non-production
 });
 
 // Debug information
 if (window.Echo) {
-    console.log("✅ Laravel Echo initialized successfully");
-    console.log("📡 Broadcasting configuration:", {
+    log("✅ Laravel Echo initialized successfully");
+    log("📡 Broadcasting configuration:", {
         broadcaster: "pusher",
         cluster: process.env.MIX_PUSHER_APP_CLUSTER || "ap1",
         forceTLS: true,
     });
 } else {
-    console.error("❌ Laravel Echo failed to initialize");
+    console.error("❌ Laravel Echo failed to initialize"); // Keep error logging in all environments
 }
 
 // Export for use in other modules

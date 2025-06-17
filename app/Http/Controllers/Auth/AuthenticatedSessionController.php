@@ -11,6 +11,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Services\LoginLogService;
 use App\Models\User;
+use App\Models\CompanyUser;
+use Illuminate\Support\Facades\Session;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -35,41 +37,85 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request)
     {
+        // Ambil email dari request
+        $email = $request->get('email');
+        $userModel = \App\Models\User::where('email', $email)->first();
+
+        // Cek mapping company berdasarkan email
+        if ($userModel && !$userModel->hasRole('SuperAdmin')) {
+            try {
+                $companyMapping = \App\Models\CompanyUser::with('company')
+                    ->where('user_id', $userModel->id)
+                    ->where('status', 'active')
+                    ->first();
+
+                if (!$companyMapping) {
+                    \Illuminate\Support\Facades\Auth::logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+                    \Illuminate\Support\Facades\Session::flash('error', [
+                        'title' => 'Akses Ditolak',
+                        'message' => 'Akun Anda belum terdaftar di perusahaan manapun. Silakan hubungi administrator perusahaan Anda untuk mendapatkan akses.',
+                        'type' => 'error'
+                    ]);
+                    return redirect()->route('login');
+                }
+
+                if (!$companyMapping->company) {
+                    \Illuminate\Support\Facades\Auth::logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+                    \Illuminate\Support\Facades\Session::flash('error', [
+                        'title' => 'Akses Ditolak',
+                        'message' => 'Data perusahaan tidak ditemukan. Silakan hubungi administrator perusahaan Anda.',
+                        'type' => 'error'
+                    ]);
+                    return redirect()->route('login');
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                \Illuminate\Support\Facades\Session::flash('error', [
+                    'title' => 'Error Sistem',
+                    'message' => 'Terjadi kesalahan saat memverifikasi akses perusahaan. Silakan coba lagi.',
+                    'type' => 'error'
+                ]);
+                return redirect()->route('login');
+            }
+            // Cek status company
+            if ($companyMapping->company && $companyMapping->company->status !== 'active') {
+                \Illuminate\Support\Facades\Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                \Illuminate\Support\Facades\Session::flash('error', [
+                    'title' => 'Perusahaan Tidak Aktif',
+                    'message' => 'Perusahaan Anda saat ini tidak aktif. Silakan hubungi administrator untuk informasi lebih lanjut.',
+                    'type' => 'warning'
+                ]);
+                return redirect()->route('login');
+            }
+        }
+
+        // Jika mapping valid, lanjutkan autentikasi
         try {
             $request->authenticate();
-
-            $request->session()->regenerate();
-
             $user = $request->user();
-
-            // Update last login info
+            $request->session()->regenerate();
             $user->update([
-                'last_login_at' => Carbon::now()->toDateTimeString(),
-                'last_login_ip' => $request->getClientIp()
+                'last_login_at' => \Illuminate\Support\Carbon::now()->toDateTimeString(),
+                'last_login_ip' => $request->ip()
             ]);
-
-            // Log successful login
-            LoginLogService::log(
+            \App\Services\LoginLogService::log(
                 $user->id,
                 'success',
                 'form',
-                ['email' => $request->email]
+                ['email' => $request->get('email')]
             );
-
-            // Create Sanctum token
             $token = $user->createToken('auth_token')->plainTextToken;
             $request->session()->put('auth_token', $token);
-
-            return redirect()->intended(RouteServiceProvider::HOME);
+            return redirect()->intended(\App\Providers\RouteServiceProvider::HOME);
         } catch (\Exception $e) {
-            // Log failed login attempt
-            // LoginLogService::log(
-            //     null,
-            //     'failed',
-            //     'form',
-            //     ['email' => $request->email, 'error' => $e->getMessage()]
-            // );
-
             throw $e;
         }
     }

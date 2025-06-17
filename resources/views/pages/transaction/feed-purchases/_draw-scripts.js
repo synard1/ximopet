@@ -24,7 +24,7 @@ document
         element.addEventListener("change", function (e) {
             if (this.disabled) return;
             const purchaseId = this.getAttribute("data-kt-transaction-id");
-            console.log("Purchase ID: " + purchaseId);
+            log("Purchase ID: " + purchaseId);
             const status = this.value;
             const current = this.getAttribute("data-current");
 
@@ -37,7 +37,7 @@ document
                 $("#notesModal").modal("show");
                 this.value = current;
             } else {
-                console.log("Updating status to " + status);
+                log("Updating status to " + status);
                 Livewire.dispatch("updateStatusFeedPurchase", {
                     purchaseId: purchaseId,
                     status: status,
@@ -347,36 +347,32 @@ document
 // });
 
 // Feed Purchase DataTable Draw Scripts with Real-time Notifications
-console.log("[FeedPurchase DataTable] Initializing draw scripts...");
+log("[FeedPurchase DataTable] Initializing draw scripts...");
 
 // Feed Purchase Real-time Notification System
-console.log(
-    "[FeedPurchase DataTable] Initializing real-time notification system..."
-);
+log("[FeedPurchase DataTable] Initializing real-time notification system...");
 
 window.FeedPurchaseDataTableNotifications = {
     init: function () {
-        console.log(
-            "[FeedPurchase DataTable] Setting up notification handlers..."
-        );
+        log("[FeedPurchase DataTable] Setting up notification handlers...");
         this.setupRealtimePolling();
         this.setupBroadcastListeners();
         this.setupUIHandlers();
     },
 
     setupRealtimePolling: function () {
-        console.log(
+        log(
             "[FeedPurchase DataTable] Setting up real-time polling integration"
         );
 
         // Connect to production notification system if available
         if (typeof window.NotificationSystem !== "undefined") {
-            console.log(
+            log(
                 "[FeedPurchase DataTable] Production notification system found - integrating..."
             );
             this.integrateWithProductionBridge();
         } else {
-            console.log(
+            log(
                 "[FeedPurchase DataTable] Production notification system not found - setting up fallback"
             );
             this.setupFallbackPolling();
@@ -390,7 +386,7 @@ window.FeedPurchaseDataTableNotifications = {
             window.NotificationSystem.handleNotification;
 
         window.NotificationSystem.handleNotification = function (notification) {
-            console.log(
+            log(
                 "[FeedPurchase DataTable] Intercepted notification:",
                 notification
             );
@@ -420,14 +416,14 @@ window.FeedPurchaseDataTableNotifications = {
                     notification.message.toLowerCase().includes("status")) ||
                 (notification.data && notification.data.batch_id);
 
-            console.log("[FeedPurchase DataTable] Notification analysis:", {
+            log("[FeedPurchase DataTable] Notification analysis:", {
                 requiresRefresh: requiresRefresh,
                 isFeedPurchaseRelated: isFeedPurchaseRelated,
                 notificationData: notification.data,
             });
 
             if (isFeedPurchaseRelated && requiresRefresh) {
-                console.log(
+                log(
                     "[FeedPurchase DataTable] Auto-refreshing table due to feed purchase notification"
                 );
                 setTimeout(() => {
@@ -436,13 +432,13 @@ window.FeedPurchaseDataTableNotifications = {
             }
         };
 
-        console.log(
+        log(
             "[FeedPurchase DataTable] Successfully integrated with production notification bridge"
         );
     },
 
     setupFallbackPolling: function () {
-        console.log(
+        log(
             "[FeedPurchase DataTable] Setting up fallback polling every 30 seconds"
         );
 
@@ -450,7 +446,7 @@ window.FeedPurchaseDataTableNotifications = {
             // Check for any critical status changes
             const table = $("#feedPurchasing-table").DataTable();
             if (table && table.ajax) {
-                console.log("[FeedPurchase DataTable] Fallback refresh check");
+                log("[FeedPurchase DataTable] Fallback refresh check");
                 // Could implement change detection here
             }
         }, 30000);
@@ -458,15 +454,13 @@ window.FeedPurchaseDataTableNotifications = {
 
     setupBroadcastListeners: function () {
         if (typeof window.Echo !== "undefined") {
-            console.log(
-                "[FeedPurchase DataTable] Setting up Echo broadcast listeners"
-            );
+            log("[FeedPurchase DataTable] Setting up Echo broadcast listeners");
 
             // Listen to general feed purchase channel
             window.Echo.channel("feed-purchases").listen(
                 "status-changed",
                 (e) => {
-                    console.log(
+                    log(
                         "[FeedPurchase DataTable] Echo status change received:",
                         e
                     );
@@ -483,7 +477,7 @@ window.FeedPurchaseDataTableNotifications = {
                 window.Echo.private(
                     "App.Models.User." + window.Laravel.user.id
                 ).notification((notification) => {
-                    console.log(
+                    log(
                         "[FeedPurchase DataTable] User notification received:",
                         notification
                     );
@@ -491,7 +485,7 @@ window.FeedPurchaseDataTableNotifications = {
                 });
             }
         } else {
-            console.log(
+            log(
                 "[FeedPurchase DataTable] Laravel Echo not available - relying on bridge notifications"
             );
         }
@@ -500,7 +494,7 @@ window.FeedPurchaseDataTableNotifications = {
     setupUIHandlers: function () {
         // Handle refresh button clicks
         $(document).on("click", ".refresh-data-btn", function () {
-            console.log("[FeedPurchase DataTable] Manual refresh triggered");
+            log("[FeedPurchase DataTable] Manual refresh triggered");
             window.FeedPurchaseDataTableNotifications.refreshDataTable();
         });
 
@@ -516,7 +510,7 @@ window.FeedPurchaseDataTableNotifications = {
             const newStatus = $select.val();
             const currentStatus = $select.data("current");
 
-            console.log(
+            log(
                 "FeedPurchase status change initiated: " +
                     currentStatus +
                     " → " +
@@ -546,7 +540,7 @@ window.FeedPurchaseDataTableNotifications = {
 
     // Handle broadcast status changes
     handleStatusChange: function (event) {
-        console.log(
+        log(
             "[FeedPurchase DataTable] Processing broadcast status change:",
             event
         );
@@ -556,7 +550,7 @@ window.FeedPurchaseDataTableNotifications = {
 
         // Only auto-refresh data - notification handled by production system
         if (requiresRefresh) {
-            console.log(
+            log(
                 "[FeedPurchase DataTable] Auto-refreshing table for critical change"
             );
             this.refreshDataTable();
@@ -565,7 +559,7 @@ window.FeedPurchaseDataTableNotifications = {
 
     // Handle user-specific notifications
     handleUserNotification: function (notification) {
-        console.log(
+        log(
             "[FeedPurchase DataTable] Processing user notification:",
             notification
         );
@@ -576,7 +570,7 @@ window.FeedPurchaseDataTableNotifications = {
                 notification.action_required &&
                 notification.action_required.includes("refresh_data")
             ) {
-                console.log(
+                log(
                     "[FeedPurchase DataTable] Auto-refreshing table for user notification"
                 );
                 this.refreshDataTable();
@@ -589,7 +583,7 @@ window.FeedPurchaseDataTableNotifications = {
         try {
             const table = $("#feedPurchasing-table").DataTable();
             if (table && table.ajax) {
-                console.log("[FeedPurchase DataTable] Refreshing data...");
+                log("[FeedPurchase DataTable] Refreshing data...");
                 table.ajax.reload(null, false);
 
                 // Show refresh notification
@@ -599,7 +593,7 @@ window.FeedPurchaseDataTableNotifications = {
             console.error(
                 "[FeedPurchase DataTable] Error refreshing table:",
                 e
-            );
+            ); // Keep error logging in all environments
         }
     },
 
@@ -692,6 +686,6 @@ window.FeedPurchaseDataTableNotifications = {
 
 // Initialize FeedPurchase DataTable notifications
 window.FeedPurchaseDataTableNotifications.init();
-console.log(
+log(
     "[FeedPurchase DataTable] ✅ Feed Purchase DataTable real-time notifications initialized"
 );

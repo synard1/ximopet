@@ -42,6 +42,7 @@ use App\Http\Controllers\MasterData\PartnerController;
 use App\Http\Controllers\QaController;
 use App\Http\Livewire\AuditTrail;
 use App\Http\Controllers\PurchaseReportsController;
+use App\Http\Controllers\PageController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -257,6 +258,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Route::get('/transaction/documents', [TransaksiController::class, 'docIndex'])->name('documents.index');
 
         // Livestock Routes
+        Route::get('/livestock-mutation', [LivestockController::class, 'mutasi'])->name('livestock.mutation');
         Route::get('/transaction/livestock', [LivestockController::class, 'purchaseIndex'])->name('livestock.index');
         Route::get('/transaction/livestock-death', [TernakController::class, 'kematianTernakIndex'])->name('livestock-death.index');
 
@@ -415,6 +417,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Batch Worker Report
     Route::get('/reports/batch-worker', [ReportsController::class, 'indexBatchWorker'])->name('reports.batch-worker');
     Route::get('/reports/batch-worker/export', [ReportsController::class, 'exportBatchWorker'])->name('reports.batch-worker.export');
+
+    // Company Management
+    Route::get('/companies', [App\Http\Controllers\Pages\CompanyController::class, 'index'])->name('companies.index');
+    Route::get('/companies/data', [App\Http\Controllers\Pages\CompanyController::class, 'getData'])->name('companies.data');
+    Route::get('/company-user-mapping', [App\Http\Controllers\Pages\CompanyController::class, 'mappingIndex'])->name('companyuser.mapping');
+    Route::post('/companies/{company}', [App\Http\Controllers\Pages\CompanyController::class, 'update'])->name('companies.update');
 });
 
 // Error Routes

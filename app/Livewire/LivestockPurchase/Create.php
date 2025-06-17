@@ -42,7 +42,7 @@ use Illuminate\Support\Facades\Http;
 
 class Create extends Component
 {
-    use WithFileUploads, HasTempAuthorization, HasValidation;
+    use WithFileUploads, HasTempAuthorization;
 
     public $livestockId;
     public $invoice_number;

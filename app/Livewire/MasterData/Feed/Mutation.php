@@ -86,7 +86,11 @@ class Mutation extends Component
 
     public function mount()
     {
-        $this->dstLivestocks = Livestock::all();
+        $this->dstLivestocks = Livestock::when(auth()->user()->hasRole('Operator'), function ($query) {
+            $query->whereHas('farm.farmOperators', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        })->get();
         $this->livestocks = Livestock::whereIn('id', function ($query) {
             $query->select('livestock_id')
                 ->from('current_supplies')
@@ -94,6 +98,11 @@ class Mutation extends Component
                 ->where('quantity', '>', 0)
                 ->groupBy('livestock_id');
         })
+            ->when(auth()->user()->hasRole('Operator'), function ($query) {
+                $query->whereHas('farm.farmOperators', function ($q) {
+                    $q->where('user_id', auth()->id());
+                });
+            })
             ->with('farm') // Jika ingin akses farm->name di blade
             ->get();
 

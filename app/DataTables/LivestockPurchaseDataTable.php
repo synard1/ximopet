@@ -176,7 +176,7 @@ class LivestockPurchaseDataTable extends DataTable
                     // ✅ PRODUCTION REAL-TIME NOTIFICATION SYSTEM INTEGRATION
                     window.LivestockPurchaseDataTableNotifications = window.LivestockPurchaseDataTableNotifications || {
                         init: function() {
-                            console.log("[DataTable] Initializing real-time notifications for Livestock Purchase DataTable");
+                            log("[DataTable] Initializing real-time notifications for Livestock Purchase DataTable");
                             this.setupRealtimePolling();
                             this.setupUIHandlers();
                             this.setupBroadcastListeners();
@@ -184,16 +184,16 @@ class LivestockPurchaseDataTable extends DataTable
                         
                         // Real-time polling integration with production notification bridge
                         setupRealtimePolling: function() {
-                            console.log("[DataTable] Setting up real-time polling integration");
+                            log("[DataTable] Setting up real-time polling integration");
                             
                             // Connect to production notification system if available
                             if (typeof window.NotificationSystem !== "undefined") {
-                                console.log("[DataTable] Production notification system found - integrating...");
+                                log("[DataTable] Production notification system found - integrating...");
                                 
                                 // Hook into the notification system polling
                                 this.integrateWithProductionBridge();
                             } else {
-                                console.log("[DataTable] Production notification system not found - setting up fallback");
+                                log("[DataTable] Production notification system not found - setting up fallback");
                                 this.setupFallbackPolling();
                             }
                         },
@@ -204,7 +204,7 @@ class LivestockPurchaseDataTable extends DataTable
                             const originalHandleNotification = window.NotificationSystem.handleNotification;
                             
                             window.NotificationSystem.handleNotification = function(notification) {
-                                console.log("[DataTable] Intercepted notification:", notification);
+                                log("[DataTable] Intercepted notification:", notification);
                                 
                                 // Call original notification handler
                                 originalHandleNotification.call(this, notification);
@@ -224,26 +224,26 @@ class LivestockPurchaseDataTable extends DataTable
                                     (notification.data && notification.data.batch_id)
                                 );
                                 
-                                console.log("[DataTable] Notification analysis:", {
+                                log("[DataTable] Notification analysis:", {
                                     requiresRefresh: requiresRefresh,
                                     isLivestockPurchaseRelated: isLivestockPurchaseRelated,
                                     notificationData: notification.data
                                 });
                                 
                                 if (isLivestockPurchaseRelated && requiresRefresh) {
-                                    console.log("[DataTable] Auto-refreshing table due to livestock purchase notification");
+                                    log("[DataTable] Auto-refreshing table due to livestock purchase notification");
                                     setTimeout(() => {
                                         window.LivestockPurchaseDataTableNotifications.refreshDataTable();
                                     }, 500); // Small delay to ensure notification is processed first
                                 }
                             };
                             
-                            console.log("[DataTable] Successfully integrated with production notification bridge");
+                            log("[DataTable] Successfully integrated with production notification bridge");
                         },
                         
                         // Fallback polling for environments without production bridge
                         setupFallbackPolling: function() {
-                            console.log("[DataTable] Setting up fallback notification polling");
+                            log("[DataTable] Setting up fallback notification polling");
                             
                             this.fallbackInterval = setInterval(() => {
                                 this.checkForDataUpdates();
@@ -257,20 +257,20 @@ class LivestockPurchaseDataTable extends DataTable
                                 .then(response => response.json())
                                 .then(data => {
                                     if (data.success && data.total_notifications > this.lastNotificationCount) {
-                                        console.log("[DataTable] New notifications detected - refreshing table");
+                                        log("[DataTable] New notifications detected - refreshing table");
                                         this.refreshDataTable();
                                         this.lastNotificationCount = data.total_notifications;
                                     }
                                 })
                                 .catch(error => {
-                                    console.log("[DataTable] Fallback polling error:", error.message);
+                                    log("[DataTable] Fallback polling error:", error.message);
                                 });
                         },
                         
                         // Setup traditional broadcast listeners (Echo/Pusher)
                         setupBroadcastListeners: function() {
                             if (typeof window.Echo !== "undefined") {
-                                console.log("[DataTable] Setting up Echo broadcast listeners");
+                                log("[DataTable] Setting up Echo broadcast listeners");
                                 
                                 // Listen to general livestock purchase channel
                                 window.Echo.channel("livestock-purchases")
@@ -283,19 +283,19 @@ class LivestockPurchaseDataTable extends DataTable
                                  if (window.Laravel && window.Laravel.user && window.Laravel.user.id) {
                                      window.Echo.private(`App.Models.User.${window.Laravel.user.id}`)
                                          .notification((notification) => {
-                                            console.log("[DataTable] User notification received:", notification);
+                                            log("[DataTable] User notification received:", notification);
                                              this.handleUserNotification(notification);
                                          });
                                  }
                             } else {
-                                console.log("[DataTable] Laravel Echo not available - relying on bridge notifications");
+                                log("[DataTable] Laravel Echo not available - relying on bridge notifications");
                             }
                         },
                         
                         setupUIHandlers: function() {
                             // Handle refresh button clicks
                             $(document).on("click", ".refresh-data-btn", function() {
-                                console.log("[DataTable] Manual refresh triggered");
+                                log("[DataTable] Manual refresh triggered");
                                 window.LivestockPurchaseDataTableNotifications.refreshDataTable();
                             });
                             
@@ -311,7 +311,7 @@ class LivestockPurchaseDataTable extends DataTable
                                 const newStatus = $select.val();
                                 const currentStatus = $select.data("current");
                                 
-                                console.log(`[DataTable] Status change initiated: ${currentStatus} → ${newStatus} for transaction ${transactionId}`);
+                                log(`[DataTable] Status change initiated: ${currentStatus} → ${newStatus} for transaction ${transactionId}`);
                                 
                                 // Show immediate feedback
                                 window.LivestockPurchaseDataTableNotifications.showStatusChangeNotification({
@@ -327,25 +327,25 @@ class LivestockPurchaseDataTable extends DataTable
                         
                         // Handle broadcast status changes (FIXED: No duplicate notifications)
                         handleStatusChange: function(event) {
-                            console.log("[DataTable] Processing broadcast status change:", event);
+                            log("[DataTable] Processing broadcast status change:", event);
                             
                             const requiresRefresh = (event.metadata && event.metadata.requires_refresh);
                             
                             // Only auto-refresh data - notification handled by production system
                             if (requiresRefresh) {
-                                console.log("[DataTable] Auto-refreshing table for critical change");
+                                log("[DataTable] Auto-refreshing table for critical change");
                                 this.refreshDataTable();
                             }
                         },
                         
                         // Handle user-specific notifications (FIXED: No duplicate notifications)
                         handleUserNotification: function(notification) {
-                            console.log("[DataTable] Processing user notification:", notification);
+                            log("[DataTable] Processing user notification:", notification);
                             
                             if (notification.type === "livestock_purchase_status_changed") {
                                 // Only refresh data - notification handled by production system
                                 if (notification.action_required && notification.action_required.includes("refresh_data")) {
-                                    console.log("[DataTable] Auto-refreshing table for user notification");
+                                    log("[DataTable] Auto-refreshing table for user notification");
                                     this.refreshDataTable();
                                 }
                             }
@@ -353,10 +353,10 @@ class LivestockPurchaseDataTable extends DataTable
                         
                         // Refresh DataTable
                         refreshDataTable: function() {
-                            console.log("[DataTable] Attempting to refresh DataTable...");
+                            log("[DataTable] Attempting to refresh DataTable...");
                             
                             // Enhanced debugging
-                            console.log("[DataTable] Table ID check:", {
+                            log("[DataTable] Table ID check:", {
                                 tableExists: $.fn.DataTable.isDataTable("#livestock-purchases-table"),
                                 tableElement: document.getElementById("livestock-purchases-table"),
                                 allTables: $(".table").length,
@@ -369,7 +369,7 @@ class LivestockPurchaseDataTable extends DataTable
                                 // Method 1: Try specific Livestock Purchase table ID
                                 if ($.fn.DataTable && $.fn.DataTable.isDataTable("#livestock-purchases-table")) {
                                     $("#livestock-purchases-table").DataTable().ajax.reload(null, false);
-                                    console.log("[DataTable] ✅ DataTable refreshed via specific ID: #livestock-purchases-table");
+                                    log("[DataTable] ✅ DataTable refreshed via specific ID: #livestock-purchases-table");
                                     refreshed = true;
                                 }
                                 
@@ -378,7 +378,7 @@ class LivestockPurchaseDataTable extends DataTable
                                     $(".table").each(function() {
                                         if ($.fn.DataTable && $.fn.DataTable.isDataTable(this)) {
                                             $(this).DataTable().ajax.reload(null, false);
-                                            console.log("[DataTable] ✅ DataTable refreshed via class selector:", this.id || "unnamed");
+                                            log("[DataTable] ✅ DataTable refreshed via class selector:", this.id || "unnamed");
                                             refreshed = true;
                                         }
                                     });
@@ -389,30 +389,30 @@ class LivestockPurchaseDataTable extends DataTable
                                     Object.keys(window.LaravelDataTables).forEach(tableId => {
                                         try {
                                             window.LaravelDataTables[tableId].ajax.reload(null, false);
-                                            console.log("[DataTable] ✅ DataTable refreshed via LaravelDataTables:", tableId);
+                                            log("[DataTable] ✅ DataTable refreshed via LaravelDataTables:", tableId);
                                             refreshed = true;
                                         } catch (e) {
-                                            console.log("[DataTable] ⚠️ Failed to refresh table via LaravelDataTables:", tableId, e.message);
+                                            log("[DataTable] ⚠️ Failed to refresh table via LaravelDataTables:", tableId, e.message);
                                         }
                                     });
                                 }
                                 
                                 if (!refreshed) {
-                                    console.log("[DataTable] ⚠️ No DataTable found to refresh");
+                                    log("[DataTable] ⚠️ No DataTable found to refresh");
                                     
                                     // Fallback: show manual refresh suggestion
                                     this.showRefreshSuggestion();
                                 }
                                 
                             } catch (error) {
-                                console.error("[DataTable] ❌ Error refreshing DataTable:", error);
+                                log("[DataTable] ❌ Error refreshing DataTable:", error);
                                 this.showRefreshSuggestion();
                             }
                         },
                         
                         // Show manual refresh suggestion
                         showRefreshSuggestion: function() {
-                            console.log("[DataTable] 💡 Showing manual refresh suggestion");
+                            log("[DataTable] 💡 Showing manual refresh suggestion");
                             
                             const suggestionHtml = `
                                 <div class="alert alert-warning alert-dismissible fade show position-fixed" 
@@ -500,7 +500,7 @@ class LivestockPurchaseDataTable extends DataTable
                             
                     // Initialize DataTable notifications
                     window.LivestockPurchaseDataTableNotifications.init();
-                    console.log("[DataTable] ✅ Livestock Purchase DataTable real-time notifications initialized");
+                    log("[DataTable] ✅ Livestock Purchase DataTable real-time notifications initialized");
                 }'
             ]);
     }

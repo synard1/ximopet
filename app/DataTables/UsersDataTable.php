@@ -22,7 +22,7 @@ class UsersDataTable extends DataTable
         return (new EloquentDataTable($query))
             ->rawColumns(['user', 'last_login_at'])
             ->editColumn('user', function (User $user) {
-                return view('pages/apps.user-management.users.columns._user', compact('user'));
+                return view('pages.apps.user-management.users.columns._user', compact('user'));
             })
             ->editColumn('role', function (User $user) {
                 return ucwords($user->roles->first()?->name);
@@ -34,7 +34,7 @@ class UsersDataTable extends DataTable
                 return $user->created_at->format('d M Y, h:i a');
             })
             ->addColumn('action', function (User $user) {
-                return view('pages/apps.user-management.users.columns._actions', compact('user'));
+                return view('pages.apps.user-management.users.columns._actions', compact('user'));
             })
             ->setRowId('id');
     }
@@ -45,14 +45,33 @@ class UsersDataTable extends DataTable
      */
     public function query(User $model): QueryBuilder
     {
-        if (! auth()->user()->hasRole('SuperAdmin')) {
+        $query = $model->newQuery();
+
+        // If user is not SuperAdmin
+        if (!auth()->user()->hasRole('SuperAdmin')) {
             $superAdminRoleId = Role::whereName('SuperAdmin')->value('id');
-            return $model->newQuery()->whereDoesntHave('roles', function (QueryBuilder $query) use ($superAdminRoleId) {
-                $query->where('id', $superAdminRoleId);
-            });
+
+            // Get current user's company mapping
+            $currentUserMapping = \App\Models\CompanyUser::getUserMapping();
+
+            if ($currentUserMapping && $currentUserMapping->isAdmin) {
+                // If user is company admin, show all users from same company
+                return $query->whereHas('companyUsers', function ($q) use ($currentUserMapping) {
+                    $q->where('company_id', $currentUserMapping->company_id)
+                        ->where('status', 'active');
+                })->whereDoesntHave('roles', function (QueryBuilder $query) use ($superAdminRoleId) {
+                    $query->where('id', $superAdminRoleId);
+                });
+            } else {
+                // If user is not admin, only show themselves
+                return $query->where('id', auth()->id())
+                    ->whereDoesntHave('roles', function (QueryBuilder $query) use ($superAdminRoleId) {
+                        $query->where('id', $superAdminRoleId);
+                    });
+            }
         }
-    
-        return $model->newQuery();
+
+        return $query;
     }
 
     /**

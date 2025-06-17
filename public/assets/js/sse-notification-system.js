@@ -7,7 +7,7 @@
  * @version 2.0.0
  */
 
-console.log("🚀 Loading SSE Notification System...");
+log("🚀 Loading SSE Notification System...");
 
 window.SSENotificationSystem = {
     eventSource: null,
@@ -21,7 +21,7 @@ window.SSENotificationSystem = {
 
     // Initialize SSE connection
     init: function () {
-        console.log("🔔 Initializing SSE Notification System...");
+        log("🔔 Initializing SSE Notification System...");
 
         this.getCurrentUserId();
         this.requestNotificationPermission();
@@ -31,12 +31,12 @@ window.SSENotificationSystem = {
         // Auto-reconnect on page visibility change
         document.addEventListener("visibilitychange", () => {
             if (!document.hidden && this.connectionStatus === "disconnected") {
-                console.log("📄 Page visible - reconnecting SSE...");
+                log("📄 Page visible - reconnecting SSE...");
                 this.connectSSE();
             }
         });
 
-        console.log("✅ SSE notification system initialized");
+        log("✅ SSE notification system initialized");
     },
 
     // Connect to SSE endpoint
@@ -45,17 +45,17 @@ window.SSENotificationSystem = {
             this.eventSource &&
             this.eventSource.readyState !== EventSource.CLOSED
         ) {
-            console.log("🔗 SSE already connected or connecting");
+            log("🔗 SSE already connected or connecting");
             return;
         }
 
-        console.log("🔌 Connecting to SSE bridge...");
+        log("🔌 Connecting to SSE bridge...");
 
         try {
             this.eventSource = new EventSource(this.bridgeUrl);
 
             this.eventSource.onopen = (event) => {
-                console.log("✅ SSE connection established");
+                log("✅ SSE connection established");
                 this.connectionStatus = "connected";
                 this.reconnectAttempts = 0;
                 this.showConnectionStatus("connected");
@@ -64,7 +64,7 @@ window.SSENotificationSystem = {
             this.eventSource.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log("📨 SSE message received:", data);
+                    log("📨 SSE message received:", data);
                     this.handleNotification(data);
                 } catch (error) {
                     console.error("❌ Error parsing SSE message:", error);
@@ -77,7 +77,7 @@ window.SSENotificationSystem = {
                 (event) => {
                     try {
                         const data = JSON.parse(event.data);
-                        console.log("📦 Supply purchase notification:", data);
+                        log("📦 Supply purchase notification:", data);
                         this.handleSupplyPurchaseNotification(data);
                     } catch (error) {
                         console.error(
@@ -93,7 +93,7 @@ window.SSENotificationSystem = {
                 (event) => {
                     try {
                         const data = JSON.parse(event.data);
-                        console.log("🌾 Feed purchase notification:", data);
+                        log("🌾 Feed purchase notification:", data);
                         this.handleFeedPurchaseNotification(data);
                     } catch (error) {
                         console.error(
@@ -109,10 +109,7 @@ window.SSENotificationSystem = {
                 (event) => {
                     try {
                         const data = JSON.parse(event.data);
-                        console.log(
-                            "🐄 Livestock purchase notification:",
-                            data
-                        );
+                        log("🐄 Livestock purchase notification:", data);
                         this.handleLivestockPurchaseNotification(data);
                     } catch (error) {
                         console.error(
@@ -126,9 +123,9 @@ window.SSENotificationSystem = {
             this.eventSource.addEventListener("heartbeat", (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log("💓 Heartbeat received:", data.uptime + "s");
+                    log("💓 Heartbeat received:", data.uptime + "s");
                 } catch (error) {
-                    console.log("💓 Heartbeat (raw)");
+                    log("💓 Heartbeat (raw)");
                 }
             });
 
@@ -148,9 +145,7 @@ window.SSENotificationSystem = {
     // Handle reconnection logic
     handleReconnection: function () {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.log(
-                "❌ Max reconnection attempts reached - switching to fallback"
-            );
+            log("❌ Max reconnection attempts reached - switching to fallback");
             this.connectionStatus = "failed";
             this.showConnectionStatus("failed");
             this.enablePollingFallback();
@@ -158,7 +153,7 @@ window.SSENotificationSystem = {
         }
 
         this.reconnectAttempts++;
-        console.log(
+        log(
             `🔄 Reconnecting SSE (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`
         );
 
@@ -169,17 +164,12 @@ window.SSENotificationSystem = {
 
     // Enable polling fallback when SSE fails
     enablePollingFallback: function () {
-        console.log(
+        log(
             "🔄 SSE failed - showing manual refresh message instead of polling"
         );
 
         // Show manual refresh notification instead of polling
         this.showManualRefreshNotification();
-
-        // DO NOT enable polling fallback to avoid request loops
-        // if (window.NotificationSystem && typeof window.NotificationSystem.initializeRealtimeBridge === 'function') {
-        //     window.NotificationSystem.initializeRealtimeBridge();
-        // }
     },
 
     // Show manual refresh notification when SSE fails
@@ -217,7 +207,7 @@ window.SSENotificationSystem = {
             notification.data.updated_by &&
             notification.data.updated_by == this.currentUserId
         ) {
-            console.log("🚫 Skipping self-notification");
+            log("🚫 Skipping self-notification");
             return;
         }
 
@@ -234,7 +224,7 @@ window.SSENotificationSystem = {
 
     // Handle supply purchase specific notifications
     handleSupplyPurchaseNotification: function (notification) {
-        console.log("📦 Handling supply purchase notification");
+        log("📦 Handling supply purchase notification");
 
         // ✅ PREVENT DUPLICATE NOTIFICATIONS
         const existingNotifications = document.querySelectorAll(
@@ -256,25 +246,19 @@ window.SSENotificationSystem = {
         if (!duplicateFound) {
             this.handleNotification(notification);
         } else {
-            console.log(
-                "🔄 Duplicate notification prevented for:",
-                notification.title
-            );
+            log("🔄 Duplicate notification prevented for:", notification.title);
         }
-
-        // Remove Livewire emit to prevent double handling
-        // Livewire integration now handled by page-specific bridge
     },
 
     // Handle feed purchase specific notifications
     handleFeedPurchaseNotification: function (notification) {
-        console.log("🌾 Handling feed purchase notification");
+        log("🌾 Handling feed purchase notification");
         this.handleNotification(notification);
     },
 
     // Handle livestock purchase specific notifications
     handleLivestockPurchaseNotification: function (notification) {
-        console.log("🐄 Handling livestock purchase notification");
+        log("🐄 Handling livestock purchase notification");
         this.handleNotification(notification);
     },
 
@@ -328,7 +312,7 @@ window.SSENotificationSystem = {
 
     // Refresh DataTables
     refreshDataTables: function (notification) {
-        console.log("🔄 Refreshing DataTables for SSE notification");
+        log("🔄 Refreshing DataTables for SSE notification");
 
         let refreshCount = 0;
 
@@ -340,10 +324,10 @@ window.SSENotificationSystem = {
                     if (table && typeof table.draw === "function") {
                         table.draw(false);
                         refreshCount++;
-                        console.log(`✅ Refreshed table: ${tableId}`);
+                        log(`✅ Refreshed table: ${tableId}`);
                     }
                 } catch (error) {
-                    console.log(
+                    log(
                         `❌ Failed to refresh table ${tableId}:`,
                         error.message
                     );
@@ -358,9 +342,9 @@ window.SSENotificationSystem = {
                     try {
                         $(this).DataTable().draw(false);
                         refreshCount++;
-                        console.log(`✅ Refreshed jQuery table: ${this.id}`);
+                        log(`✅ Refreshed jQuery table: ${this.id}`);
                     } catch (error) {
-                        console.log(
+                        log(
                             `❌ Failed to refresh jQuery table ${this.id}:`,
                             error.message
                         );
@@ -369,7 +353,7 @@ window.SSENotificationSystem = {
             });
         }
 
-        console.log(`🔄 Refreshed ${refreshCount} DataTables`);
+        log(`🔄 Refreshed ${refreshCount} DataTables`);
         return refreshCount > 0;
     },
 
@@ -377,7 +361,7 @@ window.SSENotificationSystem = {
     requestNotificationPermission: function () {
         if ("Notification" in window && Notification.permission === "default") {
             Notification.requestPermission().then((permission) => {
-                console.log("🔔 Notification permission:", permission);
+                log("🔔 Notification permission:", permission);
             });
         }
     },
@@ -415,9 +399,9 @@ window.SSENotificationSystem = {
                 return;
             }
 
-            console.log("⚠️ Could not determine current user ID");
+            log("⚠️ Could not determine current user ID");
         } catch (error) {
-            console.log("⚠️ Error getting user ID:", error.message);
+            log("⚠️ Error getting user ID:", error.message);
         }
     },
 
@@ -484,7 +468,7 @@ window.SSENotificationSystem = {
             readyState: this.eventSource ? this.eventSource.readyState : "null",
         };
 
-        console.log("📊 SSE Notification System Status:", status);
+        log("📊 SSE Notification System Status:", status);
 
         if (typeof Swal !== "undefined") {
             Swal.fire({
@@ -513,7 +497,7 @@ window.SSENotificationSystem = {
 
     // Manual reconnect
     reconnect: function () {
-        console.log("🔄 Manual SSE reconnection requested");
+        log("🔄 Manual SSE reconnection requested");
 
         if (this.eventSource) {
             this.eventSource.close();
@@ -526,7 +510,7 @@ window.SSENotificationSystem = {
     // Cleanup on page unload
     cleanup: function () {
         if (this.eventSource) {
-            console.log("🧹 Cleaning up SSE connection");
+            log("🧹 Cleaning up SSE connection");
             this.eventSource.close();
         }
     },
@@ -546,4 +530,4 @@ window.addEventListener("beforeunload", () => {
     window.SSENotificationSystem.cleanup();
 });
 
-console.log("✅ SSE Notification System loaded");
+log("✅ SSE Notification System loaded");

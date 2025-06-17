@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Permission\Models\Role;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -183,5 +184,32 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return true; // Jika authorization via role/permission, allow semua komponen
+    }
+
+    /**
+     * Get the company users associated with the user.
+     */
+    public function companyUsers()
+    {
+        return $this->hasMany(CompanyUser::class);
+    }
+
+    /**
+     * Get available roles based on user type
+     * 
+     * @return array
+     */
+    public function getAvailableRoles()
+    {
+        if ($this->hasRole('SuperAdmin')) {
+            return Role::all();
+        }
+
+        if ($this->hasRole('Administrator')) {
+            $configRoles = config('xolution.company_roles', []);
+            return Role::whereIn('name', array_keys($configRoles))->get();
+        }
+
+        return collect();
     }
 }

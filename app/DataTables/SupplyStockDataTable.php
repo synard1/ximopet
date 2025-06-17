@@ -67,7 +67,7 @@ class SupplyStockDataTable extends DataTable
      */
     public function query(SupplyStock $model): QueryBuilder
     {
-        return $model->newQuery()
+        $query = $model->newQuery()
             ->selectRaw('
                 farm_id,
                 supply_id,
@@ -75,9 +75,16 @@ class SupplyStockDataTable extends DataTable
                 SUM(quantity_used) as total_used,
                 SUM(quantity_mutated) as total_mutated
             ')
-            ->with('supply')
-            ->with('farm')
+            ->with(['supply', 'farm'])
             ->groupBy('farm_id', 'supply_id');
+
+        if (auth()->user()->hasRole('Operator')) {
+            $query->whereHas('farm.farmOperators', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
+
+        return $query;
     }
     // public function query(SupplyStock $model): QueryBuilder
     // {
@@ -102,7 +109,7 @@ class SupplyStockDataTable extends DataTable
     public function html(): HtmlBuilder
     {
         return $this->builder()
-            ->setTableId('stoks-table')
+            ->setTableId('stocks-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('Bfrtip')

@@ -19,6 +19,15 @@
     <meta property="og:type" content="article" />
     <meta property="og:title" content="" />
     <link rel="canonical" href="{{ url()->current() }}" />
+    <script>
+        // Add production environment check
+        const isProduction = document.querySelector('meta[name="app-env"]')?.content === 'production';
+        const log = (message, ...args) => {
+            if (!isProduction) {
+                console.log(message, ...args);
+            }
+        };
+    </script>
 
     {!! includeFavicon() !!}
 
@@ -94,6 +103,7 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
             @foreach(getGlobalAssets() as $path)
             {!! sprintf('<script src="%s"></script>', asset($path)) !!}
             @endforeach
+
             <script src="{{ asset('assets/js/security-protection.js') }}"></script>
             <script src="{{ asset('assets/js/security-blacklist-notification.js') }}"></script>
             <!--end::Global Javascript Bundle-->
@@ -118,18 +128,18 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
             <!--begin::Laravel User Setup-->
             <script>
                 // Set Laravel user info for Echo private channels BEFORE loading Echo
-        window.Laravel = window.Laravel || {};
-        @auth
-        window.Laravel.user = {
-            id: {{ auth()->id() }},
-            name: "{{ auth()->user()->name }}",
-            email: "{{ auth()->user()->email }}"
-        };
-        console.log('✅ Laravel user info set:', window.Laravel.user);
-        @else
-        window.Laravel.user = null;
-        console.log('👤 No authenticated user');
-        @endauth
+                window.Laravel = window.Laravel || {};
+                @auth
+                window.Laravel.user = {
+                    id: {{ auth()->id() }},
+                    name: "{{ auth()->user()->name }}",
+                    email: "{{ auth()->user()->email }}"
+                };
+                log('✅ Laravel user info set:', window.Laravel.user);
+                @else
+                window.Laravel.user = null;
+                log('👤 No authenticated user');
+                @endauth
             </script>
             <!--end::Laravel User Setup-->
 
@@ -190,7 +200,7 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
                 p = params;
             }
 
-            console.log(p);
+            log(p);
 
             // Fallbacks for missing values
             p.title = p.title || 'Konfirmasi';
@@ -215,7 +225,7 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
                     cancelButton: 'btn btn-secondary'
                 }
             }).then((result) => {
-                console.log(result.isConfirmed);
+                log(result.isConfirmed);
                 if (result.isConfirmed) {
                     Livewire.dispatch(p.title.onConfirmed, p.title.params);
                 } else if (result.dismiss === Swal.DismissReason.cancel) {
@@ -276,9 +286,9 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
         if (typeof Livewire !== 'undefined') {
-            console.log('Livewire is running');
+            log('Livewire is running');
         } else {
-            console.log('Livewire is not defined');
+            log('Livewire is not defined');
         }
     });
             </script>

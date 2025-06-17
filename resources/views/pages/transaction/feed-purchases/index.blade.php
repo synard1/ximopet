@@ -138,12 +138,12 @@
 		});
 
         document.addEventListener('livewire:init', function () {
-            console.log('🚀 Feed Purchase page initialized with PRODUCTION notification integration');
+            log('🚀 Feed Purchase page initialized with PRODUCTION notification integration');
 
             // ✅ PRODUCTION INTEGRATION: Setup integration with production notification system
             window.FeedPurchasePageNotifications = {
                 init: function() {
-                    console.log('🔧 Initializing Feed Purchase page notification integration');
+                    log('🔧 Initializing Feed Purchase page notification integration');
                     this.setupProductionIntegration();
                     this.setupLivewireListeners();
                     this.setupKeyboardShortcuts();
@@ -152,16 +152,16 @@
                 setupProductionIntegration: function() {
                     // Wait for production notification system to be ready
                     if (typeof window.NotificationSystem !== 'undefined') {
-                        console.log('✅ Production notification system found - integrating page handlers');
+                        log('✅ Production notification system found - integrating page handlers');
                         this.integrateWithProductionSystem();
                     } else {
                         // Wait and retry
                         setTimeout(() => {
                             if (typeof window.NotificationSystem !== 'undefined') {
-                                console.log('✅ Production notification system loaded - integrating page handlers');
+                                log('✅ Production notification system loaded - integrating page handlers');
                                 this.integrateWithProductionSystem();
                             } else {
-                                console.log('⚠️ Production notification system not available - using fallback mode');
+                                log('⚠️ Production notification system not available - using fallback mode');
                                 this.setupFallbackMode();
                             }
                         }, 2000);
@@ -180,11 +180,11 @@
                         window.FeedPurchasePageNotifications.handlePageSpecificUpdates();
                     };
                     
-                    console.log('🔗 Successfully integrated with production notification system');
+                    log('🔗 Successfully integrated with production notification system');
                 },
                 
                 setupFallbackMode: function() {
-                    console.log('🔄 Setting up fallback notification mode for Feed Purchase page');
+                    log('🔄 Setting up fallback notification mode for Feed Purchase page');
                     
                     // Direct polling to bridge for this page
                     this.fallbackInterval = setInterval(() => {
@@ -199,7 +199,7 @@
                             if (data.notifications && data.notifications.length > 0) {
                                 data.notifications.forEach(notification => {
                                     if (this.isFeedPurchaseNotification(notification)) {
-                                        console.log('📨 [Page] Feed purchase notification detected:', notification.title);
+                                        log('📨 [Page] Feed purchase notification detected:', notification.title);
                                         this.handleFeedPurchaseNotification(notification);
                                         
                                         if (notification.timestamp > window.lastPageTimestamp) {
@@ -210,7 +210,7 @@
                             }
                         })
                         .catch(error => {
-                            console.log('⚠️ [Page] Fallback polling error:', error.message);
+                            log('⚠️ [Page] Fallback polling error:', error.message);
                         });
                 },
                 
@@ -227,7 +227,7 @@
                 },
                 
                 handleFeedPurchaseNotification: function(notification) {
-                    console.log('🎯 [Page] Handling feed purchase notification:', notification);
+                    log('🎯 [Page] Handling feed purchase notification:', notification);
                     
                     // Show notification on page
                     if (typeof window.showNotification === 'function') {
@@ -245,14 +245,14 @@
                 triggerPageUpdates: function(notification) {
                     // Refresh DataTable if needed
                     if (notification.data && notification.data.requires_refresh) {
-                        console.log('🔄 [Page] Triggering DataTable refresh from notification');
+                        log('🔄 [Page] Triggering DataTable refresh from notification');
                         this.refreshDataTable();
                     }
                     
                     // Update form if in edit mode
                     if (notification.data && notification.data.batch_id && window.currentBatchId) {
                         if (notification.data.batch_id === window.currentBatchId) {
-                            console.log('🔄 [Page] Current batch updated - refreshing form');
+                            log('🔄 [Page] Current batch updated - refreshing form');
                             this.refreshCurrentForm();
                         }
                     }
@@ -261,7 +261,7 @@
                 handlePageSpecificUpdates: function() {
                     // This is called from the production system polling
                     // Add any page-specific logic here
-                    console.log('🔍 [Page] Checking for page-specific updates');
+                    log('🔍 [Page] Checking for page-specific updates');
                 },
                 
                 refreshDataTable: function() {
@@ -269,7 +269,7 @@
                         $('.table').each(function() {
                             if ($.fn.DataTable.isDataTable(this)) {
                                 $(this).DataTable().ajax.reload(null, false);
-                                console.log('✅ [Page] DataTable refreshed');
+                                log('✅ [Page] DataTable refreshed');
                             }
                         });
                     } catch (error) {
@@ -281,16 +281,16 @@
                     // Trigger Livewire refresh if in form mode
                     if (typeof Livewire !== 'undefined') {
                         Livewire.dispatch('refresh');
-                        console.log('✅ [Page] Livewire form refreshed');
+                        log('✅ [Page] Livewire form refreshed');
                     }
                 },
                 
                 setupLivewireListeners: function() {
-                    console.log('🎧 [Page] Setting up enhanced Livewire listeners');
+                    log('🎧 [Page] Setting up enhanced Livewire listeners');
                     
                     // Enhanced notify-status-change handler
                     Livewire.on('notify-status-change', (data) => {
-                        console.log('📢 [Page] Livewire notification received:', data);
+                        log('📢 [Page] Livewire notification received:', data);
                         
                         const notificationData = Array.isArray(data) ? data[0] : data;
                         
@@ -333,7 +333,7 @@
                 },
                 
                 showRefreshNotification: function(data) {
-                    console.log('🔄 [Page] Showing refresh notification');
+                    log('🔄 [Page] Showing refresh notification');
                     
                     const refreshHtml = `
                         <div class="alert alert-info alert-dismissible fade show position-fixed" 
@@ -387,7 +387,7 @@
                 },
                 
                 testPageNotification: function() {
-                    console.log('🧪 [Page] Testing page notification system');
+                    log('🧪 [Page] Testing page notification system');
                     
                     const testData = {
                         type: 'success',
@@ -404,7 +404,7 @@
                 },
                 
                 refreshAllData: function() {
-                    console.log('🔄 [Page] Refreshing all data');
+                    log('🔄 [Page] Refreshing all data');
                     this.refreshDataTable();
                     this.refreshCurrentForm();
                 },
@@ -417,7 +417,7 @@
                         eventsReceived: window.NotificationSystem ? window.NotificationSystem.eventsReceived : 0
                     };
                     
-                    console.log('📊 [Page] System Status:', status);
+                    log('📊 [Page] System Status:', status);
                     
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
@@ -456,7 +456,7 @@
                 const cardForm = document.getElementById('cardForm');
                 if (cardForm) {
                     cardForm.style.display = 'block';
-                    console.log('form ada');
+                    log('form ada');
                     
                 }
             });
@@ -464,7 +464,7 @@
             // ✅ LEGACY LIVEWIRE HANDLERS (Enhanced)
             // SUCCESS AND ERROR HANDLERS
             Livewire.on('success', function (message) {
-                console.log('✅ Livewire success received:', message);
+                log('✅ Livewire success received:', message);
                 
                 if (typeof window.NotificationSystem !== 'undefined') {
                     window.NotificationSystem.showNotification('Success', Array.isArray(message) ? message[0] : message, 'success');
@@ -476,7 +476,7 @@
             });
 
             Livewire.on('error', function (message) {
-                console.log('❌ Livewire error received:', message);
+                log('❌ Livewire error received:', message);
                 
                 if (typeof window.NotificationSystem !== 'undefined') {
                     window.NotificationSystem.showNotification('Error', Array.isArray(message) ? message[0] : message, 'error');
@@ -493,30 +493,30 @@
             // Ctrl+Shift+P for testing feed purchase notifications
             if (e.ctrlKey && e.shiftKey && e.key === 'P') {
                 e.preventDefault();
-                console.log('🎯 Testing feed purchase notification via keyboard shortcut');
+                log('🎯 Testing feed purchase notification via keyboard shortcut');
                 testNotificationFromPage();
             }
         });
 
         // Log when page is ready
-        console.log('📦 Feed Purchase page scripts loaded successfully');
+        log('📦 Feed Purchase page scripts loaded successfully');
 
         // ✅ GLOBAL LIVEWIRE EVENT LISTENER FOR ALL FEED PURCHASE NOTIFICATIONS
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Feed Purchase Index - Setting up global notification listeners');
+            log('🚀 Feed Purchase Index - Setting up global notification listeners');
             
             // ✅ Listen to ALL Livewire components for notify-status-change events
             window.addEventListener('livewire:initialized', () => {
-                console.log('📡 Livewire initialized - Setting up global event listeners');
+                log('📡 Livewire initialized - Setting up global event listeners');
                 
                 // ✅ Global handler for notify-status-change from ANY Livewire component
                 Livewire.on('notify-status-change', (data) => {
-                    console.log('🎯 GLOBAL notify-status-change received:', data);
+                    log('🎯 GLOBAL notify-status-change received:', data);
                     
                     // Extract data from array if needed
                     const notificationData = Array.isArray(data) ? data[0] : data;
                     
-                    console.log('📋 Processing notification data:', notificationData);
+                    log('📋 Processing notification data:', notificationData);
                     
                     // Multiple notification methods for maximum reliability
                     showGlobalNotification(notificationData);
@@ -527,25 +527,25 @@
                     }
                 });
                 
-                console.log('✅ Global Livewire event listeners registered');
+                log('✅ Global Livewire event listeners registered');
             });
             
             // ✅ Alternative listener that catches events even before Livewire full initialization
             document.addEventListener('livewire:event', function(event) {
                 if (event.detail?.name === 'notify-status-change') {
-                    console.log('🔄 Alternative listener caught notify-status-change:', event.detail.params);
+                    log('🔄 Alternative listener caught notify-status-change:', event.detail.params);
                     
                     const notificationData = Array.isArray(event.detail.params) ? event.detail.params[0] : event.detail.params;
                     showGlobalNotification(notificationData);
                 }
             });
             
-            console.log('✅ Alternative event listener registered');
+            log('✅ Alternative event listener registered');
         });
 
         // ✅ ROBUST GLOBAL NOTIFICATION FUNCTION
         function showGlobalNotification(data) {
-            console.log('🔔 showGlobalNotification called with:', data);
+            log('🔔 showGlobalNotification called with:', data);
             
             const notification = {
                 title: data?.title || 'Feed Purchase Update',
@@ -553,18 +553,18 @@
                 type: data?.type || 'info'
             };
             
-            console.log('📢 Showing notification:', notification);
+            log('📢 Showing notification:', notification);
             
             // Method 1: Use global showNotification function
             if (typeof window.showNotification === 'function') {
-                console.log('✅ Using window.showNotification');
+                log('✅ Using window.showNotification');
                 window.showNotification(notification.title, notification.message, notification.type);
                 return;
             }
             
             // Method 2: Use Toastr if available
             if (typeof toastr !== 'undefined') {
-                console.log('✅ Using toastr notification');
+                log('✅ Using toastr notification');
                 const toastrType = notification.type === 'warning' ? 'warning' : 
                                   notification.type === 'error' ? 'error' : 
                                   notification.type === 'success' ? 'success' : 'info';
@@ -574,7 +574,7 @@
             
             // Method 3: Browser notification
             if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                console.log('✅ Using browser notification');
+                log('✅ Using browser notification');
                 new Notification(notification.title, {
                     body: notification.message,
                     icon: '/assets/media/logos/favicon.ico'
@@ -584,7 +584,7 @@
             
             // Method 4: SweetAlert if available
             if (typeof Swal !== 'undefined') {
-                console.log('✅ Using SweetAlert notification');
+                log('✅ Using SweetAlert notification');
                 Swal.fire({
                     title: notification.title,
                     text: notification.message,
@@ -603,7 +603,7 @@
 
         // ✅ CREATE CUSTOM HTML NOTIFICATION
         function createCustomNotification(notification) {
-            console.log('✅ Creating custom HTML notification');
+            log('✅ Creating custom HTML notification');
             
             const notificationEl = document.createElement('div');
             notificationEl.className = `alert alert-${notification.type} alert-dismissible fade show position-fixed`;
@@ -627,7 +627,7 @@
 
         // ✅ TABLE RELOAD BUTTON (when auto reload fails)
         function showTableReloadButton() {
-            console.log('⚠️ Showing table reload button');
+            log('⚠️ Showing table reload button');
             
             // Remove existing reload button
             const existingButton = document.getElementById('table-reload-button');
@@ -650,7 +650,7 @@
         }
         
         function showAdvancedRefreshNotification(data) {
-            console.log('🔄 Showing advanced refresh notification for:', data);
+            log('🔄 Showing advanced refresh notification for:', data);
             
             // Remove existing notifications first
             const existingNotifications = document.querySelectorAll('.refresh-notification');
@@ -684,13 +684,13 @@
         
         // ✅ RELOAD DATA TABLE FUNCTION
         function reloadDataTable() {
-            console.log('🔄 Manual DataTable reload requested');
+            log('🔄 Manual DataTable reload requested');
             
             try {
                 // Method 1: Use page notification system
                 if (window.FeedPurchasePageNotifications && typeof window.FeedPurchasePageNotifications.refreshDataTable === 'function') {
                     window.FeedPurchasePageNotifications.refreshDataTable();
-                    console.log('✅ DataTable reloaded via page notification system');
+                    log('✅ DataTable reloaded via page notification system');
                     removeAllNotifications();
                     showSuccessMessage('Table reloaded successfully!');
                     return;
@@ -699,7 +699,7 @@
                 // Method 2: Direct DataTable reload
                 if ($.fn.DataTable && $('.dataTable').length > 0) {
                     $('.dataTable').DataTable().ajax.reload(function() {
-                        console.log('✅ DataTable reloaded via direct method');
+                        log('✅ DataTable reloaded via direct method');
                         removeAllNotifications();
                         showSuccessMessage('Table reloaded successfully!');
                     }, false);
@@ -708,7 +708,7 @@
                 
                 // Method 3: Livewire refresh
                 if (typeof Livewire !== 'undefined' && Livewire.components && Livewire.components.componentsById) {
-                    console.log('🔄 Trying Livewire component refresh...');
+                    log('🔄 Trying Livewire component refresh...');
                     const components = Object.values(Livewire.components.componentsById);
                     components.forEach(component => {
                         if (component.name && component.name.includes('feed-purchase')) {
@@ -721,7 +721,7 @@
                 }
                 
                 // Method 4: Page reload as last resort
-                console.log('🔄 No DataTable found - triggering page reload');
+                log('🔄 No DataTable found - triggering page reload');
                 showPageReloadButton();
                 
             } catch (error) {
@@ -738,7 +738,7 @@
         }
         
         function showPageReloadButton() {
-            console.log('🔄 Showing page reload option');
+            log('🔄 Showing page reload option');
             
             const pageReloadHtml = `
                 <div class="alert alert-info alert-dismissible fade show position-fixed" 
@@ -803,7 +803,7 @@
 
         // ✅ ENHANCED TESTING FUNCTIONS
         function testNotificationFromPage() {
-            console.log('🧪 Testing notification from Feed Purchase page');
+            log('🧪 Testing notification from Feed Purchase page');
             
             const testData = {
                 type: 'success',
@@ -813,12 +813,12 @@
                 requires_refresh: false
             };
             
-            console.log('📤 Sending test notification:', testData);
+            log('📤 Sending test notification:', testData);
             showGlobalNotification(testData);
             
             // Also trigger Livewire event for testing
             if (typeof Livewire !== 'undefined') {
-                console.log('📡 Triggering Livewire test event');
+                log('📡 Triggering Livewire test event');
                 // Simulate event dispatch
                 const event = new CustomEvent('livewire:event', {
                     detail: {
@@ -835,14 +835,14 @@
             // Ctrl+Shift+P - Test feed purchase page notification
             if (e.ctrlKey && e.shiftKey && e.key === 'P') {
                 e.preventDefault();
-                console.log('⌨️ Keyboard shortcut: Testing Feed Purchase notification');
+                log('⌨️ Keyboard shortcut: Testing Feed Purchase notification');
                 testNotificationFromPage();
             }
             
             // Ctrl+Shift+L - Test Livewire direct dispatch
             if (e.ctrlKey && e.shiftKey && e.key === 'L') {
                 e.preventDefault();
-                console.log('⌨️ Keyboard shortcut: Testing Livewire direct dispatch');
+                log('⌨️ Keyboard shortcut: Testing Livewire direct dispatch');
                 if (typeof Livewire !== 'undefined') {
                     Livewire.dispatch('notify-status-change', [{
                         type: 'info',
@@ -864,16 +864,16 @@
         window.showPageReloadButton = showPageReloadButton;
         window.removeAllNotifications = removeAllNotifications;
 
-        console.log('🎯 All global notification functions registered');
+        log('🎯 All global notification functions registered');
     </script>
 
     <!-- SSE Notification System (NEW: No more polling!) -->
-    <script src="{{ asset('assets/js/sse-notification-system.js') }}"></script>
+    {{-- <script src="{{ asset('assets/js/sse-notification-system.js') }}"></script> --}}
 
     <script>
         // Integration script to bridge SSE and existing Livewire system
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔗 Bridging SSE notification system with existing Livewire handlers');
+            log('🔗 Bridging SSE notification system with existing Livewire handlers');
             
             // Override SSE notification handler to integrate with existing page functions
             if (window.SSENotificationSystem) {
@@ -882,13 +882,13 @@
                 
                 // Override with page-specific logic with error handling
                 window.SSENotificationSystem.handleFeedPurchaseNotification = function(notification) {
-                    console.log('🔗 SSE-Livewire bridge: Feed purchase notification received');
+                    log('🔗 SSE-Livewire bridge: Feed purchase notification received');
                     
                     try {
                         // ✅ DEBOUNCE CHECK - Prevent rapid multiple notifications
                         const notificationKey = `notification_${notification.data?.batch_id}_${notification.data?.new_status}_${Date.now()}`;
                         if (window.lastNotificationKey === notificationKey.substring(0, notificationKey.lastIndexOf('_'))) {
-                            console.log('🔄 Notification debounced (too frequent)', notificationKey);
+                            log('🔄 Notification debounced (too frequent)', notificationKey);
                             return;
                         }
                         window.lastNotificationKey = notificationKey.substring(0, notificationKey.lastIndexOf('_'));
@@ -900,11 +900,11 @@
                         }
                         
                         // ✅ AUTO RELOAD DATATABLE with timeout protection
-                        console.log('🔄 Auto-reloading DataTable...');
+                        log('🔄 Auto-reloading DataTable...');
                         
                         // Set timeout to prevent hanging
                         const reloadTimeout = setTimeout(() => {
-                            console.log('⚠️ DataTable reload timeout - showing manual buttons');
+                            log('⚠️ DataTable reload timeout - showing manual buttons');
                             showTableReloadButton();
                         }, 5000); // 5 second timeout
                         
@@ -912,7 +912,7 @@
                             try {
                                 window.FeedPurchasePageNotifications.refreshDataTable();
                                 clearTimeout(reloadTimeout);
-                                console.log('✅ DataTable reloaded via page notification system');
+                                log('✅ DataTable reloaded via page notification system');
                             } catch (error) {
                                 clearTimeout(reloadTimeout);
                                 console.error('❌ Page notification system failed:', error);
@@ -942,13 +942,13 @@
                     try {
                         if (typeof $ !== 'undefined' && $.fn.DataTable && $('.dataTable').length > 0) {
                             $('.dataTable').DataTable().ajax.reload(function(json) {
-                                console.log('✅ DataTable reloaded via direct method');
+                                log('✅ DataTable reloaded via direct method');
                                 if (json && json.recordsTotal !== undefined) {
-                                    console.log(`📊 DataTable now shows ${json.recordsTotal} records`);
+                                    log(`📊 DataTable now shows ${json.recordsTotal} records`);
                                 }
                             }, false);
                         } else {
-                            console.log('⚠️ DataTable not found - showing reload button');
+                            log('⚠️ DataTable not found - showing reload button');
                             showTableReloadButton();
                         }
                     } catch (error) {
@@ -957,9 +957,9 @@
                     }
                 }
                 
-                console.log('✅ SSE-Livewire bridge configured successfully');
+                log('✅ SSE-Livewire bridge configured successfully');
             } else {
-                console.log('⚠️ SSE Notification System not loaded - using fallback');
+                log('⚠️ SSE Notification System not loaded - using fallback');
             }
         });
     </script>

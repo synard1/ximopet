@@ -37,9 +37,9 @@
 
 @push('scripts')
 <script>
-    document.getElementById('mySearchInput').addEventListener('keyup', function () {
-        window.LaravelDataTables['stoks-table'].search(this.value).draw();
-    });
+    // document.getElementById('mySearchInput').addEventListener('keyup', function () {
+    //     window.LaravelDataTables['stoks-table'].search(this.value).draw();
+    // });
 
     $(document).ready(function () {
         // Restore filter dari localStorage
@@ -50,18 +50,18 @@
             $('#supply_id').val(localStorage.getItem('stok_filter_supply_id'));
         }
 
-        $('#filter-form').on('submit', function (e) {
-            e.preventDefault();
-            // Simpan filter ke localStorage
-            localStorage.setItem('stok_filter_farm_id', $('#farm_id').val());
-            localStorage.setItem('stok_filter_supply_id', $('#supply_id').val());
-            window.LaravelDataTables['stoks-table'].draw();
-        });
+        // $('#filter-form').on('submit', function (e) {
+        //     e.preventDefault();
+        //     // Simpan filter ke localStorage
+        //     localStorage.setItem('stok_filter_farm_id', $('#farm_id').val());
+        //     localStorage.setItem('stok_filter_supply_id', $('#supply_id').val());
+        //     window.LaravelDataTables['stocks-table'].draw();
+        // });
 
-        window.LaravelDataTables['stoks-table'].on('preXhr.dt', function (e, settings, data) {
-            data.farm_id = $('#farm_id').val();
-            data.supply_id = $('#supply_id').val();
-        });
+        // window.LaravelDataTables['stocks-table'].on('preXhr.dt', function (e, settings, data) {
+        //     data.farm_id = $('#farm_id').val();
+        //     data.supply_id = $('#supply_id').val();
+        // });
     });
 </script>
 @endpush

@@ -103,9 +103,9 @@
                     // Additional logic for this particular page/component
                 });
             });
-            document.getElementById('mySearchInput').addEventListener('keyup', function () {
-                window.LaravelDataTables['stoks-table'].search(this.value).draw();
-            });
+            // document.getElementById('mySearchInput').addEventListener('keyup', function () {
+            //     window.LaravelDataTables['stoks-table'].search(this.value).draw();
+            // });
             document.addEventListener('livewire:init', function () {
                 Livewire.on('success', function () {
                     $('#kt_modal_add_user').modal('hide');

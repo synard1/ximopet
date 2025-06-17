@@ -1,11 +1,11 @@
 <x-default-layout>
 
     @section('title')
-        Users
+    Users
     @endsection
 
     @section('breadcrumbs')
-        {{ Breadcrumbs::render('user-management') ?? ''}}
+    {{ Breadcrumbs::render('user-management') ?? ''}}
     @endsection
 
     <div class="card">
@@ -16,7 +16,9 @@
                 <!--begin::Search-->
                 <div class="d-flex align-items-center position-relative my-1">
                     {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
-                    <input type="text" data-kt-user-table-filter="search" class="form-control form-control-solid w-250px ps-13" placeholder="Search user" id="mySearchInput"/>
+                    <input type="text" data-kt-user-table-filter="search"
+                        class="form-control form-control-solid w-250px ps-13" placeholder="Search user"
+                        id="mySearchInput" />
                 </div>
                 <!--end::Search-->
             </div>
@@ -54,10 +56,12 @@
         <!--end::Card body-->
     </div>
 
+    <livewire:user.add-user-modal />
+
     @push('scripts')
-        {{ $dataTable->scripts() }}
-        <script>
-            document.getElementById('mySearchInput').addEventListener('keyup', function () {
+    {{ $dataTable->scripts() }}
+    <script>
+        document.getElementById('mySearchInput').addEventListener('keyup', function () {
                 window.LaravelDataTables['users-table'].search(this.value).draw();
             });
             // document.addEventListener('livewire:init', function () {
@@ -69,7 +73,7 @@
             // $('#kt_modal_add_user').on('hidden.bs.modal', function () {
             //     Livewire.dispatch('new_user');
             // });
-        </script>
+    </script>
     @endpush
 
 </x-default-layout>
