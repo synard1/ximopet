@@ -45,10 +45,10 @@ return new class extends Migration
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('approved_by')->references('id')->on('users');
 
-            $table->uuid('livestock_id')->index();
-            $table->uuid('customer_id')->index();
-            $table->uuid('expedition_id')->nullable()->index();
-            $table->date('transaction_date')->index();
+            $table->index(['livestock_id']);
+            $table->index(['customer_id']);
+            $table->index(['expedition_id']);
+            $table->index(['transaction_date']);
         });
     }
 
