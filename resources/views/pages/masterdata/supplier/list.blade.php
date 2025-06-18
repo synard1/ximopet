@@ -24,6 +24,7 @@
 
             <!--begin::Card toolbar-->
             <div class="card-toolbar">
+                @if(auth()->user()->can('create supplier master data'))
                 <!--begin::Toolbar-->
                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
                     <!--begin::Add user-->
@@ -38,6 +39,7 @@
                 <!--begin::Modal-->
                 <livewire:master-data.supplier />
                 <!--end::Modal-->
+                @endif
             </div>
             <!--end::Card toolbar-->
         </div>

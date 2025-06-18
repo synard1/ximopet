@@ -18,9 +18,9 @@ return new class extends Migration
             $table->string('code')->unique();
             $table->string('name');           // Name of the livestock strain (e.g., "Broiler", "Layer", "Dairy")
             $table->text('description')->nullable(); // Optional: Description of the strain category
-            $table->string('status')->default('active');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->string('status')->default('active')->index();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 

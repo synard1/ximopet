@@ -18,10 +18,10 @@ return new class extends Migration
             $table->string('breed');
             $table->json('standar_data');
             $table->string('keterangan')->nullable();
-            $table->string('status');
+            $table->string('status')->index();
 
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 
@@ -30,7 +30,6 @@ return new class extends Migration
         });
 
         Schema::enableForeignKeyConstraints();
-
     }
 
     /**

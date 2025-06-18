@@ -22,9 +22,9 @@
                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
                     @if (auth()->user()->can('create kandang management'))
                     <!--begin::Add user-->
-                    <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('createKandang')">
+                    <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('create_kandang')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}
-                        Tambah Data
+                        Tambah Data Kandang
                     </button>
                     <!--end::Add user-->
                     @endif

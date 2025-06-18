@@ -71,7 +71,7 @@ return [
                     // 'roles' => ['SuperAdmin', 'Administrator', 'QA Tester'],
                     'order' => 1,
                     'show' => true,
-                    'can' => ['access farm management'],
+                    'can' => ['access farm master data'],
                 ],
                 [
                     'route' => '/master/kandangs',

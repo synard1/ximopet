@@ -17,66 +17,68 @@ const showLoadingSpinner = () => {
     }, 3000);
 };
 
-
-
 // Add click event listener to delete buttons
-document.querySelectorAll('[data-kt-action="delete_row"]').forEach(function (element) {
-    element.addEventListener('click', function () {
-        Swal.fire({
-            text: 'Are you sure you want to remove?',
-            icon: 'warning',
-            buttonsStyling: false,
-            showCancelButton: true,
-            confirmButtonText: 'Yes',
-            cancelButtonText: 'No',
-            customClass: {
-                confirmButton: 'btn btn-danger',
-                cancelButton: 'btn btn-secondary',
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Livewire.dispatch('delete_customer', [this.getAttribute('data-kt-customer-id')]);
-            }
+document
+    .querySelectorAll('[data-kt-action="delete_row"]')
+    .forEach(function (element) {
+        element.addEventListener("click", function () {
+            Swal.fire({
+                text: "Are you sure you want to remove this company?",
+                icon: "warning",
+                buttonsStyling: false,
+                showCancelButton: true,
+                confirmButtonText: "Yes",
+                cancelButtonText: "No",
+                customClass: {
+                    confirmButton: "btn btn-danger",
+                    cancelButton: "btn btn-secondary",
+                },
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Livewire.dispatch("deleteCompany", [
+                        this.getAttribute("data-kt-company-id"),
+                    ]);
+                }
+            });
         });
     });
-});
 
 // Add click event listener to update buttons
-document.querySelectorAll('[data-kt-action="update_row"]').forEach(function (element) {
-    element.addEventListener('click', function (e) {
-        e.preventDefault();
-        // Select parent row
-        const parent = e.target.closest('tr');
+document
+    .querySelectorAll('[data-kt-action="update_row"]')
+    .forEach(function (element) {
+        element.addEventListener("click", function (e) {
+            e.preventDefault();
+            // Select parent row
+            const parent = e.target.closest("tr");
 
-        // Get customer ID
-        const customerId = event.currentTarget.getAttribute('data-kt-customer-id');
+            // Get company ID
+            const companyId =
+                event.currentTarget.getAttribute("data-kt-company-id");
 
-        // Get subject name
-        const customerName = parent.querySelectorAll('td')[1].innerText;
+            // Get subject name
+            const companyName = parent.querySelectorAll("td")[1].innerText;
 
-        // Simulate delete request -- for demo purpose only
-        Swal.fire({
-            html: `Membuka Data <b>`+ customerName +`</b>`,
-            icon: "info",
-            buttonsStyling: false,
-            showConfirmButton: false,
-            timer: 2000
-        }).then(function () {
-            // showLoadingSpinner();
-            // Livewire.on('update_customer', function (event) {
-            //     // $('#kt_modal_master_customer').modal('show');
-            //     // Assuming event.detail.customerId contains the actual ID:
-            //     this.set('customer_id', event.detail.customerId); 
-            // });
-            
-            Livewire.dispatch('editCustomer', [customerId]);
+            // Simulate delete request -- for demo purpose only
+            Swal.fire({
+                html: `Membuka Data <b>` + companyName + `</b>`,
+                icon: "info",
+                buttonsStyling: false,
+                showConfirmButton: false,
+                timer: 2000,
+            }).then(function () {
+                console.log("companyId", companyId);
+                Livewire.dispatch("editCompany", [companyId]);
+                const cardList = document.getElementById(`companyTableCard`);
+                cardList.style.display = "none";
+                const cardForm = document.getElementById(`companyFormCard`);
+                cardForm.style.display = "block";
+            });
         });
-        
     });
-});
 
 // Listen for 'success' event emitted by Livewire
-Livewire.on('success', (message) => {
+Livewire.on("success", (message) => {
     // Reload the customers-table datatable
-    LaravelDataTables['companies-table'].ajax.reload();
+    LaravelDataTables["companies-table"].ajax.reload();
 });

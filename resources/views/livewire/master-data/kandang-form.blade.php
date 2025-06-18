@@ -28,24 +28,24 @@
 
                         <div class="mb-5">
                             <label class="form-label required">Kode Kandang</label>
-                            <input type="text" wire:model="kode" class="form-control"
+                            <input type="text" wire:model="code" class="form-control"
                                 placeholder="Masukkan kode kandang" />
-                            @error('kode') <span class="text-danger">{{ $message }}</span> @enderror
+                            @error('code') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
                         @endif
 
                         <div class="mb-5">
                             <label class="form-label required">Nama Kandang</label>
-                            <input type="text" wire:model="nama" class="form-control"
+                            <input type="text" wire:model="name" class="form-control"
                                 placeholder="Masukkan nama kandang" />
-                            @error('nama') <span class="text-danger">{{ $message }}</span> @enderror
+                            @error('name') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
 
                         <div class="mb-5">
                             <label class="form-label required">Kapasitas</label>
-                            <input type="number" wire:model="kapasitas" class="form-control"
+                            <input type="number" wire:model="capacity" class="form-control"
                                 placeholder="Masukkan kapasitas kandang" />
-                            @error('kapasitas') <span class="text-danger">{{ $message }}</span> @enderror
+                            @error('capacity') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
 
                         <div class="mb-5">

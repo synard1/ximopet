@@ -26,7 +26,7 @@ class KandangForm extends Component
 
     protected $listeners = [
         'openModal' => 'openModal',
-        'createKandang' => 'createKandang',
+        'createCoop' => 'createKandang',
         'editKandang' => 'editKandang',
         'delete_kandang' => 'deleteKandang',
         'closeModalFarm' => 'closeModalFarm',
@@ -59,6 +59,7 @@ class KandangForm extends Component
     {
         $this->isEdit = false;
         $this->openModal();
+        // $this->dispatch('success', 'Kandang berhasil ditambahkan');
     }
 
     public function openModal()
@@ -109,16 +110,16 @@ class KandangForm extends Component
 
                 // $totalPopulation = $totalLivestock + $totalCurrentLivestock;
 
-                if ($this->kapasitas < $totalLivestock) {
+                if ($this->capacity < $totalLivestock) {
                     throw new \Exception('Kapasitas kandang tidak boleh lebih kecil dari jumlah ayam yang ada (' . $totalLivestock . ')');
                 }
             }
 
             $data = [
                 'farm_id' => $this->farm_id,
-                'kode' => $this->kode,
-                'nama' => $this->nama,
-                'kapasitas' => $this->kapasitas,
+                'code' => $this->code,
+                'name' => $this->name,
+                'capacity' => $this->capacity,
                 'status' => $this->status,
             ];
 

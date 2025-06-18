@@ -71,13 +71,15 @@
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
     <script>
         $(document).ready(function() {
-            $('#menus-table').DataTable({
+            const table = $('#menus-table').DataTable({
                 processing: true,
                 serverSide: true,
                 ajax: '{{ route('administrator.menu.index') }}',
+                rowReorder: false, // We'll use SortableJS
                 columns: [
                     { data: 'name', name: 'name' },
                     { data: 'label', name: 'label' },
@@ -147,7 +149,42 @@
                             return actions;
                         }
                     }
-                ]
+                ],
+                drawCallback: function() {
+                    // Aktifkan drag & drop setelah dataTable render
+                    const tbody = document.querySelector('#menus-table tbody');
+                    if (tbody && !tbody.classList.contains('sortable-enabled')) {
+                        Sortable.create(tbody, {
+                            animation: 150,
+                            handle: 'td',
+                            onEnd: function (evt) {
+                                // Ambil urutan baru
+                                let items = [];
+                                $('#menus-table tbody tr').each(function(index) {
+                                    const id = $(this).find('a[href*="/edit"]').attr('href').match(/menu\/(\d+)\/edit/)[1];
+                                    items.push({ id: id, order_number: index + 1 });
+                                });
+                                // Kirim ke backend
+                                $.ajax({
+                                    url: '{{ route('administrator.menu.update-order') }}',
+                                    type: 'POST',
+                                    data: {
+                                        _token: '{{ csrf_token() }}',
+                                        items: items
+                                    },
+                                    success: function(res) {
+                                        Swal.fire('Success', 'Menu order updated!', 'success');
+                                        table.ajax.reload(null, false);
+                                    },
+                                    error: function() {
+                                        Swal.fire('Error', 'Failed to update order!', 'error');
+                                    }
+                                });
+                            }
+                        });
+                        tbody.classList.add('sortable-enabled');
+                    }
+                }
             });
 
             const importButton = $('#import-menu-button');

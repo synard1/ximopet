@@ -59,6 +59,12 @@ class FeedPurchaseDataTable extends DataTable
             ->editColumn('status', function (FeedPurchaseBatch $transaction) {
                 $statuses = FeedPurchaseBatch::STATUS_LABELS;
                 $currentStatus = $transaction->status;
+
+                // Check if user only has read permission
+                if (!auth()->user()->can('update feed purchase')) {
+                    return $statuses[$currentStatus] ?? $currentStatus;
+                }
+
                 $isDisabled = in_array($currentStatus, ['cancelled']) ? 'disabled' : '';
 
                 // Check user role

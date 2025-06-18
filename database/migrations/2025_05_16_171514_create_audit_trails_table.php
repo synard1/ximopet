@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('audit_trails', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->unsignedBigInteger('user_id')->nullable()->index();
-            $table->string('action', 50)->index();
+            $table->unsignedBigInteger('user_id')->index();
+            $table->string('action')->index();
             $table->string('model_type')->index();
             $table->string('model_name');
             $table->string('model_id')->nullable()->index();
@@ -28,6 +28,8 @@ return new class extends Migration
             $table->timestamp('timestamp');
             $table->unsignedBigInteger('created_by');
             $table->unsignedBigInteger('updated_by')->nullable();
+            $table->string('table_name')->index();
+            $table->timestamp('created_at')->index();
 
             $table->timestamps();
             $table->softDeletes();

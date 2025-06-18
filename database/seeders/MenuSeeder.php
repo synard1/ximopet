@@ -517,7 +517,7 @@ class MenuSeeder extends Seeder
         $this->attachRolesToMenu($administrator, [$superAdminRole, $qaTesterRole]);
 
         // Attach specific permissions to menus
-        $this->attachPermissionsToMenu($farm, ['access farm management', 'read farm management']);
+        $this->attachPermissionsToMenu($farm, ['access farm master data', 'read farm master data']);
         $this->attachPermissionsToMenu($kandang, ['access kandang management', 'read kandang management']);
         $this->attachPermissionsToMenu($supplier, ['read supplier management']);
         $this->attachPermissionsToMenu($customer, ['read customer management']);

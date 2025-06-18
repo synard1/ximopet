@@ -23,7 +23,7 @@ class KandangList extends Component
     protected $listeners = [
         'delete_kandang' => 'deleteKandangList',
         'editKandang' => 'editKandang',
-        'create' => 'create',
+        'create_kandang' => 'create_kandang',
     ];
 
     public function mount()
@@ -53,7 +53,7 @@ class KandangList extends Component
         ]);
     }
 
-    public function create()
+    public function create_kandang()
     {
         if (!Auth::user()->can('create kandang management')) {
             $this->dispatch('error', 'You do not have permission to create kandang.');

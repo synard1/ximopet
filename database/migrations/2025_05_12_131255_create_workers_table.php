@@ -16,9 +16,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('phone')->nullable();
             $table->text('address')->nullable();
-            $table->string('status')->default('active'); // Default status adalah 'aktif'
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->string('status')->default('active')->index(); // Default status adalah 'aktif'
+            $table->unsignedBigInteger('created_by')->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
 
             $table->timestamps();
             $table->softDeletes();

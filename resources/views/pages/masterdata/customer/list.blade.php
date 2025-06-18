@@ -26,6 +26,7 @@
 
             <!--begin::Card toolbar-->
             <div class="card-toolbar">
+                @if(auth()->user()->can('create customer master data'))
                 <!--begin::Card toolbar-->
                 <div class="card-toolbar" id="cardToolbar">
                     <button id="tambah-ekspedisi-btn" class="btn btn-primary"
@@ -34,6 +35,7 @@
                     </button>
                 </div>
                 <!--end::Card toolbar-->
+                @endif
             </div>
             <!--end::Card toolbar-->
         </div>
@@ -44,7 +46,9 @@
             <div id="datatable-section" class="table-responsive">
                 {{ $dataTable->table() }}
             </div>
+            @if(auth()->user()->can('create customer master data'))
             <livewire:master-data.customer.create />
+            @endif
 
         </div>
         <!--end::Card body-->

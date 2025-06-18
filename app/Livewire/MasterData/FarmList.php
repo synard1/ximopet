@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 
 class FarmList extends Component
 {
-    public $farms, $kode, $nama, $alamat, $telp, $pic, $telp_pic, $status = 'Aktif';
+    public $farms, $kode, $nama, $alamat, $telp, $pic, $telp_pic, $status = 'active';
 
     public $farm_id = null; // Initialize with null instead of empty string
     public $isOpen = 0;
@@ -23,7 +23,7 @@ class FarmList extends Component
 
     protected $listeners = [
         'editFarm' => 'editFarm',
-        'create' => 'create',
+        'create_farm' => 'create_farm',
         'openModalForm' => 'openModalForm',
     ];
 
@@ -34,7 +34,7 @@ class FarmList extends Component
         return view('livewire.master-data.farm-list', ['farms' => $this->farms]);
     }
 
-    public function create()
+    public function create_farm()
     {
         $this->resetInputFields();
         // $this->kode = (string) Uuid::uuid4(); // Generate and cast to string

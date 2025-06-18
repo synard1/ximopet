@@ -13,21 +13,24 @@ By: AI Assistant
     <li class="breadcrumb-item text-dark">List</li>
     @endsection --}}
 
-    @if($isCompanyAdmin && $company)
+    @if($isCompanyAdmin)
+    {{-- (auth()->user()->hasRole('SuperAdmin') && $company) ||
+    ($isCompanyAdmin && $company && auth()->user()->company_id == $company->id)
+    ) --}}
     <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x mb-5 fs-6">
         <li class="nav-item">
             <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_pane_overview">Overview</a>
         </li>
-        <li class="nav-item">
+        {{-- <li class="nav-item">
             <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_user">User</a>
-        </li>
-        <li class="nav-item dropdown">
+        </li> --}}
+        {{-- <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button"
                 aria-expanded="false">Dropdown</a>
             <ul class="dropdown-menu">
                 <li><a class="nav-link dropdown-item" data-bs-toggle="tab" href="#kt_tab_pane_10">Action</a></li>
             </ul>
-        </li>
+        </li> --}}
     </ul>
 
     <div class="tab-content" id="myTabContent">
@@ -43,49 +46,69 @@ By: AI Assistant
                 </div>
                 <div class="card-body p-9">
                     <form class="form" id="companyProfileForm" enctype="multipart/form-data" method="POST"
-                        action="{{ route('companies.update', $company->id) }}">
+                        action="{{ route('setting.companies.update', $company->id) }}">
                         @csrf
-                        <div class="row mb-7">
-                            <label class="col-lg-2 fw-semibold text-muted">Company Name <span
-                                    class="text-danger">*</span></label>
-                            <div class="col-lg-10">
-                                <input type="text" name="name" class="form-control form-control-solid"
-                                    value="{{ $company->name }}" readonly />
+                        <div class="d-flex flex-row align-items-start mb-7">
+                            <div class="flex-grow-1">
+                                <div class="row mb-7">
+                                    <label class="col-lg-2 fw-semibold text-muted">Company Name <span
+                                            class="text-danger">*</span></label>
+                                    <div class="col-lg-10">
+                                        <input type="text" name="name" class="form-control form-control-solid"
+                                            value="{{ $company->name }}" readonly />
+                                    </div>
+                                </div>
+                                {{-- <div class="row mb-7">
+                                    <label class="col-lg-2 fw-semibold text-muted">Domain</label>
+                                    <div class="col-lg-10">
+                                        <input type="text" name="domain" class="form-control form-control-solid"
+                                            value="{{ $company->domain }}" readonly />
+                                    </div>
+                                </div> --}}
+                                <div class="row mb-7">
+                                    <label class="col-lg-2 fw-semibold text-muted">Email</label>
+                                    <div class="col-lg-10">
+                                        <input type="email" name="email" class="form-control form-control-solid"
+                                            value="{{ $company->email }}" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-7">
+                                    <label class="col-lg-2 fw-semibold text-muted">Phone</label>
+                                    <div class="col-lg-10">
+                                        <input type="text" name="phone" class="form-control form-control-solid"
+                                            value="{{ $company->phone }}" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-7">
+                                    <label class="col-lg-2 fw-semibold text-muted">Address</label>
+                                    <div class="col-lg-10">
+                                        <input type="text" name="address" class="form-control form-control-solid"
+                                            value="{{ $company->address }}" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-7">
+                                    <label class="col-lg-2 fw-semibold text-muted">Status</label>
+                                    <div class="col-lg-10">
+                                        <input type="text" name="status" class="form-control form-control-solid"
+                                            value="{{ ucfirst($company->status) }}" readonly />
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        {{-- <div class="row mb-7">
-                            <label class="col-lg-2 fw-semibold text-muted">Domain</label>
-                            <div class="col-lg-10">
-                                <input type="text" name="domain" class="form-control form-control-solid"
-                                    value="{{ $company->domain }}" readonly />
-                            </div>
-                        </div> --}}
-                        <div class="row mb-7">
-                            <label class="col-lg-2 fw-semibold text-muted">Email</label>
-                            <div class="col-lg-10">
-                                <input type="email" name="email" class="form-control form-control-solid"
-                                    value="{{ $company->email }}" readonly />
-                            </div>
-                        </div>
-                        <div class="row mb-7">
-                            <label class="col-lg-2 fw-semibold text-muted">Phone</label>
-                            <div class="col-lg-10">
-                                <input type="text" name="phone" class="form-control form-control-solid"
-                                    value="{{ $company->phone }}" readonly />
-                            </div>
-                        </div>
-                        <div class="row mb-7">
-                            <label class="col-lg-2 fw-semibold text-muted">Address</label>
-                            <div class="col-lg-10">
-                                <input type="text" name="address" class="form-control form-control-solid"
-                                    value="{{ $company->address }}" readonly />
-                            </div>
-                        </div>
-                        <div class="row mb-7">
-                            <label class="col-lg-2 fw-semibold text-muted">Status</label>
-                            <div class="col-lg-10">
-                                <input type="text" name="status" class="form-control form-control-solid"
-                                    value="{{ ucfirst($company->status) }}" readonly />
+                            <div class="ms-5 d-flex flex-column align-items-center">
+                                @if($company && $company->logo_url)
+                                <img id="companyLogoPreview" src="{{ $company->logo_url }}" alt="Company Logo"
+                                    style="max-width:120px;max-height:120px;border-radius:8px;object-fit:contain;">
+                                @else
+                                <div id="companyLogoPreviewContainer"
+                                    class="border rounded bg-light d-flex align-items-center justify-content-center"
+                                    style="width:120px;height:120px;">
+                                    <span class="text-muted">No Logo</span>
+                                </div>
+                                @endif
+                                <div class="mt-2 d-none" id="logoInputRow">
+                                    <input type="file" name="logo" class="form-control" accept="image/*"
+                                        id="logoInput" />
+                                </div>
                             </div>
                         </div>
 
@@ -120,6 +143,7 @@ By: AI Assistant
             const saveButtons = document.getElementById('saveButtons');
             const form = document.getElementById('companyProfileForm');
             const inputs = form.querySelectorAll('input:not([type="hidden"])');
+            const logoInputRow = document.getElementById('logoInputRow');
 
             editBtn.addEventListener('click', function() {
                 inputs.forEach(input => {
@@ -129,6 +153,8 @@ By: AI Assistant
                 });
                 saveButtons.classList.remove('d-none');
                 editBtn.classList.add('d-none');
+                // Tampilkan input logo
+                logoInputRow.classList.remove('d-none');
             });
 
             cancelBtn.addEventListener('click', function() {
@@ -137,6 +163,8 @@ By: AI Assistant
                 });
                 saveButtons.classList.add('d-none');
                 editBtn.classList.remove('d-none');
+                // Sembunyikan input logo
+                logoInputRow.classList.add('d-none');
                 form.reset();
             });
 
@@ -172,6 +200,8 @@ By: AI Assistant
                         inputs.forEach(input => input.setAttribute('readonly', true));
                         saveButtons.classList.add('d-none');
                         editBtn.classList.remove('d-none');
+                        // Sembunyikan input logo
+                        document.getElementById('logoInputRow').classList.add('d-none');
                     } else {
                         Swal.fire({
                             icon: 'error',
@@ -188,6 +218,14 @@ By: AI Assistant
                         text: 'Failed to update company profile. Please try again.'
                     });
                 });
+            });
+
+            document.getElementById('logoInput').addEventListener('change', function(e) {
+                const [file] = e.target.files;
+                if (file) {
+                    const img = document.querySelector('img[alt=\"Company Logo\"]');
+                    img.src = URL.createObjectURL(file);
+                }
             });
         });
     </script>

@@ -24,10 +24,10 @@ return new class extends Migration {
             $table->decimal('initial_weight', 10, 2)->default(0); //berat beli rata - rata
             $table->decimal('price', 10, 2);        // Harga per unit saat beli
             $table->json('data')->nullable();
-            $table->string('status'); //status
+            $table->string('status')->index();
             $table->text('notes')->nullable(); //keterangan
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
 
             $table->timestamps();
             $table->softDeletes();
@@ -51,7 +51,7 @@ return new class extends Migration {
             $table->uuid('livestock_strain_standard_id')->nullable();
             $table->string('name'); // Batch name/code
             $table->string('livestock_strain_name'); // Chicken strain type
-            $table->dateTime('start_date');
+            $table->dateTime('start_date')->index();
             $table->dateTime('end_date')->nullable();
             $table->integer('initial_quantity');
             $table->integer('quantity_depletion')->default(0);
@@ -63,10 +63,10 @@ return new class extends Migration {
             $table->decimal('weight_per_unit', 10, 2);
             $table->decimal('weight_total', 10, 2);
             $table->json('data')->nullable();
-            $table->string('status');
+            $table->string('status')->index();
             $table->text('notes')->nullable();
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 
@@ -80,7 +80,7 @@ return new class extends Migration {
         // Livestock Purchase
         Schema::create('livestock_purchases', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->date('tanggal');
+            $table->date('tanggal')->index();
             $table->string('invoice_number');
             $table->foreignUuid('supplier_id')->constrained('partners')->onDelete('cascade');
             $table->foreignUuid('farm_id')->constrained('farms')->onDelete('cascade');
@@ -125,8 +125,8 @@ return new class extends Migration {
             // Additional information
             $table->text('notes')->nullable(); // Catatan tambahan jika ada
             $table->json('data')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 
@@ -159,8 +159,8 @@ return new class extends Migration {
             $table->decimal('weight', 10, 2)->nullable();
             $table->string('keterangan')->nullable();
             $table->json('payload')->nullable(); // JSON/array type column to save data
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 
@@ -171,7 +171,7 @@ return new class extends Migration {
         // Livestock Sales
         Schema::create('livestock_sales', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->date('tanggal');
+            $table->date('tanggal')->index();
             $table->string('customer_name')->nullable();
             $table->foreignUuid('customer_id')->nullable()->constrained('partners')->onDelete('cascade');
             $table->unsignedBigInteger('created_by')->nullable();
@@ -191,8 +191,8 @@ return new class extends Migration {
             $table->integer('quantity');
             $table->decimal('berat_total', 10, 2)->nullable();
             $table->decimal('harga_satuan', 12, 2);
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 
@@ -203,7 +203,7 @@ return new class extends Migration {
         // Daily Recording
         Schema::create('recordings', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->date('tanggal');
+            $table->date('tanggal')->index();
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
             $table->integer('age');
             $table->integer('stock_awal');
@@ -232,12 +232,12 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('recording_id')->constrained()->onDelete('cascade');
-            $table->date('tanggal');
+            $table->date('tanggal')->index();
             $table->string('jenis'); // Mati / Afkir
             $table->integer('jumlah');
             $table->json('data')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 
@@ -254,8 +254,8 @@ return new class extends Migration {
             $table->decimal('total_cost', 14, 2)->default(0);
             $table->decimal('cost_per_ayam', 10, 2)->default(0);
             $table->json('cost_breakdown')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 
@@ -267,16 +267,16 @@ return new class extends Migration {
         Schema::create('current_livestocks', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
-            $table->uuid('farm_id');
-            $table->uuid('coop_id');
+            $table->uuid('farm_id')->index();
+            $table->uuid('coop_id')->index();
             $table->integer('quantity');          // Jumlah saat ini
             $table->decimal('weight_total', 10, 2); // Estimasi berat total
             $table->decimal('weight_avg', 10, 2);   // Rata-rata berat per ekor
             $table->json('data')->nullable();
-            $table->string('status');              // active, sold, dead, culled
+            $table->string('status')->index();              // active, sold, dead, culled
 
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 

@@ -418,11 +418,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reports/batch-worker', [ReportsController::class, 'indexBatchWorker'])->name('reports.batch-worker');
     Route::get('/reports/batch-worker/export', [ReportsController::class, 'exportBatchWorker'])->name('reports.batch-worker.export');
 
-    // Company Management
-    Route::get('/companies', [App\Http\Controllers\Pages\CompanyController::class, 'index'])->name('companies.index');
-    Route::get('/companies/data', [App\Http\Controllers\Pages\CompanyController::class, 'getData'])->name('companies.data');
-    Route::get('/company-user-mapping', [App\Http\Controllers\Pages\CompanyController::class, 'mappingIndex'])->name('companyuser.mapping');
-    Route::post('/companies/{company}', [App\Http\Controllers\Pages\CompanyController::class, 'update'])->name('companies.update');
+    Route::name('setting.')->prefix('setting')->group(function () {
+        // Company Management
+        Route::get('/companies', [App\Http\Controllers\Pages\CompanyController::class, 'index'])->name('companies.index');
+        Route::get('/companies/data', [App\Http\Controllers\Pages\CompanyController::class, 'getData'])->name('companies.data');
+        Route::get('/company-user-mapping', [App\Http\Controllers\Pages\CompanyController::class, 'mappingIndex'])->name('companyuser.mapping');
+        Route::post('/companies/{company}', [App\Http\Controllers\Pages\CompanyController::class, 'update'])->name('companies.update');
+    });
 });
 
 // Error Routes

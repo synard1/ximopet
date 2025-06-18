@@ -1,4 +1,4 @@
-<div class="card" id="companyFormCard" style="display: none;">
+<div class="card" id="companyFormCard" style="display: {{ $showForm ? 'block' : 'none' }};">
     <div class="card-header">
         <h3 class="card-title">{{ $isEditing ? 'Edit Company' : 'Create New Company' }}</h3>
     </div>
@@ -23,14 +23,14 @@
                     <input type="text" wire:model="phone" class="form-control" placeholder="Enter phone number" />
                     @error('phone') <span class="text-danger">{{ $message }}</span> @enderror
                 </div>
-                <div class="col-md-6">
+                {{-- <div class="col-md-6">
                     <label class="form-label required">Domain</label>
                     <input type="text" wire:model="domain" class="form-control" placeholder="Enter domain" />
                     @error('domain') <span class="text-danger">{{ $message }}</span> @enderror
-                </div>
+                </div> --}}
             </div>
 
-            <div class="row mb-5">
+            {{-- <div class="row mb-5">
                 <div class="col-md-6">
                     <label class="form-label required">Database</label>
                     <input type="text" wire:model="database" class="form-control" placeholder="Enter database name" />
@@ -41,7 +41,7 @@
                     <input type="text" wire:model="package" class="form-control" placeholder="Enter package" />
                     @error('package') <span class="text-danger">{{ $message }}</span> @enderror
                 </div>
-            </div>
+            </div> --}}
 
             <div class="row mb-5">
                 <div class="col-md-6">
@@ -54,7 +54,33 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Logo</label>
-                    <input type="file" wire:model="logo" class="form-control" accept="image/*" />
+                    <div x-data="{ logoPreview: null }" x-init="
+                        $watch('logoPreview', value => { if (!value) return; });
+                        @if($logo && str_starts_with($logo, 'data:image'))
+                            logoPreview = '{{ $logo }}';
+                        @endif
+                    ">
+                        <template x-if="logoPreview">
+                            <div class="mb-2">
+                                <img :src="logoPreview" alt="Company Logo"
+                                    style="max-width: 100%; max-height: 150px;" />
+                            </div>
+                        </template>
+                        @if($logo && str_starts_with($logo, 'data:image'))
+                        <div class="mb-2" x-show="!logoPreview">
+                            <img src="{{ $logo }}" alt="Company Logo" style="max-width: 100%; max-height: 150px;" />
+                        </div>
+                        @endif
+                        <input type="file" wire:model="logo" class="form-control" accept="image/*" @change="
+                            if ($event.target.files.length) {
+                                const reader = new FileReader();
+                                reader.onload = e => logoPreview = e.target.result;
+                                reader.readAsDataURL($event.target.files[0]);
+                            } else {
+                                logoPreview = null;
+                            }
+                        " />
+                    </div>
                     @error('logo') <span class="text-danger">{{ $message }}</span> @enderror
                 </div>
             </div>

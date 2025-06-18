@@ -74,7 +74,12 @@
                                             </td>
                                         </tr>
                                         <!--end::Table row-->
-                                        @foreach($permissions_by_group as $group => $permissions)
+                                        @foreach($permissions_by_main_group as $main_group => $abilities)
+                                        <!--begin::Main Group row-->
+                                        <tr>
+                                            <td colspan="6" class="fw-bold text-primary bg-light">{{ $main_group }}</td>
+                                        </tr>
+                                        @foreach($abilities as $group => $permissions)
                                         <!--begin::Table row-->
                                         <tr>
                                             <!--begin::Label-->
@@ -102,6 +107,7 @@
                                             <!--end::Input group-->
                                         </tr>
                                         <!--end::Table row-->
+                                        @endforeach
                                         @endforeach
                                         <!--begin::Table row-->
                                     </tbody>

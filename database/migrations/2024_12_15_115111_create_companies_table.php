@@ -24,10 +24,11 @@ return new class extends Migration
             $table->string('domain')->unique()->nullable();
             $table->string('database')->unique()->nullable();
             $table->string('package')->nullable();
-            $table->string('status');
-            $table->string('keterangan')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->json('config')->nullable();
+            $table->string('status')->index();
+            $table->string('notes')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
 
             $table->timestamps();
             $table->softDeletes();
@@ -37,7 +38,6 @@ return new class extends Migration
         });
 
         Schema::enableForeignKeyConstraints();
-
     }
 
     /**

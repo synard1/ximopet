@@ -35,12 +35,83 @@
 
                 <div class="mb-3">
                     <label for="icon" class="form-label">Icon</label>
-                    <input type="text" class="form-control @error('icon') is-invalid @enderror" id="icon" name="icon"
-                        value="{{ old('icon') }}">
+                    <div class="input-group">
+                        <input type="text" class="form-control @error('icon') is-invalid @enderror" id="icon"
+                            name="icon" value="{{ old('icon') }}" autocomplete="off">
+                        <span class="input-group-text" id="icon-preview">
+                            <i class="fa {{ old('icon') }}"></i>
+                        </span>
+                        <button type="button" class="btn btn-outline-secondary" id="icon-picker-btn">Pilih Icon</button>
+                    </div>
                     @error('icon')
                     <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
+
+                <!-- Modal Icon Picker -->
+                <div class="modal fade" id="iconPickerModal" tabindex="-1" aria-labelledby="iconPickerModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="iconPickerModalLabel">Pilih Icon</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="icon-list"
+                                    style="max-height:400px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:10px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @push('scripts')
+                <script>
+                    // Ambil list icon dari backend config/fontawesome.php
+                    const faFreeSolidIcons = @json(config('fontawesome'));
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Update preview on input change
+                        const iconInput = document.getElementById('icon');
+                        const iconPreview = document.querySelector('#icon-preview i');
+                        iconInput.addEventListener('input', function() {
+                            if (faFreeSolidIcons.includes(this.value)) {
+                                iconPreview.className = 'fa ' + this.value;
+                            } else {
+                                iconPreview.className = '';
+                            }
+                        });
+
+                        // Open modal
+                        document.getElementById('icon-picker-btn').addEventListener('click', function() {
+                            const modal = new bootstrap.Modal(document.getElementById('iconPickerModal'));
+                            modal.show();
+                        });
+
+                        // Load icons to modal
+                        let iconsLoaded = false;
+                        document.getElementById('iconPickerModal').addEventListener('show.bs.modal', function() {
+                            if (iconsLoaded) return;
+                            const iconList = document.getElementById('icon-list');
+                            faFreeSolidIcons.forEach(icon => {
+                                const iconEl = document.createElement('div');
+                                iconEl.style.cursor = 'pointer';
+                                iconEl.style.width = '60px';
+                                iconEl.style.textAlign = 'center';
+                                iconEl.innerHTML = `<i class=\"fa ${icon}\" style=\"font-size:24px;\"></i><div style=\"font-size:10px;\">${icon}</div>`;
+                                iconEl.onclick = function() {
+                                    iconInput.value = 'fa-solid ' + icon;
+                                    iconPreview.className = 'fa ' + icon;
+                                    bootstrap.Modal.getInstance(document.getElementById('iconPickerModal')).hide();
+                                };
+                                iconList.appendChild(iconEl);
+                            });
+                            iconsLoaded = true;
+                        });
+                    });
+                </script>
+                @endpush
 
                 <div class="mb-3">
                     <label for="location" class="form-label">Location</label>

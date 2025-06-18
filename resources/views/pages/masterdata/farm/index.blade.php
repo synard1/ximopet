@@ -11,7 +11,7 @@
 
         <div class="card-body py-4">
             <ul class="nav nav-tabs nav-line-tabs mb-5 fs-6">
-                @if(auth()->user()->can('read farm management'))
+                @if(auth()->user()->can('read farm master data'))
                 <li class="nav-item">
                     <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_farm">Data Farm</a>
                 </li>
@@ -58,9 +58,10 @@
                             <!--end::Card toolbar-->
                             <!--begin::Toolbar-->
                             <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
-                                @if (auth()->user()->can('create farm management'))
+                                @if (auth()->user()->can('create farm master data'))
                                 <!--begin::Add user-->
-                                <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('create')">
+                                <button type="button" class="btn btn-primary"
+                                    onclick="Livewire.dispatch('create_farm')">
                                     {!! getIcon('plus', 'fs-2', '', 'i') !!}
                                     Tambah Data
                                 </button>
@@ -170,8 +171,8 @@
     {{--
     <x-permission-info :permissionInfo="$permissionInfo" /> --}}
 
-    {{--
-    <livewire:master-data.farm-modal /> --}}
+
+    <livewire:master-data.farm-modal />
 
     <!-- Farm Details Modal -->
     <div class="modal fade" id="farmDetailsModal" tabindex="-1" aria-labelledby="farmDetailsModalLabel"

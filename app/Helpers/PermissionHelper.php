@@ -61,11 +61,11 @@ class PermissionHelper
     public static function getFarmManagementPermissions()
     {
         return [
-            'read farm management',
-            'create farm management',
-            'update farm management',
-            'delete farm management',
-            'access farm management', // Used for operator/storage tabs access
+            'read farm master data',
+            'create farm master data',
+            'update farm master data',
+            'delete farm master data',
+            'access farm master data', // Used for operator/storage tabs access
             'read farm operator',     // Used for operator tab data
             'access farm storage',    // Used for storage tab access
             'read farm storage',      // Used for storage tab data
@@ -100,7 +100,7 @@ class PermissionHelper
     {
         // Define *route-level* required permissions (if any)
         $routePermissions = [
-            'farm.index' => ['read farm management'], // Basic view permission for the index page itself
+            'farm.index' => ['read farm master data'], // Basic view permission for the index page itself
             // Add other specific route permissions if applicable
         ];
 

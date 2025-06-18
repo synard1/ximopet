@@ -26,7 +26,7 @@ class Company extends BaseModel
         'package',
         'config',
         'status',
-        'keterangan',
+        'notes',
         'created_by',
         'updated_by',
     ];
@@ -137,5 +137,14 @@ class Company extends BaseModel
     public function getReportingConfig(): array
     {
         return $this->getConfigSection('reporting');
+    }
+
+    /**
+     * Check if company can be deleted (no users mapped)
+     */
+    public function canBeDeleted(): bool
+    {
+        // Cek apakah masih ada user yang terhubung ke company ini
+        return !\App\Models\CompanyUser::where('company_id', $this->id)->exists();
     }
 }

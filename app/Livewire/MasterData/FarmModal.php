@@ -20,7 +20,7 @@ class FarmModal extends Component
     protected $listeners = [
         'delete_farm' => 'deleteFarmList',
         'editFarm' => 'editFarm',
-        'create' => 'create',
+        'create_farm' => 'create_farm',
         'closeModalFarm' => 'closeModalFarm',
         'openModalForm' => 'openModalForm',
     ];
@@ -41,7 +41,7 @@ class FarmModal extends Component
         return view('livewire.master-data.farm-modal');
     }
 
-    public function create()
+    public function create_farm()
     {
         $this->isEdit = false;
         $this->resetForm();

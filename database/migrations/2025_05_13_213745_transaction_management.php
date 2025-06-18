@@ -28,10 +28,10 @@ return new class extends Migration
             $table->json('payload')->nullable();
 
             $table->text('notes')->nullable();
-            $table->string('status')->nullable(); // e.g. 'draft', 'confirmed', 'paid'
+            $table->string('status')->nullable()->index(); // e.g. 'draft', 'confirmed', 'paid'
 
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->unsignedBigInteger('approved_by')->nullable();
 
             $table->timestamps();
@@ -44,6 +44,11 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('approved_by')->references('id')->on('users');
+
+            $table->uuid('livestock_id')->index();
+            $table->uuid('customer_id')->index();
+            $table->uuid('expedition_id')->nullable()->index();
+            $table->date('transaction_date')->index();
         });
     }
 

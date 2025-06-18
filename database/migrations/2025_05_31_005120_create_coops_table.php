@@ -23,9 +23,9 @@ return new class extends Migration
             $table->uuid('livestock_id')->nullable();
             $table->integer('quantity')->default(0);
             $table->decimal('weight', 10, 2)->default(0);
-            $table->string('status')->default('active');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->string('status')->default('active')->index();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 

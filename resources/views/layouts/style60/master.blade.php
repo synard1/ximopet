@@ -179,60 +179,60 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
             toastr.info(message);
         });
 
-        Livewire.on('confirm', (params = {}) => {
-            // Support both array and object format for params (for Livewire compatibility)
-            let p = {};
-            if (Array.isArray(params)) {
-                // If params is an array, convert to object with expected keys
-                // [title, text, confirmButtonText, cancelButtonText, onConfirmed, onCancelled, params]
-                [
-                    'title',
-                    'text', 
-                    'confirmButtonText',
-                    'cancelButtonText',
-                    'onConfirmed',
-                    'onCancelled',
-                    'params'
-                ].forEach((key, i) => {
-                    if (typeof params[i] !== 'undefined') p[key] = params[i];
-                });
-            } else if (typeof params === 'object' && params !== null) {
-                p = params;
-            }
+        // Livewire.on('confirm', (params = {}) => {
+        //     // Support both array and object format for params (for Livewire compatibility)
+        //     let p = {};
+        //     if (Array.isArray(params)) {
+        //         // If params is an array, convert to object with expected keys
+        //         // [title, text, confirmButtonText, cancelButtonText, onConfirmed, onCancelled, params]
+        //         [
+        //             'title',
+        //             'text', 
+        //             'confirmButtonText',
+        //             'cancelButtonText',
+        //             'onConfirmed',
+        //             'onCancelled',
+        //             'params'
+        //         ].forEach((key, i) => {
+        //             if (typeof params[i] !== 'undefined') p[key] = params[i];
+        //         });
+        //     } else if (typeof params === 'object' && params !== null) {
+        //         p = params;
+        //     }
 
-            log(p);
+        //     log(p);
 
-            // Fallbacks for missing values
-            p.title = p.title || 'Konfirmasi';
-            p.text = p.text || '';
-            p.confirmButtonText = p.confirmButtonText || 'Ya';
-            p.cancelButtonText = p.cancelButtonText || 'Batal';
+        //     // Fallbacks for missing values
+        //     p.title = p.title || 'Konfirmasi';
+        //     p.text = p.text || '';
+        //     p.confirmButtonText = p.confirmButtonText || 'Ya';
+        //     p.cancelButtonText = p.cancelButtonText || 'Batal';
 
-            // Handle params object
-            if (p.params && typeof p.params === 'object') {
-                p.params = JSON.parse(JSON.stringify(p.params));
-            }
+        //     // Handle params object
+        //     if (p.params && typeof p.params === 'object') {
+        //         p.params = JSON.parse(JSON.stringify(p.params));
+        //     }
 
-            Swal.fire({
-                title: p.title.title,
-                text: p.title.text,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: p.confirmButtonText,
-                cancelButtonText: p.cancelButtonText,
-                customClass: {
-                    confirmButton: 'btn btn-primary',
-                    cancelButton: 'btn btn-secondary'
-                }
-            }).then((result) => {
-                log(result.isConfirmed);
-                if (result.isConfirmed) {
-                    Livewire.dispatch(p.title.onConfirmed, p.title.params);
-                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    Livewire.dispatch(p.onCancelled);
-                }
-            });
-        });
+        //     Swal.fire({
+        //         title: p.title.title,
+        //         text: p.title.text,
+        //         icon: 'warning',
+        //         showCancelButton: true,
+        //         confirmButtonText: p.confirmButtonText,
+        //         cancelButtonText: p.cancelButtonText,
+        //         customClass: {
+        //             confirmButton: 'btn btn-primary',
+        //             cancelButton: 'btn btn-secondary'
+        //         }
+        //     }).then((result) => {
+        //         log(result.isConfirmed);
+        //         if (result.isConfirmed) {
+        //             Livewire.dispatch(p.title.onConfirmed, p.title.params);
+        //         } else if (result.dismiss === Swal.DismissReason.cancel) {
+        //             Livewire.dispatch(p.onCancelled);
+        //         }
+        //     });
+        // });
 
         Livewire.on('swal', (message, icon, confirmButtonText) => {
             if (typeof icon === 'undefined') {

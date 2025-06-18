@@ -60,6 +60,12 @@ class LivestockPurchaseDataTable extends DataTable
             ->editColumn('status', function (Transaksi $transaksi) {
                 $statuses = Transaksi::STATUS_LABELS;
                 $currentStatus = $transaksi->status;
+
+                // Check if user only has read permission
+                if (!auth()->user()->can('update livestock purchase')) {
+                    return $statuses[$currentStatus] ?? $currentStatus;
+                }
+
                 $isDisabled = in_array($currentStatus, ['cancelled', 'completed']) ? 'disabled' : '';
 
                 $html = '<div class="d-flex align-items-center">';

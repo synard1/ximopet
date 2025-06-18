@@ -13,22 +13,22 @@ return new class extends Migration
     {
         Schema::create('mutations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('type'); // feed / supply / livestock
-            $table->uuid('from_livestock_id')->nullable(); // Bisa null jika antar farm (khusus supply)
-            $table->uuid('to_livestock_id')->nullable();   // Bisa null jika antar farm (khusus supply)
+            $table->string('type')->index(); // feed / supply / livestock
+            $table->uuid('from_livestock_id')->nullable()->index(); // Bisa null jika antar farm (khusus supply)
+            $table->uuid('to_livestock_id')->nullable()->index();   // Bisa null jika antar farm (khusus supply)
 
             // Untuk Supply: gunakan farm_id dan pen_id bisa kosong
-            $table->uuid('from_farm_id')->nullable();
+            $table->uuid('from_farm_id')->nullable()->index();
             $table->uuid('from_coop_id')->nullable();
-            $table->uuid('to_farm_id')->nullable();
+            $table->uuid('to_farm_id')->nullable()->index();
             $table->uuid('to_coop_id')->nullable();
 
-            $table->date('date');
+            $table->date('date')->index();
             $table->text('notes')->nullable();
             $table->json('payload')->nullable();
             $table->enum('mutation_scope', ['internal', 'interfarm', 'rollback'])->default('internal');
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
 
             $table->timestamps();
             $table->softDeletes();

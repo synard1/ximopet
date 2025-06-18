@@ -11,7 +11,7 @@ function isMenuActive($menu, $currentPath) {
 // Check if the current menu item's route matches the current path precisely
 // or if the current path starts exactly with the menu route path followed by a slash
 if ($menu->route && $menu->route !== '#') {
-$menuPath = ltrim(parse_url(url($menu->route), PHP_URL_PATH), '/');
+$menuPath = ltrim(parse_url(url($menu->route), PHP_URL_PATH) ?? '', '/');
 if ($currentPath === $menuPath || str_starts_with($currentPath, $menuPath . '/')) {
 return true;
 }
@@ -21,7 +21,7 @@ return true;
 if ($menu->children->isNotEmpty()) {
 foreach ($menu->children as $child) {
 if ($child->route && $child->route !== '#') {
-$childPath = ltrim(parse_url(url($child->route), PHP_URL_PATH), '/');
+$childPath = ltrim(parse_url(url($child->route), PHP_URL_PATH) ?? '', '/');
 if ($currentPath === $childPath || str_starts_with($currentPath, $childPath . '/')) {
 return true;
 }
@@ -41,7 +41,7 @@ return true;
 // Check if the menu item's route matches the current path precisely
 // or if the current path starts exactly with the menu route path followed by a slash
 if ($menu->route && $menu->route !== '#') {
-$menuPath = ltrim(parse_url(url($menu->route), PHP_URL_PATH), '/');
+$menuPath = ltrim(parse_url(url($menu->route), PHP_URL_PATH) ?? '', '/');
 if ($currentPath === $menuPath || str_starts_with($currentPath, $menuPath . '/')) {
 return true;
 }

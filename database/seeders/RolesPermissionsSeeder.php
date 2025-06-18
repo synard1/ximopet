@@ -22,7 +22,7 @@ class RolesPermissionsSeeder extends Seeder
                 'user management',
                 'supplier management',
                 'customer management',
-                'farm management',
+                'farm master data',
                 'farm operator',
                 'farm storage',
                 'kandang management',
@@ -48,7 +48,7 @@ class RolesPermissionsSeeder extends Seeder
                 'user management',
                 'supplier management',
                 'customer management',
-                'farm management',
+                'farm master data',
                 'kandang management',
                 'stok management',
                 'inventory management',
@@ -65,7 +65,7 @@ class RolesPermissionsSeeder extends Seeder
             ],
             'Supervisor' => [
                 'master data',
-                'farm management',
+                'farm master data',
                 'supplier management',
                 'customer management',
                 'transaction'

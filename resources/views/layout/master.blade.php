@@ -148,27 +148,27 @@
             });
         });
 
-        Livewire.on('confirm', (message, params) => {
-            log('confirm');
-            Swal.fire({
-                title: params.title,
-                text: params.text,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: params.confirmButtonText,
-                cancelButtonText: params.cancelButtonText,
-                customClass: {
-                    confirmButton: 'btn btn-primary',
-                    cancelButton: 'btn btn-secondary'
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    Livewire.dispatch(params.onConfirmed, params.params);
-                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    Livewire.dispatch(params.onCancelled);
-                }
-            });
-        });
+        // Livewire.on('confirm', (message, params) => {
+        //     log('confirm');
+        //     Swal.fire({
+        //         title: params.title,
+        //         text: params.text,
+        //         icon: 'warning',
+        //         showCancelButton: true,
+        //         confirmButtonText: params.confirmButtonText,
+        //         cancelButtonText: params.cancelButtonText,
+        //         customClass: {
+        //             confirmButton: 'btn btn-primary',
+        //             cancelButton: 'btn btn-secondary'
+        //         }
+        //     }).then((result) => {
+        //         if (result.isConfirmed) {
+        //             Livewire.dispatch(params.onConfirmed, params.params);
+        //         } else if (result.dismiss === Swal.DismissReason.cancel) {
+        //             Livewire.dispatch(params.onCancelled);
+        //         }
+        //     });
+        // });
     });
     </script>
 

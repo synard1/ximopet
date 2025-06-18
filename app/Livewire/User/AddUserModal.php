@@ -189,39 +189,77 @@ class AddUserModal extends Component
     public function deleteUser($id)
     {
         try {
+            $user = User::findOrFail($id);
+
             // Prevent deletion of current user
             if ($id == Auth::id()) {
-                $this->dispatch('error', 'User cannot be deleted');
-                return;
-            }
-
-            // Check if the user is the creator of any LivestockPurchase, FeedPurchase, or SupplyPurchase
-            if (\App\Models\LivestockPurchase::where('created_by', $id)->exists() || \App\Models\FeedPurchase::where('created_by', $id)->exists() || \App\Models\SupplyPurchase::where('created_by', $id)->exists()) {
-                // Ask for confirmation before suspending the user
-                $this->dispatch('confirm', [
-                    'title' => 'Confirm Suspension',
-                    'text' => 'User cannot be deleted because they have created purchases. Do you want to suspend the user instead?',
-                    'confirmButtonText' => 'Yes, Suspend',
-                    'cancelButtonText' => 'No, Cancel',
-                    'onConfirmed' => 'suspendUser',
-                    'onCancelled' => 'cancelSuspension',
-                    'params' => ['id' => $id],
+                $this->dispatch('error-modal', [
+                    'title' => 'Tidak Bisa Hapus User',
+                    'icon' => 'warning',
+                    'blockers' => ['Anda tidak dapat menghapus akun Anda sendiri.'],
+                    'text' => 'Aksi ini tidak diizinkan.',
                 ]);
                 return;
             }
 
-            DB::table('farm_operators')->where('user_id', $id)->delete();
+            // Check if user can be deleted
+            if (!$user->canBeDeleted()) {
+                $blockers = $user->getDeletionBlockers();
 
-            // Delete the user record with the specified ID
-            User::destroy($id);
+                // Jika ada purchases, tetap tawarkan suspensi
+                if (
+                    in_array('User has livestock purchases', $blockers) ||
+                    in_array('User has feed purchases', $blockers) ||
+                    in_array('User has supply purchases', $blockers)
+                ) {
 
-            // Emit a success event with a message
-            $this->dispatch('success', 'User successfully deleted');
+                    // dd($blockers);
+                    $this->dispatch('confirm', [
+                        'title' => 'Konfirmasi Suspensi',
+                        'icon' => 'warning',
+                        'blockers' => $blockers,
+                        'text' => 'User tidak dapat dihapus karena alasan berikut:',
+                        'confirmButtonText' => 'Ya, Suspend',
+                        'cancelButtonText' => 'Batal',
+                        'onConfirmed' => 'suspendUser',
+                        'onCancelled' => 'cancelSuspension',
+                        'params' => ['id' => $id],
+                    ]);
+                    return;
+                }
+
+                // Jika bukan kasus suspensi, tampilkan error stylish juga
+                $this->dispatch('error-modal', [
+                    'title' => 'Tidak Bisa Hapus User',
+                    'icon' => 'warning',
+                    'blockers' => $blockers,
+                    'text' => 'User tidak dapat dihapus karena alasan berikut:',
+                ]);
+                return;
+            }
+
+            // If user can be deleted, proceed with deletion
+            DB::beginTransaction();
+            try {
+                // Delete related farm operators first
+                DB::table('farm_operators')->where('user_id', $id)->delete();
+
+                // Delete the user
+                $user->delete();
+
+                DB::commit();
+                $this->dispatch('success', 'User successfully deleted');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
         } catch (\Exception $e) {
-            DB::rollBack();
-
-            // Handle validation and general errors
-            $this->dispatch('error', 'Terjadi kesalahan saat menghapus data. ' . $e->getMessage());
+            $this->dispatch('error-modal', [
+                'title' => 'Gagal Menghapus User',
+                'icon' => 'error',
+                'blockers' => [$e->getMessage()],
+                'text' => 'Terjadi kesalahan saat menghapus user.',
+            ]);
         }
     }
 
@@ -229,6 +267,8 @@ class AddUserModal extends Component
     {
         $user = User::find($id);
         $user->update(['status' => 'suspended']);
+        // dd($user);
+
         $this->dispatch('success', 'User suspended successfully');
     }
 

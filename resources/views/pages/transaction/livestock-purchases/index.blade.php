@@ -120,12 +120,14 @@
                     <!--end::Menu 1-->
                     <!--end::Filter-->
                     --}}
-                    <!--begin::Add user-->
+                    @if(auth()->user()->can('create livestock purchase'))
+                    <!--begin::Add DOC Purchase-->
                     <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('showCreateForm')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}
                         Tambah Data Pembelian Ayam
                     </button>
-                    <!--end::Add user-->
+                    <!--end::Add DOC Purchase-->
+                    @endif
                 </div>
                 <!--end::Toolbar-->
             </div>
@@ -143,7 +145,9 @@
                 </div>
                 <!--end::Table-->
             </div>
+            @if(auth()->user()->can('create livestock purchase'))
             <livewire:livestock-purchase.create />
+            @endif
 
 
         </div>

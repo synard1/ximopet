@@ -11,6 +11,8 @@ use App\Models\User; // Ensure User model is imported
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\RoleBackupService;
+use Spatie\ResponseCache\Facades\ResponseCache;
+
 
 class RoleModal extends Component
 {
@@ -96,42 +98,72 @@ class RoleModal extends Component
 
     public function render()
     {
+        // Define main groups and their keywords
+        $main_groups = [
+            'Master Data' => ['master data'],
+            'Purchasing' => ['purchasing', 'purchasing', 'purchase'],
+            'Management' => ['management', 'manage'],
+            'Usage' => ['usage', 'use'],
+            'Mutation' => ['mutation', 'mutasi'],
+            'Report' => ['report'],
+        ];
 
+        $permissions_by_main_group = [];
+        $other_permissions = [];
 
-        // Create an array of permissions grouped by ability.
-        $permissions_by_group = [];
         foreach ($this->permissions ?? [] as $permission) {
             $ability = Str::after($permission->name, ' ');
-
-            $query = Permission::where('name', 'like', "%{$ability}%");
-
-            if (!auth()->user()->hasRole('SuperAdmin')) {
-                $query->where('name', '!=', $permission->name);
+            $grouped = false;
+            foreach ($main_groups as $group => $keywords) {
+                foreach ($keywords as $keyword) {
+                    if (Str::contains(Str::lower($ability), $keyword)) {
+                        $query = Permission::where('name', 'like', "%{$ability}%");
+                        if (!auth()->user()->hasRole('SuperAdmin')) {
+                            $query->where('name', '!=', $permission->name);
+                        }
+                        $permissions = $query->get();
+                        $ordered_permissions = collect(['read', 'create', 'update', 'delete', 'access'])
+                            ->map(fn($action) => $permissions->firstWhere('name', "$action $ability"))
+                            ->filter()
+                            ->values();
+                        if ($ordered_permissions->isNotEmpty()) {
+                            $permissions_by_main_group[$group][$ability] = $ordered_permissions->all();
+                        }
+                        $grouped = true;
+                        break 2;
+                    }
+                }
             }
-
-            $permissions = $query->get();
-
-            // Urutkan permission berdasarkan aturan
-            $ordered_permissions = collect(['read', 'create', 'update', 'delete', 'access'])
-                ->map(fn($action) => $permissions->firstWhere('name', "{$action} {$ability}"))
-                ->filter() // Hapus null jika tidak ada permission yang cocok
-                ->values(); // Reset array index agar rapi
-
-            if ($ordered_permissions->isNotEmpty()) {
-                $permissions_by_group[$ability] = $ordered_permissions->all();
+            if (!$grouped) {
+                $other_permissions[] = $permission;
             }
         }
 
-        // dump($permissions_by_group);
+        // Group remaining permissions under 'Other'
+        foreach ($other_permissions as $permission) {
+            $ability = Str::after($permission->name, ' ');
+            $query = Permission::where('name', 'like', "%{$ability}%");
+            if (!auth()->user()->hasRole('SuperAdmin')) {
+                $query->where('name', '!=', $permission->name);
+            }
+            $permissions = $query->get();
+            $ordered_permissions = collect(['read', 'create', 'update', 'delete', 'access'])
+                ->map(fn($action) => $permissions->firstWhere('name', "$action $ability"))
+                ->filter()
+                ->values();
+            if ($ordered_permissions->isNotEmpty()) {
+                $permissions_by_main_group['Other'][$ability] = $ordered_permissions->all();
+            }
+        }
 
-
-        // Return the view with the permissions_by_group variable passed in.
-        return view('livewire.permission.role-modal', compact('permissions_by_group'));
+        return view('livewire.permission.role-modal', ['permissions_by_main_group' => $permissions_by_main_group]);
     }
 
     public function submit()
     {
         $this->validate();
+
+        // dd($this->all());
 
         try {
             DB::beginTransaction();
@@ -160,6 +192,8 @@ class RoleModal extends Component
                 $user->givePermissionTo($new_access);
             }
 
+            // Clear the response cache
+            ResponseCache::clear();
             DB::commit();
 
             // Create backup after successful update

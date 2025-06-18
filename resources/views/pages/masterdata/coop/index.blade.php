@@ -24,7 +24,7 @@
                     <!--begin::Add user-->
                     <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('createCoop')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}
-                        Tambah Data
+                        Tambah Data Kandang
                     </button>
                     <!--end::Add user-->
                     @endif
@@ -46,9 +46,10 @@
         <!--end::Card body-->
     </div>
 
+    @if(auth()->user()->can('create coop master data'))
     <!-- Include the Kandang Form Component -->
     <livewire:master-data.kandang-form />
-
+    @endif
     @push('scripts')
     {{ $dataTable->scripts() }}
     <script>

@@ -20,10 +20,10 @@ return new class extends Migration
             $table->string('livestock_strain_name');
             $table->json('standar_data');
             $table->string('description')->nullable();
-            $table->string('status');
+            $table->string('status')->index();
 
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
+            $table->unsignedBigInteger('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 

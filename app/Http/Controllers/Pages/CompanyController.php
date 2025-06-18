@@ -22,6 +22,16 @@ class CompanyController extends Controller
             $mapping = CompanyUser::getUserMapping();
             $company = $mapping ? $mapping->company : null;
         }
+        // Tambahkan path logo untuk preview jika ada
+        if ($company && $company->logo) {
+            if (str_starts_with($company->logo, 'data:image')) {
+                $company->logo_url = $company->logo; // base64
+            } else {
+                $company->logo_url = \Illuminate\Support\Facades\Storage::url($company->logo);
+            }
+        } else if ($company) {
+            $company->logo_url = null;
+        }
         return $dataTable->render('pages.masterdata.company.list', compact('company', 'isCompanyAdmin'));
     }
 
@@ -37,7 +47,11 @@ class CompanyController extends Controller
         return DataTables::of($query)
             ->addColumn('logo', function ($company) {
                 if ($company->logo) {
-                    return '<img src="' . Storage::url($company->logo) . '" alt="' . $company->name . '" class="h-10 w-10 rounded-full">';
+                    if (str_starts_with($company->logo, 'data:image')) {
+                        return '<img src="' . $company->logo . '" alt="' . $company->name . '" class="h-10 w-10 rounded-full">';
+                    } else {
+                        return '<img src="' . Storage::url($company->logo) . '" alt="' . $company->name . '" class="h-10 w-10 rounded-full">';
+                    }
                 }
                 return '<div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
                     <span class="text-gray-500 text-sm">' . substr($company->name, 0, 2) . '</span>
@@ -84,9 +98,21 @@ class CompanyController extends Controller
                 'email' => 'required|email|max:255',
                 'phone' => 'required|string|max:20',
                 'address' => 'required|string|max:500',
+                'logo' => 'nullable|image|max:5120', // 5MB
             ]);
 
+            // Handle logo upload and convert to base64
+            if ($request->hasFile('logo')) {
+                $file = $request->file('logo');
+                $imageData = file_get_contents($file->getRealPath());
+                $base64Image = 'data:image/' . $file->getClientOriginalExtension() . ';base64,' . base64_encode($imageData);
+                $validated['logo'] = $base64Image;
+            }
+
             $company->update($validated);
+
+            // Set logo_url for response
+            $company->logo_url = $company->logo;
 
             return response()->json([
                 'success' => true,
@@ -94,6 +120,7 @@ class CompanyController extends Controller
                 'data' => $company
             ]);
         } catch (\Exception $e) {
+            \Log::error('Company update failed: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update company: ' . $e->getMessage()

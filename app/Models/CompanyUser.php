@@ -83,6 +83,19 @@ class CompanyUser extends BaseModel
     }
 
     /**
+     * Check if a company has any users mapped
+     *
+     * @param string|int $companyId
+     * @return bool
+     */
+    public static function checkCompanyHasUsers($companyId): bool
+    {
+        return self::where('company_id', $companyId)
+            ->where('status', 'active')
+            ->exists();
+    }
+
+    /**
      * Relationship with Company model
      */
     public function company()
