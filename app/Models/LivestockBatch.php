@@ -14,6 +14,7 @@ class LivestockBatch extends BaseModel
     use HasFactory, SoftDeletes, HasUuids;
 
     protected $fillable = [
+        'company_id',
         'livestock_id',
         'source_type',
         'source_id',
@@ -34,6 +35,10 @@ class LivestockBatch extends BaseModel
         'weight_type',
         'weight_per_unit',
         'weight_total',
+        'price_per_unit',
+        'price_total',
+        'price_value',
+        'price_type',
         'data',
         'status',
         'notes',
@@ -45,6 +50,9 @@ class LivestockBatch extends BaseModel
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
+        'price_per_unit' => 'decimal:2',
+        'price_total' => 'decimal:2',
+        'price_value' => 'decimal:2',
         'data' => 'array'
     ];
 

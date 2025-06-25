@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Exception;
 
 use App\Models\Recording; // Assuming this is the model for the recordings
 use App\Models\CurrentStock;
@@ -24,10 +25,15 @@ use App\Models\TernakJual;
 use App\Models\TransaksiHarian;
 use App\Models\TransaksiHarianDetail;
 
+use App\Services\Recording\RecordingService;
 use App\Services\StocksService;
 use App\Services\FIFOService;
 use App\Services\TernakService;
 use App\Services\Livestock\LivestockCostService;
+use App\Services\Livestock\FIFODepletionService;
+use App\Services\Recording\RecordingMethodValidationService;
+use App\Services\Recording\RecordingMethodTransitionHelper;
+use App\Config\LivestockDepletionConfig;
 
 
 use App\Models\FeedStock;
@@ -43,9 +49,14 @@ use App\Models\SupplyStock;
 use App\Models\SupplyUsage;
 use App\Models\SupplyUsageDetail;
 use App\Models\Unit;
+use App\Models\Company;
+
+use App\Traits\HasFifoDepletion;
 
 class Records extends Component
 {
+    use HasFifoDepletion;
+
     public $recordings = [];
     public $livestockId; // Changed to a single value (integer)
     public $date;
@@ -92,6 +103,14 @@ class Records extends Component
     public $isEditing = false;
     public $showForm = false;
 
+    public $recordingMethod;
+
+    // Configuration properties
+    public $livestockConfig = [];
+    public $isManualDepletionEnabled = false;
+    public $isFifoDepletionEnabled = false;
+    public $isManualFeedUsageEnabled = false;
+
 
     protected $listeners = [
         'setRecords' => 'setRecords'
@@ -104,36 +123,223 @@ class Records extends Component
         'sales_quantity' => 'nullable|integer|min:0',
         'sales_price' => 'nullable|numeric|min:0',
         'total_sales' => 'nullable|numeric|min:0',
+        // 'recordingMethod' => 'required|in:batch,total',
+    ];
+
+    protected $messages = [
+        'recordingMethod.required' => 'Recording method must be selected.',
+        'recordingMethod.in' => 'Invalid recording method selected.',
     ];
 
     protected ?StocksService $stocksService = null;
     protected ?FIFOService $fifoService = null;
+    protected ?FIFODepletionService $fifoDepletionService = null;
+    protected ?RecordingMethodValidationService $validationService = null;
+    protected ?RecordingMethodTransitionHelper $transitionHelper = null;
+    protected ?RecordingService $recordingService = null;
 
-    public function mount(StocksService $stocksService, FIFOService $fifoService)
-    {
+    public function mount(
+        StocksService $stocksService,
+        FIFOService $fifoService,
+        FIFODepletionService $fifoDepletionService,
+        RecordingMethodValidationService $validationService,
+        RecordingMethodTransitionHelper $transitionHelper,
+        RecordingService $recordingService
+    ) {
         $this->stocksService = $stocksService;
         $this->fifoService = $fifoService;
+        $this->fifoDepletionService = $fifoDepletionService;
+        $this->validationService = $validationService;
+        $this->transitionHelper = $transitionHelper;
+        $this->recordingService = $recordingService;
         $this->initializeItemQuantities();
         $this->initializeSupplyItems();
         $this->loadRecordingData();
     }
 
-    // Fix the method signature to receive the ID directly
+    /**
+     * Validate recording method configuration
+     */
+    private function validateRecordingMethod(Livestock $livestock, Company $company): bool
+    {
+        $validation = $livestock->validateRecordingMethod();
+
+        if (!$validation['valid']) {
+            $this->addError('recording_method', $validation['message']);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Check and set recording method based on configuration and batch count
+     */
+    private function checkAndSetRecordingMethod(Livestock $livestock, Company $company): bool
+    {
+        $validation = $livestock->validateRecordingMethod();
+
+        if (!$validation['valid']) {
+            $this->addError('recording_method', $validation['message']);
+            return false;
+        }
+
+        // Set recording method based on validation result
+        $this->recordingMethod = $validation['method'];
+
+        return true;
+    }
+
+    /**
+     * Load all necessary data for recording
+     */
+    private function loadAllRecordingData(): void
+    {
+        $this->loadStockData();
+        $this->initializeItemQuantities();
+        $this->loadAvailableSupplies();
+        $this->initializeSupplyItems();
+        $this->checkCurrentLivestockStock();
+        $this->loadRecordingData();
+    }
+
     public function setRecords($livestockId)
     {
         $this->resetErrorBag();
         $this->livestockId = $livestockId;
+
         if ($this->livestockId) {
-            $this->loadStockData();
-            $this->initializeItemQuantities();
-            $this->loadAvailableSupplies();
-            $this->initializeSupplyItems();
-            $this->checkCurrentLivestockStock();
-            $this->loadRecordingData();
+            $livestock = Livestock::findOrFail($this->livestockId);
+            $company = $livestock->farm->company;
+
+            // Load livestock configuration
+            $this->loadLivestockConfiguration($livestock);
+
+            // Auto-save config for single batch if not set in data column
+            if ($livestock->getActiveBatchesCount() <= 1 && !$livestock->getDataColumn('config')) {
+                $user = auth()->user();
+                $recordingConfig = [
+                    'recording_method' => 'total',
+                    'depletion_method' => 'fifo',
+                    'mutation_method' => 'fifo',
+                    'feed_usage_method' => 'total',
+                    'saved_at' => now()->toDateTimeString(),
+                    'saved_by' => $user ? $user->id : null
+                ];
+                $livestock->updateDataColumn('config', $recordingConfig);
+
+                // Reload configuration after auto-save
+                $this->loadLivestockConfiguration($livestock);
+            }
+
+            // Rewritten: Validasi jika batch > 1 dan belum ada records, cek config di kolom data
+            if ($livestock->getActiveBatchesCount() > 1 && !\App\Models\Recording::where('livestock_id', $livestock->id)->exists()) {
+                $config = $livestock->getDataColumn('config');
+                if (empty($config) || !is_array($config) || empty($config['recording_method'])) {
+                    $this->dispatch('error', 'Ternak ini memiliki lebih dari 1 batch aktif. Silakan atur metode pencatatan terlebih dahulu di menu setting pada data ini.');
+                    // Log untuk debugging
+                    Log::info('[Records] setRecords: Gagal lanjut, config belum diatur untuk livestock_id: ' . $livestock->id, [
+                        'config' => $config,
+                        'livestock_id' => $livestock->id,
+                        'user_id' => auth()->id(),
+                        'timestamp' => now()->toDateTimeString(),
+                    ]);
+                    return;
+                }
+                // Jika config sudah ada, lanjutkan proses
+                // Log untuk debugging
+                Log::info('[Records] setRecords: Config ditemukan, proses dilanjutkan untuk livestock_id: ' . $livestock->id, [
+                    'config' => $config,
+                    'livestock_id' => $livestock->id,
+                    'user_id' => auth()->id(),
+                    'timestamp' => now()->toDateTimeString(),
+                ]);
+            }
+
+            // // Validate recording method configuration
+            // if (!$this->validateRecordingMethod($livestock, $company)) {
+            //     return;
+            // }
+
+            // // Check and set recording method
+            // if (!$this->checkAndSetRecordingMethod($livestock, $company)) {
+            //     return;
+            // }
+
+            // Load all necessary data
+            $this->loadAllRecordingData();
+
             $this->showForm = true;
             $this->dispatch('show-records');
         }
-        // $this->dispatch('success', $livestockId);
+    }
+
+    /**
+     * Load livestock configuration and set visibility flags
+     */
+    private function loadLivestockConfiguration(Livestock $livestock): void
+    {
+        $this->livestockConfig = $livestock->getConfiguration();
+        $this->isManualDepletionEnabled = $livestock->isManualDepletionEnabled();
+        $this->isManualFeedUsageEnabled = $livestock->isManualFeedUsageEnabled();
+        $this->isFifoDepletionEnabled = $livestock->isFifoDepletionEnabled();
+        Log::info('Records - Livestock Configuration Loaded', [
+            'livestock_id' => $livestock->id,
+            'config' => $this->livestockConfig,
+            'manual_depletion_enabled' => $this->isManualDepletionEnabled,
+            'manual_feed_usage_enabled' => $this->isManualFeedUsageEnabled,
+            'fifo_depletion_enabled' => $this->isFifoDepletionEnabled,
+            'depletion_method' => $this->isFifoDepletionEnabled ? 'fifo' : 'manual'
+        ]);
+    }
+
+    /**
+     * Refresh livestock configuration - useful when configuration is changed externally
+     */
+    public function refreshConfiguration()
+    {
+        if (!$this->livestockId) {
+            return;
+        }
+
+        $livestock = Livestock::find($this->livestockId);
+        if (!$livestock) {
+            return;
+        }
+
+        // Reload configuration
+        $this->loadLivestockConfiguration($livestock);
+
+        // Refresh current data if date is set
+        if ($this->date) {
+            $this->updatedDate($this->date);
+        }
+
+        // Dispatch success message
+        $this->dispatch('success', 'Konfigurasi berhasil disegarkan');
+
+        Log::info('Records - Configuration refreshed manually', [
+            'livestock_id' => $this->livestockId,
+            'manual_depletion_enabled' => $this->isManualDepletionEnabled,
+            'manual_feed_usage_enabled' => $this->isManualFeedUsageEnabled,
+            'date' => $this->date
+        ]);
+    }
+
+    /**
+     * Check if depletion inputs should be editable
+     */
+    public function getCanEditDepletionProperty()
+    {
+        return !$this->isManualDepletionEnabled;
+    }
+
+    /**
+     * Check if feed usage inputs should be editable  
+     */
+    public function getCanEditFeedUsageProperty()
+    {
+        return !$this->isManualFeedUsageEnabled;
     }
 
     public function closeForm()
@@ -562,10 +768,15 @@ class Records extends Component
 
 
         if ($currentLivestock) {
-            // Calculate deplesi using the relationship
+            // Calculate deplesi using the relationship with config normalization
             $deplesi = $currentLivestock->livestock->livestockDepletion;
-            $totalMati = $deplesi->where('jenis', 'Mati')->sum('jumlah');
-            $totalAfkir = $deplesi->where('jenis', 'Afkir')->sum('jumlah');
+
+            // Use config system for backward compatibility
+            $mortalityTypes = [LivestockDepletionConfig::LEGACY_TYPE_MATI, LivestockDepletionConfig::TYPE_MORTALITY];
+            $cullingTypes = [LivestockDepletionConfig::LEGACY_TYPE_AFKIR, LivestockDepletionConfig::TYPE_CULLING];
+
+            $totalMati = $deplesi->whereIn('jenis', $mortalityTypes)->sum('jumlah');
+            $totalAfkir = $deplesi->whereIn('jenis', $cullingTypes)->sum('jumlah');
             $totalDeplesi = $totalMati + $totalAfkir;
 
             $this->currentLivestockStock = [
@@ -634,10 +845,17 @@ class Records extends Component
             ->whereDate('tanggal', $value)
             ->first();
 
-        // --- Fetch Deplesi Data for the selected date ---
+        // --- Fetch Deplesi Data for the selected date (with config normalization) ---
         $deplesi = LivestockDepletion::where('livestock_id', $this->livestockId)
             ->whereDate('tanggal', $value)
-            ->get();
+            ->get()
+            ->map(function ($item) {
+                // Normalize depletion types for consistency using the new config system
+                $item->normalized_type = LivestockDepletionConfig::normalize($item->jenis);
+                $item->display_name = LivestockDepletionConfig::getDisplayName($item->jenis, true);
+                $item->category = LivestockDepletionConfig::getCategory($item->normalized_type);
+                return $item;
+            });
 
         // --- Fetch Item Usage Data for the selected date ---
         // $itemUsage = TransaksiHarianDetail::whereHas('transaksiHarian', function($query) use ($value) {
@@ -697,27 +915,64 @@ class Records extends Component
 
 
 
-        // Update Deplesi fields
+        // Update Deplesi fields (with config-based normalization)
         if ($deplesi->isNotEmpty()) {
+            // Use config-based normalization for backward compatibility
+            $mortalityTypes = [
+                LivestockDepletionConfig::LEGACY_TYPE_MATI,
+                LivestockDepletionConfig::TYPE_MORTALITY
+            ];
+            $cullingTypes = [
+                LivestockDepletionConfig::LEGACY_TYPE_AFKIR,
+                LivestockDepletionConfig::TYPE_CULLING
+            ];
+
+            // Calculate using both legacy and standard types for full compatibility
             $this->deplesiData = [
-                'mortality' => $deplesi->where('jenis', 'Mati')->sum('jumlah'),
-                'culling' => $deplesi->where('jenis', 'Afkir')->sum('jumlah')
+                'mortality' => $deplesi->filter(function ($item) use ($mortalityTypes) {
+                    return in_array($item->jenis, $mortalityTypes) ||
+                        in_array($item->normalized_type, [LivestockDepletionConfig::TYPE_MORTALITY]);
+                })->sum('jumlah'),
+                'culling' => $deplesi->filter(function ($item) use ($cullingTypes) {
+                    return in_array($item->jenis, $cullingTypes) ||
+                        in_array($item->normalized_type, [LivestockDepletionConfig::TYPE_CULLING]);
+                })->sum('jumlah')
             ];
             $this->mortality = $this->deplesiData['mortality'];
             $this->culling = $this->deplesiData['culling'];
+
+            Log::info('Current date depletion processed with config system', [
+                'livestock_id' => $this->livestockId,
+                'selected_date' => $value,
+                'total_records' => $deplesi->count(),
+                'mortality_found' => $this->mortality,
+                'culling_found' => $this->culling,
+                'types_found' => $deplesi->pluck('jenis')->unique()->toArray(),
+                'normalized_types' => $deplesi->pluck('normalized_type')->unique()->toArray()
+            ]);
         } else {
             $this->deplesiData = null;
             $this->mortality = 0;
             $this->culling = 0;
+
+            Log::info('No current date depletion data found', [
+                'livestock_id' => $this->livestockId,
+                'selected_date' => $value
+            ]);
         }
 
-        // Update Total Deplesi (recalculate based on all-time data)
+        // Update Total Deplesi (recalculate based on all-time data with config normalization)
         $allDeplesi = LivestockDepletion::where('livestock_id', $this->livestockId)->get();
         $this->total_deplesi = $allDeplesi->sum('jumlah');
-        // Also update the value in currentLivestockStock if needed (optional, depends on usage)
+
+        // Also update the value in currentLivestockStock if needed (with config normalization)
         if ($this->currentLivestockStock) {
-            $this->currentLivestockStock['mortality'] = $allDeplesi->where('jenis', 'Mati')->sum('jumlah');
-            $this->currentLivestockStock['culling'] = $allDeplesi->where('jenis', 'Afkir')->sum('jumlah');
+            // Use config system for backward compatibility
+            $allMortalityTypes = [LivestockDepletionConfig::LEGACY_TYPE_MATI, LivestockDepletionConfig::TYPE_MORTALITY];
+            $allCullingTypes = [LivestockDepletionConfig::LEGACY_TYPE_AFKIR, LivestockDepletionConfig::TYPE_CULLING];
+
+            $this->currentLivestockStock['mortality'] = $allDeplesi->whereIn('jenis', $allMortalityTypes)->sum('jumlah');
+            $this->currentLivestockStock['culling'] = $allDeplesi->whereIn('jenis', $allCullingTypes)->sum('jumlah');
             $this->currentLivestockStock['total_deplesi'] = $this->total_deplesi;
         }
 
@@ -780,10 +1035,17 @@ class Records extends Component
                 ->whereDate('tanggal', $yesterdayDate)
                 ->first();
 
-            // --- Fetch Yesterday's Depletion Data ---
+            // --- Fetch Yesterday's Depletion Data (with config normalization) ---
             $yesterdayDeplesi = LivestockDepletion::where('livestock_id', $this->livestockId)
                 ->whereDate('tanggal', $yesterdayDate)
-                ->get();
+                ->get()
+                ->map(function ($item) {
+                    // Normalize depletion types for consistency using the new config system
+                    $item->normalized_type = LivestockDepletionConfig::normalize($item->jenis);
+                    $item->display_name = LivestockDepletionConfig::getDisplayName($item->jenis, true);
+                    $item->category = LivestockDepletionConfig::getCategory($item->normalized_type);
+                    return $item;
+                });
 
             // --- Fetch Yesterday's Feed Usage Data ---
             $yesterdayFeedUsage = FeedUsageDetail::whereHas('feedUsage', function ($query) use ($yesterdayDate) {
@@ -810,13 +1072,46 @@ class Records extends Component
                 $this->yesterday_stock_end = 0;
             }
 
-            // Process yesterday's depletion
+            // Process yesterday's depletion using the new config system
             if ($yesterdayDeplesi->isNotEmpty()) {
-                $this->yesterday_mortality = $yesterdayDeplesi->where('jenis', 'Mati')->sum('jumlah');
-                $this->yesterday_culling = $yesterdayDeplesi->where('jenis', 'Afkir')->sum('jumlah');
+                // Use config-based normalization for backward compatibility
+                $mortalityTypes = [
+                    LivestockDepletionConfig::LEGACY_TYPE_MATI,
+                    LivestockDepletionConfig::TYPE_MORTALITY
+                ];
+                $cullingTypes = [
+                    LivestockDepletionConfig::LEGACY_TYPE_AFKIR,
+                    LivestockDepletionConfig::TYPE_CULLING
+                ];
+
+                // Calculate using both legacy and standard types for full compatibility
+                $this->yesterday_mortality = $yesterdayDeplesi->filter(function ($item) use ($mortalityTypes) {
+                    return in_array($item->jenis, $mortalityTypes) ||
+                        in_array($item->normalized_type, [LivestockDepletionConfig::TYPE_MORTALITY]);
+                })->sum('jumlah');
+
+                $this->yesterday_culling = $yesterdayDeplesi->filter(function ($item) use ($cullingTypes) {
+                    return in_array($item->jenis, $cullingTypes) ||
+                        in_array($item->normalized_type, [LivestockDepletionConfig::TYPE_CULLING]);
+                })->sum('jumlah');
+
+                Log::info('Yesterday depletion processed with config system', [
+                    'livestock_id' => $this->livestockId,
+                    'yesterday_date' => $yesterdayDate,
+                    'total_records' => $yesterdayDeplesi->count(),
+                    'mortality_found' => $this->yesterday_mortality,
+                    'culling_found' => $this->yesterday_culling,
+                    'types_found' => $yesterdayDeplesi->pluck('jenis')->unique()->toArray(),
+                    'normalized_types' => $yesterdayDeplesi->pluck('normalized_type')->unique()->toArray()
+                ]);
             } else {
                 $this->yesterday_mortality = 0;
                 $this->yesterday_culling = 0;
+
+                Log::info('No yesterday depletion data found', [
+                    'livestock_id' => $this->livestockId,
+                    'yesterday_date' => $yesterdayDate
+                ]);
             }
 
             // Process yesterday's feed usage
@@ -869,6 +1164,16 @@ class Records extends Component
                 ];
             }
 
+            // Determine if yesterday's depletion was managed manually
+            $yesterdayManualDepletion = false;
+            if ($yesterdayDeplesi->isNotEmpty()) {
+                // Check if any depletion record has manual depletion metadata
+                $yesterdayManualDepletion = $yesterdayDeplesi->contains(function ($item) {
+                    $metadata = is_array($item->metadata) ? $item->metadata : json_decode($item->metadata ?? '{}', true);
+                    return isset($metadata['depletion_method']) && $metadata['depletion_method'] === 'manual';
+                });
+            }
+
             // Create comprehensive yesterday data summary
             $this->yesterday_data = [
                 'date' => $yesterdayDate,
@@ -883,7 +1188,9 @@ class Records extends Component
                 'supply_usage' => $this->yesterday_supply_usage,
                 'has_data' => $yesterdayRecording || $yesterdayDeplesi->isNotEmpty() ||
                     $yesterdayFeedUsage->isNotEmpty() || $yesterdaySupplyUsage->isNotEmpty(),
-                'summary' => $this->generateYesterdaySummary()
+                'summary' => $this->generateYesterdaySummary(),
+                'is_manual_depletion' => $yesterdayManualDepletion,
+                'depletion_method' => $yesterdayManualDepletion ? 'manual' : 'recording'
             ];
 
             Log::info("Yesterday data loaded successfully", [
@@ -1001,8 +1308,12 @@ class Records extends Component
                 ->whereDate('tanggal', $dateStr)
                 ->get();
 
-            $mortality = $deplesi->where('jenis', 'Mati')->sum('jumlah');
-            $culling = $deplesi->where('jenis', 'Afkir')->sum('jumlah');
+            // Use config normalization for backward compatibility
+            $mortalityTypes = [LivestockDepletionConfig::LEGACY_TYPE_MATI, LivestockDepletionConfig::TYPE_MORTALITY];
+            $cullingTypes = [LivestockDepletionConfig::LEGACY_TYPE_AFKIR, LivestockDepletionConfig::TYPE_CULLING];
+
+            $mortality = $deplesi->whereIn('jenis', $mortalityTypes)->sum('jumlah');
+            $culling = $deplesi->whereIn('jenis', $cullingTypes)->sum('jumlah');
             $totalDeplesi = $mortality + $culling;
 
             $age = $startDate->diffInDays($currentDate);
@@ -1083,6 +1394,15 @@ class Records extends Component
 
     public function save()
     {
+        // Add debugging log at the start
+        Log::info('🚀 Records Save: Method called', [
+            'livestock_id' => $this->livestockId,
+            'mortality' => $this->mortality,
+            'culling' => $this->culling,
+            'date' => $this->date,
+            'fifo_service_available' => $this->fifoDepletionService ? 'yes' : 'no'
+        ]);
+
         // Add permission check
         // if ($this->isEditing) {
         //     if (!Auth::user()->can('update records management')) {
@@ -1096,14 +1416,28 @@ class Records extends Component
         //     }
         // }
 
-        $this->validate();
+        Log::info('🔍 Records Save: Starting validation');
+
+        try {
+            $this->validate();
+            Log::info('✅ Records Save: Validation passed');
+        } catch (ValidationException $e) {
+            Log::error('❌ Records Save: Validation failed', [
+                'errors' => $e->validator->errors()->all()
+            ]);
+            $this->dispatch('validation-errors', ['errors' => $e->validator->errors()->all()]);
+            $this->setErrorBag($e->validator->errors());
+            return;
+        }
 
         $validatedData = $this->all();
 
         try {
+            Log::info('🔄 Records Save: Starting database transaction');
             DB::beginTransaction(); // Start a database transaction for data integrity
 
             // --- Prepare feed usage data with comprehensive details ---
+            Log::info('📊 Records Save: Preparing feed usage data');
             $this->usages = collect($this->itemQuantities)
                 ->filter(fn($qty) => $qty > 0)
                 ->map(function ($qty, $itemId) {
@@ -1148,6 +1482,7 @@ class Records extends Component
                 ->toArray();
 
             // --- Prepare supply usage data ---
+            Log::info('🧪 Records Save: Preparing supply usage data');
             $this->supplyUsages = collect($this->supplyQuantities)
                 ->map(function ($quantity, $supplyId) {
                     if (empty($quantity) || $quantity <= 0) {
@@ -1200,6 +1535,7 @@ class Records extends Component
                 ->toArray();
 
             // --- Validate livestock and data structure with enhanced checks ---
+            Log::info('🐄 Records Save: Validating livestock data');
             $ternak = CurrentLivestock::with(['livestock.coop', 'livestock.farm'])->where('livestock_id', $this->livestockId)->first();
             if (!$ternak || !$ternak->livestock) {
                 throw new \Exception("Livestock record not found or invalid");
@@ -1220,9 +1556,21 @@ class Records extends Component
             }
 
             // --- Get detailed population history for the livestock ---
-            $populationHistory = $this->getPopulationHistory($this->livestockId, $recordDate);
+            Log::info('📈 Records Save: Getting population history');
+            // dd($this->livestockId, $recordDate);
+            if (!$this->recordingService) {
+                // Fallback: instantiate manually
+                $this->recordingService = app(\App\Services\Recording\RecordingService::class);
+                if (!$this->recordingService) {
+                    DB::rollBack();
+                    $this->dispatch('error', 'RecordingService is not available. Please reload the page or contact admin.');
+                    return;
+                }
+            }
+            $populationHistory = $this->recordingService->getPopulationHistory($this->livestockId, $recordDate);
 
             // --- Validate total outflows don't exceed initial population with detailed breakdown ---
+            Log::info('🔢 Records Save: Validating outflows');
             $existingRecord = Recording::where('livestock_id', $this->livestockId)
                 ->whereDate('tanggal', $this->date)
                 ->first();
@@ -1240,6 +1588,7 @@ class Records extends Component
             }
 
             // --- Calculate age and stock values with enriched metadata ---
+            Log::info('⏰ Records Save: Calculating age and stock values');
             $age = $livestockStartDate->diffInDays($recordDate);
 
             // Calculate stock_awal based on previous day's record
@@ -1275,54 +1624,21 @@ class Records extends Component
             );
 
             // --- Prepare detailed payload with enhanced data structure ---
-            $detailedPayload = [
-                // Depletion data
-                'mortality' => (int)($this->mortality ?? 0),
-                'culling' => (int)($this->culling ?? 0),
-                'sales_quantity' => (int)($this->sales_quantity ?? 0),
-
-                // Sales data
-                'sales_price' => (float)($this->sales_price ?? 0),
-                'sales_weight' => (float)($this->sales_weight ?? 0),
-                'total_sales' => (float)($this->total_sales ?? 0),
-                'sales_per_unit' => $this->sales_quantity > 0 ? $this->total_sales / $this->sales_quantity : 0,
-
-                // Feed usage with detailed information
-                'feed_usage' => $this->usages,
-                'total_feed_usage' => array_sum(array_column($this->usages, 'quantity')),
-                'feed_cost' => array_sum(array_map(function ($usage) {
-                    $qty = $usage['quantity'] ?? 0;
-                    $price = $usage['stock_prices']['average_price'] ?? 0;
-                    return $qty * $price;
-                }, $this->usages)),
-
-                // Performance metrics
-                'performance' => $performanceMetrics,
-
-                // Historical data
-                'weight_history' => $weightHistory,
-                'feed_history' => $feedHistory,
-                'population_history' => $populationHistory,
-                'outflow_history' => $outflowHistory,
-
-                // Environmental data (if available)
-                'environment' => [
-                    'temperature' => null, // Could be extended with actual temperature data
-                    'humidity' => null,    // Could be extended with actual humidity data
-                    'lighting' => null,    // Could be extended with lighting data
-                ],
-
-                // Farm and kandang information
-                'farm_id' => $ternak->livestock->farm_id,
-                'farm_name' => $ternak->livestock->farm->name ?? 'Unknown Farm',
-                'coop_id' => $ternak->livestock->coop_id,
-                'coop_name' => $ternak->livestock->coop->name ?? 'Unknown Coop',
-
-                // Metadata
-                'recorded_at' => now()->toIso8601String(),
-                'recorded_by' => auth()->id(),
-                'recorder_name' => auth()->user()->name ?? 'Unknown User',
-            ];
+            Log::info('📦 Records Save: Preparing detailed payload');
+            $detailedPayload = $this->buildStructuredPayload(
+                $ternak,
+                $age,
+                $stockAwalHariIni,
+                $stockAkhirHariIni,
+                $weightToday,
+                $weightYesterday,
+                $weightGain,
+                $performanceMetrics,
+                $weightHistory,
+                $feedHistory,
+                $populationHistory,
+                $outflowHistory
+            );
 
             // --- Record daily data with comprehensive payload ---
             $recordingInput = [
@@ -1455,12 +1771,66 @@ class Records extends Component
             }
 
             // --- Record depletion data with cause tracking ---
-            if ($this->mortality > 0) {
-                $this->storeDeplesiWithDetails('Mati', $this->mortality, $recording->id);
-            }
+            Log::info('💀 Records Save: Processing depletion data', [
+                'mortality' => $this->mortality,
+                'culling' => $this->culling,
+                'recording_id' => $recording->id
+            ]);
 
-            if ($this->culling > 0) {
-                $this->storeDeplesiWithDetails('Afkir', $this->culling, $recording->id);
+            // --- Refactored and consolidated depletion processing ---
+            $depletionsToProcess = [
+                LivestockDepletionConfig::TYPE_MORTALITY => $this->mortality,
+                LivestockDepletionConfig::TYPE_CULLING   => $this->culling,
+            ];
+
+            $livestockInstance = null; // Lazy load the livestock instance
+
+            foreach ($depletionsToProcess as $depletionType => $quantity) {
+                if ($quantity > 0) {
+                    // Load livestock instance only when a depletion needs to be processed
+                    if (!$livestockInstance) {
+                        $livestockInstance = Livestock::find($this->livestockId);
+                    }
+
+                    Log::info("Records Save: Processing depletion.", [
+                        'type'         => $depletionType,
+                        'quantity'     => $quantity,
+                        'recording_id' => $recording->id,
+                    ]);
+
+                    // Prepare options for the FIFO service
+                    $options = [
+                        'date'          => $this->date,
+                        'reason'        => "Depletion via Records component",
+                        'notes'         => "Recorded by " . (auth()->user()->name ?? 'System'),
+                        'original_type' => $depletionType,
+                    ];
+
+                    // Use the unified FIFO depletion method for all types
+                    $result = $this->storeDeplesiWithFifo(
+                        $depletionType,
+                        (int) $quantity,
+                        $recording->id,
+                        $livestockInstance,
+                        $options
+                    );
+
+                    $isSuccess = $result && ($result['success'] ?? false);
+
+                    Log::info("Records Save: Depletion for type '{$depletionType}' processed.", [
+                        'status'         => $isSuccess ? 'success' : 'failed',
+                        'result_payload' => $result,
+                    ]);
+
+                    if (!$isSuccess) {
+                        // Log error for potential debugging without halting the entire save process
+                        Log::error("Failed to process depletion for type '{$depletionType}'", [
+                            'livestock_id' => $this->livestockId,
+                            'recording_id' => $recording->id,
+                            'response'     => $result,
+                        ]);
+                    }
+                }
             }
 
             // --- Update current livestock quantity with detailed tracking ---
@@ -1484,9 +1854,11 @@ class Records extends Component
             //     }
             // }
 
+            Log::info('💾 Records Save: Committing database transaction');
             DB::commit(); // Commit all database changes
 
             // --- Reset form and reload data ---
+            Log::info('🔄 Records Save: Resetting form and reloading data');
             $this->reset([
                 'date',
                 'age',
@@ -1506,6 +1878,7 @@ class Records extends Component
             $this->checkCurrentLivestockStock();
             $this->loadRecordingData();
 
+            Log::info('🎉 Records Save: Process completed successfully');
             // $this->dispatch('success', 'Data berhasil disimpan dengan ' . count($this->usages) . ' tipe pakan yang berbeda');
             $this->dispatch('success', 'Data berhasil disimpan');
         } catch (ValidationException $e) {
@@ -1921,83 +2294,7 @@ class Records extends Component
         return $result;
     }
 
-    /**
-     * Get detailed population history for a livestock
-     * 
-     * @param string $livestockId The livestock ID
-     * @param Carbon $currentDate The current date
-     * @return array Population history details
-     */
-    private function getPopulationHistory($livestockId, $currentDate)
-    {
-        $livestock = Livestock::findOrFail($livestockId);
-        $initialPopulation = $livestock->populasi_awal;
-        $startDate = Carbon::parse($livestock->start_date);
 
-        // Get all recordings up to the current date
-        $recordings = Recording::where('livestock_id', $livestockId)
-            ->where('tanggal', '<', $currentDate->format('Y-m-d'))
-            ->orderBy('tanggal')
-            ->get();
-
-        // Get all depletion records up to the current date
-        $depletions = LivestockDepletion::where('livestock_id', $livestockId)
-            ->where('tanggal', '<', $currentDate->format('Y-m-d'))
-            ->orderBy('tanggal')
-            ->get();
-
-        // Get all sales records up to the current date
-        $sales = LivestockSalesItem::where('livestock_id', $livestockId)
-            ->where('tanggal', '<', $currentDate->format('Y-m-d'))
-            ->orderBy('tanggal')
-            ->get();
-
-        // Calculate daily population changes
-        $populationByDate = [];
-        $currentPopulation = $initialPopulation;
-        $totalMortality = 0;
-        $totalCulling = 0;
-        $totalSales = 0;
-
-        // Process recordings with their depletion data
-        foreach ($recordings as $recording) {
-            $recordDate = $recording->tanggal->format('Y-m-d');
-            $payload = $recording->payload ?? [];
-
-            $dayMortality = $payload['mortality'] ?? 0;
-            $dayCulling = $payload['culling'] ?? 0;
-            $daySales = $payload['sales_quantity'] ?? 0;
-
-            $totalMortality += $dayMortality;
-            $totalCulling += $dayCulling;
-            $totalSales += $daySales;
-
-            $currentPopulation = $recording->stock_akhir;
-
-            $populationByDate[$recordDate] = [
-                'date' => $recordDate,
-                'population' => $currentPopulation,
-                'mortality' => $dayMortality,
-                'culling' => $dayCulling,
-                'sales' => $daySales,
-                'age' => $recording->age,
-            ];
-        }
-
-        return [
-            'initial_population' => $initialPopulation,
-            'current_population' => $currentPopulation,
-            'total_mortality' => $totalMortality,
-            'total_culling' => $totalCulling,
-            'total_sales' => $totalSales,
-            'mortality_rate' => $initialPopulation > 0 ? ($totalMortality / $initialPopulation) * 100 : 0,
-            'culling_rate' => $initialPopulation > 0 ? ($totalCulling / $initialPopulation) * 100 : 0,
-            'sales_rate' => $initialPopulation > 0 ? ($totalSales / $initialPopulation) * 100 : 0,
-            'survival_rate' => $initialPopulation > 0 ? ($currentPopulation / $initialPopulation) * 100 : 0,
-            'daily_changes' => array_values($populationByDate),
-            'age_days' => $startDate->diffInDays($currentDate),
-        ];
-    }
 
     /**
      * Get detailed outflow history for a livestock
@@ -2604,49 +2901,379 @@ class Records extends Component
      */
     private function storeDeplesiWithDetails($jenis, $jumlah, $recordingId)
     {
+        // dd($jenis, $jumlah, $recordingId);
+        // Normalize depletion type using config
+        $normalizedType = LivestockDepletionConfig::normalize($jenis);
+        $legacyType = LivestockDepletionConfig::toLegacy($normalizedType);
+
+        Log::info('📝 StoreDeplesi: Method called with config normalization', [
+            'original_type' => $jenis,
+            'normalized_type' => $normalizedType,
+            'legacy_type' => $legacyType,
+            'quantity' => $jumlah,
+            'recording_id' => $recordingId,
+            'livestock_id' => $this->livestockId
+        ]);
+
         if ($jumlah <= 0) {
+            Log::info('⚠️ StoreDeplesi: Zero quantity, skipping');
             return null;
         }
 
         $livestock = Livestock::find($this->livestockId);
+        if (!$livestock) {
+            Log::error('❌ StoreDeplesi: Livestock not found', ['livestock_id' => $this->livestockId]);
+            return null;
+        }
+
+        Log::info('✅ StoreDeplesi: Livestock found', [
+            'livestock_name' => $livestock->name ?? 'Unknown',
+            'farm_id' => $livestock->farm_id
+        ]);
+
         $currentDate = Carbon::parse($this->date);
         $age = $livestock ? $currentDate->diffInDays(Carbon::parse($livestock->start_date)) : null;
 
-        // Create or update depletion record with enhanced metadata
+
+
+        // Create or update depletion record with enhanced metadata and config normalization
         $deplesi = LivestockDepletion::updateOrCreate(
             [
                 'livestock_id' => $this->livestockId,
                 'tanggal' => $this->date,
-                'jenis' => $jenis,
+                'jenis' => $normalizedType, // Use normalized type for consistency
             ],
             [
                 'jumlah' => $jumlah,
                 'recording_id' => $recordingId, // Link to recording for traceability
+                'method' => 'traditional',
                 'metadata' => [
+                    // Basic livestock information
                     'livestock_name' => $livestock->name ?? 'Unknown',
                     'farm_id' => $livestock->farm_id ?? null,
                     'farm_name' => $livestock->farm->name ?? 'Unknown',
                     'coop_id' => $livestock->coop_id ?? null,
                     'kandang_name' => $livestock->kandang->name ?? 'Unknown',
                     'age_days' => $age,
+
+                    // Recording information
+                    'recording_id' => $recordingId,
                     'updated_at' => now()->toIso8601String(),
                     'updated_by' => auth()->id(),
                     'updated_by_name' => auth()->user()->name ?? 'Unknown User',
+
+                    // Method information
+                    'depletion_method' => 'traditional',
+                    'processing_method' => 'records_component',
+                    'source_component' => 'Records',
+
+                    // Config-related metadata
+                    'depletion_config' => [
+                        'original_type' => $jenis,
+                        'normalized_type' => $normalizedType,
+                        'legacy_type' => $legacyType,
+                        'config_version' => '1.0',
+                        'display_name' => LivestockDepletionConfig::getDisplayName($normalizedType),
+                        'category' => LivestockDepletionConfig::getCategory($normalizedType)
+                    ]
+                ],
+                'data' => [
+                    'depletion_method' => 'traditional',
+                    'original_request' => $jumlah,
+                    'processing_source' => 'Records Component',
+                    'batch_processing' => false,
+                    'single_record' => true
                 ],
                 'created_by' => auth()->id(),
                 'updated_by' => auth()->id()
             ]
         );
 
-        Log::info("Recorded livestock depletion", [
+        Log::info("📝 Recorded livestock depletion", [
             'livestock_id' => $this->livestockId,
             'date' => $this->date,
             'type' => $jenis,
             'quantity' => $jumlah,
             'recording_id' => $recordingId,
+            'method' => 'traditional'
         ]);
 
         return $deplesi;
+    }
+
+    // private function storeDeplesiWithDetails($jenis, $jumlah, $recordingId)
+    // {
+    //     // Normalize depletion type using config
+    //     $normalizedType = LivestockDepletionConfig::normalize($jenis);
+    //     $legacyType = LivestockDepletionConfig::toLegacy($normalizedType);
+
+    //     Log::info('📝 StoreDeplesi: Method called with config normalization', [
+    //         'original_type' => $jenis,
+    //         'normalized_type' => $normalizedType,
+    //         'legacy_type' => $legacyType,
+    //         'quantity' => $jumlah,
+    //         'recording_id' => $recordingId,
+    //         'livestock_id' => $this->livestockId
+    //     ]);
+
+    //     if ($jumlah <= 0) {
+    //         Log::info('⚠️ StoreDeplesi: Zero quantity, skipping');
+    //         return null;
+    //     }
+
+    //     $livestock = Livestock::find($this->livestockId);
+    //     if (!$livestock) {
+    //         Log::error('❌ StoreDeplesi: Livestock not found', ['livestock_id' => $this->livestockId]);
+    //         return null;
+    //     }
+
+    //     Log::info('✅ StoreDeplesi: Livestock found', [
+    //         'livestock_name' => $livestock->name ?? 'Unknown',
+    //         'farm_id' => $livestock->farm_id
+    //     ]);
+
+    //     $currentDate = Carbon::parse($this->date);
+    //     $age = $livestock ? $currentDate->diffInDays(Carbon::parse($livestock->start_date)) : null;
+
+    //     // Check if FIFO depletion should be used
+    //     if ($this->shouldUseFifoDepletion($livestock, $jenis)) {
+    //         $fifoResult = $this->storeDeplesiWithFifo($jenis, $jumlah, $recordingId, $livestock);
+
+    //         // If FIFO succeeded, standardize the result and return
+    //         if ($fifoResult && (is_array($fifoResult) ? ($fifoResult['success'] ?? false) : true)) {
+    //             // Standardize FIFO depletion records to match traditional format
+    //             $this->standardizeFifoDepletionRecords($fifoResult, $livestock, $jenis, $recordingId, $age);
+    //             return $fifoResult;
+    //         }
+
+    //         // If FIFO failed, log and continue with traditional method
+    //         Log::warning('🔄 FIFO depletion failed, falling back to traditional method', [
+    //             'livestock_id' => $livestock->id,
+    //             'depletion_type' => $jenis,
+    //             'quantity' => $jumlah
+    //         ]);
+    //     }
+
+    //     // Create or update depletion record with enhanced metadata and config normalization
+    //     $deplesi = LivestockDepletion::updateOrCreate(
+    //         [
+    //             'livestock_id' => $this->livestockId,
+    //             'tanggal' => $this->date,
+    //             'jenis' => $normalizedType, // Use normalized type for consistency
+    //         ],
+    //         [
+    //             'jumlah' => $jumlah,
+    //             'recording_id' => $recordingId, // Link to recording for traceability
+    //             'method' => 'traditional',
+    //             'metadata' => [
+    //                 // Basic livestock information
+    //                 'livestock_name' => $livestock->name ?? 'Unknown',
+    //                 'farm_id' => $livestock->farm_id ?? null,
+    //                 'farm_name' => $livestock->farm->name ?? 'Unknown',
+    //                 'coop_id' => $livestock->coop_id ?? null,
+    //                 'kandang_name' => $livestock->kandang->name ?? 'Unknown',
+    //                 'age_days' => $age,
+
+    //                 // Recording information
+    //                 'recording_id' => $recordingId,
+    //                 'updated_at' => now()->toIso8601String(),
+    //                 'updated_by' => auth()->id(),
+    //                 'updated_by_name' => auth()->user()->name ?? 'Unknown User',
+
+    //                 // Method information
+    //                 'depletion_method' => 'traditional',
+    //                 'processing_method' => 'records_component',
+    //                 'source_component' => 'Records',
+
+    //                 // Config-related metadata
+    //                 'depletion_config' => [
+    //                     'original_type' => $jenis,
+    //                     'normalized_type' => $normalizedType,
+    //                     'legacy_type' => $legacyType,
+    //                     'config_version' => '1.0',
+    //                     'display_name' => LivestockDepletionConfig::getDisplayName($normalizedType),
+    //                     'category' => LivestockDepletionConfig::getCategory($normalizedType)
+    //                 ]
+    //             ],
+    //             'data' => [
+    //                 'depletion_method' => 'traditional',
+    //                 'original_request' => $jumlah,
+    //                 'processing_source' => 'Records Component',
+    //                 'batch_processing' => false,
+    //                 'single_record' => true
+    //             ],
+    //             'created_by' => auth()->id(),
+    //             'updated_by' => auth()->id()
+    //         ]
+    //     );
+
+    //     Log::info("📝 Recorded livestock depletion", [
+    //         'livestock_id' => $this->livestockId,
+    //         'date' => $this->date,
+    //         'type' => $jenis,
+    //         'quantity' => $jumlah,
+    //         'recording_id' => $recordingId,
+    //         'method' => 'traditional'
+    //     ]);
+
+    //     return $deplesi;
+    // }
+
+    /**
+     * Standardize FIFO depletion records to match traditional format
+     * This ensures consistent metadata and data structure across all depletion methods
+     *
+     * @param array $fifoResult The FIFO depletion result
+     * @param Livestock $livestock The livestock instance
+     * @param string $jenis The depletion type
+     * @param string $recordingId The recording ID
+     * @param int $age The livestock age in days
+     * @return void
+     */
+    private function standardizeFifoDepletionRecords(array $fifoResult, Livestock $livestock, string $jenis, string $recordingId, int $age): void
+    {
+        try {
+            // Normalize depletion type using config
+            $normalizedType = LivestockDepletionConfig::normalize($jenis);
+            $legacyType = LivestockDepletionConfig::toLegacy($normalizedType);
+
+            // Get depletion records from FIFO result
+            $depletionRecords = $fifoResult['depletion_records'] ?? [];
+
+            foreach ($depletionRecords as $recordData) {
+                // Find the actual depletion record
+                $depletionRecord = null;
+
+                if (isset($recordData['depletion_id'])) {
+                    $depletionRecord = LivestockDepletion::find($recordData['depletion_id']);
+                } elseif (isset($recordData['livestock_depletion_id'])) {
+                    $depletionRecord = LivestockDepletion::find($recordData['livestock_depletion_id']);
+                }
+
+                if (!$depletionRecord) {
+                    continue;
+                }
+
+                // Prepare standardized metadata that matches traditional format
+                $standardizedMetadata = [
+                    // Basic livestock information
+                    'livestock_name' => $livestock->name ?? 'Unknown',
+                    'farm_id' => $livestock->farm_id ?? null,
+                    'farm_name' => $livestock->farm->name ?? 'Unknown',
+                    'coop_id' => $livestock->coop_id ?? null,
+                    'kandang_name' => $livestock->kandang->name ?? 'Unknown',
+                    'age_days' => $age,
+
+                    // Recording information
+                    'recording_id' => $recordingId,
+                    'updated_at' => now()->toIso8601String(),
+                    'updated_by' => auth()->id(),
+                    'updated_by_name' => auth()->user()->name ?? 'Unknown User',
+
+                    // Method information
+                    'depletion_method' => 'fifo',
+                    'processing_method' => 'fifo_depletion_service',
+                    'source_component' => 'Records',
+
+                    // Config-related metadata (consistent with traditional)
+                    'depletion_config' => [
+                        'original_type' => $jenis,
+                        'normalized_type' => $normalizedType,
+                        'legacy_type' => $legacyType,
+                        'config_version' => '1.0',
+                        'display_name' => LivestockDepletionConfig::getDisplayName($normalizedType),
+                        'category' => LivestockDepletionConfig::getCategory($normalizedType)
+                    ],
+
+                    // FIFO-specific metadata
+                    'fifo_metadata' => [
+                        'batch_id' => $recordData['batch_id'] ?? null,
+                        'batch_name' => $recordData['batch_name'] ?? null,
+                        'batch_start_date' => $recordData['batch_start_date'] ?? null,
+                        'quantity_depleted' => $recordData['quantity'] ?? 0,
+                        'remaining_in_batch' => $recordData['remaining_quantity'] ?? 0,
+                        'batch_sequence' => $recordData['sequence'] ?? 1
+                    ]
+                ];
+
+                // Prepare standardized data that matches traditional format
+                $standardizedData = [
+                    'batch_id' => $recordData['batch_id'] ?? null,
+                    'batch_name' => $recordData['batch_name'] ?? null,
+                    'batch_start_date' => $recordData['batch_start_date'] ?? null,
+                    'depletion_method' => 'fifo',
+                    'original_request' => $recordData['quantity'] ?? 0,
+                    'available_in_batch' => $recordData['remaining_quantity'] ?? 0,
+                    'fifo_sequence' => $recordData['sequence'] ?? 1,
+                    'total_batches_affected' => $fifoResult['batches_affected'] ?? 1,
+                    'distribution_summary' => $fifoResult['distribution_summary'] ?? []
+                ];
+
+                // Update the depletion record with standardized format
+                $depletionRecord->update([
+                    'jenis' => $normalizedType, // Use normalized type for consistency
+                    'recording_id' => $recordingId,
+                    'method' => 'fifo',
+                    'metadata' => $standardizedMetadata,
+                    'data' => $standardizedData,
+                    'updated_by' => auth()->id()
+                ]);
+
+                Log::info('📝 Standardized FIFO depletion record', [
+                    'depletion_id' => $depletionRecord->id,
+                    'livestock_id' => $livestock->id,
+                    'jenis' => $normalizedType,
+                    'quantity' => $depletionRecord->jumlah,
+                    'batch_id' => $recordData['batch_id'] ?? null,
+                    'method' => 'fifo'
+                ]);
+            }
+
+            Log::info('✅ FIFO depletion records standardized successfully', [
+                'livestock_id' => $livestock->id,
+                'depletion_type' => $jenis,
+                'records_processed' => count($depletionRecords),
+                'batches_affected' => $fifoResult['batches_affected'] ?? 0
+            ]);
+        } catch (Exception $e) {
+            Log::error('❌ Failed to standardize FIFO depletion records', [
+                'livestock_id' => $livestock->id,
+                'depletion_type' => $jenis,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+
+
+    /**
+     * Get FIFO depletion statistics for display
+     *
+     * @param string $period
+     * @return array|null
+     */
+    public function getFifoDepletionStats(string $period = '30_days'): ?array
+    {
+        try {
+            if (!$this->livestockId) {
+                return null;
+            }
+
+            $livestock = Livestock::find($this->livestockId);
+            if (!$livestock) {
+                return null;
+            }
+
+            return $this->fifoDepletionService->getFifoDepletionStats($livestock, $period);
+        } catch (Exception $e) {
+            Log::error('❌ FIFO Stats: Failed to get FIFO depletion statistics', [
+                'livestock_id' => $this->livestockId,
+                'period' => $period,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
     }
 
     /**
@@ -2841,5 +3468,199 @@ class Records extends Component
         ]);
 
         return $recording;
+    }
+
+    /**
+     * Build structured payload with organized sections for future-proof data storage
+     * 
+     * @param mixed $ternak CurrentLivestock instance
+     * @param int $age Age in days
+     * @param int $stockAwal Initial stock for the day
+     * @param int $stockAkhir Final stock for the day
+     * @param float $weightToday Today's weight
+     * @param float $weightYesterday Yesterday's weight
+     * @param float $weightGain Weight gain
+     * @param array $performanceMetrics Performance calculations
+     * @param array $weightHistory Weight history data
+     * @param array $feedHistory Feed consumption history
+     * @param array $populationHistory Population changes
+     * @param array $outflowHistory Outflow tracking
+     * @return array Structured payload
+     */
+    private function buildStructuredPayload(
+        $ternak,
+        int $age,
+        int $stockAwal,
+        int $stockAkhir,
+        float $weightToday,
+        float $weightYesterday,
+        float $weightGain,
+        array $performanceMetrics,
+        array $weightHistory,
+        array $feedHistory,
+        array $populationHistory,
+        array $outflowHistory
+    ): array {
+        // Calculate feed-related data
+        $totalFeedUsage = array_sum(array_column($this->usages, 'quantity'));
+        $feedCost = array_sum(array_map(function ($usage) {
+            $qty = $usage['quantity'] ?? 0;
+            $price = $usage['stock_prices']['average_price'] ?? 0;
+            return $qty * $price;
+        }, $this->usages));
+
+        // Calculate supply-related data
+        $totalSupplyUsage = array_sum(array_column($this->supplyUsages, 'quantity'));
+        $supplyCost = array_sum(array_map(function ($usage) {
+            $qty = $usage['quantity'] ?? 0;
+            $price = $usage['stock_prices']['average_price'] ?? 0;
+            return $qty * $price;
+        }, $this->supplyUsages));
+
+        return [
+            // === METADATA SECTION ===
+            'schema' => [
+                'version' => '3.0',
+                'schema_date' => '2025-01-23',
+                'compatibility' => ['2.0', '3.0'],
+                'structure' => 'hierarchical_organized'
+            ],
+
+            'recording' => [
+                'timestamp' => now()->toIso8601String(),
+                'date' => $this->date,
+                'age_days' => $age,
+                'user' => [
+                    'id' => auth()->id(),
+                    'name' => auth()->user()->name ?? 'Unknown User',
+                    'role' => auth()->user()->roles->first()->name ?? 'Unknown Role',
+                    'company_id' => auth()->user()->company_id ?? null,
+                ],
+                'source' => [
+                    'application' => 'livewire_records',
+                    'component' => 'Records',
+                    'method' => 'save',
+                    'version' => '3.0'
+                ]
+            ],
+
+            // === BUSINESS DATA SECTION ===
+            'livestock' => [
+                'basic_info' => [
+                    'id' => $ternak->livestock->id,
+                    'name' => $ternak->livestock->name,
+                    'strain' => $ternak->livestock->strain ?? 'Unknown Strain',
+                    'start_date' => $ternak->livestock->start_date,
+                    'age_days' => $age
+                ],
+                'location' => [
+                    'farm_id' => $ternak->livestock->farm_id,
+                    'farm_name' => $ternak->livestock->farm->name ?? 'Unknown Farm',
+                    'coop_id' => $ternak->livestock->coop_id,
+                    'coop_name' => $ternak->livestock->coop->name ?? 'Unknown Coop'
+                ],
+                'population' => [
+                    'initial' => $ternak->livestock->initial_quantity,
+                    'stock_start' => $stockAwal,
+                    'stock_end' => $stockAkhir,
+                    'change' => $stockAkhir - $stockAwal
+                ]
+            ],
+
+            'production' => [
+                'weight' => [
+                    'yesterday' => $weightYesterday,
+                    'today' => $weightToday,
+                    'gain' => $weightGain,
+                    'unit' => 'grams'
+                ],
+                'depletion' => [
+                    'mortality' => (int)($this->mortality ?? 0),
+                    'culling' => (int)($this->culling ?? 0),
+                    'total' => (int)($this->mortality ?? 0) + (int)($this->culling ?? 0)
+                ],
+                'sales' => [
+                    'quantity' => (int)($this->sales_quantity ?? 0),
+                    'weight' => (float)($this->sales_weight ?? 0),
+                    'price_per_unit' => (float)($this->sales_price ?? 0),
+                    'total_value' => (float)($this->total_sales ?? 0),
+                    'average_weight' => $this->sales_quantity > 0 ? $this->sales_weight / $this->sales_quantity : 0
+                ]
+            ],
+
+            'consumption' => [
+                'feed' => [
+                    'total_quantity' => $totalFeedUsage,
+                    'total_cost' => $feedCost,
+                    'items' => $this->usages,
+                    'types_count' => count($this->usages),
+                    'cost_per_kg' => $totalFeedUsage > 0 ? $feedCost / $totalFeedUsage : 0
+                ],
+                'supply' => [
+                    'total_quantity' => $totalSupplyUsage,
+                    'total_cost' => $supplyCost,
+                    'items' => $this->supplyUsages,
+                    'types_count' => count($this->supplyUsages),
+                    'cost_per_unit' => $totalSupplyUsage > 0 ? $supplyCost / $totalSupplyUsage : 0
+                ]
+            ],
+
+            // === PERFORMANCE SECTION ===
+            'performance' => array_merge($performanceMetrics, [
+                'calculated_at' => now()->toIso8601String(),
+                'calculation_method' => 'standard_poultry_metrics'
+            ]),
+
+            // === HISTORICAL DATA SECTION ===
+            'history' => [
+                'weight' => $weightHistory,
+                'feed' => $feedHistory,
+                'population' => $populationHistory,
+                'outflow' => $outflowHistory
+            ],
+
+            // === ENVIRONMENT SECTION (Extensible) ===
+            'environment' => [
+                'climate' => [
+                    'temperature' => null,
+                    'humidity' => null,
+                    'pressure' => null
+                ],
+                'housing' => [
+                    'lighting' => null,
+                    'ventilation' => null,
+                    'density' => null
+                ],
+                'water' => [
+                    'consumption' => null,
+                    'quality' => null,
+                    'temperature' => null
+                ]
+            ],
+
+            // === CONFIGURATION SECTION ===
+            'config' => [
+                'manual_depletion_enabled' => $this->isManualDepletionEnabled,
+                'manual_feed_usage_enabled' => $this->isManualFeedUsageEnabled,
+                'recording_method' => $this->recordingMethod ?? 'total',
+                'livestock_config' => $this->livestockConfig
+            ],
+
+            // === VALIDATION SECTION ===
+            'validation' => [
+                'data_quality' => [
+                    'weight_logical' => $weightToday >= 0 && $weightGain >= -100,
+                    'population_logical' => $stockAkhir >= 0 && $stockAwal >= $stockAkhir,
+                    'feed_consumption_logical' => $totalFeedUsage >= 0,
+                    'depletion_logical' => ($this->mortality ?? 0) >= 0 && ($this->culling ?? 0) >= 0
+                ],
+                'completeness' => [
+                    'has_weight_data' => $weightToday > 0,
+                    'has_feed_data' => $totalFeedUsage > 0,
+                    'has_depletion_data' => ($this->mortality ?? 0) > 0 || ($this->culling ?? 0) > 0,
+                    'has_supply_data' => $totalSupplyUsage > 0
+                ]
+            ]
+        ];
     }
 }

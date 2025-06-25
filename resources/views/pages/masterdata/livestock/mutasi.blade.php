@@ -44,6 +44,9 @@
                 <!--end::Table-->
             </div>
             <livewire:master-data.livestock.mutation />
+            {{--
+            <livewire:livestock.mutation.delete-livestock-mutation :mutationId=\"$mutationId\" /> --}}
+            <livewire:livestock.mutation.delete-livestock-mutation />
         </div>
         <!--end::Card body-->
 

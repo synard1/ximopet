@@ -12,6 +12,7 @@ use App\Models\Kandang;
 use App\Models\LivestockDepletion;
 use App\Models\TernakJual;
 use App\Models\TransaksiJual;
+use App\Config\LivestockDepletionConfig;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
@@ -29,6 +30,7 @@ class LivestockDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+            ->addIndexColumn()
             ->rawColumns(['name'])
             // ->editColumn('berat_beli', function (Livestock $livestock) {
             //     if ($livestock->berat_beli < 1000) {
@@ -39,21 +41,36 @@ class LivestockDataTable extends DataTable
             //         return number_format($livestock->berat_beli / 1000000, 2) . ' Ton';
             //     }
             // })
+            ->editColumn('quantity', function (Livestock $livestock) {
+                return $livestock->currentLivestock->quantity;
+            })
             ->editColumn('umur', function (Livestock $livestock) {
                 // Calculate the age of the livestock using Carbon
                 $tanggalMasuk = Carbon::parse($livestock->start_date);
                 $HariIni = Carbon::now();
                 $umur = $tanggalMasuk->diffInDays($HariIni) + 1;
-                return $umur . ' Hari';
+                return number_format($umur, 2) . ' Hari';
             })
             ->editColumn('jumlah_mati', function (Livestock $livestock) {
-                $deplesi = LivestockDepletion::where('livestock_id', $livestock->id)->where('jenis', 'Mati')->sum('jumlah');
-                // $jumlah = KematianTernak::where('kelompok_ternak_id',$livestock->id)->sum('quantity');
+                // Use config normalization for backward compatibility
+                $mortalityTypes = [
+                    LivestockDepletionConfig::LEGACY_TYPE_MATI,
+                    LivestockDepletionConfig::TYPE_MORTALITY
+                ];
+                $deplesi = LivestockDepletion::where('livestock_id', $livestock->id)
+                    ->whereIn('jenis', $mortalityTypes)
+                    ->sum('jumlah');
                 return $deplesi;
             })
             ->editColumn('jumlah_afkir', function (Livestock $livestock) {
-                $deplesi = LivestockDepletion::where('livestock_id', $livestock->id)->where('jenis', 'Afkir')->sum('jumlah');
-                // $jumlah = TernakAfkir::where('kelompok_ternak_id',$livestock->id)->sum('jumlah');
+                // Use config normalization for backward compatibility
+                $cullingTypes = [
+                    LivestockDepletionConfig::LEGACY_TYPE_AFKIR,
+                    LivestockDepletionConfig::TYPE_CULLING
+                ];
+                $deplesi = LivestockDepletion::where('livestock_id', $livestock->id)
+                    ->whereIn('jenis', $cullingTypes)
+                    ->sum('jumlah');
                 return $deplesi;
             })
             ->editColumn('status', function (Livestock $livestock) {
@@ -108,7 +125,7 @@ class LivestockDataTable extends DataTable
             //     );
             // })
             ->addColumn('action', function (Livestock $livestock) {
-                return view('pages/masterdata.livestock._actions', compact('livestock'));
+                return view('pages.masterdata.livestock._actions', compact('livestock'));
             })
             ->setRowId('id');
     }
@@ -160,9 +177,17 @@ class LivestockDataTable extends DataTable
     public function getColumns(): array
     {
         return [
+            Column::computed('DT_RowIndex', 'No.')
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
             Column::make('name'),
             Column::make('start_date'),
             Column::make('initial_quantity'),
+            Column::computed('quantity')
+                ->title('Current Quantity')
+                ->orderable(true)
+                ->orderDataType('custom-quantity'),
             Column::computed('umur'),
             Column::computed('jumlah_mati')
                 ->title(trans('content.ternak', [], 'id') . ' Mati')

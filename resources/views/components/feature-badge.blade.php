@@ -1,0 +1,1 @@
+<span class="badge bg-secondary">{{ $label }} - Coming Soon</span>

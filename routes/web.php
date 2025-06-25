@@ -285,7 +285,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Livestock Management Routes
     Route::name('livestock.')->prefix('livestock')->group(function () {
-        Route::resource('/batch', LivestockController::class);
+        // Specific batch routes to avoid conflicts
+        Route::get('/batch', [LivestockController::class, 'index'])->name('batch.index');
+        Route::get('/batch/create', [LivestockController::class, 'create'])->name('batch.create');
+        Route::post('/batch', [LivestockController::class, 'store'])->name('batch.store');
+        Route::get('/batch/{id}', [LivestockController::class, 'show'])->name('batch.show');
+        Route::get('/batch/{id}/edit', [LivestockController::class, 'edit'])->name('batch.edit');
+        Route::put('/batch/{id}', [LivestockController::class, 'update'])->name('batch.update');
+        Route::delete('/batch/{id}', [LivestockController::class, 'destroy'])->name('batch.destroy');
+
         Route::get('/supply', [StockController::class, 'stockSupply'])->name('supply');
         Route::get('/feed', [StockController::class, 'stockPakan'])->name('feed');
         Route::get('/livestock/recording', [TernakController::class, 'recordingIndex'])->name('recording.index');
@@ -424,6 +432,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/companies/data', [App\Http\Controllers\Pages\CompanyController::class, 'getData'])->name('companies.data');
         Route::get('/company-user-mapping', [App\Http\Controllers\Pages\CompanyController::class, 'mappingIndex'])->name('companyuser.mapping');
         Route::post('/companies/{company}', [App\Http\Controllers\Pages\CompanyController::class, 'update'])->name('companies.update');
+    });
+
+    // Alert Preview Routes
+    Route::middleware(['auth'])->prefix('alerts')->name('alerts.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Pages\AlertPreviewController::class, 'index'])->name('index');
+        Route::get('/preview/{type}', [App\Http\Controllers\Pages\AlertPreviewController::class, 'preview'])->name('preview');
+        Route::post('/test', [App\Http\Controllers\Pages\AlertPreviewController::class, 'test'])->name('test');
+    });
+
+    // Transaction Clear routes
+    Route::prefix('transaction-clear')->name('transaction-clear.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\TransactionClearController::class, 'index'])->name('index');
+        Route::get('/preview', [App\Http\Controllers\Admin\TransactionClearController::class, 'preview'])->name('preview');
+        Route::post('/clear', [App\Http\Controllers\Admin\TransactionClearController::class, 'clear'])->name('clear');
+        Route::get('/history', [App\Http\Controllers\Admin\TransactionClearController::class, 'history'])->name('history');
     });
 });
 

@@ -28,6 +28,80 @@
     <!--end::Menu item-->
     @endcan
 
+    {{-- @if($livestock->isFifoDepletionEnabled())
+    <!--begin::Menu item-->
+    <div class="menu-item px-3">
+        <a href="#" class="menu-link px-3" data-livestock-id="{{ $livestock->id }}" data-kt-action="fifo_depletion">
+            <i class="ki-duotone ki-minus-circle fs-6 me-2">
+                <span class="path1"></span>
+                <span class="path2"></span>
+            </i>
+            FIFO Depletion
+        </a>
+    </div>
+    <!--end::Menu item-->
+    @endif --}}
+
+    <!--begin::Menu item-->
+    <div class="menu-item px-3">
+        <a href="#" class="menu-link px-3" data-livestock-id="{{ $livestock->id }}" data-kt-action="manual_mutation">
+            <i class="ki-duotone ki-arrows-loop fs-6 me-2">
+                <span class="path1"></span>
+                <span class="path2"></span>
+            </i>
+            Manual Mutation
+        </a>
+    </div>
+    <!--end::Menu item-->
+
+    <!--begin::Menu item-->
+    <div class="menu-item px-3">
+        <a href="#" class="menu-link px-3" data-livestock-id="{{ $livestock->id }}" data-kt-action="fifo_mutation">
+            <i class="ki-duotone ki-arrows-loop fs-6 me-2">
+                <span class="path1"></span>
+                <span class="path2"></span>
+            </i>
+            FIFO Mutation
+        </a>
+    </div>
+    <!--end::Menu item-->
+
+    @if($livestock->isManualDepletionEnabled())
+    <!--begin::Menu item-->
+    <div class="menu-item px-3">
+        <a href="#" class="menu-link px-3" data-livestock-id="{{ $livestock->id }}" data-kt-action="manual_depletion">
+            <i class="ki-duotone ki-minus-circle fs-6 me-2">
+                <span class="path1"></span>
+                <span class="path2"></span>
+            </i>
+            Manual Depletion
+        </a>
+    </div>
+    <!--end::Menu item-->
+    @endif
+
+    @if($livestock->isManualFeedUsageEnabled())
+    <!--begin::Menu item-->
+    <div class="menu-item px-3">
+        <a href="#" class="menu-link px-3" data-livestock-id="{{ $livestock->id }}" data-kt-action="manual_usage">
+            <i class="ki-duotone ki-minus-circle fs-6 me-2">
+                <span class="path1"></span>
+                <span class="path2"></span>
+            </i>
+            Manual Usage
+        </a>
+    </div>
+    <!--end::Menu item-->
+    @endif
+
+    <!--begin::Menu item-->
+    <div class="menu-item px-3">
+        <a href="#" class="menu-link px-3" data-livestock-id="{{ $livestock->id }}" data-kt-action="update_setting">
+            Setting
+        </a>
+    </div>
+    <!--end::Menu item-->
+
     @can('read worker assignment')
     <!--begin::Menu item-->
     <div class="menu-item px-3">

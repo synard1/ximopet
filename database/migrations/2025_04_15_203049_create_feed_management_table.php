@@ -117,6 +117,7 @@ return new class extends Migration
             $table->foreignUuid('feed_stock_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('feed_id')->constrained('feeds')->onDelete('cascade');
             $table->decimal('quantity_taken', 10, 2); // jumlah awal
+            $table->json('metadata')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();

@@ -15,9 +15,13 @@ class FeedUsage extends BaseModel
     protected $fillable = [
         'id',
         'livestock_id',
+        'livestock_batch_id',
         'recording_id',
         'usage_date',
+        'purpose',
+        'notes',
         'total_quantity',
+        'total_cost',
         'created_by',
         'updated_by',
     ];
@@ -40,5 +44,10 @@ class FeedUsage extends BaseModel
     public function recording()
     {
         return $this->belongsTo(Recording::class);
+    }
+
+    public function livestockBatch()
+    {
+        return $this->belongsTo(LivestockBatch::class);
     }
 }

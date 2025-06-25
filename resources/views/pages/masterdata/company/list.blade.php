@@ -21,9 +21,9 @@ By: AI Assistant
         <li class="nav-item">
             <a class="nav-link active" data-bs-toggle="tab" href="#kt_tab_pane_overview">Overview</a>
         </li>
-        {{-- <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_user">User</a>
-        </li> --}}
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#kt_tab_pane_settings">Settings</a>
+        </li>
         {{-- <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button"
                 aria-expanded="false">Dropdown</a>
@@ -125,6 +125,11 @@ By: AI Assistant
                     </form>
                 </div>
             </div>
+        </div>
+        <div class="tab-pane fade" id="kt_tab_pane_settings" role="tabpanel">
+            @if($company)
+            <livewire:company.company-settings :company="$company" />
+            @endif
         </div>
         <div class="tab-pane fade" id="kt_tab_pane_user" role="tabpanel">
             ...
@@ -236,6 +241,7 @@ By: AI Assistant
         <div class="card-header border-0 pt-6">
             <!--begin::Card title-->
             <div class="card-title">
+                {{--
                 <!--begin::Search-->
                 <div class="d-flex align-items-center position-relative my-1">
                     {!! getIcon('magnifier', 'fs-3 position-absolute ms-5') !!}
@@ -243,7 +249,7 @@ By: AI Assistant
                         class="form-control form-control-solid w-250px ps-13" placeholder="Search Company"
                         id="mySearchInput" />
                 </div>
-                <!--end::Search-->
+                <!--end::Search--> --}}
             </div>
             <!--end::Card title-->
 
@@ -315,9 +321,9 @@ By: AI Assistant
             });
             
             // Initialize the search functionality
-            document.getElementById('mySearchInput').addEventListener('keyup', function () {
-                window.LaravelDataTables['company-table'].search(this.value).draw();
-            });
+            // document.getElementById('mySearchInput').addEventListener('keyup', function () {
+            //     window.LaravelDataTables['company-table'].search(this.value).draw();
+            // });
 
             document.addEventListener('livewire:init', function () {
                 Livewire.on('success', function () {

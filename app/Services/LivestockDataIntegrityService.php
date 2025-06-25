@@ -192,6 +192,9 @@ class LivestockDataIntegrityService
                 ];
             }
 
+            // Check for price data integrity (new columns added to livestock_batches)
+            $this->checkPriceDataIntegrity();
+
             // Check for quantity mismatches
             $batchesWithPurchase = LivestockBatch::where('source_type', 'purchase')
                 ->whereNull('deleted_at')
@@ -1233,6 +1236,151 @@ class LivestockDataIntegrityService
     /**
      * Fix missing CurrentLivestock records
      */
+    /**
+     * Check price data integrity for livestock batches
+     * Validates that price columns have correct values and relationships
+     */
+    protected function checkPriceDataIntegrity()
+    {
+        try {
+            // Check for batches with missing price data when purchase items have price data
+            $batchesWithMissingPrice = DB::table('livestock_batches as lb')
+                ->join('livestock_purchase_items as lpi', 'lb.livestock_purchase_item_id', '=', 'lpi.id')
+                ->where('lb.source_type', 'purchase')
+                ->whereNull('lb.deleted_at')
+                ->whereNull('lpi.deleted_at')
+                ->where(function ($query) {
+                    $query->where('lb.price_total', 0)
+                        ->orWhereNull('lb.price_total')
+                        ->orWhere('lb.price_per_unit', 0)
+                        ->orWhereNull('lb.price_per_unit');
+                })
+                ->where(function ($query) {
+                    $query->where('lpi.price_total', '>', 0)
+                        ->where('lpi.price_per_unit', '>', 0);
+                })
+                ->select('lb.*', 'lpi.price_total as item_price_total', 'lpi.price_per_unit as item_price_per_unit', 'lpi.price_value as item_price_value', 'lpi.price_type as item_price_type')
+                ->get();
+
+            foreach ($batchesWithMissingPrice as $batch) {
+                $this->logs[] = [
+                    'type' => 'price_data_missing',
+                    'message' => "Livestock batch ID {$batch->id} missing price data while purchase item has valid price data.",
+                    'data' => [
+                        'batch_id' => $batch->id,
+                        'batch_price_total' => $batch->price_total,
+                        'batch_price_per_unit' => $batch->price_per_unit,
+                        'item_price_total' => $batch->item_price_total,
+                        'item_price_per_unit' => $batch->item_price_per_unit,
+                        'item_price_value' => $batch->item_price_value,
+                        'item_price_type' => $batch->item_price_type,
+                    ],
+                    'reasons' => [
+                        "Batch price_total is " . ($batch->price_total ?: '0 or null'),
+                        "Batch price_per_unit is " . ($batch->price_per_unit ?: '0 or null'),
+                        "But purchase item has valid price data: total={$batch->item_price_total}, per_unit={$batch->item_price_per_unit}"
+                    ]
+                ];
+            }
+
+            // Check for price calculation mismatches between batch and purchase item
+            $batchesWithPriceMismatch = DB::table('livestock_batches as lb')
+                ->join('livestock_purchase_items as lpi', 'lb.livestock_purchase_item_id', '=', 'lpi.id')
+                ->where('lb.source_type', 'purchase')
+                ->whereNull('lb.deleted_at')
+                ->whereNull('lpi.deleted_at')
+                ->where('lb.price_total', '>', 0)
+                ->where('lpi.price_total', '>', 0)
+                ->whereRaw('ABS(lb.price_total - lpi.price_total) > 0.01')
+                ->select('lb.*', 'lpi.price_total as item_price_total', 'lpi.price_per_unit as item_price_per_unit')
+                ->get();
+
+            foreach ($batchesWithPriceMismatch as $batch) {
+                $priceDifference = abs($batch->price_total - $batch->item_price_total);
+                $this->logs[] = [
+                    'type' => 'price_calculation_mismatch',
+                    'message' => "Livestock batch ID {$batch->id} has price mismatch with purchase item.",
+                    'data' => [
+                        'batch_id' => $batch->id,
+                        'batch_price_total' => $batch->price_total,
+                        'item_price_total' => $batch->item_price_total,
+                        'difference' => $priceDifference,
+                    ],
+                    'reasons' => [
+                        "Batch price_total: {$batch->price_total}",
+                        "Purchase item price_total: {$batch->item_price_total}",
+                        "Difference: {$priceDifference}"
+                    ]
+                ];
+            }
+
+            // Check for livestock with incorrect price aggregation
+            $livestockWithPriceIssues = DB::table('livestocks as l')
+                ->join('livestock_purchase_items as lpi', 'l.id', '=', 'lpi.livestock_id')
+                ->whereNull('l.deleted_at')
+                ->whereNull('lpi.deleted_at')
+                ->where('lpi.price_total', '>', 0)
+                ->where(function ($query) {
+                    $query->where('l.price', 0)
+                        ->orWhereNull('l.price');
+                })
+                ->select('l.id as livestock_id', 'l.name as livestock_name', 'l.price as livestock_price')
+                ->distinct()
+                ->get();
+
+            foreach ($livestockWithPriceIssues as $livestock) {
+                // Calculate expected price from purchase items
+                $expectedPrice = DB::table('livestock_purchase_items')
+                    ->where('livestock_id', $livestock->livestock_id)
+                    ->whereNull('deleted_at')
+                    ->selectRaw('
+                        SUM(quantity) as total_quantity,
+                        SUM(price_total) as total_price_value,
+                        CASE 
+                            WHEN SUM(quantity) > 0 THEN SUM(price_total) / SUM(quantity)
+                            ELSE 0 
+                        END as expected_avg_price
+                    ')
+                    ->first();
+
+                $this->logs[] = [
+                    'type' => 'livestock_price_aggregation_issue',
+                    'message' => "Livestock ID {$livestock->livestock_id} has incorrect price aggregation.",
+                    'data' => [
+                        'livestock_id' => $livestock->livestock_id,
+                        'livestock_name' => $livestock->livestock_name,
+                        'current_price' => $livestock->livestock_price,
+                        'expected_price' => $expectedPrice->expected_avg_price ?? 0,
+                        'total_quantity' => $expectedPrice->total_quantity ?? 0,
+                        'total_price_value' => $expectedPrice->total_price_value ?? 0,
+                    ],
+                    'reasons' => [
+                        "Current livestock price: " . ($livestock->livestock_price ?: '0 or null'),
+                        "Expected price based on purchase items: " . ($expectedPrice->expected_avg_price ?? 0),
+                        "Total purchase items quantity: " . ($expectedPrice->total_quantity ?? 0),
+                        "Total purchase items price value: " . ($expectedPrice->total_price_value ?? 0)
+                    ]
+                ];
+            }
+        } catch (\Exception $e) {
+            $this->logs[] = [
+                'type' => 'error',
+                'message' => 'Error checking price data integrity: ' . $e->getMessage(),
+                'data' => [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ],
+                'reasons' => ['Exception occurred during price integrity check']
+            ];
+
+            Log::error('Error in checkPriceDataIntegrity', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
     public function fixMissingCurrentLivestock()
     {
         $fixedCount = 0;
@@ -1351,5 +1499,185 @@ class LivestockDataIntegrityService
                 'removed_count' => $removedCount
             ];
         }
+    }
+
+    /**
+     * Fix price data integrity issues
+     */
+    public function fixPriceDataIntegrity()
+    {
+        $fixedCount = 0;
+
+        try {
+            DB::beginTransaction();
+
+            // Fix batches with missing price data
+            $batchesWithMissingPrice = DB::table('livestock_batches as lb')
+                ->join('livestock_purchase_items as lpi', 'lb.livestock_purchase_item_id', '=', 'lpi.id')
+                ->where('lb.source_type', 'purchase')
+                ->whereNull('lb.deleted_at')
+                ->whereNull('lpi.deleted_at')
+                ->where(function ($query) {
+                    $query->where('lb.price_total', 0)
+                        ->orWhereNull('lb.price_total')
+                        ->orWhere('lb.price_per_unit', 0)
+                        ->orWhereNull('lb.price_per_unit');
+                })
+                ->where(function ($query) {
+                    $query->where('lpi.price_total', '>', 0)
+                        ->where('lpi.price_per_unit', '>', 0);
+                })
+                ->select('lb.id as batch_id', 'lpi.price_total', 'lpi.price_per_unit', 'lpi.price_value', 'lpi.price_type')
+                ->get();
+
+            foreach ($batchesWithMissingPrice as $batch) {
+                $updated = DB::table('livestock_batches')
+                    ->where('id', $batch->batch_id)
+                    ->update([
+                        'price_total' => $batch->price_total,
+                        'price_per_unit' => $batch->price_per_unit,
+                        'price_value' => $batch->price_value,
+                        'price_type' => $batch->price_type,
+                        'updated_at' => now(),
+                        'updated_by' => auth()->id() ?? 1
+                    ]);
+
+                if ($updated) {
+                    $fixedCount++;
+                    $this->logs[] = [
+                        'type' => 'price_data_fixed',
+                        'message' => "Fixed missing price data for livestock batch ID {$batch->batch_id}",
+                        'data' => [
+                            'batch_id' => $batch->batch_id,
+                            'price_total' => $batch->price_total,
+                            'price_per_unit' => $batch->price_per_unit,
+                        ]
+                    ];
+                }
+            }
+
+            // Fix price calculation mismatches
+            $batchesWithPriceMismatch = DB::table('livestock_batches as lb')
+                ->join('livestock_purchase_items as lpi', 'lb.livestock_purchase_item_id', '=', 'lpi.id')
+                ->where('lb.source_type', 'purchase')
+                ->whereNull('lb.deleted_at')
+                ->whereNull('lpi.deleted_at')
+                ->where('lb.price_total', '>', 0)
+                ->where('lpi.price_total', '>', 0)
+                ->whereRaw('ABS(lb.price_total - lpi.price_total) > 0.01')
+                ->select('lb.id as batch_id', 'lpi.price_total', 'lpi.price_per_unit', 'lpi.price_value', 'lpi.price_type')
+                ->get();
+
+            foreach ($batchesWithPriceMismatch as $batch) {
+                $updated = DB::table('livestock_batches')
+                    ->where('id', $batch->batch_id)
+                    ->update([
+                        'price_total' => $batch->price_total,
+                        'price_per_unit' => $batch->price_per_unit,
+                        'price_value' => $batch->price_value,
+                        'price_type' => $batch->price_type,
+                        'updated_at' => now(),
+                        'updated_by' => auth()->id() ?? 1
+                    ]);
+
+                if ($updated) {
+                    $fixedCount++;
+                    $this->logs[] = [
+                        'type' => 'price_mismatch_fixed',
+                        'message' => "Fixed price mismatch for livestock batch ID {$batch->batch_id}",
+                        'data' => [
+                            'batch_id' => $batch->batch_id,
+                            'corrected_price_total' => $batch->price_total,
+                            'corrected_price_per_unit' => $batch->price_per_unit,
+                        ]
+                    ];
+                }
+            }
+
+            // Fix livestock price aggregation issues
+            $livestockWithPriceIssues = DB::table('livestocks as l')
+                ->join('livestock_purchase_items as lpi', 'l.id', '=', 'lpi.livestock_id')
+                ->whereNull('l.deleted_at')
+                ->whereNull('lpi.deleted_at')
+                ->where('lpi.price_total', '>', 0)
+                ->where(function ($query) {
+                    $query->where('l.price', 0)
+                        ->orWhereNull('l.price');
+                })
+                ->select('l.id as livestock_id')
+                ->distinct()
+                ->get();
+
+            foreach ($livestockWithPriceIssues as $livestock) {
+                // Calculate correct price from purchase items
+                $correctPrice = DB::table('livestock_purchase_items')
+                    ->where('livestock_id', $livestock->livestock_id)
+                    ->whereNull('deleted_at')
+                    ->selectRaw('
+                        SUM(quantity) as total_quantity,
+                        SUM(price_total) as total_price_value,
+                        CASE 
+                            WHEN SUM(quantity) > 0 THEN SUM(price_total) / SUM(quantity)
+                            ELSE 0 
+                        END as correct_avg_price
+                    ')
+                    ->first();
+
+                if ($correctPrice && $correctPrice->correct_avg_price > 0) {
+                    $updated = DB::table('livestocks')
+                        ->where('id', $livestock->livestock_id)
+                        ->update([
+                            'price' => $correctPrice->correct_avg_price,
+                            'updated_at' => now(),
+                            'updated_by' => auth()->id() ?? 1
+                        ]);
+
+                    if ($updated) {
+                        $fixedCount++;
+                        $this->logs[] = [
+                            'type' => 'livestock_price_fixed',
+                            'message' => "Fixed price aggregation for livestock ID {$livestock->livestock_id}",
+                            'data' => [
+                                'livestock_id' => $livestock->livestock_id,
+                                'corrected_price' => $correctPrice->correct_avg_price,
+                                'total_quantity' => $correctPrice->total_quantity,
+                                'total_price_value' => $correctPrice->total_price_value,
+                            ]
+                        ];
+                    }
+                }
+            }
+
+            DB::commit();
+
+            $this->logs[] = [
+                'type' => 'success',
+                'message' => "Successfully fixed {$fixedCount} price data integrity issues",
+                'data' => ['fixed_count' => $fixedCount]
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            $this->logs[] = [
+                'type' => 'error',
+                'message' => 'Error fixing price data integrity: ' . $e->getMessage(),
+                'data' => [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            ];
+
+            Log::error('Error in fixPriceDataIntegrity', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+
+        return [
+            'success' => true,
+            'logs' => $this->logs,
+            'fixed_count' => $fixedCount
+        ];
     }
 }

@@ -12,6 +12,7 @@ class LivestockPurchaseItem extends BaseModel
     use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = [
+        'company_id',
         'livestock_purchase_id',
         'livestock_id',
         'tanggal',

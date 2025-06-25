@@ -139,17 +139,40 @@ return new class extends Migration {
         // Livestock Mutation
         Schema::create('livestock_mutations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->date('tanggal');
-            $table->foreignUuid('from_livestock_id')->constrained('livestocks')->onDelete('cascade');
-            $table->foreignUuid('to_livestock_id')->constrained('livestocks')->onDelete('cascade');
-            $table->string('keterangan')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('company_id');
+            $table->uuid('source_livestock_id');
+            $table->uuid('destination_livestock_id')->nullable();
+            $table->datetime('tanggal');
+            $table->integer('jumlah');
+            $table->string('jenis'); // mutation type: internal, external, farm_transfer, etc.
+            $table->string('direction'); // in, out
+            $table->json('data')->nullable(); // Additional data like batch info, notes, etc.
+            $table->json('metadata')->nullable(); // Processing metadata, audit trail, etc.
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('created_by')->references('id')->on('users');
-            $table->foreign('updated_by')->references('id')->on('users');
+            // Foreign key constraints
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
+            $table->foreign('source_livestock_id')->references('id')->on('livestocks')->onDelete('cascade');
+            $table->foreign('destination_livestock_id')->references('id')->on('livestocks')->onDelete('cascade');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
+
+            // Indexes for performance
+            $table->index(['company_id', 'tanggal']);
+            $table->index(['source_livestock_id', 'direction']);
+            $table->index(['destination_livestock_id', 'direction']);
+            $table->index(['jenis', 'direction']);
+            $table->index(['tanggal', 'company_id']);
+            $table->index(['created_at']);
+            $table->index(['deleted_at']);
+
+            // Composite indexes for common queries
+            $table->index(['company_id', 'source_livestock_id', 'direction']);
+            $table->index(['company_id', 'destination_livestock_id', 'direction']);
+            $table->index(['source_livestock_id', 'tanggal', 'direction']);
         });
 
         Schema::create('livestock_mutation_items', function (Blueprint $table) {

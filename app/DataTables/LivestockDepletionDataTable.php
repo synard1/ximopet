@@ -22,6 +22,7 @@ class LivestockDepletionDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+            ->addIndexColumn()
             ->rawColumns([''])
             ->editColumn('total_berat', function (KematianTernak $ternak) {
                 if ($ternak->total_berat < 1000) {
@@ -138,7 +139,10 @@ class LivestockDepletionDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('id')->visible(false),
+            Column::computed('DT_RowIndex', 'No.')
+                ->title('No.')
+                ->addClass('text-center')
+                ->width(50),
             Column::make('tanggal')->title('Tanggal'),
             Column::make('ternak_id'),
             // Column::computed('farm_id')->title('Farm')->visible(false),

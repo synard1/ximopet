@@ -649,6 +649,92 @@ class LivestockDataIntegrity extends Component
     }
 
     /**
+     * Check price data integrity issues
+     */
+    public function checkPriceDataIntegrity()
+    {
+        $this->isRunning = true;
+        $this->error = null;
+        $this->logs = [];
+
+        try {
+            $service = new LivestockDataIntegrityService();
+
+            // Run price integrity check (which calls checkPriceDataIntegrity internally)
+            $result = $service->previewInvalidLivestockData();
+
+            if ($result['success'] ?? false) {
+                // Filter logs to show only price-related issues
+                $priceRelatedTypes = [
+                    'price_data_missing',
+                    'price_calculation_mismatch',
+                    'livestock_price_aggregation_issue'
+                ];
+
+                $allLogs = $result['logs'] ?? [];
+                $priceLogs = array_filter($allLogs, function ($log) use ($priceRelatedTypes) {
+                    return in_array($log['type'] ?? '', $priceRelatedTypes);
+                });
+
+                $this->logs = array_values($priceLogs);
+
+                if (count($priceLogs) > 0) {
+                    $this->dispatch('info', 'Found ' . count($priceLogs) . ' price data integrity issues.');
+                } else {
+                    $this->dispatch('success', 'No price data integrity issues found.');
+                }
+            } else {
+                $this->error = $result['error'] ?? 'Unknown error occurred';
+                $this->logs = $result['logs'] ?? [];
+            }
+        } catch (\Exception $e) {
+            $this->error = $e->getMessage();
+            Log::error('LivestockDataIntegrity::checkPriceDataIntegrity failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+
+        $this->isRunning = false;
+    }
+
+    /**
+     * Fix price data integrity issues
+     */
+    public function fixPriceDataIntegrity()
+    {
+        $this->isRunning = true;
+        $this->error = null;
+
+        try {
+            $service = new LivestockDataIntegrityService();
+            $result = $service->fixPriceDataIntegrity();
+
+            if ($result['success'] ?? false) {
+                $this->logs = array_merge($this->logs, $result['logs'] ?? []);
+                $fixedCount = $result['fixed_count'] ?? 0;
+
+                if ($fixedCount > 0) {
+                    $this->dispatch('success', "Successfully fixed {$fixedCount} price data integrity issues.");
+                } else {
+                    $this->dispatch('info', 'No price data integrity issues found to fix.');
+                }
+            } else {
+                $this->error = $result['error'] ?? 'Unknown error occurred';
+                $this->logs = array_merge($this->logs, $result['logs'] ?? []);
+            }
+        } catch (\Exception $e) {
+            $this->error = $e->getMessage();
+            Log::error('LivestockDataIntegrity::fixPriceDataIntegrity failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+
+        $this->isRunning = false;
+    }
+
+    /**
      * Render component
      */
     public function render()

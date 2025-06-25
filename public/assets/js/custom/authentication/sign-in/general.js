@@ -72,7 +72,7 @@ var KTSigninGeneral = (function () {
             },
             buttonsStyling: false,
         };
-
+        
         return Swal.fire(mergedConfig);
     };
 

@@ -140,6 +140,19 @@
                 "delete livestock strain": true
             }
         },
+        "/transaction/livestock": {
+            "roles": {
+                "Admin": true,
+                "Supervisor": true,
+                "Operator": true
+            },
+            "permissions": {
+                "read livestock purchasing": true,
+                "create livestock purchasing": true,
+                "update livestock purchasing": true,
+                "delete livestock purchasing": true
+            }
+        },
         "/transaction/supply": {
             "roles": {
                 "Admin": true,

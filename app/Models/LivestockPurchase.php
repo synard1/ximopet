@@ -33,6 +33,7 @@ class LivestockPurchase extends BaseModel
     ];
 
     protected $fillable = [
+        'company_id',
         'id',
         'tanggal',
         'invoice_number',
@@ -118,6 +119,12 @@ class LivestockPurchase extends BaseModel
     public function details()
     {
         return $this->hasMany(LivestockPurchaseItem::class, 'livestock_purchase_id', 'id');
+    }
+
+    public function items()
+    {
+        // Alias for details()
+        return $this->details();
     }
 
     public function farm()

@@ -2,7 +2,6 @@
     @if ($showForm)
 
     <!-- Readonly/Locked Status Alert -->
-    {{-- @if($this->isReadonly() && !$tempAuthEnabled) --}}
     @if(in_array($status, ['in_coop', 'complete']) && !$tempAuthEnabled)
     <div class="alert alert-warning d-flex align-items-center justify-content-between mb-4">
         <div class="d-flex align-items-center">
@@ -13,13 +12,11 @@
                 </div>
             </div>
         </div>
-        <!-- Debug Button - Always show -->
         <button type="button" class="btn btn-sm btn-warning" wire:click="requestTempAuth"
             onclick="console.log('Debug button clicked')">
             <i class="ki-outline ki-shield-search fs-4 me-1"></i>
             Minta Autorisasi (Debug)
         </button>
-
         @if($this->canRequestTempAuth())
         <button type="button" class="btn btn-sm btn-success" wire:click="requestTempAuth"
             onclick="console.log('Normal button clicked')">
@@ -57,16 +54,19 @@
                         placeholder="Masukkan nama batch atau kosongkan untuk otomatis" @if($this->isReadonly())
                     readonly @endif>
                     <x-input.error for="batch_name" />
+                    @if(isset($errorItems[0]) && str_contains($errorItems[0], 'batch'))
+                    <div class="text-danger small">{{ $errorItems[0] }}</div>
+                    @endif
                 </x-input.group>
 
                 <x-input.group label="Nomor Invoice">
-                    <input type="text" wire:model="invoice_number" class="form-control"
+                    <input type="text" wire:model.live="invoice_number" class="form-control"
                         placeholder="Masukkan nomor invoice" @if($this->isReadonly()) readonly required @endif>
                     <x-input.error for="invoice_number" />
                 </x-input.group>
 
                 <x-input.group label="Supplier">
-                    <select wire:model="supplier_id" class="form-select" @if($this->isDisabled()) disabled required
+                    <select wire:model.live="supplier_id" class="form-select" @if($this->isDisabled()) disabled required
                         @endif>
                         <option value="">-- Pilih Supplier --</option>
                         @foreach ($vendors as $vendor)
@@ -102,7 +102,7 @@
                 </x-input.group>
 
                 <x-input.group label="Kandang">
-                    <select wire:model="coop_id" class="form-select" @if(!$farm_id || $this->isDisabled()) disabled
+                    <select wire:model.live="coop_id" class="form-select" @if(!$farm_id || $this->isDisabled()) disabled
                         required @endif>
                         <option value="">-- Pilih Kandang --</option>
                         @foreach ($coops as $coop)
@@ -122,16 +122,23 @@
             </div>
         </div>
 
+        @php $canInputItems = $date && $supplier_id && $farm_id && $coop_id; @endphp
+        @if(!$canInputItems)
+        <div class="alert alert-info mt-4">
+            <strong>Lengkapi informasi pembelian terlebih dahulu</strong><br>
+            Silakan isi <b>Tanggal</b>, <b>Supplier</b>, <b>Farm</b>, dan <b>Kandang</b> sebelum menambah detail
+            livestock.
+        </div>
+        @endif
+
+        @if($canInputItems)
         <hr class="my-4">
-
         <h5 class="fw-semibold text-primary"><i class="bi bi-box-seam me-2"></i>Detail Livestock</h5>
-
         @foreach ($items as $index => $item)
         <div class="card mb-3 p-3 border rounded bg-light position-relative overflow-auto" style="max-height: 400px;">
             @if (!empty($errorItems[$index]))
             <div class="alert alert-danger py-1 px-2 mb-2">{{ $errorItems[$index] }}</div>
             @endif
-
             <div class="row">
                 <div class="col-md-6">
                     <x-input.group label="Jenis Strains">
@@ -206,7 +213,6 @@
                     </x-input.group>
                 </div>
             </div>
-
             @if(!$this->isDisabled())
             <div class="col-md-1 d-flex align-items-end justify-content-end">
                 <button type="button" wire:click="removeItem({{ $index }})" class="btn btn-outline-danger btn-sm">
@@ -224,7 +230,7 @@
                 </button>
             </div>
             @endif
-
+            @endif
             <div class="d-flex justify-content-end">
                 <button type="button" class="btn btn-secondary" wire:click="cancel">Cancel</button>
                 @if(!$this->isDisabled())

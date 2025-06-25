@@ -61,7 +61,7 @@ class FeedPurchaseDataTable extends DataTable
                 $currentStatus = $transaction->status;
 
                 // Check if user only has read permission
-                if (!auth()->user()->can('update feed purchase')) {
+                if (!auth()->user()->can('update feed purchasing')) {
                     return $statuses[$currentStatus] ?? $currentStatus;
                 }
 
@@ -93,6 +93,69 @@ class FeedPurchaseDataTable extends DataTable
 
                 return $html;
             })
+            // ->editColumn('status', function (FeedPurchaseBatch $transaction) {
+            //     $statuses = FeedPurchaseBatch::STATUS_LABELS;
+            //     $currentStatus = $transaction->status;
+
+            //     // Check if user only has read permission
+            //     if (!auth()->user()->can('update feed purchase')) {
+            //         return $statuses[$currentStatus] ?? $currentStatus;
+            //     }
+
+            //     $isDisabled = in_array($currentStatus, ['cancelled']) ? 'disabled' : '';
+
+            //     // Check user role
+            //     $userRole = auth()->user()->roles->pluck('name')->toArray();
+
+            //     // Operator special rules: dapat mengubah status jika status = draft
+            //     $isOperator = in_array('Operator', $userRole);
+            //     $isSupervisor = in_array('Supervisor', $userRole);
+
+            //     // Allow Operators to see 'completed' status if it's already set OR if they're Supervisor
+            //     $canSeeCompleted = $isSupervisor || ($currentStatus === 'completed' && $isOperator);
+
+            //     // Operator dapat mengubah status hanya jika status = draft
+            //     // Supervisor dapat mengubah semua status kecuali cancelled dan completed
+            //     $selectDisabled = '';
+            //     if ($isOperator && $currentStatus !== 'draft') {
+            //         $selectDisabled = 'disabled';
+            //     } elseif ($currentStatus === 'completed' || $currentStatus === 'cancelled') {
+            //         $selectDisabled = 'disabled';
+            //     }
+
+            //     $html = '<div class="d-flex align-items-center">';
+            //     $html .= '<select class="form-select form-select-sm status-select" data-kt-transaction-id="' . $transaction->id . '" data-kt-action="update_status" data-current="' . $currentStatus . '" ' . $isDisabled . ' ' . $selectDisabled . '>';
+
+            //     foreach ($statuses as $value => $label) {
+            //         // Only show the 'completed' status option if the user is a Supervisor or if the current status is completed for Operators
+            //         if (!$canSeeCompleted && $value === 'completed') {
+            //             continue;
+            //         }
+
+            //         $selected = $value === $currentStatus ? 'selected' : '';
+            //         $optionDisabled = '';
+            //         $optionStyle = '';
+
+            //         // Logic untuk disable option berdasarkan role dan status
+            //         if ($isOperator && $currentStatus === 'draft') {
+            //             // Operator dengan status draft hanya bisa pilih draft/pending/ordered
+            //             if (!in_array($value, ['draft', 'pending', 'ordered'])) {
+            //                 $optionDisabled = 'disabled';
+            //                 $optionStyle = 'style="background-color: #f5f5f5; color: #999;"';
+            //             }
+            //         } elseif ($currentStatus === 'arrived' && $value !== 'completed' && $value !== 'arrived') {
+            //             $optionDisabled = 'disabled';
+            //             $optionStyle = 'style="background-color: #f5f5f5; color: #999;"';
+            //         }
+
+            //         $html .= "<option value='{$value}' {$selected} {$optionDisabled} {$optionStyle}>{$label}</option>";
+            //     }
+
+            //     $html .= '</select>';
+            //     $html .= '</div>';
+
+            //     return $html;
+            // })
             // ->editColumn('status', function (FeedPurchaseBatch $transaction) {
             //     return $transaction->getStatusLabel();
             // })

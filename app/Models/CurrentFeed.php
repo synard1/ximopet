@@ -27,4 +27,9 @@ class CurrentFeed extends BaseModel
     {
         return $this->belongsTo(Feed::class, 'feed_id', 'id');
     }
+
+    public function livestock()
+    {
+        return $this->belongsTo(Livestock::class, 'livestock_id', 'id');
+    }
 }

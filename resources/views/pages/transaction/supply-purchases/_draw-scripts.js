@@ -1,6 +1,9 @@
 // Initialize KTMenu
 KTMenu.init();
 
+// ✅ DECLARE MISSING VARIABLE
+let lastStatusSelect = null;
+
 const showLoadingSpinner = () => {
     const loadingEl = document.createElement("div");
     document.body.append(loadingEl);
@@ -267,72 +270,100 @@ document
         });
     });
 
-// Add click event listener to update status buttons
-document
-    .querySelectorAll('[data-kt-action="update_status"]')
-    .forEach(function (element) {
-        element.addEventListener("change", function (e) {
-            if (this.disabled) return;
-            const purchaseId = this.getAttribute("data-kt-transaction-id");
-            const status = this.value;
-            const current = this.getAttribute("data-current");
+// ✅ IMPROVED STATUS UPDATE HANDLER - Using event delegation for dynamic content
+$(document).on("change", '[data-kt-action="update_status"]', function (e) {
+    if (this.disabled) return;
 
-            if (status === "cancelled" || status === "completed") {
-                lastStatusSelect = this;
-                document.getElementById("statusIdInput").value = purchaseId;
-                document.getElementById("statusValueInput").value = status;
-                document.getElementById("notesInput").value = "";
-                $("#notesModal").modal("show");
-                this.value = current;
-            } else {
-                Livewire.dispatch("updateStatusSupplyPurchase", {
-                    purchaseId: purchaseId,
-                    status: status,
-                    notes: "",
-                });
-            }
+    const purchaseId = this.getAttribute("data-kt-transaction-id");
+    const status = this.value;
+    const current = this.getAttribute("data-current");
+
+    console.log("Status change triggered:", { purchaseId, status, current });
+
+    if (status === "cancelled" || status === "completed") {
+        lastStatusSelect = this;
+        document.getElementById("statusIdInput").value = purchaseId;
+        document.getElementById("statusValueInput").value = status;
+        document.getElementById("notesInput").value = "";
+        $("#notesModal").modal("show");
+        this.value = current; // Reset to current value until modal is submitted
+    } else {
+        // Show immediate feedback notification if available
+        if (
+            typeof window.SupplyPurchaseDataTableNotifications !==
+                "undefined" &&
+            typeof window.SupplyPurchaseDataTableNotifications
+                .showStatusChangeNotification === "function"
+        ) {
+            window.SupplyPurchaseDataTableNotifications.showStatusChangeNotification(
+                {
+                    transactionId: purchaseId,
+                    oldStatus: current,
+                    newStatus: status,
+                    type: "info",
+                    title: "Status Change Processing",
+                    message: `Updating status from ${current} to ${status}...`,
+                }
+            );
+        }
+
+        Livewire.dispatch("updateStatusSupplyPurchase", {
+            purchaseId: purchaseId,
+            status: status,
+            notes: "",
         });
-    });
-
-// Submit modal catatan
-document.getElementById("notesForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    const id = document.getElementById("statusIdInput").value;
-    const status = document.getElementById("statusValueInput").value;
-    const notes = document.getElementById("notesInput").value;
-    if (!notes) {
-        alert("Catatan wajib diisi!");
-        return;
     }
-
-    // Show immediate feedback notification if available
-    if (
-        typeof window.SupplyPurchaseDataTableNotifications !== "undefined" &&
-        typeof window.SupplyPurchaseDataTableNotifications
-            .showStatusChangeNotification === "function"
-    ) {
-        window.SupplyPurchaseDataTableNotifications.showStatusChangeNotification(
-            {
-                transactionId: id,
-                oldStatus: lastStatusSelect
-                    ? lastStatusSelect.getAttribute("data-current")
-                    : "unknown",
-                newStatus: status,
-                type: "warning",
-                title: "Status Change Processing",
-                message: `Updating status to ${status} with notes...`,
-            }
-        );
-    }
-
-    Livewire.dispatch("updateStatusSupplyPurchase", {
-        purchaseId: id,
-        status: status,
-        notes: notes,
-    });
-    $("#notesModal").modal("hide");
-    lastStatusSelect = null;
 });
+
+// ✅ IMPROVED MODAL SUBMISSION HANDLER
+$(document).ready(function () {
+    // Ensure the form exists before adding event listener
+    const notesForm = document.getElementById("notesForm");
+    if (notesForm) {
+        notesForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const id = document.getElementById("statusIdInput").value;
+            const status = document.getElementById("statusValueInput").value;
+            const notes = document.getElementById("notesInput").value;
+
+            if (!notes) {
+                alert("Catatan wajib diisi!");
+                return;
+            }
+
+            // Show immediate feedback notification if available
+            if (
+                typeof window.SupplyPurchaseDataTableNotifications !==
+                    "undefined" &&
+                typeof window.SupplyPurchaseDataTableNotifications
+                    .showStatusChangeNotification === "function"
+            ) {
+                window.SupplyPurchaseDataTableNotifications.showStatusChangeNotification(
+                    {
+                        transactionId: id,
+                        oldStatus: lastStatusSelect
+                            ? lastStatusSelect.getAttribute("data-current")
+                            : "unknown",
+                        newStatus: status,
+                        type: "warning",
+                        title: "Status Change Processing",
+                        message: `Updating status to ${status} with notes...`,
+                    }
+                );
+            }
+
+            Livewire.dispatch("updateStatusSupplyPurchase", {
+                purchaseId: id,
+                status: status,
+                notes: notes,
+            });
+
+            $("#notesModal").modal("hide");
+            lastStatusSelect = null;
+        });
+    }
+});
+
 // // Listen for 'success' event emitted by Livewire
 // Livewire.on('success', (message) => {
 //     // Reload the transactions-table datatable

@@ -140,6 +140,62 @@ class Company extends BaseModel
     }
 
     /**
+     * Get livestock recording configuration
+     */
+    public function getLivestockRecordingConfig(): array
+    {
+        $config = $this->getLivestockConfig();
+        return $config['recording_method'] ?? [];
+    }
+
+    /**
+     * Check if company uses batch recording method
+     */
+    public function usesBatchRecording(): bool
+    {
+        $config = $this->getLivestockRecordingConfig();
+        return ($config['type'] ?? 'batch') === 'batch';
+    }
+
+    /**
+     * Check if company allows multiple batches
+     */
+    public function allowsMultipleBatches(): bool
+    {
+        $config = $this->getLivestockRecordingConfig();
+        return $config['allow_multiple_batches'] ?? true;
+    }
+
+    /**
+     * Get batch settings for livestock recording
+     */
+    public function getLivestockBatchSettings(): array
+    {
+        $config = $this->getLivestockRecordingConfig();
+        return $config['batch_settings'] ?? [];
+    }
+
+    /**
+     * Get total settings for livestock recording
+     */
+    public function getLivestockTotalSettings(): array
+    {
+        $config = $this->getLivestockRecordingConfig();
+        return $config['total_settings'] ?? [];
+    }
+
+    /**
+     * Update livestock recording configuration
+     */
+    public function updateLivestockRecordingConfig(array $config): self
+    {
+        $currentConfig = $this->getLivestockConfig();
+        $currentConfig['recording_method'] = $config;
+
+        return $this->updateConfigSection('livestock', $currentConfig);
+    }
+
+    /**
      * Check if company can be deleted (no users mapped)
      */
     public function canBeDeleted(): bool

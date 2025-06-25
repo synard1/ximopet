@@ -61,8 +61,11 @@ class LivestockPurchaseDataTable extends DataTable
                 $statuses = Transaksi::STATUS_LABELS;
                 $currentStatus = $transaksi->status;
 
-                // Check if user only has read permission
-                if (!auth()->user()->can('update livestock purchase')) {
+                // Check if user has update permission or is Supervisor
+                $canUpdate = auth()->user()->can('update livestock purchase') || 
+                            auth()->user()->hasRole('Supervisor');
+
+                if (!$canUpdate) {
                     return $statuses[$currentStatus] ?? $currentStatus;
                 }
 

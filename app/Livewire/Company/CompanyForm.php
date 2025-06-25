@@ -26,6 +26,10 @@ class CompanyForm extends Component
     public $notes;
     public $isEditing = false;
     public $showForm = false;
+    public $livestockRecordingType = 'batch';
+    public $allowMultipleBatches = true;
+    public $batchSettings = [];
+    public $totalSettings = [];
 
     protected $rules = [
         'name' => 'required|min:3',
@@ -37,6 +41,10 @@ class CompanyForm extends Component
         'package' => 'required',
         'status' => 'required',
         'logo' => 'nullable|file|image|max:5120', // 5MB in kilobytes
+        'livestockRecordingType' => 'required|in:batch,total',
+        'allowMultipleBatches' => 'boolean',
+        'batchSettings' => 'array',
+        'totalSettings' => 'array',
     ];
 
     public $listeners = [
@@ -51,6 +59,20 @@ class CompanyForm extends Component
     public function mount()
     {
         $this->resetForm();
+        $this->initializeLivestockConfig();
+    }
+
+    protected function initializeLivestockConfig()
+    {
+        if ($this->isEditing && $this->companyId) {
+            $company = Company::find($this->companyId);
+            $recordingConfig = $company->getLivestockRecordingConfig();
+
+            $this->livestockRecordingType = $recordingConfig['type'] ?? 'batch';
+            $this->allowMultipleBatches = $recordingConfig['allow_multiple_batches'] ?? true;
+            $this->batchSettings = $recordingConfig['batch_settings'] ?? [];
+            $this->totalSettings = $recordingConfig['total_settings'] ?? [];
+        }
     }
 
     public function createCompany()
@@ -93,30 +115,7 @@ class CompanyForm extends Component
 
     public function save()
     {
-        // Dynamic validation for logo
-        $rules = [
-            'name' => 'required|min:3',
-            'address' => 'required',
-            'phone' => 'required',
-            'email' => 'required|email',
-            'status' => 'required',
-        ];
-        // Only validate logo as file if it's an instance of UploadedFile
-        if (is_object($this->logo) && method_exists($this->logo, 'getRealPath')) {
-            $rules['logo'] = 'nullable|file|image|max:5120';
-        }
-        $this->validate($rules);
-
-        // Check if user has permission to save
-        if (!$this->isEditing && !auth()->user()->hasRole('SuperAdmin')) {
-            session()->flash('error', 'You do not have permission to create companies.');
-            return;
-        }
-
-        if ($this->isEditing && !auth()->user()->hasRole('SuperAdmin') && $this->companyId !== auth()->user()->company_id) {
-            session()->flash('error', 'You do not have permission to edit this company.');
-            return;
-        }
+        $this->validate();
 
         try {
             $data = [
@@ -131,8 +130,8 @@ class CompanyForm extends Component
                 'notes' => $this->notes ?? null,
             ];
 
+            // Handle logo upload
             if (is_object($this->logo) && method_exists($this->logo, 'getRealPath')) {
-                // Convert image to base64 and keep original size
                 $imageContents = file_get_contents($this->logo->getRealPath());
                 $mimeType = $this->logo->getMimeType();
                 $base64 = 'data:' . $mimeType . ';base64,' . base64_encode($imageContents);
@@ -143,29 +142,49 @@ class CompanyForm extends Component
 
             if ($this->isEditing) {
                 $company = Company::find($this->companyId);
-                // If config is missing or empty, set to default
-                if (empty($company->config)) {
-                    $data['config'] = CompanyConfig::getDefaultConfig();
-                }
+
+                // Update company basic info
                 $company->update($data);
+
+                // Update livestock recording configuration
+                $recordingConfig = [
+                    'type' => $this->livestockRecordingType,
+                    'allow_multiple_batches' => $this->allowMultipleBatches,
+                    'batch_settings' => $this->batchSettings,
+                    'total_settings' => $this->totalSettings
+                ];
+                $company->updateLivestockRecordingConfig($recordingConfig);
+
                 Log::info('Company updated successfully', [
                     'company_id' => $company->id,
-                    'name' => $company->name
+                    'name' => $company->name,
+                    'livestock_config' => $recordingConfig
                 ]);
+
                 session()->flash('message', 'Company updated successfully.');
                 $this->dispatch('success', 'Company updated successfully.');
             } else {
                 // Get default config for new company
                 $defaultConfig = CompanyConfig::getDefaultConfig();
-                $data['config'] = $defaultConfig;
 
+                // Update livestock recording config in default config
+                $defaultConfig['livestock']['recording_method'] = [
+                    'type' => $this->livestockRecordingType,
+                    'allow_multiple_batches' => $this->allowMultipleBatches,
+                    'batch_settings' => $this->batchSettings,
+                    'total_settings' => $this->totalSettings
+                ];
+
+                $data['config'] = $defaultConfig;
                 $company = Company::create($data);
-                Log::info('Company created successfully with default config', [
+
+                Log::info('Company created successfully with config', [
                     'company_id' => $company->id,
                     'name' => $company->name,
-                    'config' => $defaultConfig
+                    'livestock_config' => $defaultConfig['livestock']['recording_method']
                 ]);
-                session()->flash('message', 'Company created successfully with default configuration.');
+
+                session()->flash('message', 'Company created successfully with configuration.');
                 $this->dispatch('success', 'Company created successfully.');
             }
 
@@ -284,6 +303,10 @@ class CompanyForm extends Component
         $this->package = null;
         $this->status = 'active';
         $this->notes = '';
+        $this->livestockRecordingType = 'batch';
+        $this->allowMultipleBatches = true;
+        $this->batchSettings = [];
+        $this->totalSettings = [];
     }
 
     public function render()

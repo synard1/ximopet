@@ -26,6 +26,13 @@
                 <span wire:loading>Running...</span>
             </button>
 
+            <button wire:click="checkPriceDataIntegrity"
+                class="btn btn-secondary px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
+                wire:loading.attr="disabled">
+                <span wire:loading.remove>Check Price Data Integrity</span>
+                <span wire:loading>Running...</span>
+            </button>
+
             @if($missingCurrentLivestockCount > 0)
             <button wire:click="previewCurrentLivestockChanges"
                 class="btn btn-info px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 mr-2"
@@ -86,6 +93,12 @@
                         <span class="text-green-700">➕ Create CurrentLivestock</span>
                         @elseif($change['type'] === 'remove_orphaned_current_livestock')
                         <span class="text-red-700">🗑️ Remove Orphaned CurrentLivestock</span>
+                        @elseif($change['type'] === 'price_data_missing')
+                        <span class="text-purple-700">💰 Missing Price Data</span>
+                        @elseif($change['type'] === 'price_calculation_mismatch')
+                        <span class="text-purple-700">💰 Price Calculation Mismatch</span>
+                        @elseif($change['type'] === 'livestock_price_aggregation_issue')
+                        <span class="text-purple-700">💰 Price Aggregation Issue</span>
                         @endif
                     </div>
                     <p class="text-sm text-gray-600 mb-3">
@@ -236,6 +249,9 @@
         'missing_current_livestock');
         $hasOrphanedCurrentLivestock = collect($logs)->contains(fn($log) => $log['type'] ===
         'orphaned_current_livestock');
+        $hasPriceDataIssues = collect($logs)->contains(fn($log) => in_array($log['type'], [
+        'price_data_missing', 'price_calculation_mismatch', 'livestock_price_aggregation_issue'
+        ]));
         @endphp
 
         @if($hasQuantityMismatch)
@@ -266,6 +282,12 @@
         <button wire:click="fixMissingCurrentLivestock"
             class="btn btn-success mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
             Perbaiki CurrentLivestock Records
+        </button>
+        @endif
+        @if($hasPriceDataIssues)
+        <button wire:click="fixPriceDataIntegrity"
+            class="btn btn-success mb-4 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm">
+            Perbaiki Price Data Integrity Issues
         </button>
         @endif
 
@@ -320,6 +342,18 @@
                         <span class="text-green-700">✅ CurrentLivestock Created</span>
                         @elseif($log['type'] === 'remove_orphaned_current_livestock')
                         <span class="text-orange-700">🗑️ Orphaned CurrentLivestock Removed</span>
+                        @elseif($log['type'] === 'price_data_missing')
+                        <span class="text-purple-700">💰 Missing Price Data</span>
+                        @elseif($log['type'] === 'price_calculation_mismatch')
+                        <span class="text-purple-700">💰 Price Calculation Mismatch</span>
+                        @elseif($log['type'] === 'livestock_price_aggregation_issue')
+                        <span class="text-purple-700">💰 Price Aggregation Issue</span>
+                        @elseif($log['type'] === 'price_data_fixed')
+                        <span class="text-green-700">✅ Price Data Fixed</span>
+                        @elseif($log['type'] === 'price_mismatch_fixed')
+                        <span class="text-green-700">✅ Price Mismatch Fixed</span>
+                        @elseif($log['type'] === 'livestock_price_fixed')
+                        <span class="text-green-700">✅ Livestock Price Fixed</span>
                         @elseif($log['type'] === 'invalid_batch' || $log['type'] === 'invalid_batch_source' ||
                         $log['type'] === 'cannot_fix_empty_source' || $log['type'] === 'fix_single_failed')
                         <button

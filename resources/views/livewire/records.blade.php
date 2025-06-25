@@ -144,22 +144,97 @@
                 <x-input.error for="weight_today" />
             </x-input.group>
 
-            <x-input.group col="6" label="💀 Mati (Ekor)">
-                <input type="number" wire:model="mortality" class="form-control" placeholder="Jumlah ayam mati">
-                @if($yesterdayData && $yesterdayData['mortality'] > 0)
-                <small class="text-muted mt-1 d-block">
-                    📊 Kemarin: {{ $yesterdayData['mortality'] }} ekor mati
-                </small>
-                @endif
-            </x-input.group>
+            <!-- Total Deplesi Summary Only -->
+            <x-input.group col="6" label="⚠️ Total Deplesi (Ekor)">
+                @if($isManualDepletionEnabled)
+                <!-- Manual Depletion Mode - Read Only Display -->
+                <div class="form-control bg-light"
+                    style="display: flex; align-items: center; justify-content: space-between;">
+                    <span>{{ ($mortality ?? 0) + ($culling ?? 0) }} ekor</span>
+                    <span class="badge bg-info text-white">Manual</span>
+                </div>
 
-            <x-input.group col="6" label="🛑 Afkir (Ekor)">
-                <input type="number" wire:model="culling" class="form-control" placeholder="Ayam tidak layak">
-                @if($yesterdayData && $yesterdayData['culling'] > 0)
+                <!-- Manual Depletion Notice -->
+                <div class="alert alert-info mt-2 py-2" role="alert">
+                    <small class="d-flex align-items-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <div>
+                            <strong>Mode Manual Depletion Aktif:</strong>
+                            Data deplesi dikelola melalui menu <strong>"Manual Depletion"</strong> pada tabel livestock.
+                            <br>Input deplesi di form recording ini dinonaktifkan untuk mencegah duplikasi data.
+                        </div>
+                    </small>
+                </div>
+
+                <!-- Hidden inputs for maintaining data in manual mode -->
+                <input type="hidden" wire:model="mortality">
+                <input type="hidden" wire:model="culling">
+                @else
+                <!-- Recording Mode - Editable Inputs -->
+                <div class="form-control bg-light"
+                    style="display: flex; align-items: center; justify-content: space-between;">
+                    <span>{{ ($mortality ?? 0) + ($culling ?? 0) }} ekor</span>
+                    <span class="badge bg-success text-white">Recording</span>
+                </div>
+
+                <!-- Depletion Input Fields -->
+                <div class="row mt-2">
+                    <div class="col-6">
+                        <label class="form-label text-sm">💀 Mati (Ekor)</label>
+                        <input type="number" wire:model.live="mortality" class="form-control form-control-sm" min="0"
+                            placeholder="0" value="{{ $mortality ?? 0 }}">
+                        <x-input.error for="mortality" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-sm">🛑 Afkir (Ekor)</label>
+                        <input type="number" wire:model.live="culling" class="form-control form-control-sm" min="0"
+                            placeholder="0" value="{{ $culling ?? 0 }}">
+                        <x-input.error for="culling" />
+                    </div>
+                </div>
+
+                <!-- Recording Mode Notice -->
+                <div class="alert alert-success mt-2 py-2" role="alert">
+                    <small class="d-flex align-items-center">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <div>
+                            <strong>Mode Recording Aktif:</strong>
+                            Data deplesi dapat diinput langsung melalui form ini.
+                        </div>
+                    </small>
+                </div>
+                @endif
+
+                <!-- Yesterday's Depletion Data -->
+                @if($yesterdayData && $yesterdayData['total_depletion'] > 0)
                 <small class="text-muted mt-1 d-block">
-                    📊 Kemarin: {{ $yesterdayData['culling'] }} ekor afkir
+                    📊 Kemarin ({{ $yesterdayData['formatted_date'] }}): {{ $yesterdayData['total_depletion'] }} ekor
+                    deplesi
+                    @if($yesterdayData['is_manual_depletion'] ?? false)
+                    <span class="badge bg-info text-white ms-1" style="font-size: 0.7em;">Manual</span>
+                    @else
+                    <span class="badge bg-success text-white ms-1" style="font-size: 0.7em;">Recording</span>
+                    @endif
+                    @if($yesterdayData['mortality'] > 0 || $yesterdayData['culling'] > 0)
+                    <br>&nbsp;&nbsp;&nbsp;&nbsp;💀 Mati: {{ $yesterdayData['mortality'] }} | 🛑 Afkir: {{
+                    $yesterdayData['culling'] }}
+                    @endif
+                </small>
+                @elseif($date)
+                <small class="text-muted mt-1 d-block">
+                    📊 Kemarin: Tidak ada deplesi
                 </small>
                 @endif
+
+                <!-- Current Day Breakdown -->
+                <small class="text-muted mt-1 d-block">
+                    <strong>Hari ini:</strong> 💀 Mati: {{ $mortality ?? 0 }} | 🛑 Afkir: {{ $culling ?? 0 }}
+                    @if($isManualDepletionEnabled)
+                    <span class="badge bg-secondary ms-2">Dikelola Manual</span>
+                    @else
+                    <span class="badge bg-primary ms-2">Dikelola Recording</span>
+                    @endif
+                </small>
             </x-input.group>
 
             <x-input.group col="6" label="Jumlah Terjual (Ekor)">
@@ -181,7 +256,7 @@
 
                 <!-- Tabel Penggunaan Pakan -->
                 <div class="bg-white border border-gray-200 rounded-lg p-4">
-                    @if(Auth::user()->can('create feed usage'))
+                    @if(!$isManualFeedUsageEnabled && Auth::user()->can('create feed usage'))
                     <h3 class="text-lg font-semibold mb-3 text-gray-700 border-b pb-2">📦 Penggunaan Pakan</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
@@ -231,7 +306,24 @@
                             </tbody>
                         </table>
                     </div>
-                    @else
+                    @elseif($isManualFeedUsageEnabled)
+                    <!-- Manual Feed Usage Notice -->
+                    <h3 class="text-lg font-semibold mb-3 text-gray-700 border-b pb-2">📦 Penggunaan Pakan</h3>
+                    <div class="bg-info-50 border border-info-200 rounded p-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle me-2 text-info"></i>
+                            <div>
+                                <strong>Mode Manual Feed Usage Aktif:</strong><br>
+                                <small class="text-muted">
+                                    Data penggunaan pakan dicatat melalui menu <strong>"Manual Usage"</strong> pada
+                                    tabel livestock.
+                                    Input otomatis di form ini dinonaktifkan untuk mencegah duplikasi data.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    @elseif(!Auth::user()->can('create feed usage'))
+                    <h3 class="text-lg font-semibold mb-3 text-gray-700 border-b pb-2">📦 Penggunaan Pakan</h3>
                     <div class="bg-yellow-50 border border-yellow-200 rounded p-3">
                         <p class="text-sm text-yellow-800">Anda tidak memiliki izin untuk membuat penggunaan pakan.
                         </p>
@@ -308,16 +400,24 @@
             </div>
         </div>
 
-        <!-- Tombol Simpan -->
-        <div class="d-flex justify-content-end my-4">
-            <button wire:click="closeForm" class="btn btn-danger rounded-lg px-6 py-2">Kembali ke Tabel</button>
-            <!-- Tombol Simpan -->
-            @if($isEditing)
-            <button type="submit" class="btn btn-primary rounded-lg px-6 py-2" id='submitData'>💾 Ubah Data</button>
-            @else
-            <button type="submit" class="btn btn-primary rounded-lg px-6 py-2" id='submitData'>💾 Simpan
-                Data</button>
-            @endif
+        <!-- Tombol Aksi -->
+        <div class="d-flex justify-content-between my-4">
+            <div>
+                <button wire:click="refreshConfiguration" class="btn btn-outline-info rounded-lg px-4 py-2">
+                    <i class="fas fa-sync-alt"></i> Segarkan Konfigurasi
+                </button>
+            </div>
+            <div>
+                <button wire:click="closeForm" class="btn btn-danger rounded-lg px-6 py-2 me-2">Kembali ke
+                    Tabel</button>
+                <!-- Tombol Simpan -->
+                @if($isEditing)
+                <button type="submit" class="btn btn-primary rounded-lg px-6 py-2" id='submitData'>💾 Ubah Data</button>
+                @else
+                <button type="submit" class="btn btn-primary rounded-lg px-6 py-2" id='submitData'>💾 Simpan
+                    Data</button>
+                @endif
+            </div>
         </div>
     </form>
 
@@ -360,17 +460,42 @@
         });
     });
 
-    // Toggle yesterday details function
+    function openDepletionModal() {
+        // Check if manual depletion is enabled
+        const isManualDepletion = @json($isManualDepletionEnabled);
+        
+        if (isManualDepletion) {
+            alert('Mode Manual Depletion aktif.\n\nData deplesi dikelola melalui menu "Manual Depletion" pada tabel livestock.\n\nSilakan gunakan fitur Manual Depletion untuk input detail deplesi.');
+        } else {
+            alert('Mode Recording aktif.\n\nData deplesi dapat diinput langsung melalui form ini menggunakan field "Mati" dan "Afkir" yang tersedia.');
+        }
+    }
+
+    // Auto-update total when mortality or culling changes
+    function updateDepletionTotal() {
+        const mortality = parseInt(document.querySelector('input[wire\\:model\\.live="mortality"]')?.value || 0);
+        const culling = parseInt(document.querySelector('input[wire\\:model\\.live="culling"]')?.value || 0);
+        const total = mortality + culling;
+        
+        // Update total display if element exists
+        const totalDisplay = document.querySelector('.form-control.bg-light span');
+        if (totalDisplay) {
+            totalDisplay.textContent = total + ' ekor';
+        }
+    }
+
     function toggleYesterdayDetails() {
         const details = document.getElementById('yesterday-details');
-        const arrow = document.getElementById('yesterday-arrow');
+        const icon = event.target.querySelector('i');
         
         if (details.classList.contains('hidden')) {
             details.classList.remove('hidden');
-            arrow.classList.add('rotate-90');
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-up');
         } else {
             details.classList.add('hidden');
-            arrow.classList.remove('rotate-90');
+            icon.classList.remove('fa-chevron-up');
+            icon.classList.add('fa-chevron-down');
         }
     }
     </script>

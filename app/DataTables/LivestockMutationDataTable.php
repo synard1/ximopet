@@ -26,19 +26,46 @@ class LivestockMutationDataTable extends DataTable
             ->editColumn('tanggal', function (LivestockMutation $ternak) {
                 return $ternak->tanggal->format('d M Y');
             })
-            ->editColumn('jumlah', function (LivestockMutation $ternak) {
-                $jumlah = $ternak->mutationItem->first()?->quantity ?? null;
-                return $jumlah . ' Ekor';
+            // ->editColumn('jumlah', function (LivestockMutation $ternak) {
+            //     $jumlah = $ternak->mutationItem->first()?->quantity ?? null;
+            //     return $jumlah . ' Ekor';
+            // })
+            // ->editColumn('berat', function (LivestockMutation $ternak) {
+            //     $weight = $ternak->mutationItem->first()?->weight ?? null;
+            //     return $weight . ' Kg';
+            // })
+            ->editColumn('source_livestock_id', function (LivestockMutation $ternak) {
+                return $ternak->sourceLivestock->name;
             })
-            ->editColumn('berat', function (LivestockMutation $ternak) {
-                $weight = $ternak->mutationItem->first()?->weight ?? null;
-                return $weight . ' Kg';
-            })
-            ->editColumn('from_livestock_id', function (LivestockMutation $ternak) {
-                return $ternak->fromLivestock->name;
-            })
-            ->editColumn('to_livestock_id', function (LivestockMutation $ternak) {
-                return $ternak->toLivestock->name;
+            ->editColumn('destination_livestock_id', function (LivestockMutation $ternak) {
+                // Jika destination_livestock_id ada, tampilkan nama ternak tujuan
+                if ($ternak->destinationLivestock) {
+                    return $ternak->destinationLivestock->name;
+                }
+
+                // Jika destination_livestock_id kosong, cek pada kolom data (JSON)
+                $data = $ternak->data;
+                if (is_string($data)) {
+                    // Decode jika masih string
+                    $data = json_decode($data, true);
+                }
+
+                // Cek apakah ada destination_info.coop di data
+                if (is_array($data) && isset($data['destination_info']['coop'])) {
+                    $coop = $data['destination_info']['coop'];
+                    // Tampilkan nama kandang (coop)
+                    if (isset($coop['name'])) {
+                        // Sertakan info farm jika ada
+                        $coopName = $coop['name'];
+                        if (isset($coop['farm_name'])) {
+                            $coopName .= ' (' . $coop['farm_name'] . ')';
+                        }
+                        return $coopName;
+                    }
+                }
+
+                // Fallback jika tidak ada data
+                return '-';
             })
             // ->editColumn('id', function (LivestockMutation $ternak) {
             //     return strtoupper(substr(strrchr($ternak->id, '-'), 4));
@@ -70,12 +97,10 @@ class LivestockMutationDataTable extends DataTable
             //         $q->where('nama', 'like', "%{$keyword}%");
             //     });
             // })
-            // ->addColumn('action', function (KematianTernak $transaksi) {
-            //     if (auth()->user()->hasRole('Operator')) {
+            ->addColumn('action', function (LivestockMutation $transaction) {
 
-            //         return view('pages/transaksi.kematian-ternak._actions', compact('transaksi'));
-            //     };
-            // })
+                return view('pages.transaction.livestock-mutation._actions', compact('transaction'));
+            })
             ->setRowId('id');
     }
 
@@ -131,7 +156,7 @@ class LivestockMutationDataTable extends DataTable
                     'searchPlaceholder' => 'Enter search term...'
                 ],
             ])
-            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaksi/kematian-ternak/_draw-scripts.js')) . "}");
+            ->drawCallback("function() {" . file_get_contents(resource_path('views/pages/transaction/livestock-mutation/_draw-scripts.js')) . "}");
     }
 
     /**
@@ -146,20 +171,20 @@ class LivestockMutationDataTable extends DataTable
                 ->width(50),
             Column::make('id')->visible(false),
             Column::make('tanggal')->title('Tanggal'),
-            Column::make('from_livestock_id')->title('Asal'),
-            Column::make('to_livestock_id')->title('Tujuan'),
+            Column::make('source_livestock_id')->title('Asal'),
+            Column::make('destination_livestock_id')->title('Tujuan'),
             Column::computed('jumlah')->title('Jumlah Ekor'),
-            Column::make('berat')->title('Berat (Kg)'),
+            // Column::make('berat')->title('Berat (Kg)'),
             // Column::computed('farm_id')->title('Farm')->visible(false),
             // Column::computed('coop_id')->title('Kandang')->visible(false),
             // Column::make('total_berat'),
             // Column::make('penyebab')->visible(false),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),
-            // Column::computed('action')
-            //     // ->addClass('text-end text-nowrap')
-            //     ->exportable(false)
-            //     ->printable(false)
-            //     ->width(60)
+            Column::computed('action')
+                // ->addClass('text-end text-nowrap')
+                ->exportable(false)
+                ->printable(false)
+                ->width(60)
         ];
     }
 

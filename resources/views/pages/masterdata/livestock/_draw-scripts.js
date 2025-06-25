@@ -74,6 +74,45 @@ document
         });
     });
 
+// Event handler for livestock settings button
+document
+    .querySelectorAll('[data-kt-action="update_setting"]')
+    .forEach(function (element) {
+        element.addEventListener("click", function (e) {
+            e.preventDefault();
+
+            // Select parent row
+            const parent = e.target.closest("tr");
+
+            // Get livestock ID
+            const livestockId =
+                e.currentTarget.getAttribute("data-livestock-id");
+
+            if (!livestockId) {
+                console.error("Livestock ID not found");
+                return;
+            }
+
+            // Get subject name
+            const livestockName = parent.querySelectorAll("td")[0].innerText;
+
+            // Show loading message
+            Swal.fire({
+                html: `Membuka Data <b>` + livestockName + `</b>`,
+                icon: "info",
+                buttonsStyling: false,
+                showConfirmButton: false,
+                timer: 2000,
+            }).then(function () {
+                // Dispatch Livewire event with parameters
+                Livewire.dispatch("setLivestockIdSetting", [
+                    livestockId,
+                    livestockName,
+                ]);
+            });
+        });
+    });
+
 const recordsContainer = document.getElementById("livewireRecordsContainer");
 const workerContainer = document.getElementById("assignWorkerContainer");
 const tableContainer = document.getElementById("ternaksTables");
@@ -120,6 +159,80 @@ document
             // }
         });
     });
+
+document
+    .querySelectorAll("[data-kt-action='fifo_depletion']")
+    .forEach((item) => {
+        item.addEventListener("click", function (e) {
+            e.preventDefault();
+            const livestockId = this.getAttribute("data-livestock-id");
+
+            // Dispatch Livewire event with proper payload format
+            Livewire.dispatch("show-fifo-depletion", [livestockId]); // TODO: change to manual depletion
+            $("#kt_modal_fifo_depletion").modal("show");
+        });
+    });
+
+document
+    .querySelectorAll("[data-kt-action='manual_depletion']")
+    .forEach((item) => {
+        item.addEventListener("click", function (e) {
+            e.preventDefault();
+            const livestockId = this.getAttribute("data-livestock-id");
+
+            // Dispatch Livewire event with proper payload format
+            Livewire.dispatch("show-manual-mutation", [livestockId]); // TODO: change to manual depletion
+            $("#kt_modal_manual_batch_depletion").modal("show");
+        });
+    });
+
+document
+    .querySelectorAll("[data-kt-action='manual_mutation']")
+    .forEach((item) => {
+        item.addEventListener("click", function (e) {
+            e.preventDefault();
+            const livestockId = this.getAttribute("data-livestock-id");
+
+            // Dispatch Livewire event with proper payload format
+            Livewire.dispatch("show-manual-mutation", [livestockId]); // TODO: change to manual mutation
+            $("#kt_modal_manual_livestock_mutation").modal("show");
+        });
+    });
+
+document
+    .querySelectorAll("[data-kt-action='fifo_mutation']")
+    .forEach((item) => {
+        item.addEventListener("click", function (e) {
+            e.preventDefault();
+            const livestockId = this.getAttribute("data-livestock-id");
+
+            // Dispatch Livewire event with proper payload format
+            Livewire.dispatch("show-fifo-simple-modal", [livestockId]);
+            // Remove Bootstrap modal call since we're using Livewire component
+            // $("#fifoSimpleModal").modal("show");
+        });
+    });
+
+document.querySelectorAll("[data-kt-action='manual_usage']").forEach((item) => {
+    item.addEventListener("click", function (e) {
+        e.preventDefault();
+        const livestockId = this.getAttribute("data-livestock-id");
+
+        console.log("🔥 Manual usage button clicked", { livestockId });
+
+        // Use the most reliable dispatch method
+        try {
+            // Dispatch with array parameters like in manual depletion
+            Livewire.dispatch("show-manual-feed-usage", [livestockId]);
+            console.log("🔥 Dispatched show-manual-feed-usage event");
+        } catch (error) {
+            console.error("🔥 Error dispatching event:", error);
+        }
+
+        // Show modal via Bootstrap
+        $("#manual-feed-usage-modal").modal("show");
+    });
+});
 
 // Tangkap semua elemen dengan class .closeRecordsBtn
 document.querySelectorAll(".closeRecordsBtn").forEach(function (btn) {

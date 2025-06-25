@@ -12,6 +12,7 @@ use App\Models\Recording;
 use App\Models\LivestockDepletion;
 use App\Models\SalesTransaction;
 use App\Models\FeedUsage;
+use App\Config\LivestockDepletionConfig;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
@@ -158,9 +159,15 @@ class AnalyticsService
      */
     private function getMortalityMetrics(Livestock $livestock, Carbon $date): array
     {
+        // Use config normalization for backward compatibility
+        $mortalityTypes = [
+            LivestockDepletionConfig::LEGACY_TYPE_MATI,
+            LivestockDepletionConfig::TYPE_MORTALITY
+        ];
+
         $dailyMortality = LivestockDepletion::where('livestock_id', $livestock->id)
             ->whereDate('tanggal', $date)
-            ->where('jenis', 'Mati')
+            ->whereIn('jenis', $mortalityTypes)
             ->sum('jumlah');
 
         $currentPopulation = $this->getCurrentPopulation($livestock, $date);
@@ -855,8 +862,14 @@ class AnalyticsService
 
     private function getCumulativeMortality(Livestock $livestock, Carbon $date): int
     {
+        // Use config normalization for backward compatibility
+        $mortalityTypes = [
+            LivestockDepletionConfig::LEGACY_TYPE_MATI,
+            LivestockDepletionConfig::TYPE_MORTALITY
+        ];
+
         return LivestockDepletion::where('livestock_id', $livestock->id)
-            ->where('jenis', 'Mati')
+            ->whereIn('jenis', $mortalityTypes)
             ->whereDate('tanggal', '<=', $date)
             ->sum('jumlah');
     }
@@ -904,8 +917,13 @@ class AnalyticsService
             $chartType = $filters['chart_type'] ?? 'auto';
             $viewType = $filters['view_type'] ?? 'livestock';
 
-            // Build mortality data query similar to TestMortalityData.php
-            $mortalityQuery = LivestockDepletion::where('jenis', 'Mati')
+            // Build mortality data query with config normalization
+            $mortalityTypes = [
+                LivestockDepletionConfig::LEGACY_TYPE_MATI,
+                LivestockDepletionConfig::TYPE_MORTALITY
+            ];
+
+            $mortalityQuery = LivestockDepletion::whereIn('jenis', $mortalityTypes)
                 ->whereBetween('tanggal', [$dateFrom, $dateTo]);
 
             // Apply filters
