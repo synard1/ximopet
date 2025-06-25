@@ -35,6 +35,78 @@
         <script>
             $('#livestockSettingContainer').hide();
 
+            // Enhanced DataTable reload function with error handling
+            function reloadDataTableSafely() {
+                console.log('🔄 Attempting to reload DataTable...');
+                
+                try {
+                    if (LaravelDataTables && LaravelDataTables["ternaks-table"]) {
+                        const table = LaravelDataTables["ternaks-table"];
+                        
+                        // Check if table is still valid
+                        if (!table.context || !table.context.length) {
+                            console.warn('⚠️  DataTable context is invalid, skipping reload');
+                            return;
+                        }
+                        
+                        // Save current column visibility state
+                        const columnVisibility = [];
+                        const currentPage = table.page.info().page;
+                        const pageLength = table.page.len();
+                        
+                        // Store current settings
+                        table.columns().every(function(index) {
+                            columnVisibility[index] = this.visible();
+                        });
+                        
+                        // Reload table with proper callback and error handling
+                        table.ajax.reload(function(json) {
+                            console.log('✅ DataTable reloaded successfully');
+                            
+                            // Restore settings after reload
+                            setTimeout(() => {
+                                try {
+                                    // Restore column visibility
+                                    table.columns().every(function(index) {
+                                        if (columnVisibility[index] !== undefined) {
+                                            this.visible(columnVisibility[index]);
+                                        }
+                                    });
+                                    
+                                    // Restore page if possible
+                                    if (currentPage > 0) {
+                                        table.page(currentPage);
+                                    }
+                                    
+                                    // Adjust layout
+                                    table.columns.adjust();
+                                    if (table.responsive && table.responsive.recalc) {
+                                        table.responsive.recalc();
+                                    }
+                                    
+                                    console.log('✅ DataTable settings restored');
+                                } catch (restoreError) {
+                                    console.error('⚠️  Error restoring DataTable settings:', restoreError);
+                                }
+                            }, 100);
+                        }, false); // false = don't reset paging
+                        
+                    } else {
+                        console.warn('⚠️  LaravelDataTables["ternaks-table"] not found');
+                    }
+                } catch (error) {
+                    console.error('❌ Error reloading DataTable:', error);
+                    
+                    // Fallback: try to reinitialize the entire page if critical error
+                    if (error.message && error.message.includes('Cannot read properties')) {
+                        console.log('🔄 Attempting page refresh as fallback...');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    }
+                }
+            }
+
             document.addEventListener('livewire:init', function () {
                 window.addEventListener('show-records', () => {
                     $('#datatable-container').hide();
@@ -52,12 +124,18 @@
                     $('#assignWorkerContainer').hide();
                     $('#datatable-container').show();
                     $('#cardToolbar').show();
+                    
+                    // Reload table after worker assignment
+                    reloadDataTableSafely();
                 });
 
                 window.addEventListener('hide-records', () => {
                     $('#livewireRecordsContainer').hide();
                     $('#datatable-container').show();
                     $('#cardToolbar').show();
+                    
+                    // Reload table after records update
+                    reloadDataTableSafely();
                 });
                 
                 // Event listeners for livestock settings
@@ -66,7 +144,9 @@
                     $('#livestockSettingContainer').hide();
                     $('#datatable-container').show();
                     $('#cardToolbar').show();
-
+                    
+                    // Reload table after livestock settings update
+                    reloadDataTableSafely();
                 });
 
                 window.addEventListener('show-livestock-setting', () => {
@@ -89,9 +169,8 @@
                     $('#datatable-container').show();
                     $('#cardToolbar').show();
 
-                    if (LaravelDataTables && LaravelDataTables["ternaks-table"]) {
-                        LaravelDataTables["ternaks-table"].ajax.reload();
-                    }
+                    // Use enhanced reload function
+                    reloadDataTableSafely();
                 });
 
                 // Global event listeners for FIFO mutation notifications using Livewire
@@ -123,6 +202,22 @@
                     } else {
                         alert(`${data.title || 'Berhasil'}: ${data.message || 'Operasi berhasil diselesaikan'}`);
                     }
+                    
+                    // Reload table after successful operation
+                    setTimeout(() => {
+                        reloadDataTableSafely();
+                    }, 500);
+                });
+
+                // Additional Livewire event listeners for table reload
+                Livewire.on('refresh-livestock-table', () => {
+                    console.log('🔥 Global: refresh-livestock-table event received');
+                    reloadDataTableSafely();
+                });
+
+                Livewire.on('livestock-data-updated', () => {
+                    console.log('🔥 Global: livestock-data-updated event received');
+                    reloadDataTableSafely();
                 });
             });
 
@@ -132,7 +227,18 @@
 
             // on modal close kt_modal_ternak_details
             $('#kt_modal_ternak_details').on('hidden.bs.modal', function() {
-                $('#detailTable').DataTable().destroy();
+                try {
+                    const detailTable = $('#detailTable').DataTable();
+                    if (detailTable && typeof detailTable.destroy === 'function') {
+                        detailTable.destroy();
+                        console.log('✅ Detail table destroyed successfully');
+                    }
+                } catch (error) {
+                    console.warn('⚠️  Error destroying detail table:', error);
+                }
+                
+                // Optional: reload main table if needed
+                // reloadDataTableSafely();
             });
 
             // // Event handler untuk DataTable actions

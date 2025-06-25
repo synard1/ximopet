@@ -260,13 +260,13 @@ class CompanyConfig
                         ],
                         'lifo' => [
                             'enabled' => false,
-                            'status' => 'development', // development, ready, not_applicable
+                            'status' => 'not_applicable', // development, ready, not_applicable
                             'track_age' => false,
                             'auto_select' => false,
                         ],
                         'manual' => [
-                            'enabled' => true,
-                            'status' => 'ready', // development, ready, not_applicable
+                            'enabled' => false,
+                            'status' => 'not_applicable', // development, ready, not_applicable
                             'history_enabled' => false,
                             'track_age' => true,
                             'auto_select' => false,
@@ -360,13 +360,13 @@ class CompanyConfig
                         ],
                         'lifo' => [
                             'enabled' => false,
-                            'status' => 'development', // development, ready, not_applicable
+                            'status' => 'not_applicable', // development, ready, not_applicable
                             'track_age' => false,
                             'auto_select' => false,
                         ],
                         'manual' => [
-                            'enabled' => true,
-                            'status' => 'ready', // development, ready, not_applicable
+                            'enabled' => false,
+                            'status' => 'not_applicable', // development, ready, not_applicable
                             'history_enabled' => false,
                             'track_age' => true,
                             'auto_select' => false,
@@ -435,13 +435,13 @@ class CompanyConfig
                         ],
                         'lifo' => [
                             'enabled' => false,
-                            'status' => 'development', // development, ready, not_applicable
+                            'status' => 'not_applicable', // development, ready, not_applicable
                             'track_age' => false,
                             'auto_select' => false,
                         ],
                         'manual' => [
-                            'enabled' => true,
-                            'status' => 'ready', // development, ready, not_applicable
+                            'enabled' => false,
+                            'status' => 'not_applicable', // development, ready, not_applicable
                             'track_age' => true,
                             'auto_select' => false,
                             'show_batch_details' => true,

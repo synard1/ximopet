@@ -431,6 +431,50 @@ class ReportsController extends Controller
             ->with(['coop'])
             ->get();
 
+        // --- FEED NAMES OPTIMIZATION ---
+        $distinctFeedNames = FeedUsageDetail::whereHas('feedUsage', function ($query) use ($farm, $tanggal) {
+            $query->whereHas('livestock', function ($q) use ($farm) {
+                $q->where('farm_id', $farm->id);
+            })->whereDate('usage_date', $tanggal);
+        })
+            ->with('feed')
+            ->get()
+            ->pluck('feed.name')
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+
+        if (empty($distinctFeedNames)) {
+            $distinctFeedNames = FeedUsageDetail::whereHas('feedUsage', function ($query) use ($farm) {
+                $query->whereHas('livestock', function ($q) use ($farm) {
+                    $q->where('farm_id', $farm->id);
+                });
+            })
+                ->with('feed')
+                ->get()
+                ->pluck('feed.name')
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+        }
+
+        // Ambil semua FeedUsageDetail untuk farm dan tanggal SEKALI SAJA
+        $allFeedUsageDetails = FeedUsageDetail::whereHas('feedUsage', function ($query) use ($farm, $tanggal) {
+            $query->whereHas('livestock', function ($q) use ($farm) {
+                $q->where('farm_id', $farm->id);
+            })->whereDate('usage_date', $tanggal);
+        })->with(['feed', 'feedUsage.livestock'])->get();
+
+        // dd($allFeedUsageDetails);
+
+        \Log::info('Distinct feed names for report', [
+            'farm_id' => $farm->id,
+            'tanggal' => $tanggal->format('Y-m-d'),
+            'distinctFeedNames' => $distinctFeedNames
+        ]);
+
         // Check if there are any recordings for this date and livestocks
         $hasRecordings = Recording::whereIn('livestock_id', $livestocks->pluck('id')->toArray())
             ->whereDate('tanggal', $tanggal)
@@ -467,8 +511,6 @@ class ReportsController extends Controller
             'survival_rate' => 0  // survival rate percentage
         ];
 
-        $distinctFeedNames = [];
-
         if ($reportType === 'detail') {
             // Mode Detail: Tampilkan data per batch dengan grouping per kandang
             $livestocksByCoopNama = $livestocks->groupBy(function ($livestock) {
@@ -489,7 +531,7 @@ class ReportsController extends Controller
                 $coopData = [];
 
                 foreach ($coopLivestocks as $index => $livestock) {
-                    $batchData = $this->processLivestockData($livestock, $tanggal, $distinctFeedNames, $totals);
+                    $batchData = $this->processLivestockData($livestock, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails);
                     $coopData[] = $batchData;
                 }
 
@@ -502,7 +544,7 @@ class ReportsController extends Controller
             });
 
             foreach ($livestocksByCoopNama as $coopNama => $coopLivestocks) {
-                $aggregatedData = $this->processCoopAggregation($coopLivestocks, $tanggal, $distinctFeedNames, $totals);
+                $aggregatedData = $this->processCoopAggregation($coopLivestocks, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails);
                 $recordings[$coopNama] = $aggregatedData;
             }
         }
@@ -553,7 +595,7 @@ class ReportsController extends Controller
     /**
      * Process individual livestock data
      */
-    private function processLivestockData($livestock, $tanggal, &$distinctFeedNames, &$totals)
+    private function processLivestockData($livestock, $tanggal, $distinctFeedNames, &$totals, $allFeedUsageDetails = null)
     {
         $recordingData = Recording::where('livestock_id', $livestock->id)
             ->whereDate('tanggal', $tanggal)
@@ -573,43 +615,43 @@ class ReportsController extends Controller
             ->where('tanggal', $tanggal->format('Y-m-d'))
             ->sum('jumlah');
 
-        // Total deplesi kumulatif sampai tanggal tersebut
         $totalDepletionCumulative = (int) LivestockDepletion::where('livestock_id', $livestock->id)
             ->where('tanggal', '<=', $tanggal->format('Y-m-d'))
             ->sum('jumlah');
 
-        // Ambil data penjualan untuk tanggal spesifik
         $sales = LivestockSalesItem::where('livestock_id', $livestock->id)
             ->whereHas('livestockSale', function ($query) use ($tanggal) {
                 $query->whereDate('tanggal', $tanggal);
             })
             ->first();
 
-        // Total penjualan kumulatif sampai tanggal tersebut
         $totalSalesCumulative = (int) LivestockSalesItem::where('livestock_id', $livestock->id)
             ->whereHas('livestockSale', function ($query) use ($tanggal) {
                 $query->whereDate('tanggal', '<=', $tanggal);
             })
             ->sum('quantity');
 
-        // Ambil data penggunaan pakan harian
-        $feedUsageDetails = FeedUsageDetail::whereHas('feedUsage', function ($query) use ($livestock, $tanggal) {
-            $query->where('livestock_id', $livestock->id)
-                ->whereDate('usage_date', $tanggal);
-        })->with('feed')->get();
+        // Ambil data penggunaan pakan harian dari allFeedUsageDetails (lebih efisien)
+        $feedUsageDetails = $allFeedUsageDetails
+            ? $allFeedUsageDetails->filter(function ($detail) use ($livestock) {
+                return $detail->feedUsage && $detail->feedUsage->livestock_id === $livestock->id;
+            })
+            : collect();
+
+        // Fallback: jika tidak ada data untuk livestock, ambil semua feed usage farm pada tanggal tsb
+        if ($feedUsageDetails->isEmpty() && $allFeedUsageDetails) {
+            $feedUsageDetails = $allFeedUsageDetails;
+        }
 
         $pakanHarianPerJenis = [];
         $totalPakanHarian = 0;
 
-        foreach ($feedUsageDetails as $detail) {
-            $pakanJenis = $detail->feed->name;
-            $quantity = (float) $detail->quantity_taken;
-            $pakanHarianPerJenis[$pakanJenis] = ($pakanHarianPerJenis[$pakanJenis] ?? 0) + $quantity;
-            $totalPakanHarian += $quantity;
+        // Gunakan distinctFeedNames sebagai acuan kolom
+        foreach ($distinctFeedNames as $feedName) {
+            $jumlah = $feedUsageDetails->where('feed.name', $feedName)->sum('quantity_taken');
+            $pakanHarianPerJenis[$feedName] = $jumlah;
+            $totalPakanHarian += $jumlah;
         }
-
-        // Update distinctFeedNames dengan semua jenis pakan yang ada
-        $distinctFeedNames = array_unique(array_merge($distinctFeedNames, array_keys($pakanHarianPerJenis)));
 
         // Ambil total pakan kumulatif sampai tanggal tersebut
         $totalPakanUsage = (float) FeedUsageDetail::whereHas('feedUsage', function ($query) use ($livestock, $tanggal) {
@@ -621,43 +663,32 @@ class ReportsController extends Controller
         $berat_hari_ini = (float) ($recordingData->berat_hari_ini ?? 0);
         $kenaikan_berat = (float) ($recordingData->kenaikan_berat ?? 0);
 
-        // Hitung stock akhir dengan benar: stock awal - deplesi kumulatif - penjualan kumulatif
         $stockAkhir = $stockAwal - $totalDepletionCumulative - $totalSalesCumulative;
 
-        // Update totals dengan data harian dan kumulatif yang benar
         $totals['stock_awal'] += $stockAwal;
-        $totals['mati'] += $mortality; // harian
-        $totals['afkir'] += $culling; // harian
-        $totals['total_deplesi'] += $totalDepletionCumulative; // kumulatif
-        $totals['jual_ekor'] += (int) ($sales->quantity ?? 0); // harian
-        $totals['jual_kg'] += (float) ($sales->total_berat ?? 0); // harian
+        $totals['mati'] += $mortality;
+        $totals['afkir'] += $culling;
+        $totals['total_deplesi'] += $totalDepletionCumulative;
+        $totals['jual_ekor'] += (int) ($sales->quantity ?? 0);
+        $totals['jual_kg'] += (float) ($sales->total_berat ?? 0);
         $totals['stock_akhir'] += $stockAkhir;
         $totals['berat_semalam'] += $berat_semalam;
         $totals['berat_hari_ini'] += $berat_hari_ini;
         $totals['kenaikan_berat'] += $kenaikan_berat;
-        $totals['pakan_total'] += $totalPakanUsage; // kumulatif
-
-        // Legacy fields for backward compatibility
+        $totals['pakan_total'] += $totalPakanUsage;
         $totals['tangkap_ekor'] += (int) ($sales->quantity ?? 0);
         $totals['tangkap_kg'] += (float) ($sales->total_berat ?? 0);
 
-        // Update totals pakan harian dengan memastikan semua jenis pakan ada
+        // dd($pakanHarianPerJenis);
+
         foreach ($pakanHarianPerJenis as $jenis => $jumlah) {
             $totals['pakan_harian'][$jenis] = ($totals['pakan_harian'][$jenis] ?? 0) + (float) $jumlah;
         }
 
-        Log::info("Processed livestock data", [
+        \Log::debug('Processed livestock feed usage', [
             'livestock_id' => $livestock->id,
             'livestock_name' => $livestock->name,
-            'stock_awal' => $stockAwal,
-            'mortality_daily' => $mortality,
-            'culling_daily' => $culling,
-            'total_depletion_cumulative' => $totalDepletionCumulative,
-            'total_sales_cumulative' => $totalSalesCumulative,
-            'stock_akhir' => $stockAkhir,
-            'feed_types_count' => count($pakanHarianPerJenis),
-            'total_feed_daily' => $totalPakanHarian,
-            'total_feed_cumulative' => $totalPakanUsage
+            'feed_usage_per_jenis' => $pakanHarianPerJenis
         ]);
 
         return [
@@ -665,26 +696,26 @@ class ReportsController extends Controller
             'livestock_name' => $livestock->name,
             'umur' => $age,
             'stock_awal' => $stockAwal,
-            'mati' => $mortality, // harian
-            'afkir' => $culling, // harian
-            'total_deplesi' => $totalDepletionCumulative, // kumulatif
+            'mati' => $mortality,
+            'afkir' => $culling,
+            'total_deplesi' => $totalDepletionCumulative,
             'deplesi_percentage' => $stockAwal > 0 ? round(($totalDepletionCumulative / $stockAwal) * 100, 2) : 0,
-            'jual_ekor' => (int) ($sales->quantity ?? 0), // harian
-            'jual_kg' => (float) ($sales->total_berat ?? 0), // harian
+            'jual_ekor' => (int) ($sales->quantity ?? 0),
+            'jual_kg' => (float) ($sales->total_berat ?? 0),
             'stock_akhir' => $stockAkhir,
             'berat_semalam' => $berat_semalam,
             'berat_hari_ini' => $berat_hari_ini,
             'kenaikan_berat' => $kenaikan_berat,
             'pakan_harian' => $pakanHarianPerJenis,
             'pakan_total' => $totalPakanUsage,
-            'pakan_jenis' => array_keys($pakanHarianPerJenis)
+            'pakan_jenis' => $distinctFeedNames
         ];
     }
 
     /**
      * Process coop aggregation for simple mode
      */
-    private function processCoopAggregation($coopLivestocks, $tanggal, &$distinctFeedNames, &$totals)
+    private function processCoopAggregation($coopLivestocks, $tanggal, $distinctFeedNames, &$totals, $allFeedUsageDetails = null)
     {
         $aggregatedData = [
             'umur' => 0,
@@ -703,16 +734,13 @@ class ReportsController extends Controller
             'livestock_count' => $coopLivestocks->count()
         ];
 
-        // Process each livestock individually first to get accurate totals
         $batchDataCollection = [];
         foreach ($coopLivestocks as $livestock) {
-            $batchData = $this->processLivestockData($livestock, $tanggal, $distinctFeedNames, $totals);
+            $batchData = $this->processLivestockData($livestock, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails);
             $batchDataCollection[] = $batchData;
         }
 
-        // Now aggregate the processed data
         foreach ($batchDataCollection as $batchData) {
-            // Use the last livestock's age (they should be the same for same coop/batch)
             $aggregatedData['umur'] = $batchData['umur'];
             $aggregatedData['stock_awal'] += $batchData['stock_awal'];
             $aggregatedData['mati'] += $batchData['mati'];
@@ -725,8 +753,6 @@ class ReportsController extends Controller
             $aggregatedData['berat_hari_ini'] += $batchData['berat_hari_ini'];
             $aggregatedData['kenaikan_berat'] += $batchData['kenaikan_berat'];
             $aggregatedData['pakan_total'] += $batchData['pakan_total'];
-
-            // Aggregate pakan harian data
             foreach ($batchData['pakan_harian'] as $jenis => $jumlah) {
                 $aggregatedData['pakan_harian'][$jenis] = ($aggregatedData['pakan_harian'][$jenis] ?? 0) + (float) $jumlah;
             }
@@ -739,26 +765,19 @@ class ReportsController extends Controller
             }
         }
 
-        // Calculate averages for weight data
         if ($aggregatedData['livestock_count'] > 0) {
             $aggregatedData['berat_semalam'] = $aggregatedData['berat_semalam'] / $aggregatedData['livestock_count'];
             $aggregatedData['berat_hari_ini'] = $aggregatedData['berat_hari_ini'] / $aggregatedData['livestock_count'];
             $aggregatedData['kenaikan_berat'] = $aggregatedData['kenaikan_berat'] / $aggregatedData['livestock_count'];
         }
 
-        // Calculate depletion percentage
         $aggregatedData['deplesi_percentage'] = $aggregatedData['stock_awal'] > 0
             ? round(($aggregatedData['total_deplesi'] / $aggregatedData['stock_awal']) * 100, 2)
             : 0;
 
-        Log::info("Processed coop aggregation", [
+        \Log::debug('Processed coop aggregation feed usage', [
             'coop_livestock_count' => $aggregatedData['livestock_count'],
-            'total_stock_awal' => $aggregatedData['stock_awal'],
-            'total_stock_akhir' => $aggregatedData['stock_akhir'],
-            'total_depletion' => $aggregatedData['total_deplesi'],
-            'depletion_percentage' => $aggregatedData['deplesi_percentage'],
-            'feed_types' => array_keys($aggregatedData['pakan_harian']),
-            'distinct_feed_names' => $distinctFeedNames
+            'feed_usage_per_jenis' => $aggregatedData['pakan_harian']
         ]);
 
         return $aggregatedData;

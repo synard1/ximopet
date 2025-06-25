@@ -944,6 +944,38 @@ class Livestock extends BaseModel
     }
 
     /**
+     * Check if FIFO feed usage is configured for this livestock
+     *
+     * @return bool
+     */
+    public function isFifoFeedUsageEnabled(): bool
+    {
+        $config = $this->getDataColumn('config');
+
+        if (!$config || !isset($config['feed_usage_method'])) {
+            return false;
+        }
+
+        return $config['feed_usage_method'] === 'fifo';
+    }
+
+    /**
+     * Check if FIFO depletion is configured for this livestock
+     *
+     * @return bool
+     */
+    public function isManualMutationEnabled(): bool
+    {
+        $config = $this->getDataColumn('config');
+
+        if (!$config || !isset($config['mutation_method'])) {
+            return false;
+        }
+
+        return $config['mutation_method'] === 'manual';
+    }
+
+    /**
      * Check if FIFO depletion is configured for this livestock
      *
      * @return bool
@@ -973,6 +1005,22 @@ class Livestock extends BaseModel
         }
 
         return $config['feed_usage_method'] === 'manual';
+    }
+
+    /**
+     * Check if FIFO mutation is configured for this livestock
+     *
+     * @return bool
+     */
+    public function isFifoMutationEnabled(): bool
+    {
+        $config = $this->getDataColumn('config');
+
+        if (!$config || !isset($config['mutation_method'])) {
+            return false;
+        }
+
+        return $config['mutation_method'] === 'fifo';
     }
 
     /**

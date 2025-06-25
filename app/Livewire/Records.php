@@ -110,6 +110,8 @@ class Records extends Component
     public $isManualDepletionEnabled = false;
     public $isFifoDepletionEnabled = false;
     public $isManualFeedUsageEnabled = false;
+    public $isFifoMutationEnabled = false;
+    public $isFifoFeedUsageEnabled = false;
 
 
     protected $listeners = [
@@ -283,6 +285,8 @@ class Records extends Component
         $this->isManualDepletionEnabled = $livestock->isManualDepletionEnabled();
         $this->isManualFeedUsageEnabled = $livestock->isManualFeedUsageEnabled();
         $this->isFifoDepletionEnabled = $livestock->isFifoDepletionEnabled();
+        $this->isFifoMutationEnabled = $livestock->isFifoMutationEnabled();
+        $this->isFifoFeedUsageEnabled = $livestock->isFifoFeedUsageEnabled();
         Log::info('Records - Livestock Configuration Loaded', [
             'livestock_id' => $livestock->id,
             'config' => $this->livestockConfig,
