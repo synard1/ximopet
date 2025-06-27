@@ -42,6 +42,7 @@
     <!--end::Menu item-->
     @endif --}}
 
+    @if($livestock->isManualMutationEnabled())
     <!--begin::Menu item-->
     <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" data-livestock-id="{{ $livestock->id }}" data-kt-action="manual_mutation">
@@ -53,7 +54,9 @@
         </a>
     </div>
     <!--end::Menu item-->
+    @endif
 
+    {{-- @if($livestock->isFifoMutationEnabled())
     <!--begin::Menu item-->
     <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" data-livestock-id="{{ $livestock->id }}" data-kt-action="fifo_mutation">
@@ -65,6 +68,7 @@
         </a>
     </div>
     <!--end::Menu item-->
+    @endif --}}
 
     @if($livestock->isManualDepletionEnabled())
     <!--begin::Menu item-->

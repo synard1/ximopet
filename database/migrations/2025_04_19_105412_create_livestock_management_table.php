@@ -36,7 +36,7 @@ return new class extends Migration {
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('coop_id')->references('id')->on('coops');
-            $table->index(['id', 'start_date']);
+            $table->index(['id', 'start_date'], 'ls_id_start_date_idx');
         });
 
         Schema::create('livestock_batches', function (Blueprint $table) {
@@ -133,7 +133,7 @@ return new class extends Migration {
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
 
-            $table->index(['livestock_id']);
+            $table->index(['livestock_id'], 'lpi_livestock_id_idx');
         });
 
         // Livestock Mutation
@@ -148,8 +148,8 @@ return new class extends Migration {
             $table->string('direction'); // in, out
             $table->json('data')->nullable(); // Additional data like batch info, notes, etc.
             $table->json('metadata')->nullable(); // Processing metadata, audit trail, etc.
-            $table->uuid('created_by')->nullable();
-            $table->uuid('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -160,19 +160,19 @@ return new class extends Migration {
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
             $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
 
-            // Indexes for performance
-            $table->index(['company_id', 'tanggal']);
-            $table->index(['source_livestock_id', 'direction']);
-            $table->index(['destination_livestock_id', 'direction']);
-            $table->index(['jenis', 'direction']);
-            $table->index(['tanggal', 'company_id']);
-            $table->index(['created_at']);
-            $table->index(['deleted_at']);
+            // Indexes for performance with custom names to avoid MySQL length limits
+            $table->index(['company_id', 'tanggal'], 'lm_co_date_idx');
+            $table->index(['source_livestock_id', 'direction'], 'lm_src_dir_idx');
+            $table->index(['destination_livestock_id', 'direction'], 'lm_dest_dir_idx');
+            $table->index(['jenis', 'direction'], 'lm_type_dir_idx');
+            $table->index(['tanggal', 'company_id'], 'lm_date_co_idx');
+            $table->index(['created_at'], 'lm_created_idx');
+            $table->index(['deleted_at'], 'lm_deleted_idx');
 
-            // Composite indexes for common queries
-            $table->index(['company_id', 'source_livestock_id', 'direction']);
-            $table->index(['company_id', 'destination_livestock_id', 'direction']);
-            $table->index(['source_livestock_id', 'tanggal', 'direction']);
+            // Composite indexes for common queries with custom names
+            $table->index(['company_id', 'source_livestock_id', 'direction'], 'lm_co_src_dir_idx');
+            $table->index(['company_id', 'destination_livestock_id', 'direction'], 'lm_co_dest_dir_idx');
+            $table->index(['source_livestock_id', 'tanggal', 'direction'], 'lm_src_date_dir_idx');
         });
 
         Schema::create('livestock_mutation_items', function (Blueprint $table) {

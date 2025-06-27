@@ -1,6 +1,75 @@
 {
     "notifications": [
         {
+            "type": "supply_purchase_status_changed",
+            "title": "Supply Purchase Status Updated",
+            "message": "Purchase 00001 status changed from Draft to Arrived by Bo Bradtke from PD Novitasari Manullang (Persero) Tbk",
+            "source": "livewire_sse",
+            "priority": "high",
+            "data": {
+                "batch_id": "9f22d7e4-1b24-480e-b17d-ec5abf8983e2",
+                "invoice_number": "00001",
+                "updated_by": 6,
+                "updated_by_name": "Bo Bradtke",
+                "old_status": "draft",
+                "new_status": "arrived",
+                "timestamp": "2025-06-25T17:08:32.120540Z",
+                "requires_refresh": true
+            },
+            "requires_refresh": true,
+            "timestamp": 1750871312,
+            "debounce_key": "sse_notification_debounce_9f22d7e4-1b24-480e-b17d-ec5abf8983e2_arrived",
+            "id": "685c2d101e7f7_1750871312.1249",
+            "datetime": "2025-06-26 00:08:32",
+            "microseconds": 1750871312.124933
+        },
+        {
+            "type": "supply_purchase_status_changed",
+            "title": "Supply Purchase Status Updated",
+            "message": "Purchase 00001 status changed from Draft to Arrived by Bo Bradtke from CV Wijaya Siregar",
+            "source": "livewire_sse",
+            "priority": "high",
+            "data": {
+                "batch_id": "9f21c001-73ea-4f0a-b302-d9e9a924369c",
+                "invoice_number": "00001",
+                "updated_by": 6,
+                "updated_by_name": "Bo Bradtke",
+                "old_status": "draft",
+                "new_status": "arrived",
+                "timestamp": "2025-06-25T17:08:27.634729Z",
+                "requires_refresh": true
+            },
+            "requires_refresh": true,
+            "timestamp": 1750871307,
+            "debounce_key": "sse_notification_debounce_9f21c001-73ea-4f0a-b302-d9e9a924369c_arrived",
+            "id": "685c2d0b9c4b9_1750871307.6402",
+            "datetime": "2025-06-26 00:08:27",
+            "microseconds": 1750871307.640199
+        },
+        {
+            "type": "supply_purchase_status_changed",
+            "title": "Supply Purchase Status Updated",
+            "message": "Purchase 000002 status changed from Draft to Arrived by Bo Bradtke from PD Hassanah Tbk",
+            "source": "livewire_sse",
+            "priority": "high",
+            "data": {
+                "batch_id": "9f2153f0-c745-448d-89d9-0db802067874",
+                "invoice_number": "000002",
+                "updated_by": 6,
+                "updated_by_name": "Bo Bradtke",
+                "old_status": "draft",
+                "new_status": "arrived",
+                "timestamp": "2025-06-25T17:08:24.382449Z",
+                "requires_refresh": true
+            },
+            "requires_refresh": true,
+            "timestamp": 1750871304,
+            "debounce_key": "sse_notification_debounce_9f2153f0-c745-448d-89d9-0db802067874_arrived",
+            "id": "685c2d085eacb_1750871304.3878",
+            "datetime": "2025-06-26 00:08:24",
+            "microseconds": 1750871304.387802
+        },
+        {
             "type": "feed_purchase_status_changed",
             "title": "Feed Purchase Status Updated",
             "message": "Feed Purchase #00001 status changed from Draft to Arrived by Bo Bradtke",
@@ -1077,77 +1146,11 @@
             "timestamp": 1749730721,
             "datetime": "2025-06-12 19:18:41",
             "microseconds": 1749730721.644853
-        },
-        {
-            "id": "684ac5a188b21_1749730721.5599",
-            "type": "livestock_purchase_status_changed",
-            "title": "Weight Monitoring",
-            "message": "Livestock batch 604 - Weight Monitoring notification",
-            "source": "livestock_test_script",
-            "priority": "normal",
-            "data": {
-                "batch_id": 604,
-                "invoice_number": "LIVESTOCK-TEST-191841",
-                "updated_by": 1,
-                "updated_by_name": "Livestock Test User",
-                "old_status": "draft",
-                "new_status": "weight_monitoring",
-                "timestamp": "2025-06-12T19:18:41+07:00",
-                "requires_refresh": true
-            },
-            "requires_refresh": true,
-            "timestamp": 1749730721,
-            "datetime": "2025-06-12 19:18:41",
-            "microseconds": 1749730721.559928
-        },
-        {
-            "id": "684ac5a172ed2_1749730721.4707",
-            "type": "livestock_purchase_status_changed",
-            "title": "Livestock Vaccination",
-            "message": "Livestock batch 603 - Livestock Vaccination notification",
-            "source": "livestock_test_script",
-            "priority": "normal",
-            "data": {
-                "batch_id": 603,
-                "invoice_number": "LIVESTOCK-TEST-191841",
-                "updated_by": 1,
-                "updated_by_name": "Livestock Test User",
-                "old_status": "draft",
-                "new_status": "vaccination",
-                "timestamp": "2025-06-12T19:18:41+07:00",
-                "requires_refresh": true
-            },
-            "requires_refresh": true,
-            "timestamp": 1749730721,
-            "datetime": "2025-06-12 19:18:41",
-            "microseconds": 1749730721.470759
-        },
-        {
-            "id": "684ac5a15ecfe_1749730721.3884",
-            "type": "livestock_purchase_status_changed",
-            "title": "Livestock Health Check",
-            "message": "Livestock batch 602 - Livestock Health Check notification",
-            "source": "livestock_test_script",
-            "priority": "normal",
-            "data": {
-                "batch_id": 602,
-                "invoice_number": "LIVESTOCK-TEST-191841",
-                "updated_by": 1,
-                "updated_by_name": "Livestock Test User",
-                "old_status": "draft",
-                "new_status": "health_check",
-                "timestamp": "2025-06-12T19:18:41+07:00",
-                "requires_refresh": true
-            },
-            "requires_refresh": true,
-            "timestamp": 1749730721,
-            "datetime": "2025-06-12 19:18:41",
-            "microseconds": 1749730721.388366
         }
     ],
-    "last_update": 1750843055,
+    "last_update": 1750871312,
     "stats": {
-        "total_sent": 344,
-        "clients_connected": 434
+        "total_sent": 347,
+        "clients_connected": 438
     }
 }
