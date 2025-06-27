@@ -63,6 +63,11 @@
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
+        ],
+        "post-install-cmd": [
+            "@php -r \"if (file_exists('.env') && env('APP_ENV') === 'local') { echo 'Installing development packages for local environment...'; }\"",
+            "@php artisan vendor:publish --tag=telescope-assets --ansi --force",
+            "@php artisan vendor:publish --tag=pulse-assets --ansi --force"
         ]
     },
     "extra": {

@@ -155,7 +155,7 @@ return [
     |
     */
 
-    'providers' => [
+    'providers' => array_merge([
 
         /*
          * Laravel Framework Service Providers...
@@ -196,9 +196,14 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        App\Providers\TelescopeServiceProvider::class,
 
-    ],
+    ], env('APP_ENV') === 'local' ? [
+        /*
+         * Development Service Providers (only loaded in local environment)
+         */
+        App\Providers\TelescopeServiceProvider::class,
+        App\Providers\PulseServiceProvider::class,
+    ] : []),
 
     /*
     |--------------------------------------------------------------------------

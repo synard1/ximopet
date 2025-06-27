@@ -1,8 +1,7 @@
 <?php
 
-use Laravel\Pulse\Http\Middleware\Authorize;
-use Laravel\Pulse\Pulse;
-use Laravel\Pulse\Recorders;
+// Check if Pulse classes are available (only in local environment)
+$pulseAvailable = class_exists('Laravel\Pulse\Pulse');
 
 return [
 
@@ -12,8 +11,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | This is the subdomain which the Pulse dashboard will be accessible from.
-    | When set to null, the dashboard will reside under the same domain as
-    | the application. Remember to configure your DNS entries correctly.
+    | If the setting is null, Pulse will reside under the same domain as the
+    | application. Otherwise, this value will be used as the subdomain.
     |
     */
 
@@ -25,8 +24,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | This is the path which the Pulse dashboard will be accessible from. Feel
-    | free to change this path to anything you'd like. Note that this won't
-    | affect the path of the internal API that is never exposed to users.
+    | free to change this path to anything you like. Note that the URI will not
+    | affect the paths of its internal API that aren't exposed to users.
     |
     */
 
@@ -43,7 +42,7 @@ return [
     |
     */
 
-    'enabled' => env('PULSE_ENABLED', true),
+    'enabled' => env('PULSE_ENABLED', true) && $pulseAvailable,
 
     /*
     |--------------------------------------------------------------------------
@@ -116,10 +115,10 @@ return [
     |
     */
 
-    'middleware' => [
+    'middleware' => array_filter([
         'web',
-        Authorize::class,
-    ],
+        $pulseAvailable ? 'Laravel\Pulse\Http\Middleware\Authorize' : null,
+    ]),
 
     /*
     |--------------------------------------------------------------------------
@@ -132,20 +131,23 @@ return [
     |
     */
 
-    'recorders' => [
-        Recorders\CacheInteractions::class => [
+    'recorders' => $pulseAvailable ? [
+        'Laravel\Pulse\Recorders\CacheInteractions' => [
             'enabled' => env('PULSE_CACHE_INTERACTIONS_ENABLED', true),
             'sample_rate' => env('PULSE_CACHE_INTERACTIONS_SAMPLE_RATE', 1),
-            'ignore' => [
-                ...Pulse::defaultVendorCacheKeys(),
-            ],
+            'ignore' => $pulseAvailable ? [
+                // Use default vendor cache keys only if Pulse is available
+                'laravel:*',
+                'illuminate:*',
+                'symfony:*',
+            ] : [],
             'groups' => [
                 '/^job-exceptions:.*/' => 'job-exceptions:*',
                 // '/:\d+/' => ':*',
             ],
         ],
 
-        Recorders\Exceptions::class => [
+        'Laravel\Pulse\Recorders\Exceptions' => [
             'enabled' => env('PULSE_EXCEPTIONS_ENABLED', true),
             'sample_rate' => env('PULSE_EXCEPTIONS_SAMPLE_RATE', 1),
             'location' => env('PULSE_EXCEPTIONS_LOCATION', true),
@@ -154,7 +156,7 @@ return [
             ],
         ],
 
-        Recorders\Queues::class => [
+        'Laravel\Pulse\Recorders\Queues' => [
             'enabled' => env('PULSE_QUEUES_ENABLED', true),
             'sample_rate' => env('PULSE_QUEUES_SAMPLE_RATE', 1),
             'ignore' => [
@@ -162,12 +164,12 @@ return [
             ],
         ],
 
-        Recorders\Servers::class => [
+        'Laravel\Pulse\Recorders\Servers' => [
             'server_name' => env('PULSE_SERVER_NAME', gethostname()),
             'directories' => explode(':', env('PULSE_SERVER_DIRECTORIES', '/')),
         ],
 
-        Recorders\SlowJobs::class => [
+        'Laravel\Pulse\Recorders\SlowJobs' => [
             'enabled' => env('PULSE_SLOW_JOBS_ENABLED', true),
             'sample_rate' => env('PULSE_SLOW_JOBS_SAMPLE_RATE', 1),
             'threshold' => env('PULSE_SLOW_JOBS_THRESHOLD', 1000),
@@ -176,7 +178,7 @@ return [
             ],
         ],
 
-        Recorders\SlowOutgoingRequests::class => [
+        'Laravel\Pulse\Recorders\SlowOutgoingRequests' => [
             'enabled' => env('PULSE_SLOW_OUTGOING_REQUESTS_ENABLED', true),
             'sample_rate' => env('PULSE_SLOW_OUTGOING_REQUESTS_SAMPLE_RATE', 1),
             'threshold' => env('PULSE_SLOW_OUTGOING_REQUESTS_THRESHOLD', 1000),
@@ -190,7 +192,7 @@ return [
             ],
         ],
 
-        Recorders\SlowQueries::class => [
+        'Laravel\Pulse\Recorders\SlowQueries' => [
             'enabled' => env('PULSE_SLOW_QUERIES_ENABLED', true),
             'sample_rate' => env('PULSE_SLOW_QUERIES_SAMPLE_RATE', 1),
             'threshold' => env('PULSE_SLOW_QUERIES_THRESHOLD', 1000),
@@ -202,17 +204,17 @@ return [
             ],
         ],
 
-        Recorders\SlowRequests::class => [
+        'Laravel\Pulse\Recorders\SlowRequests' => [
             'enabled' => env('PULSE_SLOW_REQUESTS_ENABLED', true),
             'sample_rate' => env('PULSE_SLOW_REQUESTS_SAMPLE_RATE', 1),
             'threshold' => env('PULSE_SLOW_REQUESTS_THRESHOLD', 1000),
             'ignore' => [
-                '#^/'.env('PULSE_PATH', 'pulse').'$#', // Pulse dashboard...
+                '#^/' . env('PULSE_PATH', 'pulse') . '$#', // Pulse dashboard...
                 '#^/telescope#', // Telescope dashboard...
             ],
         ],
 
-        Recorders\UserJobs::class => [
+        'Laravel\Pulse\Recorders\UserJobs' => [
             'enabled' => env('PULSE_USER_JOBS_ENABLED', true),
             'sample_rate' => env('PULSE_USER_JOBS_SAMPLE_RATE', 1),
             'ignore' => [
@@ -220,13 +222,13 @@ return [
             ],
         ],
 
-        Recorders\UserRequests::class => [
+        'Laravel\Pulse\Recorders\UserRequests' => [
             'enabled' => env('PULSE_USER_REQUESTS_ENABLED', true),
             'sample_rate' => env('PULSE_USER_REQUESTS_SAMPLE_RATE', 1),
             'ignore' => [
-                '#^/'.env('PULSE_PATH', 'pulse').'$#', // Pulse dashboard...
+                '#^/' . env('PULSE_PATH', 'pulse') . '$#', // Pulse dashboard...
                 '#^/telescope#', // Telescope dashboard...
             ],
         ],
-    ],
+    ] : [],
 ];
