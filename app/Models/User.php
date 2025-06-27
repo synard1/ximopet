@@ -9,13 +9,11 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Models\Role;
-// use Spatie\Multitenancy\Models\Concerns\UsesLandlordConnection;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
     use HasRoles;
-    // use UsesLandlordConnection;
 
     /**
      * The attributes that are mass assignable.
