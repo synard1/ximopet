@@ -1151,6 +1151,10 @@
     "last_update": 1750871312,
     "stats": {
         "total_sent": 347,
+<<<<<<< HEAD
         "clients_connected": 438
+=======
+        "clients_connected": 437
+>>>>>>> 7089c39522e7815ed5279b69a14607b07c008e4f
     }
 }
