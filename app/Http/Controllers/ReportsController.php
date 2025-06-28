@@ -60,9 +60,9 @@ class ReportsController extends Controller
      */
     public function indexHarian()
     {
-        $livestock = Livestock::all();
-        $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->get();
-        $coops = Coop::whereIn('id', $livestock->pluck('coop_id'))->get();
+        $livestock = Livestock::where('company_id', auth()->user()->company_id)->get();
+        $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->where('company_id', auth()->user()->company_id)->get();
+        $coops = Coop::whereIn('id', $livestock->pluck('coop_id'))->where('company_id', auth()->user()->company_id)->get();
 
         $livestock = $livestock->map(function ($item) {
             return [
@@ -82,9 +82,9 @@ class ReportsController extends Controller
 
     public function indexBatchWorker()
     {
-        $livestock = Livestock::all();
-        $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->get();
-        $coops = Coop::whereIn('id', $livestock->pluck('coop_id'))->get();
+        $livestock = Livestock::where('company_id', auth()->user()->company_id)->get();
+        $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->where('company_id', auth()->user()->company_id)->get();
+        $coops = Coop::whereIn('id', $livestock->pluck('coop_id'))->where('company_id', auth()->user()->company_id)->get();
 
         $livestock = $livestock->map(function ($item) {
             return [
@@ -104,9 +104,9 @@ class ReportsController extends Controller
 
     public function indexDailyCost()
     {
-        $livestock = Livestock::all();
-        $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->get();
-        $coops = Coop::whereIn('id', $livestock->pluck('coop_id'))->get();
+        $livestock = Livestock::where('company_id', auth()->user()->company_id)->get();
+        $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->where('company_id', auth()->user()->company_id)->get();
+        $coops = Coop::whereIn('id', $livestock->pluck('coop_id'))->where('company_id', auth()->user()->company_id)->get();
 
         $ternak = $livestock->map(function ($item) {
             return [
@@ -126,9 +126,9 @@ class ReportsController extends Controller
 
     public function indexPenjualan()
     {
-        $kelompokTernak = Ternak::all();
-        $farms = Farm::whereIn('id', $kelompokTernak->pluck('farm_id'))->get();
-        $kandangs = Kandang::whereIn('id', $kelompokTernak->pluck('kandang_id'))->get();
+        $kelompokTernak = Ternak::where('company_id', auth()->user()->company_id)->get();
+        $farms = Farm::whereIn('id', $kelompokTernak->pluck('farm_id'))->where('company_id', auth()->user()->company_id)->get();
+        $kandangs = Kandang::whereIn('id', $kelompokTernak->pluck('kandang_id'))->where('company_id', auth()->user()->company_id)->get();
 
         $ternak = $kelompokTernak->map(function ($item) {
             return [
@@ -148,9 +148,9 @@ class ReportsController extends Controller
 
     public function indexPerformaMitra()
     {
-        $kelompokTernak = Ternak::all();
-        $farms = Farm::whereIn('id', $kelompokTernak->pluck('farm_id'))->get();
-        $kandangs = Kandang::whereIn('id', $kelompokTernak->pluck('kandang_id'))->get();
+        $kelompokTernak = Ternak::where('company_id', auth()->user()->company_id)->get();
+        $farms = Farm::whereIn('id', $kelompokTernak->pluck('farm_id'))->where('company_id', auth()->user()->company_id)->get();
+        $kandangs = Kandang::whereIn('id', $kelompokTernak->pluck('kandang_id'))->where('company_id', auth()->user()->company_id)->get();
 
         $ternak = $kelompokTernak->map(function ($item) {
             // Retrieve the entire data column
@@ -175,9 +175,9 @@ class ReportsController extends Controller
 
     public function indexPerforma()
     {
-        $livestock = Livestock::all();
-        $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->get();
-        $coops = Coop::whereIn('id', $livestock->pluck('coop_id'))->get();
+        $livestock = Livestock::where('company_id', auth()->user()->company_id)->get();
+        $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->where('company_id', auth()->user()->company_id)->get();
+        $coops = Coop::whereIn('id', $livestock->pluck('coop_id'))->where('company_id', auth()->user()->company_id)->get();
 
         $ternak = $livestock->map(function ($item) {
             // Retrieve the entire data column
@@ -204,8 +204,8 @@ class ReportsController extends Controller
 
     public function indexInventory()
     {
-        $kelompokTernak = Ternak::all();
-        $farms = Farm::whereIn('id', $kelompokTernak->pluck('farm_id'))->get();
+        $kelompokTernak = Ternak::where('company_id', auth()->user()->company_id)->get();
+        $farms = Farm::whereIn('id', $kelompokTernak->pluck('farm_id'))->where('company_id', auth()->user()->company_id)->get();
         $ternak = $kelompokTernak->map(function ($item) {
             // Retrieve the entire data column
             $allData = $item->data ? json_decode($item->data, true) : [];
@@ -231,9 +231,9 @@ class ReportsController extends Controller
      */
     public function indexPembelianLivestock()
     {
-        $farms = Farm::all();
-        $partners = Partner::where('type', 'Supplier')->get();
-        $expeditions = Expedition::all();
+        $farms = Farm::where('company_id', auth()->user()->company_id)->get();
+        $partners = Partner::where('type', 'Supplier')->where('company_id', auth()->user()->company_id)->get();
+        $expeditions = Expedition::where('company_id', auth()->user()->company_id)->get();
 
         Log::info('Livestock Purchase Report Index accessed', [
             'user_id' => auth()->id(),
@@ -249,10 +249,10 @@ class ReportsController extends Controller
      */
     public function indexPembelianPakan()
     {
-        $farms = Farm::all();
-        $partners = Partner::where('type', 'Supplier')->get();
-        $expeditions = Expedition::all();
-        $feeds = Feed::all();
+        $farms = Farm::where('company_id', auth()->user()->company_id)->get();
+        $partners = Partner::where('type', 'Supplier')->where('company_id', auth()->user()->company_id)->get();
+        $expeditions = Expedition::where('company_id', auth()->user()->company_id)->get();
+        $feeds = Feed::where('company_id', auth()->user()->company_id)->get();
 
         Log::info('Feed Purchase Report Index accessed', [
             'user_id' => auth()->id(),
@@ -268,10 +268,10 @@ class ReportsController extends Controller
      */
     public function indexPembelianSupply()
     {
-        $farms = Farm::all();
-        $partners = Partner::where('type', 'Supplier')->get();
-        $expeditions = Expedition::all();
-        $supplies = Supply::all();
+        $farms = Farm::where('company_id', auth()->user()->company_id)->get();
+        $partners = Partner::where('type', 'Supplier')->where('company_id', auth()->user()->company_id)->get();
+        $expeditions = Expedition::where('company_id', auth()->user()->company_id)->get();
+        $supplies = Supply::where('company_id', auth()->user()->company_id)->get();
 
         Log::info('Supply Purchase Report Index accessed', [
             'user_id' => auth()->id(),

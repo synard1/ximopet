@@ -62,8 +62,8 @@ class LivestockPurchaseDataTable extends DataTable
                 $currentStatus = $transaksi->status;
 
                 // Check if user has update permission or is Supervisor
-                $canUpdate = auth()->user()->can('update livestock purchase') || 
-                            auth()->user()->hasRole('Supervisor');
+                $canUpdate = auth()->user()->can('update livestock purchase') ||
+                    auth()->user()->hasRole('Supervisor');
 
                 if (!$canUpdate) {
                     return $statuses[$currentStatus] ?? $currentStatus;
@@ -141,9 +141,15 @@ class LivestockPurchaseDataTable extends DataTable
      */
     public function query(Transaksi $model): QueryBuilder
     {
-        return $model->newQuery()
+        $query = $model->newQuery()
             ->with(['details.livestock.farm', 'details.livestock.coop', 'supplier', 'expedition'])
             ->orderBy('tanggal', 'ASC');
+
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
+        return $query;
     }
 
     /**

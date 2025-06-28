@@ -24,10 +24,10 @@ class PurchaseReportsController extends Controller
      */
     public function indexPembelianLivestock()
     {
-        $farms = Farm::all();
-        $partners = Partner::where('type', 'Supplier')->get();
-        $expeditions = Expedition::all();
-        $livestocks = Livestock::with(['farm', 'coop'])->get()->map(function ($l) {
+        $farms = Farm::where('company_id', auth()->user()->company_id)->get();
+        $partners = Partner::where('type', 'Supplier')->where('company_id', auth()->user()->company_id)->get();
+        $expeditions = Expedition::where('company_id', auth()->user()->company_id)->get();
+        $livestocks = Livestock::with(['farm', 'coop'])->where('company_id', auth()->user()->company_id)->get()->map(function ($l) {
             return [
                 'id' => $l->id,
                 'farm_id' => $l->farm_id,
@@ -52,11 +52,11 @@ class PurchaseReportsController extends Controller
      */
     public function indexPembelianPakan()
     {
-        $farms = Farm::all();
-        $partners = Partner::where('type', 'Supplier')->get();
-        $expeditions = Expedition::all();
-        $feeds = Feed::all();
-        $livestocks = Livestock::with(['farm', 'coop'])->get()->map(function ($l) {
+        $farms = Farm::where('company_id', auth()->user()->company_id)->get();
+        $partners = Partner::where('type', 'Supplier')->where('company_id', auth()->user()->company_id)->get();
+        $expeditions = Expedition::where('company_id', auth()->user()->company_id)->get();
+        $feeds = Feed::where('company_id', auth()->user()->company_id)->get();
+        $livestocks = Livestock::with(['farm', 'coop'])->where('company_id', auth()->user()->company_id)->get()->map(function ($l) {
             return [
                 'id' => $l->id,
                 'farm_id' => $l->farm_id,
@@ -81,11 +81,11 @@ class PurchaseReportsController extends Controller
      */
     public function indexPembelianSupply()
     {
-        $farms = Farm::all();
-        $partners = Partner::where('type', 'Supplier')->get();
-        $expeditions = Expedition::all();
-        $supplies = Supply::all();
-        $livestocks = Livestock::with(['farm', 'coop'])->get()->map(function ($l) {
+        $farms = Farm::where('company_id', auth()->user()->company_id)->get();
+        $partners = Partner::where('type', 'Supplier')->where('company_id', auth()->user()->company_id)->get();
+        $expeditions = Expedition::where('company_id', auth()->user()->company_id)->get();
+        $supplies = Supply::where('company_id', auth()->user()->company_id)->get();
+        $livestocks = Livestock::with(['farm', 'coop'])->where('company_id', auth()->user()->company_id)->get()->map(function ($l) {
             return [
                 'id' => $l->id,
                 'farm_id' => $l->farm_id,

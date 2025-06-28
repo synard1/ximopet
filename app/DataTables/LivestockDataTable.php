@@ -136,12 +136,19 @@ class LivestockDataTable extends DataTable
      */
     public function query(Livestock $model): QueryBuilder
     {
+        $query = $model->newQuery();
+
         if (auth()->user()->hasRole('Operator')) {
-            return $model->newQuery()->whereHas('farm.farmOperators', function ($query) {
+            $query->whereHas('farm.farmOperators', function ($query) {
                 $query->where('user_id', auth()->id());
             });
         }
-        return $model->newQuery();
+
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
+        return $query;
     }
 
     /**

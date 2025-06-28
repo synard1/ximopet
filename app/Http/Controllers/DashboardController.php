@@ -26,24 +26,27 @@ class DashboardController extends Controller
         $farmIds = $isOperator ? $user->farmOperators->pluck('farm_id')->toArray() : null;
 
         $userList = Cache::remember('dashboard:user_list', now()->addHours(2), function () {
-            return User::whereDoesntHave('roles', fn($q) => $q->where('name', 'SuperAdmin'))->get();
+            return User::whereDoesntHave('roles', fn($q) => $q->where('name', 'SuperAdmin'))->where('company_id', auth()->user()->company_id)->get();
         });
 
         $farm = Cache::remember('dashboard:farm_list_' . ($isOperator ? implode('-', $farmIds) : 'all'), now()->addMinutes(30), function () use ($farmIds) {
             return Farm::whereIn('status', ['active', 'in_use'])
                 ->when($farmIds, fn($q) => $q->whereIn('id', $farmIds))
+                ->where('company_id', auth()->user()->company_id)
                 ->get();
         });
 
         $kandang = Cache::remember('dashboard:kandang_list_' . ($isOperator ? implode('-', $farmIds) : 'all'), now()->addMinutes(30), function () use ($farmIds) {
             return Coop::whereIn('status', ['active', 'in_use'])
                 ->when($farmIds, fn($q) => $q->whereIn('farm_id', $farmIds))
+                ->where('company_id', auth()->user()->company_id)
                 ->get();
         });
 
         $ternak = Cache::remember('dashboard:ternak_list_' . ($isOperator ? implode('-', $farmIds) : 'all'), now()->addMinutes(15), function () use ($farmIds) {
             return CurrentLivestock::where('status', 'active')
                 ->when($farmIds, fn($q) => $q->whereIn('farm_id', $farmIds))
+                ->where('company_id', auth()->user()->company_id)
                 ->get();
         });
 
@@ -55,12 +58,14 @@ class DashboardController extends Controller
             //     ->with('supply')
             //     ->get();
             return CurrentSupply::where('quantity', '>', 0)
+                ->where('company_id', auth()->user()->company_id)
                 ->get();
         });
 
         $stock = Cache::remember('dashboard:stock_sum', now()->addMinutes(5), function () {
             return \App\Models\TransaksiBeliDetail::where('jenis', 'Pembelian')
                 ->where('jenis_barang', '!=', 'DOC')
+                ->where('company_id', auth()->user()->company_id)
                 ->get()
                 ->sum(fn($item) => $item->sisa / $item->konversi);
         });

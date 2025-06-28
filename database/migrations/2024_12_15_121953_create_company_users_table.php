@@ -17,7 +17,8 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('company_id');
             $table->unsignedBigInteger('user_id');
-            $table->boolean('isAdmin');
+            $table->boolean('isAdmin')->default(false);
+            $table->boolean('isDefaultAdmin')->default(false);
             $table->string('status');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
@@ -32,7 +33,6 @@ return new class extends Migration
         });
 
         Schema::enableForeignKeyConstraints();
-
     }
 
     /**

@@ -19,6 +19,7 @@ class CompanyUser extends BaseModel
         'company_id',
         'user_id',
         'isAdmin',
+        'isDefaultAdmin',
         'status',
         'created_by',
         'updated_by',

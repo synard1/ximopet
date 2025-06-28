@@ -70,11 +70,15 @@ class FeedStockDataTable extends DataTable
     public function query(FeedStock $model): QueryBuilder
     {
         $query = $model->newQuery();
-        
+
         if (auth()->user()->hasRole('Operator')) {
             $query->whereHas('livestock.farm.farmOperators', function ($q) {
                 $q->where('user_id', auth()->id());
             });
+        }
+
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
         }
 
         return $query->selectRaw('
