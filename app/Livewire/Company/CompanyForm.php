@@ -36,9 +36,9 @@ class CompanyForm extends Component
         'address' => 'required',
         'phone' => 'required',
         'email' => 'required|email',
-        'domain' => 'required',
-        'database' => 'required',
-        'package' => 'required',
+        'domain' => 'nullable',
+        'database' => 'nullable',
+        'package' => 'nullable',
         'status' => 'required',
         'logo' => 'nullable|file|image|max:5120', // 5MB in kilobytes
         'livestockRecordingType' => 'required|in:batch,total',
@@ -115,6 +115,18 @@ class CompanyForm extends Component
 
     public function save()
     {
+        Log::info('CompanyForm save method called', [
+            'is_editing' => $this->isEditing,
+            'company_id' => $this->companyId,
+            'form_data' => [
+                'name' => $this->name,
+                'email' => $this->email,
+                'phone' => $this->phone,
+                'address' => $this->address,
+                'status' => $this->status,
+            ]
+        ]);
+
         $this->validate();
 
         try {
@@ -191,9 +203,16 @@ class CompanyForm extends Component
             $this->resetForm();
             $this->dispatch('closeForm');
             $this->showForm = false;
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error in CompanyForm save', [
+                'errors' => $e->errors(),
+                'form_data' => $data ?? []
+            ]);
+            throw $e; // Re-throw to let Livewire handle validation errors
         } catch (\Exception $e) {
             Log::error('Error saving company', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'company_data' => $data ?? []
             ]);
             session()->flash('error', 'Error saving company: ' . $e->getMessage());
@@ -288,6 +307,16 @@ class CompanyForm extends Component
             ]);
             session()->flash('error', 'Error updating configuration: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Close the form
+     */
+    public function closeForm()
+    {
+        $this->resetForm();
+        $this->showForm = false;
+        $this->isEditing = false;
     }
 
     private function resetForm()

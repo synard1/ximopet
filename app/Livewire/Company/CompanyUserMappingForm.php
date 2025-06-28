@@ -26,7 +26,11 @@ class CompanyUserMappingForm extends Component
         'isAdmin' => 'required|boolean',
     ];
 
-    public $listeners = ['createMapping' => 'createMapping'];
+    public $listeners = [
+        'createMapping' => 'createMapping',
+        'createMappingWithId' => 'createMappingWithId',
+        'closeMapping' => 'closeMapping'
+    ];
 
     public function mount($mappingId = null)
     {
@@ -48,9 +52,17 @@ class CompanyUserMappingForm extends Component
         $this->dispatch('hide-datatable');
     }
 
+    public function createMappingWithId($id)
+    {
+        $this->showForm = true;
+        $this->dispatch('hide-datatable');
+        $this->mappingId = $id;
+    }
+
     public function closeMapping()
     {
         $this->showForm = false;
+        $this->resetForm();
         $this->dispatch('show-datatable');
     }
 

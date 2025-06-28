@@ -138,6 +138,7 @@ By: AI Assistant
             ... aaa
         </div>
     </div>
+    <livewire:company.company-user-mapping-form />
 
 
     @push('scripts')
@@ -254,7 +255,7 @@ By: AI Assistant
             <!--end::Card title-->
 
             <!--begin::Card toolbar-->
-            <div class="card-toolbar">
+            <div class="card-toolbar" id="cardToolbar">
                 <!--begin::Toolbar-->
                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
                     @if(auth()->user()->hasRole('SuperAdmin'))
@@ -272,9 +273,15 @@ By: AI Assistant
 
         <!--begin::Card body-->
         <div class="card-body py-4">
-            <!--begin::Table-->
-            {{ $dataTable->table() }}
-            <!--end::Table-->
+            <div class="table-responsive" id="datatable-container">
+                <!--begin::Table-->
+                {{ $dataTable->table() }}
+                <!--end::Table-->
+
+            </div>
+            <!--begin::Form User Mapping-->
+            <livewire:company.company-user-mapping-form />
+            <!--end::Form User Mapping-->
         </div>
         <!--end::Card body-->
     </div>
@@ -330,6 +337,26 @@ By: AI Assistant
                     $('#kt_modal_add_user').modal('hide');
                     window.LaravelDataTables['company-table'].ajax.reload();
                 });
+            });
+    </script>
+
+    <script>
+        document.addEventListener('livewire:init', function () {
+                window.addEventListener('hide-datatable', () => {
+                    $('#datatable-container').hide();
+                    $('#cardToolbar').hide();
+                });
+
+                window.addEventListener('show-datatable', () => {
+                    $('#datatable-container').show();
+                    $('#cardToolbar').show();
+                });
+                
+                // Add event listener for closeMapping event
+                Livewire.on('closeMapping', () => {
+                    console.log('closeMapping event received');
+                });
+                
             });
     </script>
     @endpush

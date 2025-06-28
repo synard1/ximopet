@@ -82,3 +82,18 @@ Livewire.on("success", (message) => {
     // Reload the customers-table datatable
     LaravelDataTables["companies-table"].ajax.reload();
 });
+
+// user mapping
+document
+    .querySelectorAll('[data-kt-action="user_mapping"]')
+    .forEach(function (element) {
+        element.addEventListener("click", function () {
+            console.log(
+                "user mapping",
+                this.getAttribute("data-kt-company-id")
+            );
+            Livewire.dispatch("createMappingWithId", [
+                this.getAttribute("data-kt-company-id"),
+            ]);
+        });
+    });

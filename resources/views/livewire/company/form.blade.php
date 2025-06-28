@@ -95,8 +95,8 @@
 
             <div class="row mb-5">
                 <div class="col-12">
-                    <label class="form-label">Keterangan</label>
-                    <textarea wire:model="keterangan" class="form-control" rows="3"
+                    <label class="form-label">Notes</label>
+                    <textarea wire:model="notes" class="form-control" rows="3"
                         placeholder="Enter additional information"></textarea>
                 </div>
             </div>
