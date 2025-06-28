@@ -39,7 +39,13 @@ class SuppliersDataTable extends DataTable
      */
     public function query(Supplier $model): QueryBuilder
     {
-        return $model->where('type', '=', 'Supplier')->newQuery();
+        $query = $model->newQuery()->where('type', '=', 'Supplier');
+
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
+        return $query;
     }
 
     /**

@@ -40,7 +40,13 @@ class LivestockStandardDataTable extends DataTable
      */
     public function query(LivestockStrainStandard $model): QueryBuilder
     {
-        return $model->newQuery();
+        $query = $model->newQuery();
+
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
+        return $query;
     }
 
     /**

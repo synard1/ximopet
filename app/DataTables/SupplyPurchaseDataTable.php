@@ -144,6 +144,10 @@ class SupplyPurchaseDataTable extends DataTable
             });
         }
 
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
         return $query;
     }
 

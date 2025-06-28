@@ -40,6 +40,11 @@ class SupplyDataTable extends DataTable
     public function query(Supply $model): QueryBuilder
     {
         $query = $model->newQuery();
+
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
         return $query;
     }
 

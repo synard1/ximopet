@@ -65,9 +65,14 @@ class CoopsDataTable extends DataTable
                     });
                 })
                 ->orderBy('name', 'DESC');
+        } else if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query = $model::with('farm')
+                ->orderBy('name', 'DESC')
+                ->where('company_id', auth()->user()->company_id);
         } else {
             $query = $model::with('farm')
-                ->orderBy('name', 'DESC');
+                ->orderBy('name', 'DESC')
+                ->where('company_id', auth()->user()->company_id);
         }
 
         return $query;

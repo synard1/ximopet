@@ -24,12 +24,12 @@ class BaseModel extends Model
             if (!$model->created_by && Auth::id()) {
                 $model->created_by = Auth::id();
             }
-            
-            // Set company_id from CompanyUser if not already set
+
+            // Set company_id from User model if not already set
             if (!$model->company_id && Auth::id()) {
-                $companyUser = \App\Models\CompanyUser::where('user_id', Auth::id())->first();
-                if ($companyUser) {
-                    $model->company_id = $companyUser->company_id;
+                $user = Auth::user();
+                if ($user && $user->company_id) {
+                    $model->company_id = $user->company_id;
                 }
             }
         });
@@ -39,12 +39,12 @@ class BaseModel extends Model
             if (Auth::id()) {
                 $model->updated_by = Auth::id();
             }
-            
-            // Set company_id from CompanyUser if still null/empty
+
+            // Set company_id from User model if still null/empty
             if (!$model->company_id && Auth::id()) {
-                $companyUser = \App\Models\CompanyUser::where('user_id', Auth::id())->first();
-                if ($companyUser) {
-                    $model->company_id = $companyUser->company_id;
+                $user = Auth::user();
+                if ($user && $user->company_id) {
+                    $model->company_id = $user->company_id;
                 }
             }
         });

@@ -28,7 +28,7 @@ class UnitsDataTable extends DataTable
                 return $unit->created_at->format('d M Y, h:i a');
             })
             ->addColumn('action', function (Unit $unit) {
-                return view('pages/masterdata.unit._actions', compact('unit'));
+                return view('pages.masterdata.unit._actions', compact('unit'));
             })
             ->setRowId('id');
     }
@@ -40,6 +40,11 @@ class UnitsDataTable extends DataTable
     public function query(Unit $model): QueryBuilder
     {
         $query = $model->newQuery();
+
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
         return $query;
     }
 

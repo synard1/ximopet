@@ -28,7 +28,7 @@ class CustomersDataTable extends DataTable
                 return $customer->created_at->format('d M Y, h:i a');
             })
             ->addColumn('action', function (Customer $customer) {
-                return view('pages/masterdata.customer._actions', compact('customer'));
+                return view('pages.masterdata.customer._actions', compact('customer'));
             })
             ->setRowId('id');
     }
@@ -39,7 +39,13 @@ class CustomersDataTable extends DataTable
      */
     public function query(Customer $model): QueryBuilder
     {
-        return $model->where('type', '=', 'Customer')->newQuery();
+        $query = $model->newQuery()->where('type', '=', 'Customer');
+
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
+        return $query;
     }
 
     /**

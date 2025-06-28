@@ -115,7 +115,13 @@ class LivestockMutationDataTable extends DataTable
         //         $query->where('user_id', auth()->id());
         //     });
         // }
-        return $model->newQuery();
+        $query = $model->newQuery();
+
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
+        return $query;
     }
 
     /**

@@ -181,6 +181,10 @@ class FeedPurchaseDataTable extends DataTable
             });
         }
 
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
         // if (auth()->user()->hasRole('Operator')) {
         //     $farmOperator = auth()->user()->farmOperators;
         //     if ($farmOperator) {

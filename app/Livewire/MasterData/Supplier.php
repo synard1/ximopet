@@ -174,9 +174,9 @@ class Supplier extends Component
             'code' => 'required|unique:partners,code,NULL,id,deleted_at,NULL', // Modified rule for unique code with soft deletes
             'name' => 'required',
             'address' => 'required',
-            'phone_number' => 'required',
-            'contact_person' => 'required',
-            'email' => 'required|email',
+            'phone_number' => 'nullable',
+            'contact_person' => 'nullable',
+            'email' => 'nullable|email',
         ];
 
         // If editing, the unique rule should ignore the current supplier's ID

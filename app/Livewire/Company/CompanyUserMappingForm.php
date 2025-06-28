@@ -69,6 +69,9 @@ class CompanyUserMappingForm extends Component
     public function save()
     {
         $this->validate();
+
+        // Create or update company user mapping
+        // The sync to User model is handled by CompanyUser model events
         $mapping = CompanyUser::updateOrCreate(
             ['id' => $this->mappingId],
             [
@@ -80,6 +83,7 @@ class CompanyUserMappingForm extends Component
                 'updated_by' => auth()->id(),
             ]
         );
+
         $this->dispatch('show-datatable');
         $this->showForm = false;
         $this->dispatch('success', 'Mapping berhasil disimpan!');

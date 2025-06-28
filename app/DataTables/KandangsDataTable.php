@@ -71,9 +71,14 @@ class KandangsDataTable extends DataTable
                     $query->where('user_id', auth()->id());
                 })
                 ->orderBy('nama', 'DESC');
+        } else if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query = $model::with('farm')
+                ->orderBy('nama', 'DESC')
+                ->where('company_id', auth()->user()->company_id);
         } else {
             $query = $model::with('farm')
-                ->orderBy('nama', 'DESC');
+                ->orderBy('nama', 'DESC')
+                ->where('company_id', auth()->user()->company_id);
         }
 
         return $query;

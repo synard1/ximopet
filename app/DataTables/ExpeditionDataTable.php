@@ -39,7 +39,13 @@ class ExpeditionDataTable extends DataTable
      */
     public function query(Expedition $model): QueryBuilder
     {
-        return $model->where('type', '=', 'Expedition')->newQuery();
+        $query = $model->newQuery()->where('type', '=', 'Expedition');
+
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
+        return $query;
     }
 
     /**

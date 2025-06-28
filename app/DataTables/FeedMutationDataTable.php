@@ -61,6 +61,11 @@ class FeedMutationDataTable extends DataTable
     public function query(Mutation $model): QueryBuilder
     {
         $query = $model->where('type', 'feed')->newQuery();
+
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', auth()->user()->company_id);
+        }
+
         return $query;
     }
 

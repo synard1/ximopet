@@ -29,6 +29,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'last_login_ip',
         'profile_photo_path',
         'status',
+        'company_id',
     ];
 
     /**
@@ -245,6 +246,35 @@ class User extends Authenticatable implements MustVerifyEmail
     public function companyUsers()
     {
         return $this->hasMany(CompanyUser::class);
+    }
+
+    /**
+     * Get the company associated with the user.
+     */
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * Get the primary company for the user (from company_users table)
+     */
+    public function getPrimaryCompany()
+    {
+        $companyUser = $this->companyUsers()
+            ->where('status', 'active')
+            ->where('isAdmin', true)
+            ->first();
+
+        return $companyUser ? $companyUser->company : $this->company;
+    }
+
+    /**
+     * Check if user has a company assigned
+     */
+    public function hasCompany(): bool
+    {
+        return !is_null($this->company_id) || $this->companyUsers()->where('status', 'active')->exists();
     }
 
     /**

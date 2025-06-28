@@ -36,19 +36,19 @@
                         @error('phone_number') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div class="fv-row mb-7">
-                        <label class="required fw-semibold fs-6 mb-2">Contact Person</label>
+                        <label class="fw-semibold fs-6 mb-2">Contact Person</label>
                         <input type="text" wire:model="contact_person" name="pic" class="form-control"
                             placeholder="Contact Person" />
                         @error('contact_person') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div class="fv-row mb-7">
-                        <label class="required fw-semibold fs-6 mb-2">Telp. Contact Person</label>
+                        <label class="fw-semibold fs-6 mb-2">Telp. Contact Person</label>
                         <input type="text" wire:model="phone_number" name="telp_pic" class="form-control"
                             placeholder="Telp. Contact Person" />
                         @error('phone_number') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div class="fv-row mb-7">
-                        <label for="email" class="required fw-semibold fs-6 mb-2">Email</label>
+                        <label for="email" class="fw-semibold fs-6 mb-2">Email</label>
                         <input type="email" class="form-control" wire:model="email" id="email">
                         @error('email') <span class="text-danger error">{{ $message}}</span>@enderror
                     </div>

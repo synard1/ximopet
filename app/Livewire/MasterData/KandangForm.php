@@ -38,7 +38,7 @@ class KandangForm extends Component
         'name' => 'required|string|max:255',
         'capacity' => 'required|numeric|min:1',
         'status' => 'required|in:active,inactive'
-    ];
+];
 
     public function mount()
     {
@@ -47,7 +47,11 @@ class KandangForm extends Component
             return;
         }
 
-        $this->farms = Farm::where('status', 'active')->get();
+        if (auth()->user()->hasRole('SuperAdmin')) {
+            $this->farms = Farm::where('status', 'active')->get();
+        } else {
+            $this->farms = Farm::where('status', 'active')->where('company_id', auth()->user()->company_id)->get();
+        }
     }
 
     public function render()

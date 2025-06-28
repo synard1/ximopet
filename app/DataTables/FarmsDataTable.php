@@ -49,6 +49,9 @@ class FarmsDataTable extends DataTable
                 $query->where('user_id', auth()->id());
             });
         }
+        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            return $model->newQuery()->where('company_id', auth()->user()->company_id);
+        }
         return $model->newQuery();
     }
 
