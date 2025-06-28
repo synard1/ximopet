@@ -14,8 +14,8 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: demo51_test
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: demo_ximopet
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
@@ -53,9 +53,9 @@ jobs:
 
       - name: Create Database
         run: |
-          mysql -u root -ppassword -e "CREATE DATABASE IF NOT EXISTS demo51_test;"
-          mysql -u root -ppassword -e "GRANT ALL PRIVILEGES ON demo51_test.* TO 'root'@'localhost';"
-          mysql -u root -ppassword -e "FLUSH PRIVILEGES;"
+          mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS demo51_test;"
+          mysql -u root -proot -e "GRANT ALL PRIVILEGES ON demo51_test.* TO 'root'@'localhost';"
+          mysql -u root -proot -e "FLUSH PRIVILEGES;"
 
       - name: Run Migrations
         run: php artisan migrate --force
