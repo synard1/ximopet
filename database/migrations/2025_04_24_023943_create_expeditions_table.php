@@ -22,8 +22,8 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->text('description')->nullable();
             $table->string('status')->index();
-            $table->unsignedBigInteger('created_by')->index();
-            $table->unsignedBigInteger('updated_by')->nullable()->index();
+            $table->uuid('created_by')->index();
+            $table->uuid('updated_by')->nullable()->index();
 
             $table->timestamps();
             $table->softDeletes();

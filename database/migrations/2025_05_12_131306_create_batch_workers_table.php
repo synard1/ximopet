@@ -20,8 +20,8 @@ return new class extends Migration
             $table->string('role')->nullable();
             $table->text('notes')->nullable();
             $table->string('status')->default('active'); // Default status adalah 'aktif'
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

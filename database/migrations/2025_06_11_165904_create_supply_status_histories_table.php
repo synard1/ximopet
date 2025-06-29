@@ -20,8 +20,8 @@ return new class extends Migration
             $table->string('status_to');
             $table->text('notes')->nullable();
             $table->json('metadata')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

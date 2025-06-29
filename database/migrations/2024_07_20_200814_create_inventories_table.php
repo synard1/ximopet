@@ -19,8 +19,8 @@ return new class extends Migration
             $table->string('code')->unique();
             $table->text('description')->nullable();
             $table->string('status');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -42,8 +42,8 @@ return new class extends Migration
             $table->decimal('reorder_point', 15, 2)->default(0);
             $table->string('status');
             $table->boolean('is_feed')->default(false); // To identify feed items
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -61,8 +61,8 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('type'); // warehouse, farm, kandang, silo etc
             $table->string('status');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -77,8 +77,8 @@ return new class extends Migration
             $table->uuid('item_id');
             $table->uuid('location_id');
             $table->uuid('farm_id');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -97,8 +97,8 @@ return new class extends Migration
             $table->decimal('quantity', 15, 2)->default(0)->comment('Jumlah stok');
 
             $table->string('status');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -130,8 +130,8 @@ return new class extends Migration
             $table->decimal('harga', 15, 2);
             $table->string('status');
             $table->text('keterangan')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -162,8 +162,8 @@ return new class extends Migration
             $table->decimal('harga', 15, 2);
             $table->string('status');
             $table->text('notes')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

@@ -19,6 +19,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Services\Livestock\LivestockStrainStandardService;
+use Faker\Factory as Faker;
 
 class LivestockBatchSeeder extends Seeder
 {
@@ -26,6 +27,12 @@ class LivestockBatchSeeder extends Seeder
     {
         try {
             DB::beginTransaction();
+
+            // Get admin user as primary user for created_by
+            $adminUser = User::where('email', 'admin@peternakan.digital')->first();
+            if (!$adminUser) {
+                $adminUser = User::first(); // Fallback to any user
+            }
 
             // Initialize service
             $livestockStrainStandardService = new LivestockStrainStandardService();
@@ -39,8 +46,8 @@ class LivestockBatchSeeder extends Seeder
                     'phone_number' => '08123456789',
                     'address' => 'Test Address',
                     'status' => 'active',
-                    'created_by' => 1,
-                    'updated_by' => 1,
+                    'created_by' => $adminUser ? $adminUser->id : null,
+                    'updated_by' => $adminUser ? $adminUser->id : null,
                 ]
             );
 
@@ -54,8 +61,8 @@ class LivestockBatchSeeder extends Seeder
                     'name' => 'Kandang Batch Test',
                     'capacity' => 5000, // Total capacity for both batches
                     'status' => 'active',
-                    'created_by' => 1,
-                    'updated_by' => 1,
+                    'created_by' => $adminUser ? $adminUser->id : null,
+                    'updated_by' => $adminUser ? $adminUser->id : null,
                 ]
             );
 
@@ -64,8 +71,8 @@ class LivestockBatchSeeder extends Seeder
                 ['name' => 'Broiler Test', 'code' => 'BRO-TEST'],
                 [
                     'description' => 'Test Breed',
-                    'created_by' => 1,
-                    'updated_by' => 1,
+                    'created_by' => $adminUser ? $adminUser->id : null,
+                    'updated_by' => $adminUser ? $adminUser->id : null,
                 ]
             );
 
@@ -84,8 +91,8 @@ class LivestockBatchSeeder extends Seeder
                         ]
                     ],
                     'status' => 'active',
-                    'created_by' => 1,
-                    'updated_by' => 1,
+                    'created_by' => $adminUser ? $adminUser->id : null,
+                    'updated_by' => $adminUser ? $adminUser->id : null,
                 ]
             );
 
@@ -98,8 +105,8 @@ class LivestockBatchSeeder extends Seeder
                     'phone_number' => '08123456789',
                     'address' => 'Test Supplier Address',
                     'status' => 'active',
-                    'created_by' => 1,
-                    'updated_by' => 1,
+                    'created_by' => $adminUser ? $adminUser->id : null,
+                    'updated_by' => $adminUser ? $adminUser->id : null,
                 ]
             );
 
@@ -119,8 +126,8 @@ class LivestockBatchSeeder extends Seeder
                 'initial_weight' => 0, // Will be updated with average
                 'price' => 0, // Will be updated with average
                 'status' => 'active',
-                'created_by' => 1,
-                'updated_by' => 1,
+                'created_by' => $adminUser ? $adminUser->id : null,
+                'updated_by' => $adminUser ? $adminUser->id : null,
             ]);
 
             $hargaPerEkor = 15000;
@@ -163,8 +170,8 @@ class LivestockBatchSeeder extends Seeder
                     'invoice_number' => 'INV-BATCH-TEST-' . str_pad($index + 1, 3, '0', STR_PAD_LEFT),
                     'tanggal' => $batchData['tanggal'],
                     'vendor_id' => $vendor->id,
-                    'created_by' => 1,
-                    'updated_by' => 1,
+                    'created_by' => $adminUser ? $adminUser->id : null,
+                    'updated_by' => $adminUser ? $adminUser->id : null,
                 ]);
 
                 // 2. Create Purchase Item
@@ -180,8 +187,8 @@ class LivestockBatchSeeder extends Seeder
                     'weight_type' => $batchData['weight_type'],
                     'weight_per_unit' => $batchData['weight_per_unit'],
                     'weight_total' => $batchData['weight_total'],
-                    'created_by' => 1,
-                    'updated_by' =>  1,
+                    'created_by' => $adminUser ? $adminUser->id : null,
+                    'updated_by' => $adminUser ? $adminUser->id : null,
                 ]);
 
                 // 3. Create LivestockBatch
@@ -207,8 +214,8 @@ class LivestockBatchSeeder extends Seeder
                     'weight_total' => $batchData['weight_total'],
                     'status' => 'active',
                     'livestock_purchase_item_id' => $purchaseItem->id,
-                    'created_by' => 1,
-                    'updated_by' => 1,
+                    'created_by' => $adminUser ? $adminUser->id : null,
+                    'updated_by' => $adminUser ? $adminUser->id : null,
                 ]);
 
                 // 4. Run service for batch
@@ -247,8 +254,8 @@ class LivestockBatchSeeder extends Seeder
                 'avg_berat' => $totalBerat / $totalPopulasi,
                 'age' => 0,
                 'status' => 'active',
-                'created_by' => 1,
-                'updated_by' => 1,
+                'created_by' => $adminUser ? $adminUser->id : null,
+                'updated_by' => $adminUser ? $adminUser->id : null,
             ]);
 
             // Update Kandang
@@ -257,7 +264,7 @@ class LivestockBatchSeeder extends Seeder
                 'quantity' => $totalPopulasi,
                 'weight' => $totalBerat,
                 'status' => 'in_use',
-                'updated_by' => 1,
+                'updated_by' => $adminUser ? $adminUser->id : null,
             ]);
 
             // Assign farm operator

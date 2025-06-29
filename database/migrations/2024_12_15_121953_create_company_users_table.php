@@ -16,12 +16,12 @@ return new class extends Migration
         Schema::create('company_users', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('company_id');
-            $table->unsignedBigInteger('user_id');
+            $table->uuid('user_id');
             $table->boolean('isAdmin')->default(false);
             $table->boolean('isDefaultAdmin')->default(false);
             $table->string('status');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

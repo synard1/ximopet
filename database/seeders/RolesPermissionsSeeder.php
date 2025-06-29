@@ -4,8 +4,11 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
+// use Spatie\Permission\Models\Permission;
+// use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\DB;
+use App\Models\Permission;
+use App\Models\Role;
 
 class RolesPermissionsSeeder extends Seeder
 {
@@ -128,6 +131,6 @@ class RolesPermissionsSeeder extends Seeder
         }
 
         // Assign SuperAdmin ke user ID 1 (creator utama)
-        \App\Models\User::find(1)?->assignRole('SuperAdmin');
+        \App\Models\User::where('email', 'admin@peternakan.digital')->first()?->assignRole('SuperAdmin');
     }
 }

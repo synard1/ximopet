@@ -1,6 +1,7 @@
 <!--begin:: Avatar -->
 <div class="symbol symbol-circle symbol-50px overflow-hidden me-3">
-    <a href="{{ route('user-management.users.show', $user) }}">
+    {{-- <a href="{{ route('user-management.users.show', $user) }}"> --}}
+    <a href="#">
         @if($user->profile_photo_url)
             <div class="symbol-label">
                 <img src="{{ $user->profile_photo_url }}" class="w-100"/>
@@ -15,7 +16,8 @@
 <!--end::Avatar-->
 <!--begin::User details-->
 <div class="d-flex flex-column">
-    <a href="{{ route('user-management.users.show', $user) }}" class="text-gray-800 text-hover-primary mb-1">
+    {{-- <a href="{{ route('user-management.users.show', $user) }}" class="text-gray-800 text-hover-primary mb-1"> --}}
+    <a href="#" class="text-gray-800 text-hover-primary mb-1">
         {{ $user->name }}
     </a>
     <span>{{ $user->email }}</span>

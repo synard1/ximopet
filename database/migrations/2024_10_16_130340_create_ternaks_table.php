@@ -30,8 +30,8 @@ return new class extends Migration
             $table->json('data')->nullable();
             $table->string('status'); //status
             $table->string('keterangan')->nullable(); //keterangan
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
@@ -73,8 +73,8 @@ return new class extends Migration
             $table->string('status');              // active, sold, dead, culled
             $table->string('keterangan'); //keterangan
 
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -100,8 +100,8 @@ return new class extends Migration
             $table->integer('umur');
             $table->string('status');              // active, sold, dead, culled
 
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -138,8 +138,8 @@ return new class extends Migration
             $table->string('keterangan')->nullable();
             $table->string('status');                     // draft, completed, cancelled
 
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -169,8 +169,8 @@ return new class extends Migration
             $table->string('keterangan')->nullable();
             $table->integer('umur');
             $table->string('status');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
@@ -193,8 +193,8 @@ return new class extends Migration
             $table->decimal('harga', 10, 2);
             $table->dateTime('tanggal');
             $table->string('keterangan')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
@@ -220,8 +220,8 @@ return new class extends Migration
             $table->string('penyebab');
             $table->integer('umur');
             $table->string('keterangan')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
@@ -251,8 +251,8 @@ return new class extends Migration
             // $table->string('jenis_penjualan'); // normal/afkir
             $table->string('keterangan')->nullable();
             $table->string('status');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
@@ -274,8 +274,8 @@ return new class extends Migration
             $table->integer('umur');
             $table->string('status');
             $table->string('keterangan')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
@@ -297,8 +297,8 @@ return new class extends Migration
             $table->integer('umur');
             $table->string('status');
             $table->string('keterangan')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

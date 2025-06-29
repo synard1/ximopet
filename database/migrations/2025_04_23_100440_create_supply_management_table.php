@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('supply_categories', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('name');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -33,8 +33,8 @@ return new class extends Migration
             $table->json('data')->nullable();
             $table->text('description')->nullable();
             $table->string('status')->default('active')->index();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -55,8 +55,8 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->string('status')->default('draft')->index();
 
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -76,8 +76,8 @@ return new class extends Migration
             $table->decimal('converted_quantity', 12, 2);
             $table->decimal('price_per_unit', 12, 2);
             $table->decimal('price_per_converted_unit', 12, 2);
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -99,8 +99,8 @@ return new class extends Migration
             $table->decimal('quantity_in', 12, 2)->default(0);
             $table->decimal('quantity_used', 12, 2)->default(0);
             $table->decimal('quantity_mutated', 12, 2)->default(0);
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -114,8 +114,8 @@ return new class extends Migration
             $table->dateTime('usage_date');
             $table->uuid('livestock_id')->constrained()->onDelete('cascade');
             $table->decimal('total_quantity', 12, 2);
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -132,8 +132,8 @@ return new class extends Migration
             $table->decimal('quantity_taken', 12, 2);
             $table->foreign('supply_usage_id')->references('id')->on('supply_usages')->cascadeOnDelete();
             $table->foreign('supply_stock_id')->references('id')->on('supply_stocks')->cascadeOnDelete();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -148,8 +148,8 @@ return new class extends Migration
             $table->uuid('from_farm_id');
             $table->uuid('to_farm_id');
             $table->dateTime('date');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -165,8 +165,8 @@ return new class extends Migration
             $table->decimal('quantity', 12, 2);
             $table->foreign('supply_mutation_id')->references('id')->on('supply_mutations')->cascadeOnDelete();
             $table->foreign('supply_stock_id')->references('id')->on('supply_stocks')->cascadeOnDelete();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -185,8 +185,8 @@ return new class extends Migration
             $table->decimal('quantity', 12, 2);
             $table->string('status')->default('active')->index();
 
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

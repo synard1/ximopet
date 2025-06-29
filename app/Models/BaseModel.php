@@ -19,10 +19,15 @@ class BaseModel extends Model
     {
         parent::boot();
 
-        // Set created_by and company_id on creation
+        // Set created_by, updated_by and company_id on creation
         static::creating(function ($model) {
             if (!$model->created_by && Auth::id()) {
                 $model->created_by = Auth::id();
+            }
+
+            // Set updated_by during creation as well (since DB expects NOT NULL)
+            if (!$model->updated_by && Auth::id()) {
+                $model->updated_by = Auth::id();
             }
 
             // Set company_id from User model if not already set

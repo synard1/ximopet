@@ -3,13 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\BaseModel;
+// use Spatie\Permission\Models\Role;
+// use Spatie\Permission\Models\Permission;
+use App\Models\Role;
+use App\Models\Permission;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
-class Menu extends Model
+class Menu extends BaseModel
 {
+    use HasFactory;
+    use HasUuids;
+    protected $primaryKey = 'id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $fillable = [
         'parent_id',
         'name',
@@ -18,7 +29,9 @@ class Menu extends Model
         'icon',
         'location',
         'order_number',
-        'is_active'
+        'is_active',
+        'created_by',
+        'updated_by'
     ];
 
     public function parent()

@@ -26,8 +26,8 @@ return new class extends Migration
             $table->decimal('harga', 15, 2)->nullable();
             $table->string('status')->nullable();
             $table->text('notes')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             
             $table->timestamps();
             $table->softDeletes();

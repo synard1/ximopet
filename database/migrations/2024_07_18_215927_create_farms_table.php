@@ -24,8 +24,8 @@ return new class extends Migration
             $table->string('quantity')->default(0);
             $table->string('capacity')->default(0);
             $table->string('status');
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

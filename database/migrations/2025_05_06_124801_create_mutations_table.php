@@ -27,8 +27,8 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->json('payload')->nullable();
             $table->enum('mutation_scope', ['internal', 'interfarm', 'rollback'])->default('internal');
-            $table->unsignedBigInteger('created_by')->index();
-            $table->unsignedBigInteger('updated_by')->nullable()->index();
+            $table->uuid('created_by')->index();
+            $table->uuid('updated_by')->nullable()->index();
 
             $table->timestamps();
             $table->softDeletes();

@@ -14,6 +14,8 @@ use App\Observers\RoleObserver;
 use App\Observers\PermissionObserver;
 use App\Observers\LivestockDepletionObserver;
 use App\Models\LivestockDepletion;
+use Laravel\Sanctum\Sanctum;
+use App\Models\PersonalAccessToken;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -54,5 +56,8 @@ class AppServiceProvider extends ServiceProvider
         Role::observe(RoleObserver::class);
         Permission::observe(PermissionObserver::class);
         LivestockDepletion::observe(LivestockDepletionObserver::class);
+
+        // Force Sanctum to use our custom PersonalAccessToken model
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
     }
 }

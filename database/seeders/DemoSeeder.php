@@ -434,18 +434,17 @@ class DemoSeeder extends Seeder
 
     private function createItemLocationMappings()
     {
+        // Get admin user as primary user for created_by
+        $adminUser = User::where('email', 'admin@peternakan.digital')->first();
+        if (!$adminUser) {
+            $adminUser = User::first(); // Fallback to any user
+        }
+
         $farms = Farm::all();
-        $items = Item::all();
+        $warehouseLocation = InventoryLocation::where('type', 'warehouse')->first();
 
         foreach ($farms as $farm) {
-            // Get the warehouse location for this farm
-            $warehouseLocation = InventoryLocation::where('farm_id', $farm->id)
-                ->where('type', 'warehouse')
-                ->first();
-
-            if (!$warehouseLocation) {
-                continue; // Skip if no warehouse found for this farm
-            }
+            $items = Item::all();
 
             foreach ($items as $item) {
                 // Create or update the item location mapping
@@ -456,8 +455,8 @@ class DemoSeeder extends Seeder
                     ],
                     [
                         'location_id' => $warehouseLocation->id,
-                        'created_by' => 3, // Assuming 3 is a valid user ID (e.g., supervisor)
-                        'updated_by' => 3,
+                        'created_by' => $adminUser ? $adminUser->id : null,
+                        'updated_by' => $adminUser ? $adminUser->id : null,
                     ]
                 );
             }
@@ -485,6 +484,12 @@ class DemoSeeder extends Seeder
         $rekananTypes = ['Supplier', 'Customer', 'Both'];
         $faker = Faker::create('id_ID'); // Sesuaikan dengan locale yang Anda inginkan
 
+        // Get admin user as primary user for created_by
+        $adminUser = User::where('email', 'admin@peternakan.digital')->first();
+        if (!$adminUser) {
+            $adminUser = User::first(); // Fallback to any user
+        }
+
         foreach ($rekananTypes as $type) {
             for ($i = 0; $i < 5; $i++) {
                 Partner::create([
@@ -497,7 +502,7 @@ class DemoSeeder extends Seeder
                     'phone_number' => $faker->phoneNumber,
                     'email' => $faker->companyEmail,
                     'status' => 'active',
-                    'created_by' => 3,
+                    'created_by' => $adminUser ? $adminUser->id : null,
                 ]);
             }
         }
@@ -506,6 +511,12 @@ class DemoSeeder extends Seeder
     private function createDocPurchase($farm, $kandang, $location, $supervisor, $faker)
     {
         if ($supervisor) {
+            // Get admin user as primary user for created_by
+            $adminUser = User::where('email', 'admin@peternakan.digital')->first();
+            if (!$adminUser) {
+                $adminUser = User::first(); // Fallback to any user
+            }
+
             $supplier = Partner::where('type', 'Supplier')->inRandomOrder()->first();
             $docItem = Item::whereHas('category', function ($q) {
                 $q->where('name', 'DOC');
@@ -535,7 +546,7 @@ class DemoSeeder extends Seeder
                 'sisa' => $qty,
                 'notes' => 'Initial DOC Purchase',
                 'status' => 'active',
-                'created_by' => 3,
+                'created_by' => $adminUser ? $adminUser->id : null,
             ]);
 
             // Create purchase detail
@@ -556,7 +567,7 @@ class DemoSeeder extends Seeder
                 'satuan_kecil' => $docItem->satuan_kecil,
                 'konversi' => $docItem->konversi,
                 'status' => 'active',
-                'created_by' => 3,
+                'created_by' => $adminUser ? $adminUser->id : null,
             ]);
 
             // Create kelompok ternak
@@ -570,7 +581,7 @@ class DemoSeeder extends Seeder
                 'hpp' => $harga,
                 'status' => 'active',
                 'keterangan' => 'Initial DOC Purchase',
-                'created_by' => 3,
+                'created_by' => $adminUser ? $adminUser->id : null,
             ]);
 
             // Add new code: Create transaksi_ternak record
@@ -587,7 +598,7 @@ class DemoSeeder extends Seeder
                 'total_harga' => $qty * $harga,
                 'status' => 'active',
                 'keterangan' => 'Pembelian DOC Batch ' . $ternak->name,
-                'created_by' => 3,
+                'created_by' => $adminUser ? $adminUser->id : null,
             ]);
 
             // Update purchase with kelompok_ternak_id
@@ -604,7 +615,7 @@ class DemoSeeder extends Seeder
                 'berat_total' => $qty * 0.1,
                 'avg_berat' => 0.1,
                 'status' => 'active',
-                'created_by' => 3,
+                'created_by' => $adminUser ? $adminUser->id : null,
             ]);
 
             // Update kandang
@@ -613,7 +624,7 @@ class DemoSeeder extends Seeder
                 'berat' => $qty * 0.1,
                 'kelompok_ternak_id' => $ternak->id,
                 'status' => 'Digunakan',
-                'updated_by' => $supervisor->id,
+                'updated_by' => $adminUser ? $adminUser->id : null,
             ]);
         }
     }

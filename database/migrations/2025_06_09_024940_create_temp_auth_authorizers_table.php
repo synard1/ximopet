@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
 
             // User yang diberikan hak autorisasi
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignUuid('user_id')->constrained('users')->onDelete('cascade');
 
             // User yang memberikan hak autorisasi
-            $table->foreignId('authorized_by')->constrained('users')->onDelete('cascade');
+            $table->foreignUuid('authorized_by')->constrained('users')->onDelete('cascade');
 
             // Status aktif/non-aktif
             $table->boolean('is_active')->default(true);

@@ -28,6 +28,14 @@ class UsersSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
+        // Super admin manual
+        User::create([
+            'name'              => 'Admin',
+            'email'             => 'admin@peternakan.digital',
+            'password'          => Hash::make('Admin123!@'),
+            'email_verified_at' => now(),
+        ]);
+
         // Template demo emails
         $demoAccounts = [
             'admin@demo.com',

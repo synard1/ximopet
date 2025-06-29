@@ -31,8 +31,8 @@ return new class extends Migration
             $table->uuid('ternak_id')->nullable()->comment('ID kelompok ternak terkait');
             $table->string('status')->nullable()->comment('Status transaksi');
             $table->text('notes')->nullable()->comment('Catatan tambahan');
-            $table->unsignedBigInteger('created_by')->nullable()->comment('ID user yang membuat');
-            $table->unsignedBigInteger('updated_by')->nullable()->comment('ID user yang mengupdate');
+            $table->uuid('created_by')->nullable()->comment('ID user yang membuat');
+            $table->uuid('updated_by')->nullable()->comment('ID user yang mengupdate');
 
             $table->timestamps();
             $table->softDeletes();

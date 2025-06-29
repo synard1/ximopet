@@ -21,8 +21,8 @@ return new class extends Migration
             $table->json('data')->nullable();
             $table->text('description')->nullable();
             $table->string('status')->default('active')->index();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -43,8 +43,8 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->string('status')->default('draft')->index();
 
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -64,8 +64,8 @@ return new class extends Migration
             $table->decimal('converted_quantity', 12, 2);
             $table->decimal('price_per_unit', 12, 2);
             $table->decimal('price_per_converted_unit', 12, 2);
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -85,8 +85,8 @@ return new class extends Migration
             $table->decimal('quantity_in', 12, 2)->default(0);
             $table->decimal('quantity_used', 12, 2)->default(0);
             $table->decimal('quantity_mutated', 12, 2)->default(0);
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -101,8 +101,8 @@ return new class extends Migration
             $table->foreignUuid('recording_id')->constrained()->onDelete('cascade');
             $table->date('usage_date');
             $table->decimal('total_quantity', 10, 2); // jumlah awal
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -118,8 +118,8 @@ return new class extends Migration
             $table->foreignUuid('feed_id')->constrained('feeds')->onDelete('cascade');
             $table->decimal('quantity_taken', 10, 2); // jumlah awal
             $table->json('metadata')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -133,8 +133,8 @@ return new class extends Migration
             $table->date('date');
             $table->foreignUuid('from_livestock_id')->constrained('livestocks')->onDelete('cascade');
             $table->foreignUuid('to_livestock_id')->constrained('livestocks')->onDelete('cascade');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -149,8 +149,8 @@ return new class extends Migration
             $table->foreignUuid('feed_stock_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('feed_id')->constrained('feeds')->onDelete('cascade');
             $table->decimal('quantity', 12, 2);
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -161,11 +161,11 @@ return new class extends Migration
         // Tabel feed_rollbacks (info rollback secara umum)
         Schema::create('feed_rollbacks', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignId('performed_by')->constrained('users'); // siapa yang rollback
+            $table->foreignUuid('performed_by')->constrained('users'); // siapa yang rollback
             $table->string('rollback_type'); // mutation / usage
             $table->text('notes')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -179,8 +179,8 @@ return new class extends Migration
             $table->foreignUuid('feed_rollback_id')->constrained()->onDelete('cascade');
             $table->uuid('target_id'); // ID yang di-rollback (mutation_id, stock_id, dll)
             $table->string('target_type'); // mutation / stock
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -194,8 +194,8 @@ return new class extends Migration
             $table->foreignUuid('feed_rollback_id')->constrained()->onDelete('cascade');
             $table->json('before');
             $table->json('after')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -213,8 +213,8 @@ return new class extends Migration
             $table->decimal('quantity', 12, 2);
             $table->string('status')->default('active')->index();
 
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

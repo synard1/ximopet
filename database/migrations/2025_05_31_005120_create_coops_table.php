@@ -24,8 +24,8 @@ return new class extends Migration
             $table->integer('quantity')->default(0);
             $table->decimal('weight', 10, 2)->default(0);
             $table->string('status')->default('active')->index();
-            $table->unsignedBigInteger('created_by')->nullable()->index();
-            $table->unsignedBigInteger('updated_by')->nullable()->index();
+            $table->uuid('created_by')->nullable()->index();
+            $table->uuid('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 
