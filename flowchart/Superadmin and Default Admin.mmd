@@ -1,0 +1,43 @@
+graph TD
+    A[User Action Request] --> B{Check User Role}
+    
+    B -->|SuperAdmin| C[Full Access - All Operations]
+    B -->|Default Admin| D[Company Scope Access]
+    B -->|Regular Admin| E[Limited Access]
+    B -->|Regular User| F[No Admin Access]
+    
+    C --> G[Admin Operations]
+    D --> H{Operation Type}
+    E --> I[View Only/Basic Actions]
+    F --> J[Access Denied]
+    
+    H -->|Set Default Admin| K[Remove Current Default<br/>Set New Default]
+    H -->|Transfer Role| L[Transfer to Another Admin]
+    H -->|Promote User| M[Create New Admin]
+    H -->|Demote Admin| N{Is Default Admin?}
+    
+    N -->|Yes| O[Block - Cannot Demote<br/>Default Admin]
+    N -->|No| P[Demote to Regular User]
+    
+    K --> Q[CompanyUser Model Events]
+    L --> Q
+    M --> Q
+    P --> Q
+    
+    Q --> R{Validation}
+    R -->|Pass| S[Execute Operation<br/>Log Changes]
+    R -->|Fail| T[Throw Exception<br/>Rollback Transaction]
+    
+    S --> U[Update Database<br/>Sync User Model]
+    T --> V[Return Error Response]
+    
+    U --> W[Success Response<br/>Audit Log]
+    
+    style A fill:#e1f5fe
+    style C fill:#c8e6c9
+    style D fill:#fff3e0
+    style E fill:#ffecb3
+    style F fill:#ffcdd2
+    style O fill:#ffcdd2
+    style T fill:#ffcdd2
+    style W fill:#c8e6c9

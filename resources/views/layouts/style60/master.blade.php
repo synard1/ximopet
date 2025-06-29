@@ -131,7 +131,7 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
                 window.Laravel = window.Laravel || {};
                 @auth
                 window.Laravel.user = {
-                    id: {{ auth()->id() }},
+                    id: "{{ auth()->id() }}", // Wrap in quotes for UUID string
                     name: "{{ auth()->user()->name }}",
                     email: "{{ auth()->user()->email }}"
                 };
