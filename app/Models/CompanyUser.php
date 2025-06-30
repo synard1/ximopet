@@ -200,7 +200,7 @@ class CompanyUser extends BaseModel
             return ['can_delete' => true, 'reason' => ''];
         }
 
-        // Check if user to delete is default admin
+        // Check if user to delete is default admin – always protected (except by SuperAdmin above)
         if ($userToDelete->isDefaultAdmin) {
             // Get current user mapping
             $currentUser = self::where('user_id', $deletingUserId)
@@ -228,6 +228,14 @@ class CompanyUser extends BaseModel
                     'reason' => 'Default admin cannot delete themselves. Please transfer default admin role first.'
                 ];
             }
+        }
+
+        // Block deletion of company administrators (isAdmin) by non-SuperAdmin
+        if ($userToDelete->isAdmin) {
+            return [
+                'can_delete' => false,
+                'reason' => 'Administrator users cannot be deleted by non-SuperAdmin. Please downgrade the user first or ask SuperAdmin.'
+            ];
         }
 
         return ['can_delete' => true, 'reason' => ''];

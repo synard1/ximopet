@@ -17,6 +17,7 @@
         "league/flysystem-aws-s3-v3": "^3.0",
         "livewire/livewire": "^3.0",
         "pusher/pusher-php-server": "^7.2",
+        "spatie/laravel-backup": "^9.0",
         "spatie/laravel-permission": "^6.0",
         "spatie/laravel-responsecache": "^7.7",
         "yajra/laravel-datatables": "^11.0"

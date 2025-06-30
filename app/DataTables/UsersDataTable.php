@@ -9,6 +9,7 @@ use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Log;
 
 class UsersDataTable extends DataTable
 {
@@ -48,6 +49,9 @@ class UsersDataTable extends DataTable
     {
         $query = $model->newQuery();
 
+        // Include related role relationship for performance
+        $query->with('roles');
+
         // If user is not SuperAdmin
         if (!auth()->user()->hasRole('SuperAdmin')) {
             $superAdminRoleId = Role::whereName('SuperAdmin')->value('id');
@@ -56,21 +60,74 @@ class UsersDataTable extends DataTable
             $currentUserMapping = \App\Models\CompanyUser::getUserMapping();
 
             if ($currentUserMapping && $currentUserMapping->isAdmin) {
-                // If user is company admin, show all users from same company
-                return $query->whereHas('companyUsers', function ($q) use ($currentUserMapping) {
-                    $q->where('company_id', $currentUserMapping->company_id)
-                        ->where('status', 'active');
-                })->whereDoesntHave('roles', function (QueryBuilder $query) use ($superAdminRoleId) {
-                    $query->where('id', $superAdminRoleId);
+                // Company admin should see all users that belong to the same company –
+                // either via company_users mapping OR already having company_id set directly on users table
+                $companyId = $currentUserMapping->company_id;
+
+                $countPivot = User::whereHas('companyUsers', function ($qq) use ($companyId) {
+                    $qq->where('company_id', $companyId);
+                })->count();
+                Log::debug('[UsersDataTable] Pivot only count', ['company_id' => $companyId, 'count' => $countPivot]);
+
+                $countCompanyId = User::where('company_id', $companyId)->count();
+                Log::debug('[UsersDataTable] Direct company_id count', ['company_id' => $companyId, 'count' => $countCompanyId]);
+
+                $query = $query->where(function ($q) use ($companyId) {
+                    // Users linked through the pivot table (any active status allowed)
+                    $q->whereHas('companyUsers', function ($sub) use ($companyId) {
+                        $sub->where('company_id', $companyId);
+                    })
+                        // OR users whose company_id is already set (fallback for legacy data)
+                        ->orWhere('company_id', $companyId);
                 });
+
+                // Debug log
+                Log::debug('[UsersDataTable] CompanyAdmin Query', [
+                    'user_id' => auth()->id(),
+                    'company_id' => $companyId,
+                    'sql' => $query->toSql(),
+                    'bindings' => $query->getBindings(),
+                    'result_count' => $query->count(),
+                ]);
+
+                // Temporary: log roles of users in company to identify exclusion reason
+                $companyUsers = User::where(function ($q) use ($companyId) {
+                    $q->whereHas('companyUsers', function ($sub) use ($companyId) {
+                        $sub->where('company_id', $companyId);
+                    })->orWhere('company_id', $companyId);
+                })->with('roles')->get();
+                $companyUsers->each(function ($u) {
+                    Log::debug('[UsersDataTable] Company user roles', [
+                        'user_id' => $u->id,
+                        'roles' => $u->roles->pluck('name', 'id')->toArray(),
+                    ]);
+                });
+
+                return $query;
             } else {
                 // If user is not admin, only show themselves
-                return $query->where('id', auth()->id())
-                    ->whereDoesntHave('roles', function (QueryBuilder $query) use ($superAdminRoleId) {
-                        $query->where('id', $superAdminRoleId);
+                $selfQuery = $query->where('id', auth()->id())
+                    ->whereDoesntHave('roles', function (QueryBuilder $q) use ($superAdminRoleId) {
+                        $q->where('id', $superAdminRoleId);
                     });
+
+                Log::debug('[UsersDataTable] Non-Admin Self Query', [
+                    'user_id' => auth()->id(),
+                    'sql' => $selfQuery->toSql(),
+                    'bindings' => $selfQuery->getBindings(),
+                    'result_count' => $selfQuery->count(),
+                ]);
+
+                return $selfQuery;
             }
         }
+
+        Log::debug('[UsersDataTable] SuperAdmin Query', [
+            'user_id' => auth()->id(),
+            'sql' => $query->toSql(),
+            'bindings' => $query->getBindings(),
+            'result_count' => $query->count(),
+        ]);
 
         return $query;
     }
