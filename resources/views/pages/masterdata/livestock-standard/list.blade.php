@@ -5,14 +5,14 @@
 
     @section('breadcrumbs')
     @endsection
-    @if(auth()->user()->can('read livestock standard'))
+    @if(auth()->user()->can('read livestock strain standard master data'))
     <div class="card" id="standarBobotTables">
         <div class="card-header border-0 pt-6">
             <div class="card-title">
             </div>
             <div class="card-toolbar" id="cardToolbar">
                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
-                    @can('create livestock standard')
+                    @can('create livestock strain standard master data')
                     <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('showCreateForm')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}
                         Tambah Data

@@ -996,20 +996,23 @@ class Create extends Component
         // Check temp auth on every render
         $this->checkTempAuth();
 
-        $strains = LivestockStrain::active()->orderBy('name')->get();
-        $standardStrains = LivestockStrainStandard::active()->orderBy('livestock_strain_name')->get();
-        // Get farms based on user role
         $user = auth()->user();
+        $companyId = $user->company_id;
+
+        $strains = LivestockStrain::active()->where('company_id', $companyId)->orderBy('name')->get();
+        $standardStrains = LivestockStrainStandard::active()->where('company_id', $companyId)->orderBy('livestock_strain_name')->get();
+        
+        // Get farms based on user role
         if ($user->hasRole('Operator')) {
             $farmIds = $user->farmOperators()->pluck('farm_id')->toArray();
-            $farms = Farm::whereIn('id', $farmIds)->get(['id', 'name']);
+            $farms = Farm::whereIn('id', $farmIds)->where('company_id', $companyId)->get(['id', 'name']);
         } else {
-            $farms = Farm::where('status', 'active')->get(['id', 'name']);
+            $farms = Farm::where('status', 'active')->where('company_id', $companyId)->get(['id', 'name']);
         }
 
         return view('livewire.livestock-purchase.create', [
-            'vendors' => Partner::where('type', 'Supplier')->get(),
-            'expeditions' => Partner::where('type', 'Expedition')->get(),
+            'vendors' => Partner::where('type', 'Supplier')->where('company_id', $companyId)->get(),
+            'expeditions' => Partner::where('type', 'Expedition')->where('company_id', $companyId)->get(),
             'strains' => $strains,
             'standardStrains' => $standardStrains,
             'farms' => $farms,

@@ -3,22 +3,23 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\Farm;
+use App\Models\Company;
 
-class FarmFactory extends Factory
+class CompanyFactory extends Factory
 {
-    protected $model = Farm::class;
+    protected $model = Company::class;
 
     public function definition()
     {
         return [
-            'code' => $this->faker->unique()->regexify('[A-Z]{2}[0-9]{3}'),
             'name' => $this->faker->company,
             'address' => $this->faker->address,
-            'phone_number' => $this->faker->phoneNumber,
-            'contact_person' => $this->faker->name,
-            'status' => $this->faker->randomElement(['active', 'inactive']),
+            'phone' => $this->faker->phoneNumber,
             'email' => $this->faker->email,
+            'domain' => $this->faker->domainName,
+            'database' => $this->faker->word,
+            'package' => 'basic',
+            'status' => 'active',
             'notes' => $this->faker->sentence,
         ];
     }

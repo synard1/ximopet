@@ -184,7 +184,7 @@ class SupplyPurchaseDataTable extends DataTable
                         window.Laravel = {};
                     }
                     if (typeof window.Laravel.user === "undefined") {
-                        window.Laravel.user = { id: ' . (auth()->check() ? auth()->id() : 'null') . ' };
+                        window.Laravel.user = { id: ' . json_encode(auth()->check() ? auth()->id() : null) . ' };
                     }
                     
                     // ✅ PRODUCTION REAL-TIME NOTIFICATION SYSTEM INTEGRATION

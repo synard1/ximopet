@@ -9,7 +9,7 @@
     data-kt-menu="true">
 
     <!--begin::Menu item-->
-    @if(auth()->user()->can('update livestock standard'))
+    @if(auth()->user()->can('update livestock strain standard master data'))
     <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" data-kt-livestock-standard-id="{{ $livestockStrainStandard->id }}"
             data-kt-action="update_row">
@@ -20,7 +20,7 @@
     <!--end::Menu item-->
 
     <!--begin::Menu item-->
-    @if(auth()->user()->can('delete livestock standard'))
+    @if(auth()->user()->can('delete livestock strain standard master data'))
     <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" data-kt-livestock-standard-id="{{ $livestockStrainStandard->id }}"
             data-kt-action="delete_row">
