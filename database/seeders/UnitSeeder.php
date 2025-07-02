@@ -22,8 +22,8 @@ class UnitSeeder extends Seeder
         // Get company_id from the command
         $companyId = config('seeder.current_company_id');
         if (!$companyId) {
-            $this->command->warn('UnitSeeder: `company_id` not found in config, skipping.');
-            return;
+            // Fallback: seeding global/default units (no company_id)
+            $this->command->warn('UnitSeeder: `company_id` not found in config, seeding as global/default units.');
         }
 
         $units = [
@@ -70,12 +70,14 @@ class UnitSeeder extends Seeder
         foreach ($units as $unitData) {
             $searchCriteria = [
                 'code' => $unitData['code'],
-                'company_id' => $companyId,
             ];
+            if ($companyId) {
+                $searchCriteria['company_id'] = $companyId;
+            }
 
             $createData = array_merge($unitData, [
                 'created_by' => $userId,
-                'company_id' => $companyId
+                'company_id' => $companyId ?? null
             ]);
 
             $unit = Unit::firstOrCreate($searchCriteria, $createData);
