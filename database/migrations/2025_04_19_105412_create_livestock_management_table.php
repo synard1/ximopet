@@ -138,31 +138,32 @@ return new class extends Migration {
             $table->index(['livestock_id'], 'lpi_livestock_id_idx');
         });
 
-        // Livestock Mutation
+        // Livestock Mutation (header-detail pattern, merged from update migration)
         Schema::create('livestock_mutations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('company_id');
-            $table->uuid('source_livestock_id');
-            $table->uuid('destination_livestock_id')->nullable();
-            $table->datetime('tanggal');
-            $table->integer('jumlah');
-            $table->string('jenis'); // mutation type: internal, external, farm_transfer, etc.
-            $table->string('direction'); // in, out
-            $table->json('data')->nullable(); // Additional data like batch info, notes, etc.
-            $table->json('metadata')->nullable(); // Processing metadata, audit trail, etc.
-            $table->uuid('created_by')->nullable();
-            $table->uuid('updated_by')->nullable();
+            $table->uuid('company_id')->index();
+            $table->uuid('source_livestock_id')->index();
+            $table->uuid('destination_livestock_id')->nullable()->index();
+            $table->uuid('from_livestock_id')->nullable()->index();
+            $table->uuid('to_livestock_id')->nullable()->index();
+            $table->datetime('tanggal')->index();
+            $table->integer('jumlah')->default(0)->comment('Total quantity (calculated from items)');
+            $table->string('jenis')->index()->comment('Mutation type: internal, external, farm_transfer, etc.');
+            $table->string('direction')->index()->comment('Direction: in, out');
+            $table->text('keterangan')->nullable()->comment('Notes/description');
+            $table->json('data')->nullable()->comment('Additional data like batch info, notes, etc.');
+            $table->json('metadata')->nullable()->comment('Processing metadata, audit trail, etc.');
+            $table->uuid('created_by')->nullable()->index();
+            $table->uuid('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
-
-            // Foreign key constraints
             $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
             $table->foreign('source_livestock_id')->references('id')->on('livestocks')->onDelete('cascade');
             $table->foreign('destination_livestock_id')->references('id')->on('livestocks')->onDelete('cascade');
+            $table->foreign('from_livestock_id')->references('id')->on('livestocks')->onDelete('cascade');
+            $table->foreign('to_livestock_id')->references('id')->on('livestocks')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
             $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
-
-            // Indexes for performance with custom names to avoid MySQL length limits
             $table->index(['company_id', 'tanggal'], 'lm_co_date_idx');
             $table->index(['source_livestock_id', 'direction'], 'lm_src_dir_idx');
             $table->index(['destination_livestock_id', 'direction'], 'lm_dest_dir_idx');
@@ -170,27 +171,28 @@ return new class extends Migration {
             $table->index(['tanggal', 'company_id'], 'lm_date_co_idx');
             $table->index(['created_at'], 'lm_created_idx');
             $table->index(['deleted_at'], 'lm_deleted_idx');
-
-            // Composite indexes for common queries with custom names
-            $table->index(['company_id', 'source_livestock_id', 'direction'], 'lm_co_src_dir_idx');
-            $table->index(['company_id', 'destination_livestock_id', 'direction'], 'lm_co_dest_dir_idx');
-            $table->index(['source_livestock_id', 'tanggal', 'direction'], 'lm_src_date_dir_idx');
+            $table->index(['company_id', 'source_livestock_id', 'direction'], 'idx_company_source_direction');
+            $table->index(['company_id', 'destination_livestock_id', 'direction'], 'idx_company_dest_direction');
+            $table->index(['source_livestock_id', 'tanggal', 'direction'], 'idx_source_date_direction');
+            $table->index(['from_livestock_id', 'direction'], 'idx_from_direction');
+            $table->index(['to_livestock_id', 'direction'], 'idx_to_direction');
         });
-
         Schema::create('livestock_mutation_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('livestock_mutation_id')->constrained()->onDelete('cascade');
+            $table->uuid('livestock_mutation_id')->index('lmi_mutation_id_idx');
+            $table->uuid('batch_id')->nullable()->index('lmi_batch_id_idx');
             $table->integer('quantity');
             $table->decimal('weight', 10, 2)->nullable();
-            $table->string('keterangan')->nullable();
-            $table->json('payload')->nullable(); // JSON/array type column to save data
-            $table->uuid('created_by')->index();
-            $table->uuid('updated_by')->nullable()->index();
+            $table->text('keterangan')->nullable();
+            $table->json('payload')->nullable();
+            $table->uuid('created_by')->nullable()->index('lmi_created_by_idx');
+            $table->uuid('updated_by')->nullable()->index('lmi_updated_by_idx');
             $table->timestamps();
             $table->softDeletes();
-
-            $table->foreign('created_by')->references('id')->on('users');
-            $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('livestock_mutation_id')->references('id')->on('livestock_mutations')->onDelete('cascade');
+            $table->foreign('batch_id')->references('id')->on('livestock_batches')->onDelete('set null');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
         });
 
         // Livestock Sales
