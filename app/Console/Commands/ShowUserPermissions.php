@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\User; // Pastikan Anda mengimpor model User Anda
-use Spatie\Permission\Models\Permission;
+use App\Models\Permission;
 
 class ShowUserPermissions extends Command
 {

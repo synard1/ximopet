@@ -165,9 +165,15 @@
                         @foreach($roles as $role)
                         <div class="col-md-3">
                             <div class="form-check">
+                                @php
+                                $selectedRoles = is_null(old('roles')) ? $menu->roles->pluck('id')->toArray() :
+                                old('roles');
+                                $selectedRoles = array_map('strval', $selectedRoles);
+
+                                @endphp
                                 <input type="checkbox" class="form-check-input" id="role_{{ $role->id }}" name="roles[]"
-                                    value="{{ $role->id }}" {{ in_array($role->id, old('roles',
-                                $menu->roles->pluck('id')->toArray())) ? 'checked' : '' }}>
+                                    value="{{ $role->id }}" {{ in_array((string)$role->id, $selectedRoles) ? 'checked' :
+                                '' }}>
                                 <label class="form-check-label" for="role_{{ $role->id }}">
                                     {{ $role->name }}
                                 </label>
@@ -183,9 +189,14 @@
                         @foreach($permissions as $permission)
                         <div class="col-md-3">
                             <div class="form-check">
+                                @php
+                                $selectedPermissions = is_null(old('permissions')) ?
+                                $menu->permissions->pluck('id')->toArray() : old('permissions');
+                                $selectedPermissions = array_map('strval', $selectedPermissions);
+                                @endphp
                                 <input type="checkbox" class="form-check-input" id="permission_{{ $permission->id }}"
-                                    name="permissions[]" value="{{ $permission->id }}" {{ in_array($permission->id,
-                                old('permissions', $menu->permissions->pluck('id')->toArray())) ? 'checked' : '' }}>
+                                    name="permissions[]" value="{{ $permission->id }}" {{
+                                    in_array((string)$permission->id, $selectedPermissions) ? 'checked' : '' }}>
                                 <label class="form-check-label" for="permission_{{ $permission->id }}">
                                     {{ $permission->name }}
                                 </label>

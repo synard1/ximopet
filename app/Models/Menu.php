@@ -6,8 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\BaseModel;
-// use Spatie\Permission\Models\Role;
-// use Spatie\Permission\Models\Permission;
 use App\Models\Role;
 use App\Models\Permission;
 use Illuminate\Support\Facades\Auth;

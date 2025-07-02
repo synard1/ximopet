@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use Spatie\Permission\Models\Permission;
+use App\Models\Permission;
 use Illuminate\Support\Facades\Log;
 
 class PermissionInfoService

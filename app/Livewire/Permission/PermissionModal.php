@@ -3,7 +3,7 @@
 namespace App\Livewire\Permission;
 
 use Livewire\Component;
-use Spatie\Permission\Models\Permission;
+use App\Models\Permission;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 

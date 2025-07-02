@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\Events\Registered;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Support\Facades\Response; // Add this line for JSON response
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 
 
 class RegisteredUserController extends Controller

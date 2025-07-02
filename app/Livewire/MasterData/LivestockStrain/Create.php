@@ -10,8 +10,8 @@ use App\Models\LivestockStrain;
 use App\Models\Unit;
 use App\Models\UnitConversion;
 use App\Models\LivestockStrainStandard;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use App\Models\Role;
+use App\Models\Permission;
 
 class Create extends Component
 {

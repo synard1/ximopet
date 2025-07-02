@@ -4,8 +4,6 @@ namespace App\Livewire\Permission;
 
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Component;
-// use Spatie\Permission\Models\Role;
-// use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\WithFileUploads;

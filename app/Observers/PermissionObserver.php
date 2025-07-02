@@ -2,7 +2,7 @@
 
 namespace App\Observers;
 
-use Spatie\Permission\Models\Permission;
+use App\Models\Permission;
 use App\Services\RoleBackupService;
 use Illuminate\Support\Facades\Log;
 
