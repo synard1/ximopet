@@ -4,8 +4,8 @@ namespace App\Livewire\Permission;
 
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Component;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+// use Spatie\Permission\Models\Role;
+// use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\WithFileUploads;
@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Storage;
 use App\Services\RoleBackupService;
+use App\Models\Role;
+use App\Models\Permission;
 
 class RoleList extends Component
 {

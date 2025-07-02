@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('farm_operators', function (Blueprint $table) {
             $table->uuid('farm_id');
-            $table->unsignedBigInteger('user_id');
-        
+            $table->uuid('user_id');
+
             $table->foreign('user_id')->references('id')->on('users');
             $table->foreign('farm_id')->references('id')->on('farms');
-        
+
             // Define the composite primary key
-            $table->primary(['farm_id', 'user_id']); 
+            $table->primary(['farm_id', 'user_id']);
         });
     }
 

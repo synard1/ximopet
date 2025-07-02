@@ -21,8 +21,8 @@ class DatabaseSeeder extends Seeder
             RolesPermissionsSeeder::class,
             DemoSeeder::class,
             // LivestockPurchaseSeeder::class,
-            QaPermissionSeeder::class,
-            QaUserSeeder::class,
+            // QaPermissionSeeder::class,
+            // QaUserSeeder::class,
             // RoutePermissionSeeder::class,
             MenuSeeder::class,
             // UnitSeeder::class,
@@ -31,11 +31,11 @@ class DatabaseSeeder extends Seeder
             // WorkerSeeder::class,
             // OVKSeeder::class,
             // LivestockBatchSeeder::class,
-            QaTodoPermissionSeeder::class,
-            QaTodoMasterDataSeeder::class,
+            // QaTodoPermissionSeeder::class,
+            // QaTodoMasterDataSeeder::class,
             // QaChecklistSeeder::class,
-            ExpeditionSeeder::class,
-            VerificationRuleSeeder::class,
+            // ExpeditionSeeder::class,
+            // VerificationRuleSeeder::class,
         ]);
 
         // \App\Models\User::factory(20)->create();

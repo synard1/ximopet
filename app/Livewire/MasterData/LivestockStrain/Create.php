@@ -85,12 +85,12 @@ class Create extends Component
         ]);
 
         // Check if the user has the permission to create or update livestock strains
-        if (!auth()->user()->can('create livestock strain') && !$this->edit_mode) {
+        if (!auth()->user()->can('create livestock strain master data') && !$this->edit_mode) {
             $this->dispatch('error', 'You do not have permission to create livestock strains.');
             return;
         }
 
-        if (!auth()->user()->can('update livestock strain') && $this->edit_mode) {
+        if (!auth()->user()->can('update livestock strain master data') && $this->edit_mode) {
             $this->dispatch('error', 'You do not have permission to update livestock strain.');
             return;
         }
@@ -134,7 +134,7 @@ class Create extends Component
         }
 
         // Check if the user has the permission to delete livestock strains
-        if (!auth()->user()->can('delete livestock strain')) {
+        if (!auth()->user()->can('delete livestock strain master data')) {
             $this->dispatch('error', 'You do not have permission to delete livestock strain.');
             return;
         }

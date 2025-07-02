@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 use App\Models\Farm;
-use App\Models\Kandang;
+use App\Models\Coop;
 
 class FarmModal extends Component
 {
@@ -66,12 +66,10 @@ class FarmModal extends Component
     public function deleteFarmList($id)
     {
         try {
-            // Check if farm has any kandang data
-            $hasKandang = Kandang::where('farm_id', $id)->exists();
+            // Check if farm has any coop data
+            $hasCoop = Coop::where('farm_id', $id)->exists();
 
-            // dd($hasKandang);
-
-            if ($hasKandang) {
+            if ($hasCoop) {
                 $this->dispatch('error', 'Farm tidak dapat dihapus karena memiliki data kandang');
                 return;
             }

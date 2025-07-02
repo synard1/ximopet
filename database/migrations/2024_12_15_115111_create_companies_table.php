@@ -27,8 +27,8 @@ return new class extends Migration
             $table->json('config')->nullable();
             $table->string('status')->index();
             $table->string('notes')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable()->index();
-            $table->unsignedBigInteger('updated_by')->nullable()->index();
+            $table->uuid('created_by')->nullable()->index();
+            $table->uuid('updated_by')->nullable()->index();
 
             $table->timestamps();
             $table->softDeletes();

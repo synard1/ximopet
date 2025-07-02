@@ -22,9 +22,9 @@ return new class extends Migration
         Schema::create('model_verifications', function (Blueprint $table) {
             $table->id();
             $table->string('model_type');
-            $table->unsignedBigInteger('model_id');
+            $table->uuid('model_id');
             $table->string('status')->default('pending');
-            $table->foreignId('verified_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignUuid('verified_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('verified_at')->nullable();
             $table->text('verification_notes')->nullable();
             $table->json('verified_data')->nullable()->comment('Snapshot of verified data');
@@ -40,8 +40,8 @@ return new class extends Migration
         Schema::create('verification_logs', function (Blueprint $table) {
             $table->id();
             $table->string('model_type');
-            $table->unsignedBigInteger('model_id');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->uuid('model_id');
+            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
             $table->string('action')->comment('verify, reject, unlock, etc.');
             $table->text('notes')->nullable();
             $table->json('changes')->nullable()->comment('Changes made during verification');

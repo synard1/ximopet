@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
 
             // User yang mendapat autorisasi
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignUuid('user_id')->constrained('users')->onDelete('cascade');
 
             // User yang memberikan autorisasi (nullable untuk password-based auth)
-            $table->foreignId('authorizer_user_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignUuid('authorizer_user_id')->nullable()->constrained('users')->onDelete('set null');
 
             // Action yang dilakukan: 'granted', 'revoked', 'expired'
             $table->enum('action', ['granted', 'revoked', 'expired'])->default('granted');

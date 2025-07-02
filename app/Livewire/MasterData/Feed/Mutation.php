@@ -91,20 +91,7 @@ class Mutation extends Component
                 $q->where('user_id', auth()->id());
             });
         })->get();
-        $this->livestocks = Livestock::whereIn('id', function ($query) {
-            $query->select('livestock_id')
-                ->from('current_supplies')
-                ->where('status', 'active')
-                ->where('quantity', '>', 0)
-                ->groupBy('livestock_id');
-        })
-            ->when(auth()->user()->hasRole('Operator'), function ($query) {
-                $query->whereHas('farm.farmOperators', function ($q) {
-                    $q->where('user_id', auth()->id());
-                });
-            })
-            ->with('farm') // Jika ingin akses farm->name di blade
-            ->get();
+
 
         // $this->livestocks = FeedStock::distinct('livestock_id')
         //     ->with('livestock:id,name') // Eager load the 'farm' relationship to access the name
@@ -289,8 +276,25 @@ class Mutation extends Component
 
     public function render()
     {
+        $this->livestocks = Livestock::whereIn('id', function ($query) {
+            $query->select('livestock_id')
+                ->from('current_feeds')
+                ->where('status', 'active')
+                ->where('quantity', '>', 0)
+                ->groupBy('livestock_id');
+        })
+            ->when(auth()->user()->hasRole('Operator'), function ($query) {
+                $query->whereHas('farm.farmOperators', function ($q) {
+                    $q->where('user_id', auth()->id());
+                });
+            })
+            ->with('farm') // Jika ingin akses farm->name di blade
+            ->get();
+
+        // dd($this->livestocks);
         return view('livewire.master-data.feed.mutation', [
             'units' => Unit::all(),
+            'livestocks' => $this->livestocks,
         ]);
     }
 

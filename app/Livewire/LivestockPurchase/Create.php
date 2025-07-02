@@ -50,7 +50,7 @@ class Create extends Component
     public $invoice_number;
     public $date;
     public $supplier_id;
-    public $expedition_id;
+    public $expedition_id = null;
     public $expedition_fee = 0;
     public $items = [];
     public $livestock_id;
@@ -88,6 +88,34 @@ class Create extends Component
     public function mount()
     {
         $this->initializeTempAuth();
+    }
+
+    /**
+     * Normalize expedition_id to ensure it's either a valid UUID or null
+     */
+    private function normalizeExpeditionId($expeditionId)
+    {
+        // If it's null, return null
+        if ($expeditionId === null) {
+            return null;
+        }
+
+        // If it's an empty string, return null
+        if ($expeditionId === '') {
+            return null;
+        }
+
+        // If it's a valid UUID format, return it
+        if (is_string($expeditionId) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $expeditionId)) {
+            return $expeditionId;
+        }
+
+        // If it's not a valid UUID, return null
+        Log::warning('Invalid expedition_id format detected', [
+            'expedition_id' => $expeditionId,
+            'type' => gettype($expeditionId)
+        ]);
+        return null;
     }
 
     public function updatedFarmId($value)
@@ -636,25 +664,25 @@ class Create extends Component
                 'supplier_id' => 'required|exists:partners,id',
                 'farm_id' => 'required|exists:farms,id',
                 'coop_id' => 'required|exists:coops,id',
+                'expedition_id' => 'nullable|exists:partners,id',
             ]);
             Log::info('Main fields validated');
 
-            // Validasi config-based (jika ada)
-            // ... existing code ...
             if (!empty($this->errorItems)) {
                 Log::warning('Config-based validation failed', ['errors' => $this->errorItems]);
                 return;
             }
             Log::info('Config-based validation passed');
 
-            // Siapkan data untuk LivestockPurchase
+            $normalizedExpeditionId = $this->normalizeExpeditionId($this->expedition_id);
+
             $purchaseData = [
                 'invoice_number' => $this->invoice_number,
                 'tanggal' => $this->date,
                 'supplier_id' => $this->supplier_id,
                 'farm_id' => $this->farm_id,
                 'coop_id' => $this->coop_id,
-                'expedition_id' => $this->expedition_id ?? null,
+                'expedition_id' => $normalizedExpeditionId,
                 'expedition_fee' => $this->expedition_fee ?? 0,
                 'status' => LivestockPurchase::STATUS_DRAFT,
                 'updated_by' => auth()->id(),
@@ -669,13 +697,27 @@ class Create extends Component
                 ]
             ];
             Log::info('Prepared purchase data', $purchaseData);
+            Log::info('Expedition ID debug info', [
+                'raw_expedition_id' => $this->expedition_id,
+                'expedition_id_type' => gettype($this->expedition_id),
+                'normalized_expedition_id' => $normalizedExpeditionId,
+                'normalized_type' => gettype($normalizedExpeditionId)
+            ]);
 
             DB::beginTransaction();
             Log::info('DB transaction started');
 
-            // Create purchase record
-            $purchase = LivestockPurchase::create($purchaseData);
-            Log::info('LivestockPurchase created', ['id' => $purchase->id]);
+            if ($this->edit_mode && $this->pembelianId) {
+                // UPDATE MODE
+                $purchase = LivestockPurchase::findOrFail($this->pembelianId);
+                $purchase->update($purchaseData);
+                // Hapus semua item lama, lalu insert ulang (atau bisa diupdate per item jika ingin lebih advance)
+                LivestockPurchaseItem::where('livestock_purchase_id', $purchase->id)->delete();
+            } else {
+                // CREATE MODE
+                $purchase = LivestockPurchase::create($purchaseData);
+            }
+            Log::info('LivestockPurchase saved', ['id' => $purchase->id]);
 
             // Proses setiap item
             foreach ($this->items as $item) {
@@ -686,13 +728,11 @@ class Create extends Component
                 $periodeFormat = 'PR-' . $farm->code . '-' . $kandang->code . '-' . Carbon::parse($purchase->tanggal)->format('dmY');
                 $periode = $this->batch_name ?? $periodeFormat;
 
-                // Hitung nilai-nilai
                 $weightPerUnit = $item['weight_type'] === 'per_unit' ? $item['weight_value'] : ($item['weight_value'] / $item['quantity']);
                 $pricePerUnit = $item['price_type'] === 'per_unit' ? $item['price_value'] : ($item['price_value'] / $item['quantity']);
                 $weightTotal = $item['weight_type'] === 'per_unit' ? ($item['weight_value'] * $item['quantity']) : $item['weight_value'];
                 $priceTotal = $item['price_type'] === 'per_unit' ? ($item['price_value'] * $item['quantity']) : $item['price_value'];
 
-                // Siapkan data untuk Livestock dan LivestockBatch
                 $livestockData = [
                     'name' => $periode,
                     'farm_id' => $farm->id,
@@ -727,7 +767,6 @@ class Create extends Component
                     'status' => 'active',
                 ];
 
-                // Create LivestockPurchaseItem dengan data Livestock dan Batch
                 LivestockPurchaseItem::create([
                     'tanggal' => $this->date,
                     'livestock_purchase_id' => $purchase->id,
@@ -753,7 +792,6 @@ class Create extends Component
                 ]);
             }
 
-            // Proses verifikasi (jika ada)
             if (method_exists($this, 'verifyPurchase')) {
                 Log::info('Verifying purchase', ['purchase_id' => $purchase->id]);
                 $this->verifyPurchase([
@@ -761,15 +799,12 @@ class Create extends Component
                     'user_id' => auth()->id(),
                 ], $this->notes ?? null);
                 Log::info('Purchase verified, generating livestock and batch', ['purchase_id' => $purchase->id]);
-                // Generate livestock and batches
                 $this->generateLivestockAndBatch($purchase->id);
             }
 
             DB::commit();
             Log::info('DB transaction committed');
             $this->dispatch('success', 'Pembelian berhasil disimpan');
-            // $this->dispatch('refresh-datatable');
-
             $this->close();
             Log::info('Form reset after save');
         } catch (\Exception $e) {
@@ -996,20 +1031,23 @@ class Create extends Component
         // Check temp auth on every render
         $this->checkTempAuth();
 
-        $strains = LivestockStrain::active()->orderBy('name')->get();
-        $standardStrains = LivestockStrainStandard::active()->orderBy('livestock_strain_name')->get();
-        // Get farms based on user role
         $user = auth()->user();
+        $companyId = $user->company_id;
+
+        $strains = LivestockStrain::active()->where('company_id', $companyId)->orderBy('name')->get();
+        $standardStrains = LivestockStrainStandard::active()->where('company_id', $companyId)->orderBy('livestock_strain_name')->get();
+
+        // Get farms based on user role
         if ($user->hasRole('Operator')) {
             $farmIds = $user->farmOperators()->pluck('farm_id')->toArray();
-            $farms = Farm::whereIn('id', $farmIds)->get(['id', 'name']);
+            $farms = Farm::whereIn('id', $farmIds)->where('company_id', $companyId)->get(['id', 'name']);
         } else {
-            $farms = Farm::where('status', 'active')->get(['id', 'name']);
+            $farms = Farm::where('status', 'active')->where('company_id', $companyId)->get(['id', 'name']);
         }
 
         return view('livewire.livestock-purchase.create', [
-            'vendors' => Partner::where('type', 'Supplier')->get(),
-            'expeditions' => Partner::where('type', 'Expedition')->get(),
+            'vendors' => Partner::where('type', 'Supplier')->where('company_id', $companyId)->get(),
+            'expeditions' => Partner::where('type', 'Expedition')->where('company_id', $companyId)->get(),
             'strains' => $strains,
             'standardStrains' => $standardStrains,
             'farms' => $farms,
@@ -1369,15 +1407,12 @@ class Create extends Component
             $this->date = $pembelian->tanggal;
             $this->batch_name = $pembelian->details->first()->livestock->name ?? null;
             $this->invoice_number = $pembelian->invoice_number;
-            $this->supplier_id = $pembelian->vendor_id;
-            $this->expedition_id = $pembelian->expedition_id;
+            $this->supplier_id = $pembelian->supplier_id; // FIX: gunakan supplier_id, bukan vendor_id
+            $this->expedition_id = $this->normalizeExpeditionId($pembelian->expedition_id);
             $this->expedition_fee = $pembelian->expedition_fee;
             $this->status = $pembelian->status;
 
-            // Get farm_id and coop_id from the first livestock record
-            // $firstLivestock = $pembelian->details->first()->livestock;
             $firstLivestock = $pembelian->details->first()->data['livestock'];
-            // dd($firstLivestock['farm_id']);
             if ($firstLivestock) {
                 $this->farm_id = $firstLivestock['farm_id'];
                 $this->coop_id = $firstLivestock['coop_id'];
@@ -1387,12 +1422,8 @@ class Create extends Component
                     ->get();
             }
 
-            // dd($this->farm_id, $this->coop_id);
-
             foreach ($pembelian->details as $item) {
                 $livestock = $item->data['batch'];
-                // dd($livestock);
-                // dd($livestock['livestock_strain_id']);
                 if ($livestock) {
                     $batch = $item->livestockBatches->first();
                     $this->items[] = [
@@ -1409,8 +1440,6 @@ class Create extends Component
                         'weight_value' => $item->weight_value ?? null,
                     ];
                 }
-
-                // dd($this->items);
             }
         }
 
@@ -1447,6 +1476,7 @@ class Create extends Component
                 Log::info('Using company livestock recording config', [
                     'company_id' => $company->id,
                     'company_name' => $company->name,
+
                     'config_source' => 'company_database'
                 ]);
             } else {
@@ -1456,13 +1486,13 @@ class Create extends Component
                 ]);
             }
 
-            Log::info('Using livestock recording config:', ['config' => $recordingConfig]);
+            // Log::info('Using livestock recording config:', ['config' => $recordingConfig]);
 
-            $validationResult = $this->validateRecordingMethodConfig($recordingConfig);
-            if (!$validationResult['is_valid']) {
-                Log::error('Recording method configuration validation failed:', ['errors' => $validationResult['errors']]);
-                throw new \Exception('Konfigurasi recording method tidak valid: ' . implode(', ', $validationResult['errors']));
-            }
+            // $validationResult = $this->validateRecordingMethodConfig($recordingConfig);
+            // if (!$validationResult['is_valid']) {
+            //     Log::error('Recording method configuration validation failed:', ['errors' => $validationResult['errors']]);
+            //     throw new \Exception('Konfigurasi recording method tidak valid: ' . implode(', ', $validationResult['errors']));
+            // }
 
             // Cek apakah sudah pernah dibuat batch untuk purchase ini
             $existingBatches = \App\Models\LivestockBatch::where('source_type', 'purchase')

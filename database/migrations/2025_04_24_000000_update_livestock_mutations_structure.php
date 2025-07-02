@@ -53,8 +53,8 @@ return new class extends Migration
             $table->json('metadata')->nullable()->comment('Processing metadata, audit trail, etc.');
 
             // Audit fields (bigint to match User model)
-            $table->unsignedBigInteger('created_by')->nullable()->index();
-            $table->unsignedBigInteger('updated_by')->nullable()->index();
+            $table->uuid('created_by')->nullable()->index();
+            $table->uuid('updated_by')->nullable()->index();
 
             $table->timestamps();
             $table->softDeletes();
@@ -122,8 +122,8 @@ return new class extends Migration
                 $table->decimal('weight', 10, 2)->nullable();
                 $table->text('keterangan')->nullable();
                 $table->json('payload')->nullable();
-                $table->unsignedBigInteger('created_by')->nullable()->index('lmi_created_by_idx');
-                $table->unsignedBigInteger('updated_by')->nullable()->index('lmi_updated_by_idx');
+                $table->uuid('created_by')->nullable()->index('lmi_created_by_idx');
+                $table->uuid('updated_by')->nullable()->index('lmi_updated_by_idx');
                 $table->timestamps();
                 $table->softDeletes();
 
@@ -154,8 +154,8 @@ return new class extends Migration
             $table->foreignUuid('from_livestock_id')->constrained('livestocks')->onDelete('cascade');
             $table->foreignUuid('to_livestock_id')->constrained('livestocks')->onDelete('cascade');
             $table->string('keterangan')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -170,8 +170,8 @@ return new class extends Migration
             $table->decimal('weight', 10, 2)->nullable();
             $table->string('keterangan')->nullable();
             $table->json('payload')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

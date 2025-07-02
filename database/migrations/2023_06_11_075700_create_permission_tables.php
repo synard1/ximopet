@@ -11,6 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         $teams = config('permission.teams');
         $tableNames = config('permission.table_names');
         $columnNames = config('permission.column_names');
@@ -22,7 +24,8 @@ return new class extends Migration
 
         Schema::create($tableNames['permissions'], static function (Blueprint $table) {
             // $table->engine('InnoDB');
-            $table->bigIncrements('id'); // permission id
+            $table->uuid('id')->primary()->unique(); // permission id
+            $table->string('company_id')->nullable();
             $table->string('name');       // For MyISAM use string('name', 225); // (or 166 for InnoDB with Redundant/Compact row format)
             $table->string('guard_name'); // For MyISAM use string('guard_name', 25);
             $table->timestamps();
@@ -32,11 +35,12 @@ return new class extends Migration
 
         Schema::create($tableNames['roles'], static function (Blueprint $table) use ($teams, $columnNames) {
             // $table->engine('InnoDB');
-            $table->bigIncrements('id'); // role id
+            $table->uuid('id')->primary()->unique(); // role id
             if ($teams || config('permission.testing')) { // permission.testing is a fix for sqlite testing
                 $table->unsignedBigInteger($columnNames['team_foreign_key'])->nullable();
                 $table->index($columnNames['team_foreign_key'], 'roles_team_foreign_key_index');
             }
+            $table->string('company_id')->nullable();
             $table->string('name');       // For MyISAM use string('name', 225); // (or 166 for InnoDB with Redundant/Compact row format)
             $table->string('guard_name'); // For MyISAM use string('guard_name', 25);
             $table->timestamps();
@@ -48,10 +52,10 @@ return new class extends Migration
         });
 
         Schema::create($tableNames['model_has_permissions'], static function (Blueprint $table) use ($tableNames, $columnNames, $pivotPermission, $teams) {
-            $table->unsignedBigInteger($pivotPermission);
+            $table->uuid($pivotPermission);
 
             $table->string('model_type');
-            $table->unsignedBigInteger($columnNames['model_morph_key']);
+            $table->uuid($columnNames['model_morph_key']);
             $table->index([$columnNames['model_morph_key'], 'model_type'], 'model_has_permissions_model_id_model_type_index');
 
             $table->foreign($pivotPermission)
@@ -62,20 +66,23 @@ return new class extends Migration
                 $table->unsignedBigInteger($columnNames['team_foreign_key']);
                 $table->index($columnNames['team_foreign_key'], 'model_has_permissions_team_foreign_key_index');
 
-                $table->primary([$columnNames['team_foreign_key'], $pivotPermission, $columnNames['model_morph_key'], 'model_type'],
-                    'model_has_permissions_permission_model_type_primary');
+                $table->primary(
+                    [$columnNames['team_foreign_key'], $pivotPermission, $columnNames['model_morph_key'], 'model_type'],
+                    'model_has_permissions_permission_model_type_primary'
+                );
             } else {
-                $table->primary([$pivotPermission, $columnNames['model_morph_key'], 'model_type'],
-                    'model_has_permissions_permission_model_type_primary');
+                $table->primary(
+                    [$pivotPermission, $columnNames['model_morph_key'], 'model_type'],
+                    'model_has_permissions_permission_model_type_primary'
+                );
             }
-
         });
 
         Schema::create($tableNames['model_has_roles'], static function (Blueprint $table) use ($tableNames, $columnNames, $pivotRole, $teams) {
-            $table->unsignedBigInteger($pivotRole);
+            $table->uuid($pivotRole);
 
             $table->string('model_type');
-            $table->unsignedBigInteger($columnNames['model_morph_key']);
+            $table->uuid($columnNames['model_morph_key']);
             $table->index([$columnNames['model_morph_key'], 'model_type'], 'model_has_roles_model_id_model_type_index');
 
             $table->foreign($pivotRole)
@@ -86,17 +93,21 @@ return new class extends Migration
                 $table->unsignedBigInteger($columnNames['team_foreign_key']);
                 $table->index($columnNames['team_foreign_key'], 'model_has_roles_team_foreign_key_index');
 
-                $table->primary([$columnNames['team_foreign_key'], $pivotRole, $columnNames['model_morph_key'], 'model_type'],
-                    'model_has_roles_role_model_type_primary');
+                $table->primary(
+                    [$columnNames['team_foreign_key'], $pivotRole, $columnNames['model_morph_key'], 'model_type'],
+                    'model_has_roles_role_model_type_primary'
+                );
             } else {
-                $table->primary([$pivotRole, $columnNames['model_morph_key'], 'model_type'],
-                    'model_has_roles_role_model_type_primary');
+                $table->primary(
+                    [$pivotRole, $columnNames['model_morph_key'], 'model_type'],
+                    'model_has_roles_role_model_type_primary'
+                );
             }
         });
 
         Schema::create($tableNames['role_has_permissions'], static function (Blueprint $table) use ($tableNames, $pivotRole, $pivotPermission) {
-            $table->unsignedBigInteger($pivotPermission);
-            $table->unsignedBigInteger($pivotRole);
+            $table->uuid($pivotPermission);
+            $table->uuid($pivotRole);
 
             $table->foreign($pivotPermission)
                 ->references('id') // permission id
@@ -114,6 +125,8 @@ return new class extends Migration
         app('cache')
             ->store(config('permission.cache.store') != 'default' ? config('permission.cache.store') : null)
             ->forget(config('permission.cache.key'));
+
+        Schema::enableForeignKeyConstraints();
     }
 
     /**

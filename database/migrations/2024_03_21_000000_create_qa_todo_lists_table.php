@@ -16,13 +16,13 @@ return new class extends Migration
             $table->enum('environment', ['dev', 'staging', 'production']);
             $table->enum('priority', ['low', 'medium', 'high', 'critical']);
             $table->enum('status', ['pending', 'in_progress', 'completed', 'blocked'])->default('pending');
-            $table->foreignId('assigned_to')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->uuid('assigned_to')->nullable()->constrained('users')->nullOnDelete();
+            $table->uuid('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('url')->nullable();
             $table->date('due_date')->nullable();
             $table->text('notes')->nullable();
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

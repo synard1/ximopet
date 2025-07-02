@@ -64,6 +64,118 @@
     @push('styles')
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+    <style>
+        /* Responsive SweetAlert2 Modal */
+        .swal-responsive-popup {
+            max-width: 90vw !important;
+            width: 600px !important;
+            min-width: 500px !important;
+            font-size: 15px !important;
+            max-height: 90vh !important;
+            overflow: hidden !important;
+        }
+
+        .swal-responsive-title {
+            font-size: 1.5rem !important;
+            padding: 0.75rem 0 !important;
+            margin-bottom: 0.5rem !important;
+        }
+
+        .swal-responsive-content {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-height: calc(90vh - 180px) !important;
+            overflow-y: auto !important;
+        }
+
+        .swal-responsive-actions {
+            margin-top: 1.5rem !important;
+            gap: 1rem !important;
+            padding-top: 1rem !important;
+            border-top: 1px solid #e9ecef !important;
+        }
+
+        /* Import preview content styling */
+        .import-preview {
+            padding: 0.5rem 0 !important;
+        }
+
+        .import-preview .row.g-2 {
+            margin-bottom: 1rem !important;
+        }
+
+        .import-preview .text-center.p-2 {
+            padding: 1rem !important;
+            border-radius: 8px !important;
+        }
+
+        .import-preview .fw-bold {
+            font-size: 1.5rem !important;
+            margin-bottom: 0.25rem !important;
+        }
+
+        .import-preview small.text-muted {
+            font-size: 0.875rem !important;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .swal-responsive-popup {
+                margin: 1rem !important;
+                max-width: calc(100vw - 2rem) !important;
+                width: auto !important;
+                min-width: auto !important;
+            }
+
+            .swal-responsive-title {
+                font-size: 1.25rem !important;
+            }
+
+            .import-preview .fw-bold {
+                font-size: 1.25rem !important;
+            }
+
+            .swal-responsive-actions {
+                gap: 0.5rem !important;
+            }
+
+            .swal-responsive-actions button {
+                font-size: 0.875rem !important;
+                padding: 0.5rem 1rem !important;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .swal-responsive-popup {
+                margin: 0.5rem !important;
+                max-width: calc(100vw - 1rem) !important;
+            }
+
+            .import-preview .badge-sm {
+                font-size: 0.75rem !important;
+                padding: 0.25rem 0.5rem !important;
+            }
+        }
+
+        /* Alert and badge styling */
+        .alert-sm {
+            padding: 0.75rem 1rem !important;
+            font-size: 0.875rem !important;
+            margin-bottom: 0 !important;
+        }
+
+        .badge-sm {
+            font-size: 0.8rem !important;
+            padding: 0.35rem 0.65rem !important;
+            margin: 0.1rem !important;
+        }
+
+        /* Format badge styling */
+        .import-preview .badge.fs-6 {
+            font-size: 1rem !important;
+            padding: 0.5rem 1rem !important;
+        }
+    </style>
     @endpush
 
     @push('scripts')
@@ -196,10 +308,271 @@
             });
 
             fileInput.on('change', function() {
+                console.log('File input changed, files:', this.files);
                 if (this.files.length > 0) {
-                    importForm.submit();
+                    console.log('File selected:', this.files[0].name);
+                    showImportPreview(this.files[0]);
                 }
             });
+
+            function showImportPreview(file) {
+                console.log('showImportPreview called with file:', file.name);
+                
+                // Show loading
+                Swal.fire({
+                    title: 'Analyzing File',
+                    text: 'Please wait while we analyze your menu configuration...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Create FormData for file upload
+                const formData = new FormData();
+                formData.append('menu_file', file);
+                formData.append('_token', '{{ csrf_token() }}');
+
+                console.log('Making AJAX request to:', '{{ route('administrator.menu.import-preview') }}');
+
+                // Call preview endpoint
+                $.ajax({
+                    url: '{{ route('administrator.menu.import-preview') }}',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        console.log('Preview response:', response);
+                        if (response && response.success) {
+                            if (response.preview && response.validation) {
+                                showPreviewModal(response.preview, response.validation, file);
+                            } else {
+                                console.error('Invalid response structure:', response);
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: 'Invalid response structure from server. Check console for details.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        } else {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: response?.error || 'Failed to analyze menu file.',
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Preview error:', xhr);
+                        let errorMessage = 'Failed to analyze menu file.';
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage = xhr.responseJSON.error;
+                        }
+                        Swal.fire({
+                            title: 'Error!',
+                            text: errorMessage,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            }
+
+            function showPreviewModal(preview, validation, file) {
+                console.log('showPreviewModal called with:', { preview, validation });
+                
+                // Provide default values to prevent undefined errors
+                const safePreview = {
+                    format: preview?.format || 'unknown',
+                    total_menus: preview?.total_menus || 0,
+                    parent_menus: preview?.parent_menus || 0,
+                    child_menus: preview?.child_menus || 0,
+                    unique_roles: preview?.unique_roles || 0,
+                    unique_permissions: preview?.unique_permissions || 0,
+                    roles: preview?.roles || [],
+                    permissions: preview?.permissions || []
+                };
+
+                const safeValidation = {
+                    errors: validation?.errors || [],
+                    warnings: validation?.warnings || []
+                };
+
+                let validationHtml = '';
+                if (safeValidation.errors.length > 0) {
+                    validationHtml = `
+                        <div class="alert alert-danger">
+                            <h6>Validation Errors:</h6>
+                            <ul class="mb-0">
+                                ${safeValidation.errors.map(error => `<li>${error}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                let warningsHtml = '';
+                if (safeValidation.warnings.length > 0) {
+                    warningsHtml = `
+                        <div class="alert alert-warning">
+                            <h6>Warnings:</h6>
+                            <ul class="mb-0">
+                                ${safeValidation.warnings.map(warning => `<li>${warning}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                const previewHtml = `
+                    <div class="import-preview">
+                        ${validationHtml}
+                        ${warningsHtml}
+                        
+                        <!-- Summary Section -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-4">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="fw-bold text-primary">${safePreview.total_menus}</div>
+                                    <small class="text-muted">Total Menus</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="fw-bold text-success">${safePreview.unique_roles}</div>
+                                    <small class="text-muted">Roles</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="fw-bold text-info">${safePreview.unique_permissions}</div>
+                                    <small class="text-muted">Permissions</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Format Detection -->
+                        <div class="d-flex align-items-center justify-content-center mb-3">
+                            <span class="badge badge-${safePreview.format === 'legacy' ? 'warning' : 'success'} fs-6">
+                                ${safePreview.format.toUpperCase()} Format
+                            </span>
+                        </div>
+
+                        <!-- Roles & Permissions -->
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <h6 class="fw-bold text-muted mb-2">ROLES FOUND:</h6>
+                                    <div>
+                                        ${safePreview.roles.length > 0 ? 
+                                            safePreview.roles.slice(0, 5).map(role => `<span class="badge badge-primary badge-sm me-1 mb-1">${role}</span>`).join('') +
+                                            (safePreview.roles.length > 5 ? `<span class="badge badge-secondary badge-sm">+${safePreview.roles.length - 5} more</span>` : '') :
+                                            '<span class="text-muted">No roles found</span>'
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <h6 class="fw-bold text-muted mb-2">PERMISSIONS FOUND:</h6>
+                                    <div>
+                                        ${safePreview.permissions.length > 0 ? 
+                                            safePreview.permissions.slice(0, 5).map(permission => `<span class="badge badge-info badge-sm me-1 mb-1">${permission}</span>`).join('') +
+                                            (safePreview.permissions.length > 5 ? `<span class="badge badge-secondary badge-sm">+${safePreview.permissions.length - 5} more</span>` : '') :
+                                            '<span class="text-muted">No permissions found</span>'
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${safePreview.format === 'legacy' ? `
+                            <div class="alert alert-warning alert-sm mt-3 py-2">
+                                <i class="fa fa-info-circle me-1"></i>
+                                <small><strong>Legacy Format:</strong> Integer IDs will be converted to UUIDs.</small>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                const canImport = safeValidation.errors.length === 0;
+
+                Swal.fire({
+                    title: 'Import Preview',
+                    html: previewHtml,
+                    width: '600px',
+                    padding: '1.5rem',
+                    showCancelButton: true,
+                    confirmButtonText: canImport ? 'Import Configuration' : 'Fix Errors First',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: canImport ? '#198754' : '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    buttonsStyling: true,
+                    heightAuto: false,
+                    scrollbarPadding: false,
+                    customClass: {
+                        popup: 'swal-responsive-popup',
+                        title: 'swal-responsive-title',
+                        htmlContainer: 'swal-responsive-content',
+                        actions: 'swal-responsive-actions'
+                    },
+                    preConfirm: () => {
+                        if (!canImport) {
+                            Swal.showValidationMessage('Please fix validation errors before importing');
+                            return false;
+                        }
+                        return true;
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed && canImport) {
+                        // Proceed with actual import
+                        proceedWithImport(file);
+                    }
+                });
+            }
+
+            function proceedWithImport(file) {
+                // Show import progress
+                Swal.fire({
+                    title: 'Importing Menu Configuration',
+                    text: 'Please wait while we import your menu configuration...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Create FormData for actual import
+                const formData = new FormData();
+                formData.append('menu_file', file);
+                formData.append('_token', '{{ csrf_token() }}');
+
+                // Submit to actual import endpoint
+                $.ajax({
+                    url: '{{ route('administrator.menu.import') }}',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        // Handle redirect response
+                        window.location.reload();
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'Failed to import menu configuration.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        Swal.fire({
+                            title: 'Import Failed!',
+                            text: errorMessage,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            }
 
             // Add confirmation for duplicate action
             $(document).on('submit', '.duplicate-form', function(e) {

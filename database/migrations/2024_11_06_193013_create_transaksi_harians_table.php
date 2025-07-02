@@ -21,8 +21,8 @@ return new class extends Migration
             $table->uuid('farm_id')->nullable();
             $table->uuid('coop_id')->nullable();
             $table->text('notes')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -44,8 +44,8 @@ return new class extends Migration
             $table->decimal('harga', 8, 2)->nullable(); // For sales
             $table->text('notes')->nullable(); // Additional notes for any type of transaction
             $table->json('payload')->nullable(); // JSON/array type column to save data
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

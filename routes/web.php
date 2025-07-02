@@ -145,6 +145,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware(['auth', 'role:SuperAdmin'])->name('menu.')->prefix('menu')->group(function () {
             // Add export route BEFORE the resource route
             Route::get('export', [MenuController::class, 'export'])->name('export');
+            // Add import preview route BEFORE the import route
+            Route::post('import-preview', [MenuController::class, 'importPreview'])->name('import-preview');
             // Add import route BEFORE the resource route
             Route::post('import', [MenuController::class, 'import'])->name('import');
 

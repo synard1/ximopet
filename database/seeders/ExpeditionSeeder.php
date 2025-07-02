@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Partner;
+use App\Models\User;
 use Illuminate\Support\Str;
 
 class ExpeditionSeeder extends Seeder
@@ -13,6 +14,12 @@ class ExpeditionSeeder extends Seeder
      */
     public function run(): void
     {
+        // Get admin user as primary user for created_by
+        $adminUser = User::where('email', 'admin@peternakan.digital')->first();
+        if (!$adminUser) {
+            $adminUser = User::first(); // Fallback to any user
+        }
+
         $expeditions = [
             [
                 'code' => 'EXP001',
@@ -72,8 +79,8 @@ class ExpeditionSeeder extends Seeder
                 'address' => $expedition['address'],
                 'description' => $expedition['description'],
                 'status' => $expedition['status'],
-                'created_by' => 1,
-                'updated_by' => 1,
+                'created_by' => $adminUser ? $adminUser->id : null,
+                'updated_by' => $adminUser ? $adminUser->id : null,
             ]);
         }
     }

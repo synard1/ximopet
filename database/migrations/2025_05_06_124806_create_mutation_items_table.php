@@ -19,8 +19,8 @@ return new class extends Migration
             $table->uuid('stock_id'); // ID dari stok yang digunakan
             $table->integer('quantity');
             $table->json('unit_metadata')->nullable();
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

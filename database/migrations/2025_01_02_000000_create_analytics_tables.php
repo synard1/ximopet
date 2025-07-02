@@ -40,8 +40,8 @@ return new class extends Migration
             $table->decimal('production_index', 8, 2)->default(0);
             $table->decimal('efficiency_score', 5, 2)->default(0);
 
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -83,8 +83,8 @@ return new class extends Migration
 
             $table->json('detailed_metrics')->nullable();
 
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -117,8 +117,8 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->json('additional_targets')->nullable();
 
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -143,10 +143,10 @@ return new class extends Migration
             $table->text('recommendation')->nullable();
             $table->boolean('is_resolved')->default(false);
             $table->timestamp('resolved_at')->nullable();
-            $table->unsignedBigInteger('resolved_by')->nullable();
+            $table->uuid('resolved_by')->nullable();
 
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

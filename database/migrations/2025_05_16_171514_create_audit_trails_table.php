@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('audit_trails', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->unsignedBigInteger('user_id')->index();
+            $table->uuid('user_id')->index();
             $table->string('action')->index();
             $table->string('model_type')->index();
             $table->string('model_name');
@@ -26,8 +26,8 @@ return new class extends Migration
             $table->json('additional_info')->nullable();
             $table->json('user_info');
             $table->timestamp('timestamp');
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
             $table->string('table_name')->index();
 
             $table->timestamps();

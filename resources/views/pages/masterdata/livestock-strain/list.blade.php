@@ -6,7 +6,7 @@
 
     @section('breadcrumbs')
     @endsection
-    @if(auth()->user()->can('read livestock strain'))
+    @if(auth()->user()->can('read livestock strain master data'))
     <div class="card">
         <!--begin::Card header-->
         <div class="card-header border-0 pt-6">
@@ -19,7 +19,7 @@
             <div class="card-toolbar" id="cardToolbar">
                 <!--begin::Toolbar-->
                 <div class="d-flex justify-content-end" data-kt-user-table-toolbar="base">
-                    @if (auth()->user()->can('create livestock strain'))
+                    @if (auth()->user()->can('create livestock strain master data'))
                     <!--begin::Add user-->
                     <button type="button" class="btn btn-primary" onclick="Livewire.dispatch('showCreateForm')">
                         {!! getIcon('plus', 'fs-2', '', 'i') !!}

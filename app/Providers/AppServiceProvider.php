@@ -14,6 +14,10 @@ use App\Observers\RoleObserver;
 use App\Observers\PermissionObserver;
 use App\Observers\LivestockDepletionObserver;
 use App\Models\LivestockDepletion;
+use Laravel\Sanctum\Sanctum;
+use App\Models\PersonalAccessToken;
+use App\Models\Company;
+use App\Observers\CompanyObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -54,5 +58,11 @@ class AppServiceProvider extends ServiceProvider
         Role::observe(RoleObserver::class);
         Permission::observe(PermissionObserver::class);
         LivestockDepletion::observe(LivestockDepletionObserver::class);
+
+        // Auto-sync master data when company created
+        Company::observe(CompanyObserver::class);
+
+        // Force Sanctum to use our custom PersonalAccessToken model
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
     }
 }

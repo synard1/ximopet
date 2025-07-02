@@ -31,8 +31,8 @@ return new class extends Migration
             $table->json('metadata')->nullable(); // Additional data like IP, user agent, etc.
 
             // Audit fields
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

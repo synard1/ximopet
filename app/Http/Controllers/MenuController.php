@@ -13,15 +13,18 @@ use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\MenuBackupService;
+use App\Services\LegacyMenuImportService;
 use Illuminate\Support\Facades\File;
 
 class MenuController extends Controller
 {
     protected $menuBackupService;
+    protected $legacyMenuImportService;
 
-    public function __construct(MenuBackupService $menuBackupService)
+    public function __construct(MenuBackupService $menuBackupService, LegacyMenuImportService $legacyMenuImportService)
     {
         $this->menuBackupService = $menuBackupService;
+        $this->legacyMenuImportService = $legacyMenuImportService;
     }
 
     public function index(Request $request)
@@ -273,22 +276,18 @@ class MenuController extends Controller
                                     'id' => $permission->id,
                                     'name' => $permission->name
                                 ];
-                            })->toArray()
+                            })->toArray(),
                         ];
                     })->toArray()
                 ];
             })->toArray();
 
-            $filename = 'menu_configuration_' . date('Y-m-d_His') . '.json';
-            $path = storage_path('app/backups/menus/' . $filename);
+            $filename = 'menu_configuration_' . date('Y-m-d_H-i-s') . '.json';
+            $jsonData = json_encode($data, JSON_PRETTY_PRINT);
 
-            if (!File::exists(storage_path('app/backups/menus'))) {
-                File::makeDirectory(storage_path('app/backups/menus'), 0755, true);
-            }
-
-            File::put($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-
-            return response()->download($path)->deleteFileAfterSend(true);
+            return response($jsonData)
+                ->header('Content-Type', 'application/json')
+                ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
         } catch (\Exception $e) {
             Log::error('Failed to export menu configuration', [
                 'error' => $e->getMessage(),
@@ -313,36 +312,89 @@ class MenuController extends Controller
                 ->with('error', 'Invalid JSON format in the uploaded file.');
         }
 
-        // --- Data Import Logic ---
-        // Clear existing menus and related roles/permissions
-        // Consider if you want to completely replace or merge/update
-        // For simplicity here, let's assume a full replacement of sidebar menus
-
         try {
-            // Get IDs of existing menus in the target location (e.g., 'sidebar')
-            $existingMenuIds = Menu::where('location', 'sidebar')->pluck('id');
+            // Validate menu configuration
+            $validation = $this->legacyMenuImportService->validateMenuConfiguration($menuConfig);
 
-            // Detach roles and permissions for these menus
-            DB::table('menu_role')->whereIn('menu_id', $existingMenuIds)->delete();
-            DB::table('menu_permission')->whereIn('menu_id', $existingMenuIds)->delete();
+            if (!empty($validation['errors'])) {
+                return redirect()->route('administrator.menu.index')
+                    ->with('error', 'Menu validation failed: ' . implode(', ', $validation['errors']));
+            }
 
-            // Delete existing menus in the target location
-            Menu::where('location', 'sidebar')->delete();
+            // Import menu configuration using the legacy service
+            $result = $this->legacyMenuImportService->importMenuConfiguration($menuConfig, 'sidebar');
 
-            // Import new menus recursively
-            $this->importMenus($menuConfig, null, 'sidebar');
+            if ($result['success']) {
+                // Clear menu cache
+                Cache::flush();
 
-            // Clear menu cache
-            Cache::flush();
+                $message = sprintf(
+                    'Menu configuration imported successfully! Format: %s, Imported: %d menus, Roles: %d, Permissions: %d',
+                    $result['format'],
+                    $result['imported_count'],
+                    $result['roles_attached'],
+                    $result['permissions_attached']
+                );
 
-            return redirect()->route('administrator.menu.index')
-                ->with('success', 'Menu configuration imported successfully.');
+                return redirect()->route('administrator.menu.index')
+                    ->with('success', $message);
+            } else {
+                return redirect()->route('administrator.menu.index')
+                    ->with('error', 'Error importing menu configuration: ' . $result['error']);
+            }
         } catch (\Exception $e) {
-            // Log the error for debugging
-            Log::error('Menu import failed: ' . $e->getMessage());
+            Log::error('Menu import failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return redirect()->route('administrator.menu.index')
                 ->with('error', 'Error importing menu configuration: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Preview menu import before actual import
+     */
+    public function importPreview(Request $request)
+    {
+        $request->validate([
+            'menu_file' => 'required|file|mimes:json',
+        ]);
+
+        $file = $request->file('menu_file');
+        $jsonContent = file_get_contents($file->getRealPath());
+        $menuConfig = json_decode($jsonContent, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Invalid JSON format in the uploaded file.'
+            ], 400);
+        }
+
+        try {
+            // Get preview information
+            $preview = $this->legacyMenuImportService->getImportPreview($menuConfig);
+
+            // Validate menu configuration
+            $validation = $this->legacyMenuImportService->validateMenuConfiguration($menuConfig);
+
+            return response()->json([
+                'success' => true,
+                'preview' => $preview,
+                'validation' => $validation
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Menu import preview failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Error processing menu configuration: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -435,22 +487,17 @@ class MenuController extends Controller
      */
     private function duplicateChildren(Menu $originalParent, Menu $newParent)
     {
-        // Ensure children are loaded
-        $originalParent->load('children');
-
         foreach ($originalParent->children as $child) {
+            // Duplicate the child menu
             $newChild = $child->replicate();
-            $newChild->label = $child->label . ' (Copy)';
             $newChild->parent_id = $newParent->id;
-            // Find the correct order number based on the new parent's children
-            $newChild->order_number = Menu::where('parent_id', $newParent->id)->max('order_number') + 1; // Ensure unique order under new parent
             $newChild->save();
 
             // Duplicate roles and permissions for the child
             $newChild->roles()->sync($child->roles);
             $newChild->permissions()->sync($child->permissions);
 
-            // Recursively duplicate grandchildren if any
+            // If the child has its own children, duplicate them recursively
             if ($child->children->isNotEmpty()) {
                 $this->duplicateChildren($child, $newChild);
             }

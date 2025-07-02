@@ -614,13 +614,27 @@ class Create extends Component
 
     public function render()
     {
+        $user = auth()->user();
+        $companyId = $user->company_id;
+
+        $isSuperAdmin = $user->hasRole('SuperAdmin');
+
         return view('livewire.feed-purchases.create', [
-            'vendors' => Partner::where('type', 'Supplier')->get(),
-            'expeditions' => Expedition::all(),
-            'feedItems' => Feed::all(),
-            'livestocks' => Livestock::whereHas('farm.farmOperators', function ($query) {
-                $query->where('user_id', auth()->id());
-            })->get(),
+            'vendors' => $isSuperAdmin
+                ? Partner::where('type', 'Supplier')->get()
+                : Partner::where('type', 'Supplier')->where('company_id', $companyId)->get(),
+            'expeditions' => $isSuperAdmin
+                ? Expedition::all()
+                : Expedition::where('company_id', $companyId)->get(),
+            'feedItems' => $isSuperAdmin
+                ? Feed::all()
+                : Feed::where('company_id', $companyId)->get(),
+            'livestocks' => $isSuperAdmin
+                ? Livestock::all()
+                : Livestock::where('company_id', $companyId)
+                ->whereHas('farm.farmOperators', function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                })->get(),
         ]);
     }
 
@@ -1114,7 +1128,8 @@ class Create extends Component
             ]);
 
             // ✅ SEND TO SSE NOTIFICATION BRIDGE FOR REAL-TIME UPDATES (NO MORE POLLING!)
-            $this->sendToSSENotificationBridge($notificationData, $purchase);
+            // TODO: Uncomment this when the notification bridge is ready
+            // $this->sendToSSENotificationBridge($notificationData, $purchase);
 
             // Fire event for external systems and broadcasting (secondary)
             try {

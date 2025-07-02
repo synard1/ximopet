@@ -50,6 +50,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Personal Access Token Model
+    |--------------------------------------------------------------------------
+    |
+    | This is the model that will be used to store personal access tokens.
+    | You can customize this model to add additional fields or methods.
+    |
+    */
+
+    'personal_access_token_model' => App\Models\PersonalAccessToken::class,
+
+    /*
+    |--------------------------------------------------------------------------
     | Sanctum Middleware
     |--------------------------------------------------------------------------
     |

@@ -11,11 +11,11 @@ return new class extends Migration
         Schema::create('qa_todo_comments', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('todo_id')->constrained('qa_todo_lists')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
             $table->text('comment');
             $table->json('attachments')->nullable();
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

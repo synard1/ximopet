@@ -12,13 +12,14 @@ class FarmFactory extends Factory
     public function definition()
     {
         return [
-            'code' => 'F' . str_pad($this->faker->unique()->numberBetween(1, 999), 3, '0', STR_PAD_LEFT),
-            'name' => $this->faker->company . '-Farm',
+            'code' => $this->faker->unique()->regexify('[A-Z]{2}[0-9]{3}'),
+            'name' => $this->faker->company,
             'address' => $this->faker->address,
             'phone_number' => $this->faker->phoneNumber,
             'contact_person' => $this->faker->name,
-            'status' => 'active',
-            'created_by' => 3,
+            'status' => $this->faker->randomElement(['active', 'inactive']),
+            'email' => $this->faker->email,
+            'notes' => $this->faker->sentence,
         ];
     }
 }

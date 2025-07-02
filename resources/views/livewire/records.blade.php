@@ -193,6 +193,9 @@
                     </div>
                 </div>
 
+
+                <!-- disable for clean UI -->
+                {{--
                 <!-- Recording Mode Notice -->
                 <div class="alert alert-success mt-2 py-2" role="alert">
                     <small class="d-flex align-items-center">
@@ -202,9 +205,11 @@
                             Data deplesi dapat diinput langsung melalui form ini.
                         </div>
                     </small>
-                </div>
+                </div> --}}
                 @endif
 
+                <!-- disable for clean UI -->
+                {{--
                 <!-- Yesterday's Depletion Data -->
                 @if($yesterdayData && $yesterdayData['total_depletion'] > 0)
                 <small class="text-muted mt-1 d-block">
@@ -234,7 +239,8 @@
                     @else
                     <span class="badge bg-primary ms-2">Dikelola Recording</span>
                     @endif
-                </small>
+                </small> --}}
+                <!-- disable for clean UI -->
             </x-input.group>
 
             <x-input.group col="6" label="Jumlah Terjual (Ekor)">
@@ -402,11 +408,11 @@
 
         <!-- Tombol Aksi -->
         <div class="d-flex justify-content-between my-4">
-            <div>
+            {{-- <div>
                 <button wire:click="refreshConfiguration" class="btn btn-outline-info rounded-lg px-4 py-2">
                     <i class="fas fa-sync-alt"></i> Segarkan Konfigurasi
                 </button>
-            </div>
+            </div> --}}
             <div>
                 <button wire:click="closeForm" class="btn btn-danger rounded-lg px-6 py-2 me-2">Kembali ke
                     Tabel</button>

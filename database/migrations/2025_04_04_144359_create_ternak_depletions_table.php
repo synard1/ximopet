@@ -22,19 +22,17 @@ return new class extends Migration
             $table->string('alasan_deplesi')->nullable();
             $table->text('keterangan')->nullable();
             $table->json('data')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('ternak_id')->references('id')->on('ternaks');
-
         });
 
         Schema::enableForeignKeyConstraints();
-
     }
 
     /**

@@ -17,8 +17,8 @@ return new class extends Migration
             $table->decimal('quantity', 10, 2);
             $table->foreignUuid('unit_id');
             $table->text('notes')->nullable();
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

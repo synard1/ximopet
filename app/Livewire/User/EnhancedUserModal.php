@@ -650,7 +650,19 @@ class EnhancedUserModal extends Component
                 return;
             }
 
-            // Check if user can be deleted
+            // Check CompanyUser delete permissions (default admin protection)
+            $canDeleteCheck = CompanyUser::canDeleteUser($id);
+            if (!$canDeleteCheck['can_delete']) {
+                $this->dispatch('error-modal', [
+                    'title' => 'Tidak Bisa Hapus User',
+                    'icon' => 'warning',
+                    'blockers' => [$canDeleteCheck['reason']],
+                    'text' => 'User ini tidak dapat dihapus karena memiliki peran khusus.',
+                ]);
+                return;
+            }
+
+            // Check if user can be deleted (data relationships)
             if (!$user->canBeDeleted()) {
                 $this->dispatch('error-modal', [
                     'title' => 'Tidak Bisa Hapus User',

@@ -31,6 +31,7 @@ class DataController extends Controller
      */
     public function index(Request $request, $type, $submodul = null)
     {
+        // dd($request->all(), $type, $submodul);
         $user = Auth::user();
         $farmId = $request->input('farm_id');
         $userRoleName = $user->roles->first()->name; // Assuming 'roles' is a relationship and user has only one role
@@ -40,12 +41,23 @@ class DataController extends Controller
         // dd($request->all());
 
         // Check permissions based on user role
-        if (!$task || !in_array($task, ['GET', 'LIST', 'ADD', 'DELETE', 'UPDATE'])) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+        // if (!$task || !in_array($task, ['GET', 'LIST', 'ADD', 'DELETE', 'UPDATE'])) {
+        //     return response()->json(['error' => 'Unauthorized'], 403);
+        // }
 
-        if ($userRoleName === 'admin') {
-            $data = $this->getAdminData($type);
+        if ($userRoleName === 'Administrator') {
+            if ($submodul && $submodul === 'operators') {
+                if ($task === 'GET') {
+                    $data = $this->getFarmOperator();
+                } elseif ($task === 'DELETE') {
+                    return $this->deleteFarmOperator($request);
+                } else {
+                    return response()->json(['error' => 'Unauthorized'], 403);
+                }
+            } else {
+
+                $data = $this->getAdminData($type);
+            }
         } elseif ($userRoleName === 'Supervisor' || $userRoleName === 'Manager') {
             if ($submodul && $submodul === 'operators') {
                 if ($task === 'GET') {
@@ -281,7 +293,12 @@ class DataController extends Controller
 
     public function getFarmOperator()
     {
-        $data = FarmOperator::with('user:id,name,email')
+        $companyId = auth()->user()->company_id;
+        
+        $data = FarmOperator::with(['user:id,name,email', 'farm:id,name,company_id'])
+            ->whereHas('farm', function ($query) use ($companyId) {
+                $query->where('company_id', $companyId);
+            })
             ->get(['farm_id', 'user_id']);
 
         // Extract the 'nama' from the 'farm' relationship

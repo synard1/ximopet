@@ -85,8 +85,11 @@
     // Listen for Livewire events for error-modal and confirm
     document.addEventListener('livewire:init', function () {
         Livewire.on('error-modal', function (data) {
+            // Unwrap if data is delivered inside an extra array index
+            if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'object') {
+                data = data[0];
+            }
             console.log('Blockers:', data.blockers);
-            console.log('error-modal');
             showUserBlockersModal(data, false);
         });
         // Livewire.on('confirm', function (data) {

@@ -4,14 +4,23 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Menu;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+// use Spatie\Permission\Models\Role;
+// use Spatie\Permission\Models\Permission;
+use App\Models\Role;
+use App\Models\Permission;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class MenuSeeder extends Seeder
 {
     public function run()
     {
+        // Get admin user as primary user for created_by
+        $adminUser = User::where('email', 'admin@peternakan.digital')->first();
+        if (!$adminUser) {
+            $adminUser = User::first(); // Fallback to any user
+        }
+
         // Disable foreign key checks
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
 
@@ -30,7 +39,9 @@ class MenuSeeder extends Seeder
             'route' => '/',
             'icon' => 'fa-solid fa-house',
             'location' => 'sidebar',
-            'order_number' => 1
+            'order_number' => 1,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Master Data Menu
@@ -40,7 +51,9 @@ class MenuSeeder extends Seeder
             'route' => '#',
             'icon' => 'fa-solid fa-database',
             'location' => 'sidebar',
-            'order_number' => 2
+            'order_number' => 2,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Master Data Submenu Items
@@ -51,7 +64,9 @@ class MenuSeeder extends Seeder
             'route' => '/master/farms',
             'icon' => 'fa-solid fa-farm',
             'location' => 'sidebar',
-            'order_number' => 1
+            'order_number' => 1,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $kandang = Menu::create([
@@ -61,7 +76,9 @@ class MenuSeeder extends Seeder
             'route' => '/master/kandangs',
             'icon' => 'fa-solid fa-truck',
             'location' => 'sidebar',
-            'order_number' => 2
+            'order_number' => 2,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $supplier = Menu::create([
@@ -71,7 +88,9 @@ class MenuSeeder extends Seeder
             'route' => '/master/suppliers',
             'icon' => 'fa-solid fa-user-plus',
             'location' => 'sidebar',
-            'order_number' => 3
+            'order_number' => 3,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $customer = Menu::create([
@@ -81,7 +100,9 @@ class MenuSeeder extends Seeder
             'route' => '/master/customers',
             'icon' => 'fa-solid fa-user-plus',
             'location' => 'sidebar',
-            'order_number' => 4
+            'order_number' => 4,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $expedition = Menu::create([
@@ -91,7 +112,9 @@ class MenuSeeder extends Seeder
             'route' => '/master/expeditions',
             'icon' => 'fa-solid fa-truck',
             'location' => 'sidebar',
-            'order_number' => 5
+            'order_number' => 5,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $unit = Menu::create([
@@ -101,7 +124,9 @@ class MenuSeeder extends Seeder
             'route' => '/master/units',
             'icon' => 'fa-solid fa-ruler',
             'location' => 'sidebar',
-            'order_number' => 6
+            'order_number' => 6,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $feed = Menu::create([
@@ -111,7 +136,9 @@ class MenuSeeder extends Seeder
             'route' => '/master/feeds',
             'icon' => 'fa-solid fa-wheat-awn',
             'location' => 'sidebar',
-            'order_number' => 7
+            'order_number' => 7,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $supply = Menu::create([
@@ -121,7 +148,9 @@ class MenuSeeder extends Seeder
             'route' => '/master/supplies',
             'icon' => 'fa-solid fa-box',
             'location' => 'sidebar',
-            'order_number' => 8
+            'order_number' => 8,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $worker = Menu::create([
@@ -131,7 +160,9 @@ class MenuSeeder extends Seeder
             'route' => '/master/workers',
             'icon' => 'fa-solid fa-users',
             'location' => 'sidebar',
-            'order_number' => 9
+            'order_number' => 9,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Inventory Menu
@@ -141,7 +172,9 @@ class MenuSeeder extends Seeder
             'route' => '#',
             'icon' => 'fa-solid fa-box',
             'location' => 'sidebar',
-            'order_number' => 3
+            'order_number' => 3,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Inventory Submenu Items
@@ -152,7 +185,9 @@ class MenuSeeder extends Seeder
             'route' => '/inventory/docs',
             'icon' => 'fa-solid fa-folder',
             'location' => 'sidebar',
-            'order_number' => 1
+            'order_number' => 1,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $feedInventory = Menu::create([
@@ -162,7 +197,9 @@ class MenuSeeder extends Seeder
             'route' => '/stocks/feed',
             'icon' => 'fa-solid fa-wheat-awn',
             'location' => 'sidebar',
-            'order_number' => 2
+            'order_number' => 2,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $supplyInventory = Menu::create([
@@ -172,7 +209,9 @@ class MenuSeeder extends Seeder
             'route' => '/stocks/supply',
             'icon' => 'fa-solid fa-box',
             'location' => 'sidebar',
-            'order_number' => 3
+            'order_number' => 3,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // User Management Menu
@@ -182,7 +221,9 @@ class MenuSeeder extends Seeder
             'route' => '#',
             'icon' => 'fa-solid fa-users',
             'location' => 'sidebar',
-            'order_number' => 4
+            'order_number' => 4,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // User Management Submenu Items
@@ -193,7 +234,9 @@ class MenuSeeder extends Seeder
             'route' => '/users',
             'icon' => 'fa-solid fa-users',
             'location' => 'sidebar',
-            'order_number' => 1
+            'order_number' => 1,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $userRole = Menu::create([
@@ -203,7 +246,9 @@ class MenuSeeder extends Seeder
             'route' => '/user/roles',
             'icon' => 'fa-solid fa-shield',
             'location' => 'sidebar',
-            'order_number' => 2
+            'order_number' => 2,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $userPermission = Menu::create([
@@ -213,7 +258,9 @@ class MenuSeeder extends Seeder
             'route' => '/user/permissions',
             'icon' => 'fa-solid fa-lock',
             'location' => 'sidebar',
-            'order_number' => 3
+            'order_number' => 3,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Peternakan Menu
@@ -223,7 +270,9 @@ class MenuSeeder extends Seeder
             'route' => '#',
             'icon' => 'fa-solid fa-warehouse',
             'location' => 'sidebar',
-            'order_number' => 5
+            'order_number' => 5,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Peternakan Submenu Items
@@ -234,7 +283,9 @@ class MenuSeeder extends Seeder
             'route' => '/data/farms',
             'icon' => 'fa-solid fa-warehouse',
             'location' => 'sidebar',
-            'order_number' => 1
+            'order_number' => 1,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $dataKandang = Menu::create([
@@ -244,7 +295,9 @@ class MenuSeeder extends Seeder
             'route' => '/data/kandangs',
             'icon' => 'fa-solid fa-house',
             'location' => 'sidebar',
-            'order_number' => 2
+            'order_number' => 2,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $dataLivestock = Menu::create([
@@ -254,7 +307,9 @@ class MenuSeeder extends Seeder
             'route' => '/data/livestocks',
             'icon' => '/assets/media/icons/custom/chicken.png',
             'location' => 'sidebar',
-            'order_number' => 3
+            'order_number' => 3,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $dataStandarBobot = Menu::create([
@@ -264,7 +319,9 @@ class MenuSeeder extends Seeder
             'route' => '/data/standar-bobot',
             'icon' => 'fa-solid fa-weight-hanging',
             'location' => 'sidebar',
-            'order_number' => 4
+            'order_number' => 4,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $dataAfkir = Menu::create([
@@ -274,7 +331,9 @@ class MenuSeeder extends Seeder
             'route' => '/livestock/afkir',
             'icon' => 'fa-solid fa-ban',
             'location' => 'sidebar',
-            'order_number' => 5
+            'order_number' => 5,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $dataJual = Menu::create([
@@ -284,7 +343,9 @@ class MenuSeeder extends Seeder
             'route' => '/livestock/jual',
             'icon' => 'fa-solid fa-tags',
             'location' => 'sidebar',
-            'order_number' => 6
+            'order_number' => 6,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $dataMati = Menu::create([
@@ -294,7 +355,9 @@ class MenuSeeder extends Seeder
             'route' => '/livestock/mati',
             'icon' => 'fa-solid fa-skull',
             'location' => 'sidebar',
-            'order_number' => 7
+            'order_number' => 7,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Transaksi Menu
@@ -304,7 +367,9 @@ class MenuSeeder extends Seeder
             'route' => '#',
             'icon' => 'fa-solid fa-money-bill',
             'location' => 'sidebar',
-            'order_number' => 6
+            'order_number' => 6,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Transaksi Submenu Items
@@ -315,7 +380,9 @@ class MenuSeeder extends Seeder
             'route' => '/pembelian/doc',
             'icon' => 'fa-solid fa-cart-shopping',
             'location' => 'sidebar',
-            'order_number' => 1
+            'order_number' => 1,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $pembelianPakan = Menu::create([
@@ -325,7 +392,9 @@ class MenuSeeder extends Seeder
             'route' => '/transaction/feed',
             'icon' => 'fa-solid fa-cart-shopping',
             'location' => 'sidebar',
-            'order_number' => 2
+            'order_number' => 2,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $pembelianOvk = Menu::create([
@@ -335,7 +404,9 @@ class MenuSeeder extends Seeder
             'route' => '/pembelian/ovk',
             'icon' => 'fa-solid fa-cart-shopping',
             'location' => 'sidebar',
-            'order_number' => 3
+            'order_number' => 3,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $pembelianStock = Menu::create([
@@ -345,7 +416,9 @@ class MenuSeeder extends Seeder
             'route' => '/transaction/supply',
             'icon' => 'fa-solid fa-cart-shopping',
             'location' => 'sidebar',
-            'order_number' => 4
+            'order_number' => 4,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $penjualanTernak = Menu::create([
@@ -355,7 +428,9 @@ class MenuSeeder extends Seeder
             'route' => '/transaction/sales',
             'icon' => 'fa-solid fa-tags',
             'location' => 'sidebar',
-            'order_number' => 5
+            'order_number' => 5,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $pemakaianSupply = Menu::create([
@@ -365,7 +440,9 @@ class MenuSeeder extends Seeder
             'route' => '/livestock/supply-recording',
             'icon' => 'fa-solid fa-tags',
             'location' => 'sidebar',
-            'order_number' => 6
+            'order_number' => 6,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $mutasiFeed = Menu::create([
@@ -375,7 +452,9 @@ class MenuSeeder extends Seeder
             'route' => '/feeds/mutation',
             'icon' => 'fa-solid fa-arrows-rotate',
             'location' => 'sidebar',
-            'order_number' => 7
+            'order_number' => 7,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $mutasiSupply = Menu::create([
@@ -385,7 +464,9 @@ class MenuSeeder extends Seeder
             'route' => '/supplies/mutation',
             'icon' => 'fa-solid fa-arrows-rotate',
             'location' => 'sidebar',
-            'order_number' => 8
+            'order_number' => 8,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $mutasiAyam = Menu::create([
@@ -395,7 +476,9 @@ class MenuSeeder extends Seeder
             'route' => '/livestock/mutasi',
             'icon' => 'fa-solid fa-arrows-rotate',
             'location' => 'sidebar',
-            'order_number' => 9
+            'order_number' => 9,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Reports Menu
@@ -405,7 +488,9 @@ class MenuSeeder extends Seeder
             'route' => '#',
             'icon' => 'fa-solid fa-chart-line',
             'location' => 'sidebar',
-            'order_number' => 7
+            'order_number' => 7,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Reports Submenu Items
@@ -416,7 +501,9 @@ class MenuSeeder extends Seeder
             'route' => '/reports/harian',
             'icon' => 'fa-solid fa-chart-line',
             'location' => 'sidebar',
-            'order_number' => 1
+            'order_number' => 1,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $reportDailyCost = Menu::create([
@@ -426,7 +513,9 @@ class MenuSeeder extends Seeder
             'route' => '/reports/daily-cost',
             'icon' => 'fa-solid fa-chart-line',
             'location' => 'sidebar',
-            'order_number' => 2
+            'order_number' => 2,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $reportPerforma = Menu::create([
@@ -436,7 +525,9 @@ class MenuSeeder extends Seeder
             'route' => '/reports/performa',
             'icon' => 'fa-solid fa-chart-line',
             'location' => 'sidebar',
-            'order_number' => 3
+            'order_number' => 3,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $reportPenjualan = Menu::create([
@@ -446,7 +537,9 @@ class MenuSeeder extends Seeder
             'route' => '/reports/penjualan',
             'icon' => 'fa-solid fa-chart-line',
             'location' => 'sidebar',
-            'order_number' => 4
+            'order_number' => 4,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $reportFeedPurchase = Menu::create([
@@ -456,7 +549,9 @@ class MenuSeeder extends Seeder
             'route' => '/reports/feed/purchase',
             'icon' => 'fa-solid fa-chart-line',
             'location' => 'sidebar',
-            'order_number' => 5
+            'order_number' => 5,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $reportPerformaMitra = Menu::create([
@@ -466,7 +561,9 @@ class MenuSeeder extends Seeder
             'route' => '/reports/performa-mitra',
             'icon' => 'fa-solid fa-chart-line',
             'location' => 'sidebar',
-            'order_number' => 6
+            'order_number' => 6,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Administrator Menu
@@ -476,7 +573,9 @@ class MenuSeeder extends Seeder
             'route' => '#',
             'icon' => 'fa-solid fa-gear',
             'location' => 'sidebar',
-            'order_number' => 8
+            'order_number' => 8,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Administrator Submenu Items
@@ -487,7 +586,9 @@ class MenuSeeder extends Seeder
             'route' => '/administrator/qa',
             'icon' => 'fa-solid fa-chart-line',
             'location' => 'sidebar',
-            'order_number' => 1
+            'order_number' => 1,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         $routes = Menu::create([
@@ -497,7 +598,9 @@ class MenuSeeder extends Seeder
             'route' => '/administrator/routes',
             'icon' => 'fa-solid fa-chart-line',
             'location' => 'sidebar',
-            'order_number' => 2
+            'order_number' => 2,
+            'created_by' => $adminUser ? $adminUser->id : null,
+            'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
         // Attach roles and permissions

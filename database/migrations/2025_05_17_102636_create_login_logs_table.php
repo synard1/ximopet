@@ -13,14 +13,14 @@ return new class extends Migration
     {
         Schema::create('login_logs', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
             $table->string('ip_address');
             $table->string('user_agent');
             $table->string('login_status'); // success, failed
             $table->string('login_type')->default('form'); // form, socialite, api
             $table->text('login_details')->nullable();
-            $table->unsignedBigInteger('created_by');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->uuid('created_by');
+            $table->uuid('updated_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

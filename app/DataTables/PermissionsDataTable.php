@@ -3,7 +3,8 @@
 namespace App\DataTables;
 
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
-use Spatie\Permission\Models\Permission;
+// use Spatie\Permission\Models\Permission;
+use App\Models\Permission;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -24,13 +25,13 @@ class PermissionsDataTable extends DataTable
             })
             ->addColumn('assigned_to', function (Permission $permission) {
                 $roles = $permission->roles;
-                return view('pages/apps.user-management.permissions.columns._assign-to', compact('roles'));
+                return view('pages.apps.user-management.permissions.columns._assign-to', compact('roles'));
             })
             ->editColumn('created_at', function (Permission $permission) {
                 return $permission->created_at->format('d M Y, h:i a');
             })
             ->addColumn('actions', function (Permission $permission) {
-                return view('pages/apps.user-management.permissions.columns._actions', compact('permission'));
+                return view('pages.apps.user-management.permissions.columns._actions', compact('permission'));
             })
             ->setRowId('id');
     }

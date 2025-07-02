@@ -42,6 +42,7 @@ use Exception;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Config\LivestockDepletionConfig;
 
 
 
@@ -1963,9 +1964,15 @@ class ReportsController extends Controller
                 ->whereDate('tanggal', $dateStr)
                 ->get();
 
-            $mortality = $deplesi->where('jenis', 'Mati')->sum('jumlah');
-            $culling = $deplesi->where('jenis', 'Afkir')->sum('jumlah');
-            $totalDeplesi = $mortality + $culling;
+            $dailyMortality = $deplesi->filter(function ($item) {
+                return LivestockDepletionConfig::normalize($item->jenis) === LivestockDepletionConfig::TYPE_MORTALITY;
+            })->sum('jumlah');
+
+            $dailyCulling = $deplesi->filter(function ($item) {
+                return LivestockDepletionConfig::normalize($item->jenis) === LivestockDepletionConfig::TYPE_CULLING;
+            })->sum('jumlah');
+
+            $totalDeplesi = $dailyMortality + $dailyCulling;
             Log::debug('Total depletion for date ' . $dateStr . ': ' . $totalDeplesi);
 
             $age = $startDate->diffInDays($currentDate);
@@ -2018,8 +2025,8 @@ class ReportsController extends Controller
                 'umur' => $age,
                 'fcr_target' => $standarData['data'][$age]['fcr']['target'] ?? 0,
                 'stock_awal' => $stockAwal,
-                'mati' => $mortality,
-                'afkir' => $culling,
+                'mati' => $dailyMortality,
+                'afkir' => $dailyCulling,
                 'jual_ekor' => $totalSales,
                 'jual_kg' => $sales->total_berat ?? 0,
                 'jual_rata' => ($totalSales > 0) ? ($sales->total_berat / $totalSales) : 0,
@@ -2122,8 +2129,14 @@ class ReportsController extends Controller
                 ->whereDate('tanggal', $dateStr)
                 ->get();
 
-            $dailyMortality = $deplesi->where('jenis', 'Mati')->sum('jumlah');
-            $dailyCulling = $deplesi->where('jenis', 'Afkir')->sum('jumlah');
+            $dailyMortality = $deplesi->filter(function ($item) {
+                return LivestockDepletionConfig::normalize($item->jenis) === LivestockDepletionConfig::TYPE_MORTALITY;
+            })->sum('jumlah');
+
+            $dailyCulling = $deplesi->filter(function ($item) {
+                return LivestockDepletionConfig::normalize($item->jenis) === LivestockDepletionConfig::TYPE_CULLING;
+            })->sum('jumlah');
+
             $dailyDepletion = $dailyMortality + $dailyCulling;
             $cumulativeDepletion += $dailyDepletion;
 

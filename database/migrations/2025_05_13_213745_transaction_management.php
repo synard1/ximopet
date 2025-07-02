@@ -30,9 +30,9 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->string('status')->nullable()->index(); // e.g. 'draft', 'confirmed', 'paid'
 
-            $table->unsignedBigInteger('created_by')->nullable()->index();
-            $table->unsignedBigInteger('updated_by')->nullable()->index();
-            $table->unsignedBigInteger('approved_by')->nullable();
+            $table->uuid('created_by')->nullable()->index();
+            $table->uuid('updated_by')->nullable()->index();
+            $table->uuid('approved_by')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
