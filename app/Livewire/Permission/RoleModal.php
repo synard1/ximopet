@@ -5,8 +5,6 @@ namespace App\Livewire\Permission;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 use Livewire\Component;
-// use Spatie\Permission\Models\Permission;
-// use Spatie\Permission\Models\Role;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User; // Ensure User model is imported

@@ -8,8 +8,8 @@ use Illuminate\Support\ServiceProvider;
 // use App\Livewire\MasterData\SupplierModal;
 use Livewire\Livewire; // Import the facade
 use App\Livewire\QaChecklistForm;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use App\Models\Role;
+use App\Models\Permission;
 use App\Observers\RoleObserver;
 use App\Observers\PermissionObserver;
 use App\Observers\LivestockDepletionObserver;

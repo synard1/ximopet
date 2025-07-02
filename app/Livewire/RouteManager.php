@@ -6,8 +6,8 @@ use App\Models\RoutePermission;
 use Illuminate\Support\Facades\Route;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
+use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Support\Facades\App;
 
 class RouteManager extends Component
