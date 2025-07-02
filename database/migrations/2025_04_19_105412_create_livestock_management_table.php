@@ -21,6 +21,8 @@ return new class extends Migration {
             $table->integer('quantity_depletion')->nullable();
             $table->integer('quantity_sales')->nullable();
             $table->integer('quantity_mutated')->nullable();
+            $table->integer('quantity_mutated_out')->default(0);
+            $table->integer('quantity_mutated_in')->default(0);
             $table->decimal('initial_weight', 10, 2)->default(0); //berat beli rata - rata
             $table->decimal('price', 10, 2);        // Harga per unit saat beli
             $table->json('data')->nullable();
