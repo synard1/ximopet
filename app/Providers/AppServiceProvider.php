@@ -64,5 +64,12 @@ class AppServiceProvider extends ServiceProvider
 
         // Force Sanctum to use our custom PersonalAccessToken model
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
+
+        // Only load Pulse and Telescope migrations in local/dev
+        if (app()->environment(['local', 'development', 'dev', 'testing'])) {
+            $this->loadMigrationsFrom(database_path('migrations/pulse'));
+            $this->loadMigrationsFrom(database_path('migrations/telescope'));
+        }
+
     }
 }

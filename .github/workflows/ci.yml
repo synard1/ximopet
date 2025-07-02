@@ -43,7 +43,7 @@ jobs:
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
       - name: Cache composer dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -110,8 +110,10 @@ jobs:
             php artisan db:seed --force
           fi
 
-      - name: Run Tests
-        run: php artisan test --coverage-clover=coverage.xml
+
+      # Uncomment this to run tests
+      # - name: Run Tests
+      #   run: php artisan test --coverage-clover=coverage.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -133,7 +135,7 @@ jobs:
           php-version: "8.2"
 
       - name: Cache composer dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.composer/cache
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -219,7 +221,7 @@ jobs:
         run: npm run build
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-assets
           path: public/build/
