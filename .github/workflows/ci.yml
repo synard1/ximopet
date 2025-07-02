@@ -110,6 +110,7 @@ jobs:
             php artisan db:seed --force
           fi
 
+
       # Uncomment this to run tests
       # - name: Run Tests
       #   run: php artisan test --coverage-clover=coverage.xml
