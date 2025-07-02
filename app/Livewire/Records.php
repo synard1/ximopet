@@ -114,6 +114,11 @@ class Records extends Component
     public $isFifoFeedUsageEnabled = false;
 
 
+    //Condition for recording method
+    public $skipConfigMultipleBatch = true;
+    public $skipConfigSingleBatch = false;
+
+
     protected $listeners = [
         'setRecords' => 'setRecords'
     ];
@@ -234,29 +239,46 @@ class Records extends Component
                 $this->loadLivestockConfiguration($livestock);
             }
 
-            // Rewritten: Validasi jika batch > 1 dan belum ada records, cek config di kolom data
-            if ($livestock->getActiveBatchesCount() > 1 && !\App\Models\Recording::where('livestock_id', $livestock->id)->exists()) {
-                $config = $livestock->getDataColumn('config');
-                if (empty($config) || !is_array($config) || empty($config['recording_method'])) {
-                    $this->dispatch('error', 'Ternak ini memiliki lebih dari 1 batch aktif. Silakan atur metode pencatatan terlebih dahulu di menu setting pada data ini.');
+            if ($this->skipConfigMultipleBatch) {
+                $user = auth()->user();
+                $recordingConfig = [
+                    'recording_method' => 'total',
+                    'depletion_method' => 'fifo',
+                    'mutation_method' => 'fifo',
+                    'feed_usage_method' => 'total',
+                    'saved_at' => now()->toDateTimeString(),
+                    'saved_by' => $user ? $user->id : null
+                ];
+                $livestock->updateDataColumn('config', $recordingConfig);
+
+                // Reload configuration after auto-save
+                $this->loadLivestockConfiguration($livestock);
+            } else {
+                // Rewritten: Validasi jika batch > 1 dan belum ada records, cek config di kolom data
+                if ($livestock->getActiveBatchesCount() > 1 && !\App\Models\Recording::where('livestock_id', $livestock->id)->exists()) {
+                    $config = $livestock->getDataColumn('config');
+                    if (empty($config) || !is_array($config) || empty($config['recording_method'])) {
+                        $this->dispatch('error', 'Ternak ini memiliki lebih dari 1 batch aktif. Silakan atur metode pencatatan terlebih dahulu di menu setting pada data ini.');
+                        // Log untuk debugging
+                        Log::info('[Records] setRecords: Gagal lanjut, config belum diatur untuk livestock_id: ' . $livestock->id, [
+                            'config' => $config,
+                            'livestock_id' => $livestock->id,
+                            'user_id' => auth()->id(),
+                            'timestamp' => now()->toDateTimeString(),
+                        ]);
+                        return;
+                    }
+                    // Jika config sudah ada, lanjutkan proses
                     // Log untuk debugging
-                    Log::info('[Records] setRecords: Gagal lanjut, config belum diatur untuk livestock_id: ' . $livestock->id, [
+                    Log::info('[Records] setRecords: Config ditemukan, proses dilanjutkan untuk livestock_id: ' . $livestock->id, [
                         'config' => $config,
                         'livestock_id' => $livestock->id,
                         'user_id' => auth()->id(),
                         'timestamp' => now()->toDateTimeString(),
                     ]);
-                    return;
                 }
-                // Jika config sudah ada, lanjutkan proses
-                // Log untuk debugging
-                Log::info('[Records] setRecords: Config ditemukan, proses dilanjutkan untuk livestock_id: ' . $livestock->id, [
-                    'config' => $config,
-                    'livestock_id' => $livestock->id,
-                    'user_id' => auth()->id(),
-                    'timestamp' => now()->toDateTimeString(),
-                ]);
             }
+
 
             // // Validate recording method configuration
             // if (!$this->validateRecordingMethod($livestock, $company)) {

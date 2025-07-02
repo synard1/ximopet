@@ -78,7 +78,17 @@ class AssignWorker extends Component
 
     public function mount()
     {
-        $this->workers = Worker::orderBy('name')->get();
+        $user = Auth::user();
+        $isSuperAdmin = $user->hasRole('SuperAdmin');
+        if ($isSuperAdmin) {
+            $this->workers = Worker::orderBy('name')->get();
+        } else {
+            $this->workers = Worker::where('company_id', $user->company_id)
+                ->orderBy('name')
+                ->get();
+        }
+        Log::info('AssignWorker: User company_id', ['company_id' => $user->company_id, 'isSuperAdmin' => $isSuperAdmin]);
+        Log::info('AssignWorker: Workers found', ['workers' => json_decode(json_encode($this->workers), true)]);
         $this->resetForm();
     }
 
@@ -197,35 +207,6 @@ class AssignWorker extends Component
         ];
     }
 
-    // public function confirmDeleteWorker($index)
-    // {
-    //     if (!isset($this->workersData[$index])) {
-    //         $this->errorMessage = "Data pekerja tidak ditemukan pada index {$index}.";
-    //         $this->dispatch('error', $this->errorMessage);
-    //         return;
-    //     }
-
-    //     $worker = $this->workersData[$index];
-    //     // Jika end_date belum ada, wajib input end_date dulu (tampilkan modal)
-    //     if (empty($worker['endDate'])) {
-    //         $this->indexToDelete = $index;
-    //         $this->showEndDateModal = true;
-    //         return;
-    //     }
-
-    //     // Jika sudah ada end_date, update status menjadi inactive
-    //     if (!empty($worker['id'])) {
-    //         BatchWorker::where('id', $worker['id'])->update([
-    //             'status' => 'inactive',
-    //             'updated_by' => auth()->id(),
-    //         ]);
-    //         // Update di array agar reflect di UI
-    //         $this->workersData[$index]['status'] = 'inactive';
-    //     }
-    //     // Refresh data agar sinkron
-    //     $this->setLivestock($this->livestockId);
-    // }
-
     public function confirmDeleteWorker($index)
     {
         if (!isset($this->workersData[$index])) {
@@ -236,6 +217,14 @@ class AssignWorker extends Component
 
         $worker = $this->workersData[$index];
         $this->indexToDelete = $index;
+
+        // Jika row belum tersimpan ke DB (tidak ada 'id'), langsung hapus
+        if (empty($worker['id'])) {
+            unset($this->workersData[$index]);
+            $this->workersData = array_values($this->workersData);
+            $this->indexToDelete = null;
+            return;
+        }
 
         if (empty($worker['endDate'])) {
             // Belum ada end_date, wajib input end_date

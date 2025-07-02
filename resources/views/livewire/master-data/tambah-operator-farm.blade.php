@@ -13,7 +13,7 @@
                         <label class="required fw-semibold fs-6 mb-2">Farm</label>
                         <!--end::Label-->
                         <!--begin::Select2-->
-                        <select id="farms" wire:model="selectedFarm" class="js-select2 form-control">
+                        <select wire:model="selectedFarm" name="farm_id" id="farm_id" class="form-select">
                             <option value="">=== Pilih Farm ===</option>
                             @foreach($farms as $farm)
                             <option value="{{ $farm->id }}">{{ $farm->name }}</option>

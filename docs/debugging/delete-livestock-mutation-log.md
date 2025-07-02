@@ -238,3 +238,23 @@
 - Name: PR-DF02-K02-DF02-2025-06-24
 - Dijalankan oleh user: Bo Bradtke (ID: 6)
 - Status: SUCCESS
+
+## [2025-07-01 15:42:57] Deleted LivestockBatch: 9f49030e-66fd-4a66-a86f-3fc18af0867f
+- Name: PR-Farm01-K1 F1-01062025-001-MUT-154207
+- Dijalankan oleh user: Supervisor (ID: 9f46b366-74fa-43c9-8824-7455515e9b95)
+- Status: SUCCESS
+
+## [2025-07-01 15:42:57] Deleted CurrentLivestock: 9f49030e-6116-4e4d-b228-fba2478cb871
+- Name: PR-Farm01-K2F1-2025-07-01
+- Dijalankan oleh user: Supervisor (ID: 9f46b366-74fa-43c9-8824-7455515e9b95)
+- Status: SUCCESS
+
+## [2025-07-01 15:42:57] Deleted Livestock: 9f49030e-6116-4e4d-b228-fba2478cb871
+- Name: PR-Farm01-K2F1-2025-07-01
+- Dijalankan oleh user: Supervisor (ID: 9f46b366-74fa-43c9-8824-7455515e9b95)
+- Status: SUCCESS
+
+## [2025-07-01 15:42:57] Deleted Livestock: 9f49030e-6116-4e4d-b228-fba2478cb871
+- Name: PR-Farm01-K2F1-2025-07-01
+- Dijalankan oleh user: Supervisor (ID: 9f46b366-74fa-43c9-8824-7455515e9b95)
+- Status: SUCCESS

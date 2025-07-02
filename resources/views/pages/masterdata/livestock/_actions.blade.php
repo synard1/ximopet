@@ -56,7 +56,7 @@
     <!--end::Menu item-->
     @endif
 
-    {{-- @if($livestock->isFifoMutationEnabled())
+    @if($livestock->isFifoMutationEnabled())
     <!--begin::Menu item-->
     <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" data-livestock-id="{{ $livestock->id }}" data-kt-action="fifo_mutation">
@@ -64,11 +64,11 @@
                 <span class="path1"></span>
                 <span class="path2"></span>
             </i>
-            FIFO Mutation
+            Mutasi
         </a>
     </div>
     <!--end::Menu item-->
-    @endif --}}
+    @endif
 
     @if($livestock->isManualDepletionEnabled())
     <!--begin::Menu item-->
@@ -98,13 +98,14 @@
     <!--end::Menu item-->
     @endif
 
+    {{--
     <!--begin::Menu item-->
     <div class="menu-item px-3">
         <a href="#" class="menu-link px-3" data-livestock-id="{{ $livestock->id }}" data-kt-action="update_setting">
             Setting
         </a>
     </div>
-    <!--end::Menu item-->
+    <!--end::Menu item--> --}}
 
     @can('read worker assignment')
     <!--begin::Menu item-->

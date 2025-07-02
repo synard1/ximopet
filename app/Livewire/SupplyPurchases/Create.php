@@ -475,14 +475,26 @@ class Create extends Component
 
     public function render()
     {
-        $supply = Supply::where('status', 'active')->orderBy('name')->get();
-        $farmIds = auth()->user()->farmOperators()->pluck('farm_id')->toArray();
-        $farms = Farm::whereIn('id', $farmIds)->get(['id', 'name']);
+        $user = auth()->user();
+        $companyId = $user->company_id;
+        $isSuperAdmin = $user->hasRole('SuperAdmin');
 
-        // dd($supply);
+        $supply = $isSuperAdmin
+            ? Supply::where('status', 'active')->orderBy('name')->get()
+            : Supply::where('status', 'active')->where('company_id', $companyId)->orderBy('name')->get();
+
+        $farmIds = $user->farmOperators()->pluck('farm_id')->toArray();
+        $farms = $isSuperAdmin
+            ? Farm::whereIn('id', $farmIds)->get(['id', 'name'])
+            : Farm::whereIn('id', $farmIds)->where('company_id', $companyId)->get(['id', 'name']);
+
         return view('livewire.supply-purchases.create', [
-            'vendors' => Partner::where('type', 'Supplier')->get(),
-            'expeditions' => Expedition::all(),
+            'vendors' => $isSuperAdmin
+                ? Partner::where('type', 'Supplier')->get()
+                : Partner::where('type', 'Supplier')->where('company_id', $companyId)->get(),
+            'expeditions' => $isSuperAdmin
+                ? Expedition::all()
+                : Expedition::where('company_id', $companyId)->get(),
             'supplyItems' => $supply,
             'farms' => $farms,
         ]);
@@ -797,7 +809,8 @@ class Create extends Component
             ]);
 
             // ✅ SEND TO SSE NOTIFICATION BRIDGE FOR REAL-TIME UPDATES (NO MORE POLLING!)
-            $this->sendToSSENotificationBridge($notificationData, $batch);
+            // TODO: Uncomment this when the notification bridge is ready
+            // $this->sendToSSENotificationBridge($notificationData, $batch);
 
             // Fire event for external systems and broadcasting (secondary)
             try {
