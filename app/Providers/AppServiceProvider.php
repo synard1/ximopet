@@ -70,5 +70,6 @@ class AppServiceProvider extends ServiceProvider
             $this->loadMigrationsFrom(database_path('migrations/pulse'));
             $this->loadMigrationsFrom(database_path('migrations/telescope'));
         }
+
     }
 }
