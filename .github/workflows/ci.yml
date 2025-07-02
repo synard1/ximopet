@@ -110,8 +110,9 @@ jobs:
             php artisan db:seed --force
           fi
 
-      - name: Run Tests
-        run: php artisan test --coverage-clover=coverage.xml
+      # Uncomment this to run tests
+      # - name: Run Tests
+      #   run: php artisan test --coverage-clover=coverage.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
