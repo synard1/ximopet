@@ -1,0 +1,54 @@
+name: Auto Rebase Feature Branches
+
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: write
+
+jobs:
+  rebase-features:
+    if: github.repository_owner == 'synard1' # prevent forks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository (all history & branches)
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          # Fetch all branches
+          fetch-tags: true
+          ref: develop
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: List feature branches
+        id: list
+        run: |
+          FEATURE_BRANCHES=$(git for-each-ref --format='%(refname:short)' refs/remotes/origin/feature/* | sed 's#origin/##')
+          echo "branches<<EOF" >> $GITHUB_OUTPUT
+          echo "$FEATURE_BRANCHES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Rebase each feature branch onto develop
+        run: |
+          set -e
+          for BR in ${{ steps.list.outputs.branches }}; do
+            echo "Processing $BR..."
+            git checkout $BR
+            # Attempt rebase
+            if git rebase origin/develop --autostash; then
+              echo "Rebase successful for $BR"
+              git push --force-with-lease origin $BR
+            else
+              echo "WARNING: Rebase conflict on $BR. Aborting and resetting."
+              git rebase --abort || true
+            fi
+          done
+
+      - name: Switch back to develop
+        run: git checkout develop
