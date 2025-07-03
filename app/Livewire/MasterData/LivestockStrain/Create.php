@@ -12,6 +12,8 @@ use App\Models\UnitConversion;
 use App\Models\LivestockStrainStandard;
 use App\Models\Role;
 use App\Models\Permission;
+use Illuminate\Support\Facades\Auth;
+
 
 class Create extends Component
 {
@@ -85,12 +87,12 @@ class Create extends Component
         ]);
 
         // Check if the user has the permission to create or update livestock strains
-        if (!auth()->user()->can('create livestock strain master data') && !$this->edit_mode) {
+        if (!Auth::user()->can('create livestock strain master data') && !$this->edit_mode) {
             $this->dispatch('error', 'You do not have permission to create livestock strains.');
             return;
         }
 
-        if (!auth()->user()->can('update livestock strain master data') && $this->edit_mode) {
+        if (!Auth::user()->can('update livestock strain master data') && $this->edit_mode) {
             $this->dispatch('error', 'You do not have permission to update livestock strain.');
             return;
         }
@@ -101,7 +103,7 @@ class Create extends Component
             // Simpan atau update Livestock Strain
             $livestockStrain = $this->edit_mode && $this->livestockStrainId
                 ? LivestockStrain::findOrFail($this->livestockStrainId)
-                : new LivestockStrain(['created_by' => auth()->id()]);
+                : new LivestockStrain(['created_by' => Auth::id()]);
 
             $livestockStrain->fill([
                 'code' => $this->code,
@@ -134,7 +136,7 @@ class Create extends Component
         }
 
         // Check if the user has the permission to delete livestock strains
-        if (!auth()->user()->can('delete livestock strain master data')) {
+        if (!Auth::user()->can('delete livestock strain master data')) {
             $this->dispatch('error', 'You do not have permission to delete livestock strain.');
             return;
         }

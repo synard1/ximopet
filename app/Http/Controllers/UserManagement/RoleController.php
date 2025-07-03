@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Role;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
@@ -16,7 +17,7 @@ class RoleController extends Controller
         $query = Role::with('permissions');
 
         // If user is not SuperAdmin, exclude SuperAdmin role
-        if (!auth()->user()->hasRole('SuperAdmin')) {
+        if (!Auth::user()->hasRole('SuperAdmin')) {
             $query->where('name', '!=', 'SuperAdmin');
         }
 

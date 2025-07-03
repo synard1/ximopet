@@ -57,7 +57,7 @@ class AddUserModal extends Component
 
     public function render()
     {
-        $roles = auth()->user()->getAvailableRoles();
+        $roles = Auth::user()->getAvailableRoles();
         $roles_description = config('xolution.company_role_descriptions', []);
 
         foreach ($roles as $i => $role) {
@@ -153,7 +153,7 @@ class AddUserModal extends Component
             }
 
             // Handle CompanyUser data for Administrator users
-            if (auth()->user()->hasRole('Administrator')) {
+            if (Auth::user()->hasRole('Administrator')) {
                 $currentUserMapping = \App\Models\CompanyUser::getUserMapping();
 
                 if ($currentUserMapping) {
@@ -166,8 +166,8 @@ class AddUserModal extends Component
                         [
                             'isAdmin' => $this->role === 'Administrator',
                             'status' => 'active',
-                            'created_by' => auth()->id(),
-                            'updated_by' => auth()->id(),
+                            'created_by' => Auth::id(),
+                            'updated_by' => Auth::id(),
                         ]
                     );
                 }

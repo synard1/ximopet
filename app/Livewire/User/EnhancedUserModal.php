@@ -318,7 +318,7 @@ class EnhancedUserModal extends Component
      */
     protected function initializeDefaultSettings()
     {
-        $this->company_id = auth()->user()->company_id ?? null;
+        $this->company_id = Auth::user()->company_id ?? null;
         $this->status = 'Aktif';
         $this->is_email_enabled = false;
         $this->access_level = 'basic';
@@ -332,7 +332,7 @@ class EnhancedUserModal extends Component
 
     public function render()
     {
-        $roles = auth()->user()->getAvailableRoles();
+        $roles = Auth::user()->getAvailableRoles();
         $roles_description = config('xolution.company_role_descriptions', []);
 
         foreach ($roles as $i => $role) {
@@ -344,7 +344,7 @@ class EnhancedUserModal extends Component
 
         // Get farms based on user access
         $farmsQuery = DB::table('farms')->select('id', 'name');
-        if (!auth()->user()->hasRole('SuperAdmin')) {
+        if (!Auth::user()->hasRole('SuperAdmin')) {
             $currentUserMapping = CompanyUser::getUserMapping();
             if ($currentUserMapping) {
                 $farmsQuery->where('company_id', $currentUserMapping->company_id);
@@ -356,7 +356,7 @@ class EnhancedUserModal extends Component
         $coopsQuery = DB::table('coops')->select('id', 'name', 'farm_id');
         if (!empty($this->farm_ids)) {
             $coopsQuery->whereIn('farm_id', $this->farm_ids);
-        } elseif (!auth()->user()->hasRole('SuperAdmin')) {
+        } elseif (!Auth::user()->hasRole('SuperAdmin')) {
             $currentUserMapping = CompanyUser::getUserMapping();
             if ($currentUserMapping) {
                 $coopsQuery->whereExists(function ($query) use ($currentUserMapping) {
@@ -462,7 +462,7 @@ class EnhancedUserModal extends Component
                 }
 
                 // Handle CompanyUser mapping
-                if (auth()->user()->hasRole('Administrator')) {
+                if (Auth::user()->hasRole('Administrator')) {
                     $currentUserMapping = CompanyUser::getUserMapping();
 
                     if ($currentUserMapping) {
@@ -474,8 +474,8 @@ class EnhancedUserModal extends Component
                             [
                                 'isAdmin' => $this->role === 'Administrator',
                                 'status' => strtolower($this->status) === 'aktif' ? 'active' : 'inactive',
-                                'created_by' => auth()->id(),
-                                'updated_by' => auth()->id(),
+                                'created_by' => Auth::id(),
+                                'updated_by' => Auth::id(),
                             ]
                         );
                     }
@@ -494,7 +494,7 @@ class EnhancedUserModal extends Component
                     'permissions' => $this->userPermissions,
                     'farm_access' => $this->farm_ids,
                     'coop_access' => $this->coop_ids,
-                    'action_by' => auth()->id(),
+                    'action_by' => Auth::id(),
                 ]);
 
                 if ($this->edit_mode) {
@@ -687,7 +687,7 @@ class EnhancedUserModal extends Component
             Log::info('User deleted', [
                 'deleted_user_id' => $user->id,
                 'deleted_user_name' => $user->name,
-                'deleted_by' => auth()->id(),
+                'deleted_by' => Auth::id(),
             ]);
 
             $this->dispatch('success', 'User berhasil dihapus');
@@ -720,7 +720,7 @@ class EnhancedUserModal extends Component
             Log::info('User suspended', [
                 'suspended_user_id' => $user->id,
                 'suspended_user_name' => $user->name,
-                'suspended_by' => auth()->id(),
+                'suspended_by' => Auth::id(),
             ]);
 
             $this->dispatch('success', 'User berhasil disuspend');
