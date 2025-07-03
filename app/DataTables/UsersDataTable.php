@@ -10,6 +10,7 @@ use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use App\Models\Role;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class UsersDataTable extends DataTable
 {
@@ -53,7 +54,7 @@ class UsersDataTable extends DataTable
         $query->with('roles');
 
         // If user is not SuperAdmin
-        if (!auth()->user()->hasRole('SuperAdmin')) {
+        if (!Auth::user()->hasRole('SuperAdmin')) {
             $superAdminRoleId = Role::whereName('SuperAdmin')->value('id');
 
             // Get current user's company mapping
@@ -83,7 +84,7 @@ class UsersDataTable extends DataTable
 
                 // Debug log
                 Log::debug('[UsersDataTable] CompanyAdmin Query', [
-                    'user_id' => auth()->id(),
+                    'user_id' => Auth::id(),
                     'company_id' => $companyId,
                     'sql' => $query->toSql(),
                     'bindings' => $query->getBindings(),
@@ -106,13 +107,13 @@ class UsersDataTable extends DataTable
                 return $query;
             } else {
                 // If user is not admin, only show themselves
-                $selfQuery = $query->where('id', auth()->id())
+                $selfQuery = $query->where('id', Auth::id())
                     ->whereDoesntHave('roles', function (QueryBuilder $q) use ($superAdminRoleId) {
                         $q->where('id', $superAdminRoleId);
                     });
 
                 Log::debug('[UsersDataTable] Non-Admin Self Query', [
-                    'user_id' => auth()->id(),
+                    'user_id' => Auth::id(),
                     'sql' => $selfQuery->toSql(),
                     'bindings' => $selfQuery->getBindings(),
                     'result_count' => $selfQuery->count(),
@@ -123,7 +124,7 @@ class UsersDataTable extends DataTable
         }
 
         Log::debug('[UsersDataTable] SuperAdmin Query', [
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'sql' => $query->toSql(),
             'bindings' => $query->getBindings(),
             'result_count' => $query->count(),

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\RoleBackupService;
 use Spatie\ResponseCache\Facades\ResponseCache;
+use Illuminate\Support\Facades\Auth;
 
 
 class RoleModal extends Component
@@ -66,7 +67,7 @@ class RoleModal extends Component
     public function mount()
     {
         // Check if the user is an Admin
-        if (auth()->user()->hasRole('Administrator')) {
+        if (Auth::user()->hasRole('Administrator')) {
             // Get only the permissions that the current user has
             // $this->permissions = Permission::whereIn('id', function($query) {
             //     $query->select('permission_id')
@@ -118,7 +119,7 @@ class RoleModal extends Component
                 foreach ($keywords as $keyword) {
                     if (Str::contains(Str::lower($ability), $keyword)) {
                         $query = Permission::where('name', 'like', "%{$ability}%");
-                        if (!auth()->user()->hasRole('SuperAdmin')) {
+                        if (!Auth::user()->hasRole('SuperAdmin')) {
                             $query->where('name', '!=', $permission->name);
                         }
                         $permissions = $query->get();
@@ -143,7 +144,7 @@ class RoleModal extends Component
         foreach ($other_permissions as $permission) {
             $ability = Str::after($permission->name, ' ');
             $query = Permission::where('name', 'like', "%{$ability}%");
-            if (!auth()->user()->hasRole('SuperAdmin')) {
+            if (!Auth::user()->hasRole('SuperAdmin')) {
                 $query->where('name', '!=', $permission->name);
             }
             $permissions = $query->get();
