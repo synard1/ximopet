@@ -1,4 +1,5 @@
-@if(auth()->user()->can('update livestock strain') || auth()->user()->can('delete livestock strain'))
+@if(auth()->user()->can('update livestock strain master data') || auth()->user()->can('delete livestock strain master
+data'))
 <a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click"
     data-kt-menu-placement="bottom-end">
     Actions

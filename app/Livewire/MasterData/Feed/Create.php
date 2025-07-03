@@ -6,6 +6,7 @@ use App\Traits\HasTempAuthorization;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Auth;
 
 use App\Models\Feed;
 use App\Models\Unit;
@@ -219,22 +220,9 @@ class Create extends Component
         $this->code = $feed->code;
         $this->name = $feed->name;
         $this->type = "Feed";
-        $this->unit_id = $feed->data['unit_id'];
+        $this->unit_id = $feed->data['unit_id'] ?? null;
         $this->description = $feed->description;
         $this->conversion_units = $feed->data['conversion_units'] ?? [];
-
-
-        // $this->conversion_units = $feed->conversionUnits->map(function ($item) {
-        //     return [
-        //         'unit_id' => $item->unit_id,
-        //         'unit_name' => optional($item->unit)->name,
-        //         'value' => $item->value,
-        //         'is_default_purchase' => $item->is_default_purchase,
-        //         'is_default_mutation' => $item->is_default_mutation,
-        //         'is_default_sale' => $item->is_default_sale,
-        //         'is_smallest' => $item->is_smallest,
-        //     ];
-        // })->toArray();
 
         $this->showForm = true;
         $this->edit_mode = true;
@@ -251,18 +239,18 @@ class Create extends Component
 
         $this->validateConversionDefaults();
 
-        if (!auth()->user()->can('create feed master data') && !$this->edit_mode) {
+        if (!Auth::user()->can('create feed master data') && !$this->edit_mode) {
             $this->addError('create', 'You do not have permission to create feed master data.');
             return;
         }
 
-        if (!auth()->user()->can('update feed master data') && $this->edit_mode) {
+        if (!Auth::user()->can('update feed master data') && $this->edit_mode) {
             $this->addError('update', 'You do not have permission to update feed master data.');
             return;
         }
 
         DB::transaction(function () {
-            // Buat payload yang akan disimpan ke field `payload`
+            // Buat payload yang akan disimpan ke field `data`
             $payload = [
                 'unit_id' => $this->unit_id,
                 'unit_details' => Unit::find($this->unit_id)?->only('id', 'name', 'description'),
@@ -285,12 +273,12 @@ class Create extends Component
             // Simpan atau update Feed
             $feed = $this->edit_mode && $this->feedId
                 ? Feed::findOrFail($this->feedId)
-                : new Feed(['created_by' => auth()->id()]);
+                : new Feed(['created_by' => Auth::id()]);
 
             $feed->fill([
                 'code' => $this->code,
                 'name' => $this->name,
-                'payload' => $payload,
+                'data' => $payload,
             ])->save();
 
             // Bersihkan semua konversi lama untuk feed ini
@@ -314,7 +302,7 @@ class Create extends Component
                         'default_mutation' => $conversion['is_default_mutation'] ?? false,
                         'default_sale' => $conversion['is_default_sale'] ?? false,
                         'smallest' => $conversion['is_smallest'] ?? false,
-                        'created_by' => auth()->id(),
+                        'created_by' => Auth::id(),
                     ]
                 );
             }
@@ -326,7 +314,7 @@ class Create extends Component
 
     public function deleteFeed($feedId)
     {
-        if (!auth()->user()->can('delete feed master data')) {
+        if (!Auth::user()->can('delete feed master data')) {
             $this->addError('delete', 'You do not have permission to delete feed master data.');
             return;
         }

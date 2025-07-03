@@ -18,6 +18,7 @@ use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class LivestockStrainDataTable extends DataTable
 {
@@ -35,7 +36,7 @@ class LivestockStrainDataTable extends DataTable
                 return $livestockStrain->code ?? '-';
             })
             ->editColumn('name', function (LivestockStrain $livestockStrain) {
-                if (auth()->user()->can('read records management')) {
+                if (Auth::user()->can('read records management')) {
                     return '<a href="#" class="text-gray-800 text-hover-primary mb-1" data-kt-action="view_detail_livestock" data-kt-livestock-id="' . $livestockStrain->id . '">' . $livestockStrain->name . '</a>';
                 } else {
                     return $livestockStrain->name;
@@ -58,14 +59,14 @@ class LivestockStrainDataTable extends DataTable
     {
         $query = $model->newQuery();
 
-        if (auth()->user()->hasRole('Operator')) {
+        if (Auth::user()->hasRole('Operator')) {
             $query->whereHas('farm.farmOperators', function ($query) {
-                $query->where('user_id', auth()->id());
+                $query->where('user_id', Auth::id());
             });
         }
 
-        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
-            $query->where('company_id', auth()->user()->company_id);
+        if (Auth::user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', Auth::user()->company_id);
         }
 
         return $query;
