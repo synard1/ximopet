@@ -185,6 +185,11 @@ class Livestock extends BaseModel
         return $this->hasMany(LivestockDepletion::class, 'livestock_id', 'id');
     }
 
+    public function salesItems()
+    {
+        return $this->hasMany(LivestockSalesItem::class, 'livestock_id', 'id');
+    }
+
     public function recordings()
     {
         return $this->hasMany(Recording::class, 'livestock_id', 'id');
@@ -1179,5 +1184,17 @@ class Livestock extends BaseModel
         }
 
         return $result;
+    }
+
+    public function feedUsageDetails()
+    {
+        return $this->hasManyThrough(
+            \App\Models\FeedUsageDetail::class,
+            \App\Models\FeedUsage::class,
+            'livestock_id', // Foreign key di FeedUsage
+            'feed_usage_id', // Foreign key di FeedUsageDetail
+            'id', // Local key di Livestock
+            'id' // Local key di FeedUsage
+        );
     }
 }
