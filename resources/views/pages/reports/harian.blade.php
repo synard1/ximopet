@@ -78,6 +78,9 @@
         FARM : {{ $farm }}<br>
         TANGGAL : {{ $tanggal }}<br>
         TIPE : {{ strtoupper($reportType) }} {{ $reportType === 'detail' ? '(PER BATCH)' : '(PER KANDANG)' }}
+        @if($reportType === 'detail')
+        <br><small>Mode Detail: Menampilkan data per deplesi record dengan normalisasi jenis deplesi</small>
+        @endif
     </div>
 
     <table>
@@ -126,14 +129,27 @@
         </thead>
         <tbody>
             @if($reportType === 'detail')
+            {{-- MODE DETAIL: Tampilkan per batch --}}
             @forelse($recordings as $coopNama => $batchesData)
             @if(is_array($batchesData) && count($batchesData) > 0)
-            @foreach($batchesData as $index => $batch)
+            @php
+            $validBatches = collect($batchesData)->filter(function($batch) {
+            return is_array($batch) && isset($batch['livestock_name']);
+            });
+            @endphp
+
+            @if($validBatches->count() > 0)
+            @foreach($validBatches as $index => $batch)
             <tr>
                 @if($index === 0)
-                <td rowspan="{{ count($batchesData) }}">{{ $coopNama ?? '-' }}</td>
+                <td rowspan="{{ $validBatches->count() }}">{{ $coopNama ?? '-' }}</td>
                 @endif
-                <td>{{ $batch['livestock_name'] ?? '-' }}</td>
+                <td title="Batch: {{ $batch['livestock_name'] ?? '-' }}">
+                    {{ $batch['livestock_name'] ?? '-' }}
+                    @if(isset($batch['depletion_type']) && $batch['depletion_type'])
+                    <br><small class="text-muted">{{ $batch['depletion_category'] ?? 'other' }}</small>
+                    @endif
+                </td>
                 <td>{{ $batch['umur'] ?? '0' }}</td>
                 <td>{{ formatNumber($batch['stock_awal'] ?? 0, 0) }}</td>
                 <td>{{ $batch['mati'] ?? '0' }}</td>
@@ -156,14 +172,28 @@
                 <td>{{ formatNumber($batch['pakan_total'] ?? 0, 0) }}</td>
             </tr>
             @endforeach
+            @else
+            {{-- No valid batches found --}}
+            <tr>
+                <td>{{ $coopNama ?? '-' }}</td>
+                <td colspan="{{ 13 + count($distinctFeedNames) }}">Data batch tidak valid atau kosong</td>
+            </tr>
+            @endif
+            @else
+            {{-- Fallback jika data batch tidak valid --}}
+            <tr>
+                <td>{{ $coopNama ?? '-' }}</td>
+                <td colspan="{{ 13 + count($distinctFeedNames) }}">Format data tidak sesuai ({{ gettype($batchesData)
+                    }})</td>
+            </tr>
             @endif
             @empty
             <tr>
-                <td colspan="{{ 14 + count($distinctFeedNames) + ($reportType === 'detail' ? 1 : 0) }}">Tidak ada data
-                    untuk ditampilkan</td>
+                <td colspan="{{ 15 + count($distinctFeedNames) }}">Tidak ada data untuk ditampilkan</td>
             </tr>
             @endforelse
             @else
+            {{-- MODE SIMPLE: Tampilkan per kandang --}}
             @forelse($recordings as $coopNama => $record)
             <tr>
                 <td>{{ $coopNama ?? '-' }}</td>

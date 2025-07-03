@@ -34,10 +34,12 @@ use App\Models\SupplyPurchaseBatch;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use App\Models\BatchWorker;
 use App\Models\Coop;
 use App\Models\Worker;
 use App\Services\Report\DaillyReportExcelExportService;
+use App\Services\Report\LivestockDepletionReportService;
 use Exception;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -50,10 +52,14 @@ use App\Config\LivestockDepletionConfig;
 class ReportsController extends Controller
 {
     protected $daillyReportExcelExportService;
+    protected $depletionReportService;
 
-    public function __construct(DaillyReportExcelExportService $daillyReportExcelExportService)
-    {
+    public function __construct(
+        DaillyReportExcelExportService $daillyReportExcelExportService,
+        LivestockDepletionReportService $depletionReportService
+    ) {
         $this->daillyReportExcelExportService = $daillyReportExcelExportService;
+        $this->depletionReportService = $depletionReportService;
     }
 
     /**
@@ -61,9 +67,9 @@ class ReportsController extends Controller
      */
     public function indexHarian()
     {
-        $livestock = Livestock::where('company_id', auth()->user()->company_id)->get();
-        $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->where('company_id', auth()->user()->company_id)->get();
-        $coops = Coop::whereIn('id', $livestock->pluck('coop_id'))->where('company_id', auth()->user()->company_id)->get();
+        $livestock = Livestock::where('company_id', Auth::user()->company_id)->get();
+        $farms = Farm::whereIn('id', $livestock->pluck('farm_id'))->where('company_id', Auth::user()->company_id)->get();
+        $coops = Coop::whereIn('id', $livestock->pluck('coop_id'))->where('company_id', Auth::user()->company_id)->get();
 
         $livestock = $livestock->map(function ($item) {
             return [
@@ -513,7 +519,7 @@ class ReportsController extends Controller
         ];
 
         if ($reportType === 'detail') {
-            // Mode Detail: Tampilkan data per batch dengan grouping per kandang
+            // Mode Detail: Tampilkan data per deplesi record dengan grouping per kandang
             $livestocksByCoopNama = $livestocks->groupBy(function ($livestock) {
                 return $livestock->coop->name;
             });
@@ -531,9 +537,35 @@ class ReportsController extends Controller
             foreach ($livestocksByCoopNama as $coopNama => $coopLivestocks) {
                 $coopData = [];
 
-                foreach ($coopLivestocks as $index => $livestock) {
-                    $batchData = $this->processLivestockData($livestock, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails);
-                    $coopData[] = $batchData;
+                foreach ($coopLivestocks as $livestock) {
+                    // Get deplesi records for this livestock on this date using service
+                    $depletionRecords = $this->depletionReportService->getDepletionRecords($livestock, $tanggal);
+
+                    if ($depletionRecords->count() > 0) {
+                        // Create one batch per deplesi record using service
+                        foreach ($depletionRecords as $depletionRecord) {
+                            $batchData = $this->depletionReportService->processLivestockDepletionDetails(
+                                $livestock,
+                                $tanggal,
+                                $distinctFeedNames,
+                                $totals,
+                                $allFeedUsageDetails,
+                                $depletionRecord
+                            );
+                            $coopData[] = $batchData;
+                        }
+                    } else {
+                        // If no deplesi records, create one batch with zero deplesi using service
+                        $batchData = $this->depletionReportService->processLivestockDepletionDetails(
+                            $livestock,
+                            $tanggal,
+                            $distinctFeedNames,
+                            $totals,
+                            $allFeedUsageDetails,
+                            null
+                        );
+                        $coopData[] = $batchData;
+                    }
                 }
 
                 $recordings[$coopNama] = $coopData;
@@ -605,20 +637,59 @@ class ReportsController extends Controller
         $age = Carbon::parse($livestock->start_date)->diffInDays($tanggal);
         $stockAwal = (int) $livestock->initial_quantity;
 
-        // Ambil data deplesi untuk tanggal spesifik (harian)
-        $mortality = (int) LivestockDepletion::where('livestock_id', $livestock->id)
-            ->where('jenis', 'Mati')
-            ->where('tanggal', $tanggal->format('Y-m-d'))
-            ->sum('jumlah');
+        // Logging awal
+        \Log::debug('DEBUG: processLivestockData', [
+            'livestock_id' => $livestock->id,
+            'livestock_name' => $livestock->name,
+            'tanggal' => $tanggal->format('Y-m-d'),
+        ]);
 
-        $culling = (int) LivestockDepletion::where('livestock_id', $livestock->id)
-            ->where('jenis', 'Afkir')
-            ->where('tanggal', $tanggal->format('Y-m-d'))
-            ->sum('jumlah');
+        // Ambil data deplesi untuk tanggal spesifik (harian) dengan normalisasi jenis
+        $mortalityQuery = LivestockDepletion::where('livestock_id', $livestock->id)
+            ->whereIn('jenis', [
+                LivestockDepletionConfig::TYPE_MORTALITY,
+                LivestockDepletionConfig::LEGACY_TYPE_MATI
+            ])
+            ->whereDate('tanggal', $tanggal->format('Y-m-d'));
+        $mortality = (int) $mortalityQuery->sum('jumlah');
+        \Log::debug('DEBUG: mortality query', [
+            'sql' => $mortalityQuery->toSql(),
+            'bindings' => $mortalityQuery->getBindings(),
+            'result' => $mortality
+        ]);
 
-        $totalDepletionCumulative = (int) LivestockDepletion::where('livestock_id', $livestock->id)
-            ->where('tanggal', '<=', $tanggal->format('Y-m-d'))
-            ->sum('jumlah');
+        $cullingQuery = LivestockDepletion::where('livestock_id', $livestock->id)
+            ->whereIn('jenis', [
+                LivestockDepletionConfig::TYPE_CULLING,
+                LivestockDepletionConfig::LEGACY_TYPE_AFKIR
+            ])
+            ->whereDate('tanggal', $tanggal->format('Y-m-d'));
+        $culling = (int) $cullingQuery->sum('jumlah');
+        \Log::debug('DEBUG: culling query', [
+            'sql' => $cullingQuery->toSql(),
+            'bindings' => $cullingQuery->getBindings(),
+            'result' => $culling
+        ]);
+
+        $totalDepletionQuery = LivestockDepletion::where('livestock_id', $livestock->id)
+            ->whereDate('tanggal', $tanggal->format('Y-m-d'));
+        $totalDepletion = (int) $totalDepletionQuery->sum('jumlah');
+        $totalDepletionCount = $totalDepletionQuery->count();
+        \Log::debug('DEBUG: totalDepletion query', [
+            'sql' => $totalDepletionQuery->toSql(),
+            'bindings' => $totalDepletionQuery->getBindings(),
+            'result' => $totalDepletion,
+            'count' => $totalDepletionCount
+        ]);
+
+        // Logging hasil akhir livestock
+        \Log::debug('DEBUG: livestock result', [
+            'livestock_id' => $livestock->id,
+            'mortality' => $mortality,
+            'culling' => $culling,
+            'total_depletion' => $totalDepletion,
+            'total_depletion_count' => $totalDepletionCount
+        ]);
 
         $sales = LivestockSalesItem::where('livestock_id', $livestock->id)
             ->whereHas('livestockSale', function ($query) use ($tanggal) {
@@ -664,12 +735,12 @@ class ReportsController extends Controller
         $berat_hari_ini = (float) ($recordingData->berat_hari_ini ?? 0);
         $kenaikan_berat = (float) ($recordingData->kenaikan_berat ?? 0);
 
-        $stockAkhir = $stockAwal - $totalDepletionCumulative - $totalSalesCumulative;
+        $stockAkhir = $stockAwal - $totalDepletion - $totalSalesCumulative;
 
         $totals['stock_awal'] += $stockAwal;
         $totals['mati'] += $mortality;
         $totals['afkir'] += $culling;
-        $totals['total_deplesi'] += $totalDepletionCumulative;
+        $totals['total_deplesi'] += $totalDepletion;
         $totals['jual_ekor'] += (int) ($sales->quantity ?? 0);
         $totals['jual_kg'] += (float) ($sales->total_berat ?? 0);
         $totals['stock_akhir'] += $stockAkhir;
@@ -699,8 +770,8 @@ class ReportsController extends Controller
             'stock_awal' => $stockAwal,
             'mati' => $mortality,
             'afkir' => $culling,
-            'total_deplesi' => $totalDepletionCumulative,
-            'deplesi_percentage' => $stockAwal > 0 ? round(($totalDepletionCumulative / $stockAwal) * 100, 2) : 0,
+            'total_deplesi' => $totalDepletion,
+            'deplesi_percentage' => $stockAwal > 0 ? round(($totalDepletion / $stockAwal) * 100, 2) : 0,
             'jual_ekor' => (int) ($sales->quantity ?? 0),
             'jual_kg' => (float) ($sales->total_berat ?? 0),
             'stock_akhir' => $stockAkhir,
@@ -2504,5 +2575,23 @@ class ReportsController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Legacy method - now delegated to LivestockDepletionReportService
+     * @deprecated Use LivestockDepletionReportService::processLivestockDepletionDetails instead
+     */
+    private function processLivestockDepletionDetails($livestock, $tanggal, $distinctFeedNames, &$totals, $allFeedUsageDetails = null, $depletionRecord = null)
+    {
+        Log::warning('Using deprecated method processLivestockDepletionDetails, consider using LivestockDepletionReportService');
+
+        return $this->depletionReportService->processLivestockDepletionDetails(
+            $livestock,
+            $tanggal,
+            $distinctFeedNames,
+            $totals,
+            $allFeedUsageDetails,
+            $depletionRecord
+        );
     }
 }
