@@ -1,0 +1,47 @@
+name: Generate Changelog
+
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: write
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository (full history)
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # need full git history for changelog
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install conventional-changelog CLI
+        run: npm install -g conventional-changelog-cli
+
+      - name: Generate / update CHANGELOG.md
+        run: |
+          # Generate changelog using angular preset (Conventional Commits standard)
+          # -i: input file (create if not exist)
+          # -s: same file (overwrite)
+          # -r 0: include all releases/commits
+          conventional-changelog -p angular -i CHANGELOG.md -s -r 0
+
+      - name: Commit & push if CHANGELOG updated
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --exit-code --quiet CHANGELOG.md; then
+            echo "No CHANGELOG updates needed." && exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): update CHANGELOG [skip ci]"
+          git push origin HEAD:develop
