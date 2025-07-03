@@ -219,22 +219,9 @@ class Create extends Component
         $this->code = $feed->code;
         $this->name = $feed->name;
         $this->type = "Feed";
-        $this->unit_id = $feed->data['unit_id'];
+        $this->unit_id = $feed->data['unit_id'] ?? null;
         $this->description = $feed->description;
         $this->conversion_units = $feed->data['conversion_units'] ?? [];
-
-
-        // $this->conversion_units = $feed->conversionUnits->map(function ($item) {
-        //     return [
-        //         'unit_id' => $item->unit_id,
-        //         'unit_name' => optional($item->unit)->name,
-        //         'value' => $item->value,
-        //         'is_default_purchase' => $item->is_default_purchase,
-        //         'is_default_mutation' => $item->is_default_mutation,
-        //         'is_default_sale' => $item->is_default_sale,
-        //         'is_smallest' => $item->is_smallest,
-        //     ];
-        // })->toArray();
 
         $this->showForm = true;
         $this->edit_mode = true;

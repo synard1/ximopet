@@ -95,7 +95,7 @@ class FarmsDataTable extends DataTable
             Column::computed('action')
                 ->exportable(false)
                 ->printable(false)
-                ->visible(auth()->user()->hasRole(['Supervisor']))
+            // ->visible(auth()->user()->hasRole(['Supervisor']))
         ];
     }
 

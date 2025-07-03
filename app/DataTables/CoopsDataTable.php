@@ -116,8 +116,8 @@ class CoopsDataTable extends DataTable
                 // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
-                // ->width(60)
-                ->visible(auth()->user()->hasRole(['Supervisor', 'Admin']))
+            // ->width(60)
+            // ->visible(auth()->user()->hasRole(['Supervisor', 'Admin']))
         ];
     }
 
