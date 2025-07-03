@@ -32,7 +32,7 @@ class FeedPurchaseStatusChanged implements ShouldBroadcast
         FeedPurchaseBatch $batch,
         string $oldStatus,
         string $newStatus,
-        int $updatedBy,
+        int|string $updatedBy,
         ?string $notes = null,
         array $metadata = []
     ) {

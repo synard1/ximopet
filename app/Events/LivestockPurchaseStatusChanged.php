@@ -32,7 +32,7 @@ class LivestockPurchaseStatusChanged implements ShouldBroadcast
         LivestockPurchase $batch,
         string $oldStatus,
         string $newStatus,
-        int $updatedBy,
+        int|string $updatedBy,
         ?string $notes = null,
         array $metadata = []
     ) {
