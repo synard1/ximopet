@@ -9,6 +9,7 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Auth;
 
 class FarmsDataTable extends DataTable
 {
@@ -44,13 +45,13 @@ class FarmsDataTable extends DataTable
      */
     public function query(Farm $model): QueryBuilder
     {
-        if (auth()->user()->hasRole('Operator')) {
+        if (Auth::user()->hasRole('Operator')) {
             return $model->newQuery()->whereHas('farmOperators', function ($query) {
-                $query->where('user_id', auth()->id());
+                $query->where('user_id', Auth::id());
             });
         }
-        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
-            return $model->newQuery()->where('company_id', auth()->user()->company_id);
+        if (Auth::user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            return $model->newQuery()->where('company_id', Auth::user()->company_id);
         }
         return $model->newQuery();
     }
@@ -95,7 +96,7 @@ class FarmsDataTable extends DataTable
             Column::computed('action')
                 ->exportable(false)
                 ->printable(false)
-            // ->visible(auth()->user()->hasRole(['Supervisor']))
+            // ->visible(Auth::user()->hasRole(['Supervisor']))
         ];
     }
 

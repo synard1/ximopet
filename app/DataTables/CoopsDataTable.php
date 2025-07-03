@@ -8,6 +8,7 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Auth;
 
 class CoopsDataTable extends DataTable
 {
@@ -57,22 +58,22 @@ class CoopsDataTable extends DataTable
     {
         $query = $model->newQuery();
 
-        if (auth()->user()->hasRole('Operator')) {
+        if (Auth::user()->hasRole('Operator')) {
             $query = $model::with('farm')
                 ->whereHas('farm', function ($query) {
                     $query->whereHas('farmOperators', function ($query) {
-                        $query->where('user_id', auth()->id());
+                        $query->where('user_id', Auth::id());
                     });
                 })
                 ->orderBy('name', 'DESC');
-        } else if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+        } else if (Auth::user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
             $query = $model::with('farm')
                 ->orderBy('name', 'DESC')
-                ->where('company_id', auth()->user()->company_id);
+                ->where('company_id', Auth::user()->company_id);
         } else {
             $query = $model::with('farm')
                 ->orderBy('name', 'DESC')
-                ->where('company_id', auth()->user()->company_id);
+                ->where('company_id', Auth::user()->company_id);
         }
 
         return $query;
