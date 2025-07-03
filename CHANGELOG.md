@@ -95,6 +95,7 @@
 * update Laravel application configuration and dependencies ([81410c4](https://github.com/synard1/ximopet/commit/81410c4ba81047b4bf8a8587031a04787044f8fc))
 * update livestock management table for mutation tracking ([cf74cd5](https://github.com/synard1/ximopet/commit/cf74cd543e803afdcf585acef16d3822e3aaccfb))
 * update seeder data and refine menu routing for administrator access ([1353793](https://github.com/synard1/ximopet/commit/13537930e950830aceb6571c8ad05579b3e896d8))
+* **version:** auto version & auto rebase feature branches ([#19](https://github.com/synard1/ximopet/issues/19)) ([f3cc20c](https://github.com/synard1/ximopet/commit/f3cc20cbfa60911cc25c5d43dfd2e38a3be4361c))
 
 
 ### Performance Improvements
