@@ -65,11 +65,44 @@ class AppServiceProvider extends ServiceProvider
         // Force Sanctum to use our custom PersonalAccessToken model
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
 
+        // =========================================
+        // Share Version Information Globally
+        // =========================================
+        $detectedVersion = cache()->rememberForever('app_version', function () {
+            $default = config('xolution.APPS.Version');
+            $filePath = base_path('CHANGELOG.md');
+
+            if (!file_exists($filePath)) {
+                return $default;
+            }
+
+            $handle = fopen($filePath, 'r');
+            if (! $handle) {
+                return $default;
+            }
+
+            while (($line = fgets($handle)) !== false) {
+                // look for lines like: ## [V1.2.3] – 2025-01-24  or ## [1.2.3]
+                if (preg_match('/^##\s*\[?v?([0-9]+(?:\.[0-9]+)+)\]?/i', $line, $matches)) {
+                    fclose($handle);
+                    return strtoupper('V' . ltrim($matches[1], 'vV'));
+                }
+            }
+            fclose($handle);
+
+            return $default; // fallback
+        });
+
+        // Overwrite config value at runtime so existing calls continue to work
+        config(['xolution.APPS.Version' => $detectedVersion]);
+
+        // Share to all blade views
+        view()->share('app_version', $detectedVersion);
+
         // Only load Pulse and Telescope migrations in local/dev
         if (app()->environment(['local', 'development', 'dev', 'testing'])) {
             $this->loadMigrationsFrom(database_path('migrations/pulse'));
             $this->loadMigrationsFrom(database_path('migrations/telescope'));
         }
-
     }
 }
