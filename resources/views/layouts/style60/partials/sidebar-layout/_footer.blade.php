@@ -6,7 +6,7 @@
         <div class="text-gray-900 order-2 order-md-1">
             <span class="text-muted fw-semibold me-1">{{ date('Y') }}&copy;</span>
             <a href="#" target="_blank" class="text-gray-800 text-hover-primary">Ximopet</a>
-            <span class="text-muted fw-semibold ms-1">{{ config('xolution.APPS.Version') ?? 'Unknown' }}</span>
+            <span class="text-muted fw-semibold ms-1">{{ $app_version ?? 'Unknown' }}</span>
             @if(app()->environment('local'))
             @php
             // Attempt to retrieve current Git branch and short commit hash. Fallback to "unknown" if command fails.

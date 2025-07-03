@@ -1,0 +1,44 @@
+name: Auto Version
+
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: write
+
+jobs:
+  generate_version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Generate version string
+        id: gen
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          DATE=$(date +"%Y.%m.%d")
+          VERSION="V${DATE}-${SHORT_SHA}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Write .version file
+        run: echo "${{ steps.gen.outputs.version }}" > .version
+
+      - name: Commit & push .version if changed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --exit-code --quiet .version; then
+            echo "No version change; skipping commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .version
+          git commit -m "ci(version): bump version to ${{ steps.gen.outputs.version }} [skip ci]"
+          git push origin HEAD:develop
