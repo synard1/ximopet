@@ -1,4 +1,4 @@
-#  (2025-07-03)
+#  (2025-07-04)
 
 
 ### Bug Fixes
@@ -39,12 +39,14 @@
 * add advanced supply purchase report component and view ([9f38c66](https://github.com/synard1/ximopet/commit/9f38c6657fc55d0b6d24943c6f86bb607f4d0417))
 * add artisan command for deleting all feed data ([10eab2c](https://github.com/synard1/ximopet/commit/10eab2cc7cee62d55dbbab732044c10de7161602))
 * add batch worker reporting functionality ([fc39793](https://github.com/synard1/ximopet/commit/fc397930d4649c47df7617f7afbc87d80f3b98b5))
+* add commands for managing company roles and permissions ([7ca06cb](https://github.com/synard1/ximopet/commit/7ca06cbc87b9fe4a4bbf9d91248ec914ddc70fd5))
 * add comprehensive and basic recording seeders for livestock management ([90b70cd](https://github.com/synard1/ximopet/commit/90b70cddab852e1be2882de6aead426e4ccffaa9))
 * add Kandang management component and modal for CRUD operations ([ceb4de1](https://github.com/synard1/ximopet/commit/ceb4de18cc309220fe2c04ded1bf7e1aeba6faee))
 * Add Kematian Ternak feature ([a62f374](https://github.com/synard1/ximopet/commit/a62f374130e90554719147c98851bf1d2fc1a8c7))
 * add new data integrity services and enhance data management features ([26121fc](https://github.com/synard1/ximopet/commit/26121fc6f7c74bdaf8e7aee97154af0564a6be1b))
 * add new files for livestock management and notification system enhancements ([b9a29cf](https://github.com/synard1/ximopet/commit/b9a29cfe386cc8734e7679f6ac6b3ec85e255800))
 * add new SVG and CodeDiagram files for enhanced visualization and documentation ([481f418](https://github.com/synard1/ximopet/commit/481f418bcff782b7ade7d87794be3f13bab63cce))
+* add permission preset management functionality ([9aa099e](https://github.com/synard1/ximopet/commit/9aa099edd0e93fc4a486f34592548c4715ca46ee))
 * add Pulse and Telescope migrations for local development ([d8ccc9e](https://github.com/synard1/ximopet/commit/d8ccc9ef700e672861ea786b635fd11e094de8e0))
 * add purchase reports functionality for livestock, feed, and supply ([3d05a3c](https://github.com/synard1/ximopet/commit/3d05a3c4e76ee2327955d5b7ed6188c281dea3f9))
 * add Pusher and Laravel Echo support for real-time notifications ([7fa315b](https://github.com/synard1/ximopet/commit/7fa315b3869447d50bfc02af7e95b869269ba32e))
@@ -61,6 +63,7 @@
 * enhance livestock data integrity management and UI ([0bd05e2](https://github.com/synard1/ximopet/commit/0bd05e2865c354fab38a28724f48c9f6704f9646))
 * enhance menu export functionality with structured JSON output and error handling ([36fc97a](https://github.com/synard1/ximopet/commit/36fc97ae472ff3f560325e402d78a53865226c1c))
 * enhance QA Checklist Monitor and reporting components for improved user experience ([0c61b8a](https://github.com/synard1/ximopet/commit/0c61b8ad14484079157bf143c2843e1e8f3425ab))
+* enhance role management with company-specific filtering ([42505b8](https://github.com/synard1/ximopet/commit/42505b89a55f8f699aed072c9f5ca59291dac0c6))
 * enhance security and performance with blacklist system and reporting improvements ([7c55bec](https://github.com/synard1/ximopet/commit/7c55bec92a8e4f364be37d79eb668e96184dd621))
 * enhance user authentication metadata and UI structure ([76b2ef3](https://github.com/synard1/ximopet/commit/76b2ef37380a782325aa0cd157aa072b9c1c6845))
 * enhance user role management and sidebar menu access ([46c48e1](https://github.com/synard1/ximopet/commit/46c48e1c05c13ec14c7837908c2bbcf9b732ee76))
@@ -68,6 +71,7 @@
 * implement company admin management system with enhanced role constraints ([7ac9dc4](https://github.com/synard1/ximopet/commit/7ac9dc4e8ab5daef993f73ab4fe32899e183cfe8))
 * implement company management features with user mapping and configuration ([4ccee2d](https://github.com/synard1/ximopet/commit/4ccee2ddffb39a1d087cadef6cecd0cf637e1e52))
 * implement company master data auto-sync system ([917577d](https://github.com/synard1/ximopet/commit/917577da20418d6c29303e6ed85720c6379a8de3))
+* implement company-specific role and permission management ([cf5cefb](https://github.com/synard1/ximopet/commit/cf5cefbe0444c73d55f5dbc862ca2bbea1ca9af4))
 * implement comprehensive notification systems for real-time updates ([51d0e23](https://github.com/synard1/ximopet/commit/51d0e230f0168336110f0dfd58238e26ad5d054e))
 * implement environment-based package management and configuration ([24d7e6b](https://github.com/synard1/ximopet/commit/24d7e6bbe99906e458e29cd9926b60aee7e15ad8))
 * implement environment-based package management for development tools ([f2979f7](https://github.com/synard1/ximopet/commit/f2979f72391eb86c74d04496340369ef2429d668))
