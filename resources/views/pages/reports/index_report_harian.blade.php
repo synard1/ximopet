@@ -412,18 +412,22 @@
              // Update report statistics from the loaded content
              function updateReportStats() {
                  try {
-                     // Count coops from table rows
-                     const coopRows = $('#report-content table tbody tr').length;
-                     $('#totalCoops').text(coopRows || 0);
+                     // Count distinct coop names (column first TD of each tbody row)
+                     const coopNames = new Set();
+                     $('#report-content table tbody tr').each(function(){
+                         const coopName = $(this).find('td').first().text().trim();
+                         if(coopName) coopNames.add(coopName);
+                     });
+                     $('#totalCoops').text(coopNames.size || 0);
 
                      // Extract totals from the total row
                      const totalRow = $('#report-content table tfoot tr');
                      if (totalRow.length > 0) {
                          const cells = totalRow.find('td');
-                         if (cells.length >= 10) {
-                             const stockAwal = parseInt(cells.eq(2).text().replace(/,/g, '')) || 0;
-                             const totalDeplesi = parseInt(cells.eq(5).text().replace(/,/g, '')) || 0;
-                             const stockAkhir = parseInt(cells.eq(9).text().replace(/,/g, '')) || 0;
+                         if (cells.length >= 9) {
+                             const stockAwal = parseInt(cells.eq(1).text().replace(/,/g, '')) || 0;
+                             const totalDeplesi = parseInt(cells.eq(4).text().replace(/,/g, '')) || 0;
+                             const stockAkhir = parseInt(cells.eq(8).text().replace(/,/g, '')) || 0;
                              
                              $('#totalStock').text(stockAwal.toLocaleString());
                              $('#totalDeplesi').text(totalDeplesi.toLocaleString());
