@@ -538,6 +538,13 @@ class ReportsController extends Controller
                 $coopData = [];
 
                 foreach ($coopLivestocks as $livestock) {
+                    // Skip processing this livestock if no Recording records exist for the selected date
+                    if (!Recording::where('livestock_id', $livestock->id)
+                        ->whereDate('tanggal', $tanggal)
+                        ->exists()) {
+                        continue;
+                    }
+
                     // Get deplesi records for this livestock on this date using service
                     $depletionRecords = $this->depletionReportService->getDepletionRecords($livestock, $tanggal);
 
@@ -568,7 +575,9 @@ class ReportsController extends Controller
                     }
                 }
 
-                $recordings[$coopNama] = $coopData;
+                if (!empty($coopData)) {
+                    $recordings[$coopNama] = $coopData;
+                }
             }
         } else {
             // Mode Simple: Agregasi data per kandang
@@ -578,7 +587,9 @@ class ReportsController extends Controller
 
             foreach ($livestocksByCoopNama as $coopNama => $coopLivestocks) {
                 $aggregatedData = $this->processCoopAggregation($coopLivestocks, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails);
-                $recordings[$coopNama] = $aggregatedData;
+                if ($aggregatedData !== null) {
+                    $recordings[$coopNama] = $aggregatedData;
+                }
             }
         }
 
@@ -633,6 +644,15 @@ class ReportsController extends Controller
         $recordingData = Recording::where('livestock_id', $livestock->id)
             ->whereDate('tanggal', $tanggal)
             ->first();
+
+        // Skip processing if there is no Recording data to avoid confusing users
+        if (!$recordingData) {
+            \Log::debug('Skipping livestock - no Recording data', [
+                'livestock_id' => $livestock->id,
+                'tanggal' => $tanggal->format('Y-m-d'),
+            ]);
+            return null; // 🚫 Skip this livestock completely
+        }
 
         $age = Carbon::parse($livestock->start_date)->diffInDays($tanggal);
         $stockAwal = (int) $livestock->initial_quantity;
@@ -803,14 +823,26 @@ class ReportsController extends Controller
             'kenaikan_berat' => 0,
             'pakan_harian' => [],
             'pakan_total' => 0,
-            'livestock_count' => $coopLivestocks->count()
+            'livestock_count' => 0 // will be updated after filtering livestock having Recording data
         ];
+
+        $processedCount = 0;
 
         $batchDataCollection = [];
         foreach ($coopLivestocks as $livestock) {
             $batchData = $this->processLivestockData($livestock, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails);
+            if ($batchData === null) {
+                continue; // Skip livestock without Recording
+            }
+            $processedCount++;
             $batchDataCollection[] = $batchData;
         }
+
+        if (empty($batchDataCollection)) {
+            return null; // No data to aggregate for this coop
+        }
+
+        $aggregatedData['livestock_count'] = $processedCount;
 
         foreach ($batchDataCollection as $batchData) {
             $aggregatedData['umur'] = $batchData['umur'];
