@@ -57,6 +57,7 @@
 * company-scoped roles & permissions implementation with spatie package ([469d7d2](https://github.com/synard1/ximopet/commit/469d7d29d715e4011e9c2a17e80c4a04ac93b038))
 * enhance company management and user permissions ([4b3022c](https://github.com/synard1/ximopet/commit/4b3022ccdcca54170b1170d572a746276149aaee))
 * enhance daily report detail mode for livestock depletion records ([6920177](https://github.com/synard1/ximopet/commit/692017757e32d213ca0b5b60324fbafb97071727))
+* enhance daily report processing by filtering livestock with recording data ([a9b8c71](https://github.com/synard1/ximopet/commit/a9b8c71ea4b1f91971a596f89dc161989bda3c39))
 * enhance data visibility and filtering by company_id across various DataTables and controllers ([85ef48c](https://github.com/synard1/ximopet/commit/85ef48c5d0b1ecc7ffaaec4c6d4a187a7574656d))
 * enhance DataTable components with status management and real-time notifications ([ddd6513](https://github.com/synard1/ximopet/commit/ddd6513485830dbb0f13fff57de8dc29ebee2d62))
 * enhance feed and supply purchase components with real-time notifications and status management ([359addc](https://github.com/synard1/ximopet/commit/359addc5083aab3e0350318cb84e1284959d7364))
