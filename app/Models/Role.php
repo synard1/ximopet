@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\Permission\Models\Role as SpatieRole;
+use Illuminate\Support\Facades\Auth;
 
 class Role extends SpatieRole
 {
@@ -20,4 +21,15 @@ class Role extends SpatieRole
         'name',
         'guard_name',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (is_null($model->company_id) && !is_null(Auth::id())) {
+                $model->company_id = Auth::user()->company_id;
+            }
+        });
+    }
 }

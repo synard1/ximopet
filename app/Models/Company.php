@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Permission;
 
 class Company extends BaseModel
 {
@@ -202,5 +203,18 @@ class Company extends BaseModel
     {
         // Cek apakah masih ada user yang terhubung ke company ini
         return !\App\Models\CompanyUser::where('company_id', $this->id)->exists();
+    }
+
+    public function farms()
+    {
+        return $this->belongsTo(Farm::class);
+    }
+
+    /**
+     * Permissions allowed for this company.
+     */
+    public function allowedPermissions()
+    {
+        return $this->belongsToMany(Permission::class, 'company_permission');
     }
 }

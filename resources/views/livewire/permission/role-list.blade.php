@@ -86,6 +86,7 @@
         @endcan
     </div>
 
+    @if(auth()->user()->hasRole('SuperAdmin'))
     <div class="card mt-5">
         <div class="card-header border-0 pt-6">
             <div class="card-title">
@@ -128,7 +129,9 @@
             </div>
         </div>
     </div>
+    @endif
 
+    @if(auth()->user()->hasRole('SuperAdmin'))
     @include('livewire.permission.import-modal')
 
     <!-- Restore Backup Modal -->
@@ -175,6 +178,7 @@
             </div>
         </div>
     </div>
+    @endif
 </div>
 
 @push('scripts')

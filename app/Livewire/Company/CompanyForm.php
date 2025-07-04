@@ -8,6 +8,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class CompanyForm extends Component
 {
@@ -87,7 +88,7 @@ class CompanyForm extends Component
         $company = Company::findOrFail($id);
 
         // Check if user has permission to edit this company
-        if (!auth()->user()->hasRole('SuperAdmin') && $company->id !== auth()->user()->company_id) {
+        if (!Auth::user()->hasRole('SuperAdmin') && $company->id !== Auth::user()->company_id) {
             session()->flash('error', 'You do not have permission to edit this company.');
             return;
         }
@@ -222,7 +223,7 @@ class CompanyForm extends Component
     public function delete($id)
     {
         // Only SuperAdmin can delete companies
-        if (!auth()->user()->hasRole('SuperAdmin')) {
+        if (!Auth::user()->hasRole('SuperAdmin')) {
             session()->flash('error', 'You do not have permission to delete companies.');
             return;
         }
@@ -253,7 +254,7 @@ class CompanyForm extends Component
             $company = Company::findOrFail($id);
 
             // Check if user has permission
-            if (!auth()->user()->hasRole('SuperAdmin') && $company->id !== auth()->user()->company_id) {
+            if (!Auth::user()->hasRole('SuperAdmin') && $company->id !== Auth::user()->company_id) {
                 session()->flash('error', 'You do not have permission to reset configuration.');
                 return;
             }
@@ -285,7 +286,7 @@ class CompanyForm extends Component
             $company = Company::findOrFail($id);
 
             // Check if user has permission
-            if (!auth()->user()->hasRole('SuperAdmin') && $company->id !== auth()->user()->company_id) {
+            if (!Auth::user()->hasRole('SuperAdmin') && $company->id !== Auth::user()->company_id) {
                 session()->flash('error', 'You do not have permission to update configuration.');
                 return;
             }

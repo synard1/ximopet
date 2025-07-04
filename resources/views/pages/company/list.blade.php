@@ -52,6 +52,7 @@
     </div>
 
     <livewire:company.company-form />
+    <livewire:superadmin.company-permission-manager />
     {{--
     <livewire:company.company-admin-management /> --}}
 
@@ -90,6 +91,14 @@
                             $(this).DataTable().ajax.reload();
                         }
                     });
+                });
+
+                Livewire.on('closePanel', function () {
+                    showLoadingSpinner();
+                    const cardList = document.getElementById(`companyTableCard`);
+                    cardList.style.display = 'block';
+                    const cardPermission = document.getElementById(`companyPermissionCard`);
+                    cardPermission.style.display = 'none';
                 });
             });
             

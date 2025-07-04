@@ -450,6 +450,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/clear', [App\Http\Controllers\Admin\TransactionClearController::class, 'clear'])->name('clear');
         Route::get('/history', [App\Http\Controllers\Admin\TransactionClearController::class, 'history'])->name('history');
     });
+
+    // SuperAdmin Company Permission Manager
+    Route::middleware(['auth', 'role:SuperAdmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
+        Route::get('/companies', \App\Http\Controllers\Pages\CompanyController::class . '@index')->name('companies');
+        Route::get('/company/{company}/permissions', \App\Livewire\Superadmin\CompanyPermissionManager::class)->name('company.permissions');
+    });
 });
 
 // Error Routes
