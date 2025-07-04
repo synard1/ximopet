@@ -6,7 +6,9 @@ use Livewire\Component;
 use App\Models\Company;
 // use Spatie\Permission\Models\Permission;
 use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class CompanyPermissionManager extends Component
 {
@@ -21,6 +23,11 @@ class CompanyPermissionManager extends Component
     public array $originalSelected = [];
     private array $undoBuffer = [];
     private int $undoExpiresAt = 0;
+    public array $systemDefaultIds = [];
+    public array $presets = [];
+    public string $presetName = '';
+    public string $selectedPresetId = '';
+    public bool $isSuperAdmin = false;
 
     /**
      * Livewire lifecycle hook that fires whenever the `search` property is
@@ -43,6 +50,9 @@ class CompanyPermissionManager extends Component
     public function mount()
     {
         // $this->loadPermissions();
+        $this->loadPresets();
+
+        $this->isSuperAdmin = Auth::user()?->hasRole('SuperAdmin');
     }
 
     public function loadCompany($companyId)
@@ -50,6 +60,18 @@ class CompanyPermissionManager extends Component
         $this->company = Company::findOrFail($companyId);
         $this->selectedPermissions = $this->company->allowedPermissions()->pluck('id')->toArray();
         $this->originalSelected   = $this->selectedPermissions;
+
+        // Determine system default permissions: assume Administrator role seeded by system
+        $adminRole = Role::where('company_id', $this->company->id)
+            ->where('name', 'Administrator')
+            ->first();
+
+        if ($adminRole) {
+            $this->systemDefaultIds = $adminRole->permissions()->pluck('permissions.id')->toArray();
+        } else {
+            $this->systemDefaultIds = [];
+        }
+
         $this->showPanel = true;
 
         $this->loadPermissions();
@@ -85,6 +107,49 @@ class CompanyPermissionManager extends Component
         $this->groupedPermissions = $grouped;
     }
 
+    public function loadPresets(): void
+    {
+        $this->presets = \App\Models\PermissionPreset::orderBy('name')->get()->toArray();
+    }
+
+    public function savePreset(): void
+    {
+        $name = trim($this->presetName);
+        if ($name === '') {
+            $this->dispatch('error', 'Preset name is required');
+            return;
+        }
+
+        $preset = \App\Models\PermissionPreset::updateOrCreate(
+            ['name' => $name],
+            [
+                'permission_ids' => $this->selectedPermissions,
+                'created_by'    => Auth::id(),
+            ]
+        );
+
+        $this->presetName = '';
+        $this->loadPresets();
+        $this->dispatch('success', 'Preset saved');
+    }
+
+    public function applyPreset($presetId): void
+    {
+        $preset = \App\Models\PermissionPreset::find($presetId);
+        if (!$preset) return;
+
+        Log::info('Applying permission preset', ['preset' => $presetId, 'count' => count($preset->permission_ids ?? [])]);
+
+        $this->selectedPresetId = $presetId;
+        $this->selectedPermissions = array_values($preset->permission_ids ?? []);
+    }
+
+    public function updatedSelectedPresetId($value)
+    {
+        if ($value === '' || $value === '0') return;
+        $this->applyPreset($value);
+    }
+
     public function save()
     {
         if (!$this->company) {
@@ -96,7 +161,7 @@ class CompanyPermissionManager extends Component
         $this->undoExpiresAt = time() + 15; // 15 sec window
         $this->company->allowedPermissions()->sync($this->selectedPermissions);
         Log::info('Company permissions updated', ['company' => $this->company->id, 'count' => count($this->selectedPermissions)]);
-        $this->dispatchBrowserEvent('permission-saved');
+        $this->dispatch('success', 'Permissions saved');
     }
 
     public function selectAll()

@@ -31,6 +31,22 @@
                             placeholder="Search module / ability" wire:model.live.debounce.400ms="search">
                         <button class="btn btn-outline-secondary btn-sm" wire:click="resetSelections">Reset</button>
                     </div>
+                    @if($isSuperAdmin)
+                    <div class="mb-3 d-flex align-items-center">
+                        <input type="text" class="form-control form-control-sm me-2" placeholder="New preset name"
+                            wire:model.defer="presetName">
+                        <button class="btn btn-sm btn-light-primary me-3" wire:click="savePreset">Save as
+                            Preset</button>
+
+                        <select class="form-select form-select-sm w-auto me-2" wire:model="selectedPresetId"
+                            wire:change="applyPreset($event.target.value)">
+                            <option value="0">-- Apply Preset --</option>
+                            @foreach($presets as $preset)
+                            <option value="{{ $preset['id'] }}">{{ $preset['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
                     <table class="table table-sm table-bordered align-middle">
                         <thead class="table-light">
                             <tr>
@@ -49,10 +65,23 @@
                             <tr>
                                 <td class="fw-bold">{{ ucwords($module) }}</td>
                                 @foreach($abilityList as $ability)
-                                <td class="text-center">
-                                    @if($abilities[$ability])
-                                    <input type="checkbox" class="form-check-input" value="{{ $abilities[$ability] }}"
-                                        wire:model.lazy="selectedPermissions">
+                                @php($permId = $abilities[$ability])
+                                @php($isChecked = $permId && in_array($permId, $selectedPermissions))
+                                @php($isSystemDefault = $permId && in_array($permId, $systemDefaultIds))
+                                @php($cellClass = '')
+                                @if($permId)
+                                @if($isChecked && $isSystemDefault)
+                                @php($cellClass = 'bg-light-primary') {{-- inherited & still allowed --}}
+                                @elseif($isChecked && !$isSystemDefault)
+                                @php($cellClass = 'bg-light-success') {{-- newly added --}}
+                                @elseif(!$isChecked && $isSystemDefault)
+                                @php($cellClass = 'bg-light-warning') {{-- removed own default --}}
+                                @endif
+                                @endif
+                                <td class="text-center {{ $cellClass }}">
+                                    @if($permId)
+                                    <input type="checkbox" class="form-check-input" value="{{ $permId }}"
+                                        wire:model="selectedPermissions">
                                     @endif
                                 </td>
                                 @endforeach
