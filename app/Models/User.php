@@ -312,8 +312,13 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         if ($this->hasRole('Administrator')) {
-            $configRoles = config('xolution.company_roles', []);
-            return Role::whereIn('name', array_keys($configRoles))->get();
+            // Administrator can see roles belonging to their company (or global roles, excluding SuperAdmin)
+            return Role::where(function ($q) {
+                $q->whereNull('company_id');
+                if (!is_null($this->company_id)) {
+                    $q->orWhere('company_id', $this->company_id);
+                }
+            })->where('name', '!=', 'SuperAdmin')->get();
         }
 
         return collect();

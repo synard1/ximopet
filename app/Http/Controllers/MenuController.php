@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Menu;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+// use Spatie\Permission\Models\Role;
+// use Spatie\Permission\Models\Permission;
+use App\Models\Role;
+use App\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Yajra\DataTables\Facades\DataTables;
