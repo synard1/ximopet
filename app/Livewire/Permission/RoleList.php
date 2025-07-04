@@ -64,8 +64,21 @@ class RoleList extends Component
     protected function getRoles()
     {
         Log::info('Fetching roles with permissions');
-        $query = Role::with('permissions');
+        $query = Role::with(['permissions', 'users']);
 
+        // Filter by company scope (current user company_id or null for global roles)
+        $currentCompanyId = Auth::user()->company_id ?? null;
+        $query->where(function ($q) use ($currentCompanyId) {
+            // Always include system/global roles (company_id is null)
+            $q->whereNull('company_id');
+
+            // Also include roles that belong to the current company if available
+            if (!is_null($currentCompanyId)) {
+                $q->orWhere('company_id', $currentCompanyId);
+            }
+        });
+
+        // Non-SuperAdmin users should not see SuperAdmin role regardless of company scope
         if (!Auth::user()->hasRole('SuperAdmin')) {
             Log::info('Filtering out SuperAdmin role for non-superadmin user');
             $query->where('name', '!=', 'SuperAdmin');
@@ -73,6 +86,19 @@ class RoleList extends Component
 
         $roles = $query->get();
         Log::info('Found ' . $roles->count() . ' roles');
+
+        $defaultRoles = ['Administrator', 'Manager', 'Supervisor', 'Operator'];
+
+        // If not SuperAdmin, ensure template (global) roles are hidden when company-specific duplicate exists
+        if (!Auth::user()->hasRole('SuperAdmin')) {
+            // Filter roles to default list only
+            $roles = $roles->filter(fn($role) => in_array($role->name, $defaultRoles));
+
+            $roles = $roles->groupBy('name')->map(function ($group) use ($currentCompanyId) {
+                // Prefer company-specific role; fallback to global
+                return $group->firstWhere('company_id', $currentCompanyId) ?? $group->firstWhere('company_id', null);
+            })->sortBy('name')->values();
+        }
 
         foreach ($roles as $role) {
             $filteredPermissions = $role->permissions->filter(function ($permission) {
