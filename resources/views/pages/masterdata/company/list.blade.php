@@ -283,6 +283,8 @@ By: AI Assistant
             <livewire:company.company-user-mapping-form />
             <!--end::Form User Mapping-->
 
+            <livewire:superadmin.company-permission-manager />
+
             {{--
             <livewire:company.company-admin-management /> --}}
         </div>

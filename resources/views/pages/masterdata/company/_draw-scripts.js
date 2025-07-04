@@ -97,3 +97,27 @@ document
             ]);
         });
     });
+
+document
+    .querySelectorAll('[data-kt-action="company_permission"]')
+    .forEach(function (element) {
+        element.addEventListener("click", function () {
+            const companyId = this.getAttribute("data-kt-company-id");
+
+            Swal.fire({
+                html: `Membuka Panel Izin Perusahaan...`,
+                icon: "info",
+                buttonsStyling: false,
+                showConfirmButton: false,
+                timer: 1500,
+            }).then(function () {
+                Livewire.dispatch("showCompanyPermission", [companyId]);
+                const cardList = document.getElementById(`companyTableCard`);
+                cardList.style.display = "block";
+                const cardPermission = document.getElementById(
+                    `companyPermissionCard`
+                );
+                cardPermission.style.display = "block";
+            });
+        });
+    });
