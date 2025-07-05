@@ -51,7 +51,14 @@ class RoleModal extends Component
         }
 
         // Get the role by name.
-        $role = Role::where('name', $role_name)->first();
+        $companyId = Auth::user()->company_id;
+        $role = Role::where('name', $role_name)
+            ->where(function ($q) use ($companyId) {
+                $q->whereNull('company_id');
+                if (!is_null($companyId)) {
+                    $q->orWhere('company_id', $companyId);
+                }
+            })->first();
         if (is_null($role)) {
             $this->dispatch('error', 'The selected role [' . $role_name . '] is not found');
             return;
@@ -66,25 +73,18 @@ class RoleModal extends Component
 
     public function mount()
     {
-        // Check if the user is an Admin
         if (Auth::user()->hasRole('Administrator')) {
-            // Get only the permissions that the current user has
-            // $this->permissions = Permission::whereIn('id', function($query) {
-            //     $query->select('permission_id')
-            //         ->from('model_has_permissions')
-            //         ->where('model_type', User::class)
-            //         ->where('model_id', auth()->id())
-            //         ->where('name', 'like','%access%');
-            // })->get();
-
-            // Get only the access permissions
-            $this->permissions = Permission::where('name', 'like', '%access%')->get();
+            // Limit permissions to those allowed for this company
+            $companyPermIds = Auth::user()->company?->allowedPermissions()->pluck('permissions.id');
+            $queryPerm = Permission::query();
+            if ($companyPermIds && $companyPermIds->isNotEmpty()) {
+                $queryPerm->whereIn('id', $companyPermIds);
+            }
+            $this->permissions = $queryPerm->where('name', 'like', '%access%')->get();
         } else {
             // For other roles (like SuperAdmin), get all permissions
-            // $this->permissions = Permission::all();
             $this->permissions = Permission::where('name', 'like', '%access%')->get();
         }
-
 
         // dump($this->permissions);
 
@@ -170,6 +170,10 @@ class RoleModal extends Component
             DB::beginTransaction();
 
             $this->role->name = $this->name;
+            // Ensure company_id is set for non-global roles
+            if (is_null($this->role->company_id)) {
+                $this->role->company_id = Auth::user()->company_id;
+            }
             if ($this->role->isDirty()) {
                 $this->role->save();
             }

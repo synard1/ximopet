@@ -220,30 +220,36 @@
         <!-- Farm and Livestock Information -->
         <table class='info-header'
             style="width: 100%; margin-bottom: 20px; font-size: 14px; border-collapse: collapse;">
+            @if(!empty($records))
             <tr>
                 <td><strong>FARM</strong></td>
-                <td>: {{ $currentLivestock->livestock->farm->name }}</td>
+                <td>: {{ $records[0]['farm_name'] }}</td>
                 <td><strong>DOC MASUK</strong></td>
-                <td>: {{ number_format($currentLivestock->livestock->initial_quantity) }} Ekor</td>
+                <td>: {{ number_format($records[0]['initial_quantity']) }} Ekor</td>
             </tr>
             <tr>
                 <td><strong>KANDANG</strong></td>
-                <td>: {{ $currentLivestock->livestock->coop->name }}</td>
+                <td>: {{ $records[0]['coop_name'] }}</td>
                 <td><strong>BONUS DOC</strong></td>
-                <td>: {{ number_format($currentLivestock->livestock->bonus_doc ?? 0) }} Ekor</td>
+                <td>: {{ number_format($records[0]['bonus_doc'] ?? 0) }} Ekor</td>
             </tr>
             <tr>
                 <td><strong>TGL. MASUK DOC</strong></td>
-                <td>: {{ $currentLivestock->livestock->start_date->translatedFormat('d F Y') }}</td>
+                <td>: {{ \Carbon\Carbon::parse($records[0]['start_date'])->translatedFormat('d F Y') }}</td>
                 <td><strong>STRAIN</strong></td>
-                <td>: {{ $strain ?? '-' }}</td>
+                <td>: {{ $records[0]['strain'] ?? '-' }}</td>
             </tr>
             <tr>
                 <td><strong>PERIODE</strong></td>
-                <td>: {{ $currentLivestock->livestock->name }}</td>
+                <td>: {{ $records[0]['livestock_name'] }}</td>
                 <td><strong>BERAT RATA-RATA DOC</strong></td>
-                <td>: {{ number_format($currentLivestock->livestock->initial_weight ?? 0) }} Gram</td>
+                <td>: {{ number_format($records[0]['initial_weight'] ?? 0) }} Gram</td>
             </tr>
+            @else
+            <tr>
+                <td colspan="4">Tidak ada data untuk ditampilkan.</td>
+            </tr>
+            @endif
         </table>
 
         <!-- Strain Information -->
@@ -287,8 +293,6 @@
                     @if(isset($allFeedNames) && $allFeedNames->count() > 0)
                     <th class="table-header feed-highlight" colspan="{{ $allFeedNames->count() + 1 }}">Pemakaian Pakan
                         (Kg)</th>
-                    @else
-                    <th class="table-header feed-highlight" colspan="4">Pemakaian Pakan (Kg)</th>
                     @endif
 
                     <!-- Body Weight -->
@@ -321,11 +325,6 @@
                     <th class="table-header feed-highlight">{{ $feedName }}</th>
                     @endforeach
                     <th class="table-header feed-highlight">Total</th>
-                    @else
-                    <th class="table-header feed-highlight">SP 10</th>
-                    <th class="table-header feed-highlight">SP 11</th>
-                    <th class="table-header feed-highlight">SP 12</th>
-                    <th class="table-header feed-highlight">Total</th>
                     @endif
 
                     <!-- Body Weight Sub-headers -->
@@ -348,124 +347,84 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($records ?? [] as $record)
+                @forelse($records as $record)
+                @forelse($record['daily_records'] as $daily)
                 <tr class="border-b hover:bg-gray-50">
-                    <td class="p-2">{{ \Carbon\Carbon::parse($record['tanggal'])->format('d/m/Y') }}</td>
-                    <td class="p-2">{{ $record['umur'] ?? 0 }}</td>
-                    <td class="p-2">{{ number_format($record['stock_awal'] ?? 0) }}</td>
+                    <td class="p-2">{{ $daily['date']->format('d/m/Y') }}</td>
+                    <td class="p-2">{{ $daily['age'] }}</td>
+                    <td class="p-2">{{ number_format($daily['stock_awal']) }}</td>
+                    <td class="p-2">{{ number_format($daily['mati']) }}</td>
+                    <td class="p-2">{{ number_format($daily['afkir']) }}</td>
+                    <td class="p-2">{{ number_format($daily['total_deplesi']) }}</td>
+                    <td class="p-2">{{ number_format($daily['deplesi_percentage'], 2) }}%</td>
+                    <td class="p-2">{{ number_format($daily['jual_ekor']) }}</td>
+                    <td class="p-2">{{ number_format($daily['jual_kg'], 1) }}</td>
+                    <td class="p-2">{{ number_format($daily['jual_rata']) }}</td>
+                    <td class="p-2">{{ number_format($daily['stock_akhir']) }}</td>
 
-                    <!-- Deplesi -->
-                    <td class="p-2">{{ number_format($record['mati'] ?? 0) }}</td>
-                    <td class="p-2">{{ number_format($record['afkir'] ?? 0) }}</td>
-                    <td class="p-2">{{ number_format($record['total_deplesi'] ?? 0) }}</td>
-                    <td class="p-2">{{ number_format($record['deplesi_percentage'] ?? 0, 2) }}%</td>
-
-                    <!-- Penangkapan -->
-                    <td class="p-2">{{ number_format($record['jual_ekor'] ?? 0) }}</td>
-                    <td class="p-2">{{ number_format($record['jual_kg'] ?? 0, 1) }}</td>
-                    <td class="p-2">{{ number_format($record['jual_rata'] ?? 0) }}</td>
-
-                    <!-- Stock Akhir -->
-                    <td class="p-2">{{ number_format($record['stock_akhir'] ?? 0) }}</td>
-
-                    <!-- Dynamic Feed Usage -->
-                    @if(isset($allFeedNames) && $allFeedNames->count() > 0)
+                    {{-- Dynamic Feed Usage --}}
+                    @if(isset($allFeedNames))
                     @foreach($allFeedNames as $feedName)
-                    <td class="p-2 feed-highlight">{{ number_format($record[$feedName] ?? 0, 1) }}</td>
+                    <td class="p-2 feed-highlight">{{ number_format($daily['feed_consumption_by_type'][$feedName] ?? 0,
+                        1) }}</td>
                     @endforeach
-                    <td class="p-2 feed-highlight"><strong>{{ number_format($record['feed_total'] ?? 0, 1) }}</strong>
-                    </td>
-                    @else
-                    <td class="p-2 feed-highlight">{{ number_format($record['SP 10'] ?? 0, 1) }}</td>
-                    <td class="p-2 feed-highlight">{{ number_format($record['SP 11'] ?? 0, 1) }}</td>
-                    <td class="p-2 feed-highlight">{{ number_format($record['SP 12'] ?? 0, 1) }}</td>
-                    <td class="p-2 feed-highlight"><strong>{{ number_format($record['feed_total'] ?? 0, 1) }}</strong>
-                    </td>
                     @endif
+                    <td class="p-2 feed-highlight"><strong>{{ number_format($daily['feed_total'], 1) }}</strong></td>
 
-                    <!-- Body Weight -->
-                    <td
-                        class="p-2 {{ (isset($record['bw_actual']) && isset($record['bw_standard']) && $record['bw_actual'] >= $record['bw_standard']) ? 'weight-above' : 'weight-below' }}">
-                        {{ number_format($record['bw_actual'] ?? 0) }}
-                    </td>
-                    <td class="p-2">{{ number_format($record['bw_standard'] ?? 0) }}</td>
-
-                    <!-- FCR Performance -->
-                    <td
-                        class="p-2 {{ (isset($record['fcr_actual']) && isset($record['fcr_standard']) && $record['fcr_actual'] <= $record['fcr_standard']) ? 'fcr-good' : 'fcr-poor' }}">
-                        {{ number_format($record['fcr_actual'] ?? 0, 3) }}
-                    </td>
-                    <td class="p-2">{{ number_format($record['fcr_standard'] ?? 0, 3) }}</td>
-                    <td class="p-2">
-                        @if(isset($record['fcr_difference']))
-                        @if($record['fcr_difference'] > 0)
-                        <span style="color: red;">+{{ number_format($record['fcr_difference'], 3) }}</span>
-                        @else
-                        <span style="color: green;">{{ number_format($record['fcr_difference'], 3) }}</span>
-                        @endif
-                        @else
-                        -
-                        @endif
-                    </td>
-
-                    <!-- IP Performance -->
-                    <td
-                        class="p-2 {{ isset($record['ip_actual']) ? ($record['ip_actual'] >= 400 ? 'ip-excellent' : ($record['ip_actual'] >= 300 ? 'ip-good' : ($record['ip_actual'] >= 200 ? 'ip-average' : 'ip-poor'))) : '' }}">
-                        {{ number_format($record['ip_actual'] ?? 0) }}
-                    </td>
-                    <td class="p-2">{{ number_format($record['ip_standard'] ?? 0) }}</td>
-                    <td class="p-2">
-                        @if(isset($record['ip_difference']))
-                        @if($record['ip_difference'] > 0)
-                        <span style="color: green;">+{{ number_format($record['ip_difference']) }}</span>
-                        @else
-                        <span style="color: red;">{{ number_format($record['ip_difference']) }}</span>
-                        @endif
-                        @else
-                        -
-                        @endif
-                    </td>
-
-                    <!-- OVK/Supply Usage -->
-                    <td class="p-2 ovk-highlight hide-on-print">
-                        @if(isset($record['ovk_details']) && count($record['ovk_details']) > 0)
-                        @foreach($record['ovk_details'] as $ovk)
-                        {{ $ovk['name'] }}<br>
-                        @endforeach
-                        @else
-                        -
-                        @endif
-                    </td>
-                    <td class="p-2 ovk-highlight hide-on-print">{{ number_format($record['ovk_total'] ?? 0, 2) }}</td>
+                    <td class="p-2">{{ number_format($daily['bw_actual']) }}</td>
+                    <td class="p-2">{{-- bw_standard needed --}}</td>
+                    <td class="p-2">{{ number_format($daily['fcr_actual'], 3) }}</td>
+                    <td class="p-2">{{-- fcr_standard needed --}}</td>
+                    <td class="p-2">{{-- fcr_difference needed --}}</td>
+                    <td class="p-2">{{ number_format($daily['ip_actual']) }}</td>
+                    <td class="p-2">{{-- ip_standard needed --}}</td>
+                    <td class="p-2">{{-- ip_difference needed --}}</td>
+                    <td class="p-2 ovk-highlight hide-on-print">{{-- ovk details needed --}}</td>
+                    <td class="p-2 ovk-highlight hide-on-print">{{-- ovk total needed --}}</td>
                 </tr>
-                @endforeach
+                @empty
+                <tr>
+                    <td colspan="100%">Tidak ada data harian.</td>
+                </tr>
+                @endforelse
+                @empty
+                <tr>
+                    <td colspan="100%">Tidak ada laporan.</td>
+                </tr>
+                @endforelse
             </tbody>
         </table>
 
         <!-- Performance Summary -->
-        @if(isset($records) && $records->count() > 0)
+        @if(isset($records) && count($records) > 0)
         @php
-        $lastRecord = $records->last();
-        $totalDays = $records->count();
-        $avgFCR = $records->where('fcr_actual', '>', 0)->avg('fcr_actual');
-        $avgIP = $records->where('ip_actual', '>', 0)->avg('ip_actual');
-        $totalFeedConsumption = $records->sum('feed_total');
-        $totalOVKUsage = $records->sum('ovk_total');
-        $finalSurvivalRate = isset($lastRecord['stock_akhir']) && $currentLivestock->livestock->initial_quantity > 0
-        ? ($lastRecord['stock_akhir'] / $currentLivestock->livestock->initial_quantity) * 100
-        : 0;
-        @endphp
+        $lastRecord = $records[0]; // Summary is now in the first record
+        $totalDays = count($lastRecord['daily_records']);
+        $avgFCR = $lastRecord['fcr_actual'] ?? 0;
+        $avgIP = $lastRecord['ip_actual'] ?? 0;
 
+        // Calculate totals from daily records
+        $totalFeedConsumption = 0;
+        $totalOVKUsage = 0; // Assuming this will be added to daily records later
+        foreach($lastRecord['daily_records'] as $daily) {
+        $totalFeedConsumption += $daily['feed_total'];
+        // $totalOVKUsage += $daily['ovk_total'] ?? 0;
+        }
+
+        $finalDailyRecord = end($lastRecord['daily_records']);
+        $finalSurvivalRate = ($lastRecord['initial_quantity'] > 0) ? ($finalDailyRecord['stock_akhir'] /
+        $lastRecord['initial_quantity']) * 100 : 0;
+        @endphp
         <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
             <h3 style="margin-top: 0;">RINGKASAN PERFORMA</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                 <div>
                     <strong>Total Hari Pemeliharaan:</strong> {{ $totalDays }} hari<br>
                     <strong>Tingkat Kelangsungan Hidup:</strong> {{ number_format($finalSurvivalRate, 2) }}%<br>
-                    <strong>FCR Rata-rata:</strong> {{ number_format($avgFCR ?? 0, 3) }}
+                    <strong>FCR Rata-rata:</strong> {{ number_format($avgFCR, 3) }}
                 </div>
                 <div>
-                    <strong>IP Rata-rata:</strong> {{ number_format($avgIP ?? 0) }}<br>
+                    <strong>IP Rata-rata:</strong> {{ number_format($avgIP) }}<br>
                     <strong>Total Konsumsi Pakan:</strong> {{ number_format($totalFeedConsumption, 1) }} kg<br>
                     <strong>Total Penggunaan OVK:</strong> {{ number_format($totalOVKUsage, 2) }} kg
                 </div>

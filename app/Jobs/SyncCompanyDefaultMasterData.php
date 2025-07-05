@@ -49,6 +49,7 @@ class SyncCompanyDefaultMasterData implements ShouldQueue
             \Database\Seeders\SupplyCategorySeeder::class,
             \Database\Seeders\FeedSeeder::class,
             \Database\Seeders\SupplySeeder::class,
+            \Database\Seeders\CompanyRolesPermissionsSeeder::class,
         ];
 
         foreach ($seeders as $seederClass) {
