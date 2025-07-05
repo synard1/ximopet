@@ -36,6 +36,9 @@ class CostReportService
 
         // Get cost data for the specified date
         $costData = $this->getCostData($livestock, $tanggal);
+        if (!$costData) {
+            throw new \Exception('Tidak ada data biaya harian untuk tanggal dan batch ini.');
+        }
 
         // Get initial purchase data
         $initialPurchaseData = $this->getInitialPurchaseData($livestock);
@@ -58,7 +61,10 @@ class CostReportService
             'costData' => $costData,
             'initialPurchaseData' => $initialPurchaseData,
             'costs' => $processedData['costs'],
-            'totals' => $processedData['totals']
+            'totals' => $processedData['totals'],
+            'prev_cost_data' => $processedData['prev_cost_data'],
+            'summary_data' => $processedData['summary_data'],
+            'total_cumulative_cost_calculated' => $processedData['total_cumulative_cost_calculated'],
         ];
     }
 
@@ -76,16 +82,14 @@ class CostReportService
             ->first();
 
         if (!$costData) {
-            Log::warning("⚠️ No cost data found for the specified date", [
-                'livestock_id' => $livestock->id,
-                'date' => $tanggal->format('Y-m-d')
-            ]);
-
-            // Try to generate cost data if missing
-            $costService = app(\App\Services\Livestock\LivestockCostService::class);
-            $costData = $costService->calculateForDate($livestock->id, $tanggal);
+            try {
+                $costService = app(\App\Services\Livestock\LivestockCostService::class);
+                $costData = $costService->calculateForDate($livestock->id, $tanggal);
+            } catch (\Exception $e) {
+                // Jika tidak ada data, return null
+                return null;
+            }
         }
-
         return $costData;
     }
 
@@ -102,9 +106,10 @@ class CostReportService
             ->first();
 
         $data = [
-            'price_per_unit' => $initialPurchaseItem->price_per_unit ?? 0,
-            'quantity' => $initialPurchaseItem->quantity ?? $livestock->initial_quantity ?? 0,
-            'date' => $initialPurchaseItem->start_date ?? $livestock->start_date ?? null,
+            'price_per_unit' => optional($initialPurchaseItem)->price_per_unit ?? 0,
+            'quantity' => optional($initialPurchaseItem)->quantity ?? $livestock->initial_quantity ?? 0,
+            'date' => optional($initialPurchaseItem)->start_date ?? $livestock->start_date ?? null,
+            'found' => $initialPurchaseItem !== null,
         ];
 
         $data['total_cost'] = $data['price_per_unit'] * $data['quantity'];
@@ -113,7 +118,7 @@ class CostReportService
             'price_per_unit' => $data['price_per_unit'],
             'quantity' => $data['quantity'],
             'total_cost' => $data['total_cost'],
-            'date' => $data['date'] ? $data['date']->format('Y-m-d') : '-',
+            'date' => $data['date'] ? ($data['date'] instanceof \Carbon\Carbon ? $data['date']->format('Y-m-d') : ($data['date'] ? Carbon::parse($data['date'])->format('Y-m-d') : '-')) : '-',
         ]);
 
         return $data;
@@ -134,7 +139,7 @@ class CostReportService
         $breakdown = $costData->cost_breakdown ?? [];
         $summary = $breakdown['summary'] ?? [];
 
-        $age = Carbon::parse($livestock->start_date)->diffInDays($tanggal);
+        $age = $livestock->start_date ? Carbon::parse($livestock->start_date)->diffInDays($tanggal) : 0;
         $stockAwal = $breakdown['stock_awal'] ?? $livestock->initial_quantity ?? 0;
         $stockAkhir = $breakdown['stock_akhir'] ?? $stockAwal;
         $totalCost = $costData->total_cost ?? 0;
@@ -142,14 +147,15 @@ class CostReportService
 
         $costs = [];
         $totals = [
-            'total_cost' => 0,
-            'total_ayam' => 0,
-            'total_cost_per_ayam' => 0,
+            'total_cost' => $totalCost,
+            'total_ayam' => $stockAkhir,
+            'daily_cost_per_ayam' => $summary['daily_added_cost_per_chicken'] ?? 0,
+            'total_cost_per_ayam' => $stockAkhir > 0 ? round($totalCost / $stockAkhir, 2) : 0,
         ];
 
         // Main cost entry
         $mainCost = [
-            'kandang' => $livestock->coop->name ?? '-',
+            'kandang' => optional($livestock->coop)->name ?? '-',
             'livestock' => $livestock->name,
             'umur' => $age,
             'total_cost' => $totalCost,
@@ -166,14 +172,16 @@ class CostReportService
 
         $costs[] = $mainCost;
 
-        // Calculate totals
-        $totals['total_cost'] = $totalCost;
-        $totals['total_ayam'] = $stockAkhir;
-        $totals['total_cost_per_ayam'] = $stockAkhir > 0 ? $totalCost / $stockAkhir : 0;
+        // Calculate total cumulative cost for display
+        $cumulativeAddedCost = $summary['total_cumulative_added_cost'] ?? 0;
+        $totalCumulativeCostCalculated = $initialPurchaseData['total_cost'] + $cumulativeAddedCost;
 
         return [
             'costs' => $costs,
-            'totals' => $totals
+            'totals' => $totals,
+            'prev_cost_data' => $breakdown['prev_cost'] ?? [],
+            'summary_data' => $summary,
+            'total_cumulative_cost_calculated' => $totalCumulativeCostCalculated,
         ];
     }
 
@@ -493,7 +501,7 @@ class CostReportService
                 return $this->exportToCsv($data);
             case 'html':
             default:
-                return view('pages.reports.cost-harian', $data);
+                return $this->exportToHtml($data);
         }
     }
 
@@ -529,7 +537,27 @@ class CostReportService
      */
     private function exportToCsv(array $data)
     {
-        Log::info('Exporting cost report to CSV');
         return response()->json(['message' => 'CSV export not implemented yet']);
+    }
+
+    /**
+     * Export to HTML format
+     * 
+     * @param array $data
+     * @return \Illuminate\View\View
+     */
+    private function exportToHtml(array $data)
+    {
+        return view('pages.reports.livestock-cost', [
+            'farm' => $data['farm']->name,
+            'tanggal' => $data['tanggal']->format('d M Y'),
+            'report_type' => $data['reportType'],
+            'costs' => $data['costs'],
+            'totals' => $data['totals'],
+            'prev_cost_data' => $data['prev_cost_data'],
+            'summary_data' => $data['summary_data'],
+            'total_cumulative_cost_calculated' => $data['total_cumulative_cost_calculated'],
+            'initial_purchase_data' => $data['initialPurchaseData'],
+        ]);
     }
 }

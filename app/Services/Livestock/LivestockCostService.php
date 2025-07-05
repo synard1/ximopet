@@ -43,6 +43,16 @@ class LivestockCostService
             'date' => $tanggal
         ]);
 
+        // Tambahkan pengecekan data sumber
+        $hasRecording = \App\Models\Recording::where('livestock_id', $livestockId)->whereDate('tanggal', $tanggal)->exists();
+        $hasFeedUsage = \App\Models\FeedUsage::where('livestock_id', $livestockId)->whereDate('usage_date', $tanggal)->exists();
+        $hasSupplyUsage = \App\Models\SupplyUsage::where('livestock_id', $livestockId)->whereDate('usage_date', $tanggal)->exists();
+        $hasDepletion = \App\Models\LivestockDepletion::where('livestock_id', $livestockId)->whereDate('tanggal', $tanggal)->exists();
+
+        if (!$hasRecording && !$hasFeedUsage && !$hasSupplyUsage && !$hasDepletion) {
+            throw new \Exception('Tidak ada data biaya harian untuk tanggal dan batch ini.');
+        }
+
         // Get or create recording for this date
         $recording = Recording::where('livestock_id', $livestockId)
             ->whereDate('tanggal', $tanggal)

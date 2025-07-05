@@ -292,9 +292,10 @@ class ReportsController extends Controller
             $format = $request->format ?? 'html';
             return $this->costReportService->export($reportData, $format);
         } catch (\Exception $e) {
-            Log::error("[" . __CLASS__ . "::" . __FUNCTION__ . "] Error: " . $e->getMessage());
-            Log::debug("[" . __CLASS__ . "::" . __FUNCTION__ . "] Stack trace: " . $e->getTraceAsString());
-            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['error' => $e->getMessage()], 404);
+            }
+            return back()->with('error', $e->getMessage());
         }
     }
 
