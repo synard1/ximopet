@@ -216,6 +216,7 @@ return new class extends Migration {
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
             $table->date('tanggal');
             $table->integer('quantity');
+            $table->decimal('weight', 10, 2)->nullable();
             $table->decimal('berat_total', 10, 2)->nullable();
             $table->decimal('harga_satuan', 12, 2);
             $table->uuid('created_by')->index();

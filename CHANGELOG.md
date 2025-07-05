@@ -1,26 +1,24 @@
-#  (2025-07-04)
-
+# (2025-07-04)
 
 ### Bug Fixes
 
-* :ambulance: Detail Data Stock Show Data Kandang ([c0fa043](https://github.com/synard1/ximopet/commit/c0fa0430c00d0fd9a30612808f2aa00aabc7439e))
-* :ambulance: Fix Add New Item Stock ([8acb5ee](https://github.com/synard1/ximopet/commit/8acb5ee4cce1ce43bd914c53de1eaf9331f8f8ac))
-* :ambulance: Fix Menu Access Roles Manager ([613118f](https://github.com/synard1/ximopet/commit/613118f1b60cf84f7038c66ddd6039290a3da1f0))
-* :ambulance: Fix Non Numeric Transaksi ([fd986c4](https://github.com/synard1/ximopet/commit/fd986c454a2a62a5c74c7c0cd45d40ab0fe002a5))
-* :ambulance: Fix qty_used validation ([9d5b0d4](https://github.com/synard1/ximopet/commit/9d5b0d44fa1692496cf94e0250ceb54b3818bfd9))
-* :ambulance: Fix Reset Form Modal ([977f599](https://github.com/synard1/ximopet/commit/977f599b6ca0d012c72554bf48a8e2e7f82fd211))
-* :ambulance: Stock History Not Deleted ([8c383a8](https://github.com/synard1/ximopet/commit/8c383a81fd3647c02be9465347a33a182483fbf9))
-* :ambulance: Transaksi Form Not Reset ([5ead807](https://github.com/synard1/ximopet/commit/5ead8074659eb206e2c084121bcbe0352a37bb99))
-* :ambulance: Transaksi Form Not Reset ([81d8a8a](https://github.com/synard1/ximopet/commit/81d8a8a1f9b521e70475de4cb786bcface8061ba))
-* :bug: bug fix ([9d0d275](https://github.com/synard1/ximopet/commit/9d0d275b421d1fb00478c1098243ace72dd18bf9))
-* :bug: Refactor code for creating "Data Kematian Ternak" functionality ([5f0afbb](https://github.com/synard1/ximopet/commit/5f0afbbf6d0391cd3e8e3a6a48ffa92f6db7640f))
-* :bug: update bug purchasing stok ([278ab2e](https://github.com/synard1/ximopet/commit/278ab2ed1a784a25ca78f16b8c1c51f088156429))
-* :fire: add some feature in roles operator ([bc2936f](https://github.com/synard1/ximopet/commit/bc2936f1f1d4c5d3d278edb506d6b1198562ca3f))
-* :fire: add some feature in roles operator ([37cd674](https://github.com/synard1/ximopet/commit/37cd6742ded1b9ba3c81b33f7f0422e6400a1eaa))
-* Fix validation and error handling in Kandang Modul ([1c7d6fa](https://github.com/synard1/ximopet/commit/1c7d6fa3bfbc2e221a275c4c09b9079d8d348f37))
-* improve backup file loading and logging in RestoreModal ([3d2f0d7](https://github.com/synard1/ximopet/commit/3d2f0d7b82e27a0327ac96acd6a9b9cee2e70313))
-* update notification bridge URLs for relative path usage ([40cc08d](https://github.com/synard1/ximopet/commit/40cc08d7c5d50571b7fcb60f3e65300236ce2af7))
-
+-   :ambulance: Detail Data Stock Show Data Kandang ([c0fa043](https://github.com/synard1/ximopet/commit/c0fa0430c00d0fd9a30612808f2aa00aabc7439e))
+-   :ambulance: Fix Add New Item Stock ([8acb5ee](https://github.com/synard1/ximopet/commit/8acb5ee4cce1ce43bd914c53de1eaf9331f8f8ac))
+-   :ambulance: Fix Menu Access Roles Manager ([613118f](https://github.com/synard1/ximopet/commit/613118f1b60cf84f7038c66ddd6039290a3da1f0))
+-   :ambulance: Fix Non Numeric Transaksi ([fd986c4](https://github.com/synard1/ximopet/commit/fd986c454a2a62a5c74c7c0cd45d40ab0fe002a5))
+-   :ambulance: Fix qty_used validation ([9d5b0d4](https://github.com/synard1/ximopet/commit/9d5b0d44fa1692496cf94e0250ceb54b3818bfd9))
+-   :ambulance: Fix Reset Form Modal ([977f599](https://github.com/synard1/ximopet/commit/977f599b6ca0d012c72554bf48a8e2e7f82fd211))
+-   :ambulance: Stock History Not Deleted ([8c383a8](https://github.com/synard1/ximopet/commit/8c383a81fd3647c02be9465347a33a182483fbf9))
+-   :ambulance: Transaksi Form Not Reset ([5ead807](https://github.com/synard1/ximopet/commit/5ead8074659eb206e2c084121bcbe0352a37bb99))
+-   :ambulance: Transaksi Form Not Reset ([81d8a8a](https://github.com/synard1/ximopet/commit/81d8a8a1f9b521e70475de4cb786bcface8061ba))
+-   :bug: bug fix ([9d0d275](https://github.com/synard1/ximopet/commit/9d0d275b421d1fb00478c1098243ace72dd18bf9))
+-   :bug: Refactor code for creating "Data Kematian Ternak" functionality ([5f0afbb](https://github.com/synard1/ximopet/commit/5f0afbbf6d0391cd3e8e3a6a48ffa92f6db7640f))
+-   :bug: update bug purchasing stok ([278ab2e](https://github.com/synard1/ximopet/commit/278ab2ed1a784a25ca78f16b8c1c51f088156429))
+-   :fire: add some feature in roles operator ([bc2936f](https://github.com/synard1/ximopet/commit/bc2936f1f1d4c5d3d278edb506d6b1198562ca3f))
+-   :fire: add some feature in roles operator ([37cd674](https://github.com/synard1/ximopet/commit/37cd6742ded1b9ba3c81b33f7f0422e6400a1eaa))
+-   Fix validation and error handling in Kandang Modul ([1c7d6fa](https://github.com/synard1/ximopet/commit/1c7d6fa3bfbc2e221a275c4c09b9079d8d348f37))
+-   improve backup file loading and logging in RestoreModal ([3d2f0d7](https://github.com/synard1/ximopet/commit/3d2f0d7b82e27a0327ac96acd6a9b9cee2e70313))
+-   update notification bridge URLs for relative path usage ([40cc08d](https://github.com/synard1/ximopet/commit/40cc08d7c5d50571b7fcb60f3e65300236ce2af7))
 
 ### Features
 
@@ -63,7 +61,7 @@
 * enhance feed and supply purchase components with real-time notifications and status management ([359addc](https://github.com/synard1/ximopet/commit/359addc5083aab3e0350318cb84e1284959d7364))
 * enhance livestock data integrity management and UI ([0bd05e2](https://github.com/synard1/ximopet/commit/0bd05e2865c354fab38a28724f48c9f6704f9646))
 * enhance menu export functionality with structured JSON output and error handling ([36fc97a](https://github.com/synard1/ximopet/commit/36fc97ae472ff3f560325e402d78a53865226c1c))
-* enhance QA Checklist Monitor and reporting components for improved user experience ([0c61b8a](https://github.com/synard1/ximopet/commit/0c61b8ad14484079157bf143c2843e1e8f3425ab))
+* enhance QA Checklist Monitor and reporting components for improved user experience ([0c61b8a](https://github.com/synard1/ximopet/commit/0c61b8a_14484079157bf143c2843e1e8f3425ab))
 * enhance role management with company-specific filtering ([42505b8](https://github.com/synard1/ximopet/commit/42505b89a55f8f699aed072c9f5ca59291dac0c6))
 * enhance security and performance with blacklist system and reporting improvements ([7c55bec](https://github.com/synard1/ximopet/commit/7c55bec92a8e4f364be37d79eb668e96184dd621))
 * enhance user authentication metadata and UI structure ([76b2ef3](https://github.com/synard1/ximopet/commit/76b2ef37380a782325aa0cd157aa072b9c1c6845))
@@ -102,10 +100,8 @@
 * update seeder data and refine menu routing for administrator access ([1353793](https://github.com/synard1/ximopet/commit/13537930e950830aceb6571c8ad05579b3e896d8))
 * **version:** auto version & auto rebase feature branches ([#19](https://github.com/synard1/ximopet/issues/19)) ([f3cc20c](https://github.com/synard1/ximopet/commit/f3cc20cbfa60911cc25c5d43dfd2e38a3be4361c))
 
-
 ### Performance Improvements
 
-* :zap: Fix Stok Control ([a73e714](https://github.com/synard1/ximopet/commit/a73e714e9972a9b3fa4e08ee5cc52aed5cfd5434))
+-   :zap: Fix Stok Control ([a73e714](https://github.com/synard1/ximopet/commit/a73e714e9972a9b3fa4e08ee5cc52aed5cfd5434))
 
-
-
+</rewritten_file> 

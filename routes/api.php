@@ -58,7 +58,7 @@ Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
     // Reports Routes
     Route::prefix('reports')->group(function () {
         Route::post('/performa-mitra', [ReportsController::class, 'exportPerformancePartner']);
-        Route::post('/performa', [ReportsController::class, 'exportPerformanceEnhanced']);
+        Route::post('/performa', [ReportsController::class, 'exportPerformance']);
         Route::post('/penjualan', [ReportsController::class, 'exportPenjualan']);
         Route::post('/harian', [ReportsController::class, 'exportHarian']);
         Route::post('/livestock-cost', [ReportsController::class, 'exportCostHarian']);

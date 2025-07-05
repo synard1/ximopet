@@ -99,7 +99,7 @@
     {{ $dataTable->scripts() }}
 
     {{-- SSE Notification System Integration --}}
-    <script src="{{ asset('assets/js/sse-notification-system.js') }}?v=2.0.3"></script>
+    {{-- <script src="{{ asset('assets/js/sse-notification-system.js') }}?v=2.0.3"></script> --}}
 
     <script>
         document.querySelectorAll('[data-kt-button="create_new"]').forEach(function (element) {

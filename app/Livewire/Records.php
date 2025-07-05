@@ -224,7 +224,7 @@ class Records extends Component
 
             // Auto-save config for single batch if not set in data column
             if ($livestock->getActiveBatchesCount() <= 1 && !$livestock->getDataColumn('config')) {
-                $user = auth()->user();
+                $user = Auth::user();
                 $recordingConfig = [
                     'recording_method' => 'total',
                     'depletion_method' => 'fifo',
@@ -240,7 +240,7 @@ class Records extends Component
             }
 
             if ($this->skipConfigMultipleBatch) {
-                $user = auth()->user();
+                $user = Auth::user();
                 $recordingConfig = [
                     'recording_method' => 'total',
                     'depletion_method' => 'fifo',
@@ -263,7 +263,7 @@ class Records extends Component
                         Log::info('[Records] setRecords: Gagal lanjut, config belum diatur untuk livestock_id: ' . $livestock->id, [
                             'config' => $config,
                             'livestock_id' => $livestock->id,
-                            'user_id' => auth()->id(),
+                            'user_id' => Auth::id(),
                             'timestamp' => now()->toDateTimeString(),
                         ]);
                         return;
@@ -273,7 +273,7 @@ class Records extends Component
                     Log::info('[Records] setRecords: Config ditemukan, proses dilanjutkan untuk livestock_id: ' . $livestock->id, [
                         'config' => $config,
                         'livestock_id' => $livestock->id,
-                        'user_id' => auth()->id(),
+                        'user_id' => Auth::id(),
                         'timestamp' => now()->toDateTimeString(),
                     ]);
                 }
@@ -1828,7 +1828,7 @@ class Records extends Component
                     $options = [
                         'date'          => $this->date,
                         'reason'        => "Depletion via Records component",
-                        'notes'         => "Recorded by " . (auth()->user()->name ?? 'System'),
+                        'notes'         => "Recorded by " . (Auth::user()->name ?? 'System'),
                         'original_type' => $depletionType,
                     ];
 
@@ -2584,10 +2584,10 @@ class Records extends Component
                         ];
                     }, $this->usages),
                     'updated_at' => now()->toIso8601String(),
-                    'updated_by' => auth()->id(),
-                    'updated_by_name' => auth()->user()->name ?? 'Unknown User',
+                    'updated_by' => Auth::id(),
+                    'updated_by_name' => Auth::user()->name ?? 'Unknown User',
                 ],
-                'updated_by' => auth()->id(),
+                'updated_by' => Auth::id(),
             ]);
 
             // Revert old details with detailed tracking
@@ -2627,11 +2627,11 @@ class Records extends Component
                     'status' => 'reverted',
                     'metadata' => [
                         'reverted_at' => now()->toIso8601String(),
-                        'reverted_by' => auth()->id(),
-                        'reverted_by_name' => auth()->user()->name ?? 'Unknown User',
+                        'reverted_by' => Auth::id(),
+                        'reverted_by_name' => Auth::user()->name ?? 'Unknown User',
                         'reason' => 'Updated feed usage',
                     ],
-                    'updated_by' => auth()->id(),
+                    'updated_by' => Auth::id(),
                 ]);
 
                 // Then delete
@@ -2683,10 +2683,10 @@ class Records extends Component
                         ];
                     }, $this->usages),
                     'created_at' => now()->toIso8601String(),
-                    'created_by' => auth()->id(),
-                    'created_by_name' => auth()->user()->name ?? 'Unknown User',
+                    'created_by' => Auth::id(),
+                    'created_by_name' => Auth::user()->name ?? 'Unknown User',
                 ],
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
         }
 
@@ -2757,7 +2757,7 @@ class Records extends Component
                 'usage_date' => $this->date,
                 'livestock_id' => $this->livestockId,
                 'total_quantity' => array_sum(array_column($this->supplyUsages, 'quantity')),
-                'updated_by' => auth()->id(),
+                'updated_by' => Auth::id(),
             ]);
 
             // Revert old details
@@ -2829,7 +2829,7 @@ class Records extends Component
                 'usage_date' => $this->date,
                 'livestock_id' => $this->livestockId,
                 'total_quantity' => array_sum(array_column($this->supplyUsages, 'quantity')),
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
         }
 
@@ -2879,7 +2879,7 @@ class Records extends Component
                     'supply_id' => $usageData['supply_id'],
                     'supply_stock_id' => $stock->id,
                     'quantity_taken' => $quantityToTake,
-                    'created_by' => auth()->id(),
+                    'created_by' => Auth::id(),
                 ]);
 
                 // Update stock quantity used
@@ -2985,8 +2985,8 @@ class Records extends Component
                     // Recording information
                     'recording_id' => $recordingId,
                     'updated_at' => now()->toIso8601String(),
-                    'updated_by' => auth()->id(),
-                    'updated_by_name' => auth()->user()->name ?? 'Unknown User',
+                    'updated_by' => Auth::id(),
+                    'updated_by_name' => Auth::user()->name ?? 'Unknown User',
 
                     // Method information
                     'depletion_method' => 'traditional',
@@ -3010,8 +3010,8 @@ class Records extends Component
                     'batch_processing' => false,
                     'single_record' => true
                 ],
-                'created_by' => auth()->id(),
-                'updated_by' => auth()->id()
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id()
             ]
         );
 
@@ -3193,8 +3193,8 @@ class Records extends Component
                     // Recording information
                     'recording_id' => $recordingId,
                     'updated_at' => now()->toIso8601String(),
-                    'updated_by' => auth()->id(),
-                    'updated_by_name' => auth()->user()->name ?? 'Unknown User',
+                    'updated_by' => Auth::id(),
+                    'updated_by_name' => Auth::user()->name ?? 'Unknown User',
 
                     // Method information
                     'depletion_method' => 'fifo',
@@ -3242,7 +3242,7 @@ class Records extends Component
                     'method' => 'fifo',
                     'metadata' => $standardizedMetadata,
                     'data' => $standardizedData,
-                    'updated_by' => auth()->id()
+                    'updated_by' => Auth::id()
                 ]);
 
                 Log::info('📝 Standardized FIFO depletion record', [
@@ -3341,7 +3341,7 @@ class Records extends Component
             $livestock->update([
                 'quantity_depletion' => $totalDeplesi,
                 'quantity_sales' => $totalSales,
-                'updated_by' => auth()->id()
+                'updated_by' => Auth::id()
             ]);
 
             // Calculate real-time quantity using consistent formula
@@ -3362,8 +3362,8 @@ class Records extends Component
                 'quantity' => $calculatedQuantity,
                 'metadata' => array_merge($currentLivestock->metadata ?? [], [
                     'last_updated' => now()->toIso8601String(),
-                    'updated_by' => auth()->id(),
-                    'updated_by_name' => auth()->user()->name ?? 'Unknown User',
+                    'updated_by' => Auth::id(),
+                    'updated_by_name' => Auth::user()->name ?? 'Unknown User',
                     'previous_quantity' => $oldQuantity,
                     'quantity_change' => $calculatedQuantity - $oldQuantity,
                     'calculation_source' => 'livewire_records_consistent_formula',
@@ -3386,7 +3386,7 @@ class Records extends Component
                             : 0
                     ]
                 ]),
-                'updated_by' => auth()->id()
+                'updated_by' => Auth::id()
             ]);
 
             Log::info("📊 Updated livestock quantities (consistent formula)", [
@@ -3436,9 +3436,9 @@ class Records extends Component
             'version' => '2.0',
             'recorded_at' => now()->toIso8601String(),
             'recorded_by' => [
-                'id' => auth()->id(),
-                'name' => auth()->user()->name ?? 'Unknown User',
-                'role' => auth()->user()->roles->first()->name ?? 'Unknown Role',
+                'id' => Auth::id(),
+                'name' => Auth::user()->name ?? 'Unknown User',
+                'role' => Auth::user()->roles->first()->name ?? 'Unknown Role',
             ],
             'livestock_details' => [
                 'id' => $livestock->id,
@@ -3473,14 +3473,14 @@ class Records extends Component
                 'pakan_jenis' => $data['pakan_jenis'],
                 'pakan_harian' => $data['pakan_harian'],
                 'payload' => $fullPayload,
-                'created_by' => auth()->id(),
-                'updated_by' => auth()->id(),
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id(),
             ]
         );
 
         // Force update of updated_by/updated_at even if no changes
         if (!$recording->wasRecentlyCreated && !$recording->wasChanged()) {
-            $recording->updated_by = auth()->id();
+            $recording->updated_by = Auth::id();
             $recording->touch();
         }
 
@@ -3557,10 +3557,10 @@ class Records extends Component
                 'date' => $this->date,
                 'age_days' => $age,
                 'user' => [
-                    'id' => auth()->id(),
-                    'name' => auth()->user()->name ?? 'Unknown User',
-                    'role' => auth()->user()->roles->first()->name ?? 'Unknown Role',
-                    'company_id' => auth()->user()->company_id ?? null,
+                    'id' => Auth::id(),
+                    'name' => Auth::user()->name ?? 'Unknown User',
+                    'role' => Auth::user()->roles->first()->name ?? 'Unknown Role',
+                    'company_id' => Auth::user()->company_id ?? null,
                 ],
                 'source' => [
                     'application' => 'livewire_records',

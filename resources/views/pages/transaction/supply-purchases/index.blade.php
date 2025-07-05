@@ -869,7 +869,7 @@
     </script>
 
     <!-- SSE Notification System (NEW: No more polling!) -->
-    <script src="{{ asset('assets/js/sse-notification-system.js') }}"></script>
+    {{-- <script src="{{ asset('assets/js/sse-notification-system.js') }}"></script> --}}
 
     <script>
         // Integration script to bridge SSE and existing Livewire system
