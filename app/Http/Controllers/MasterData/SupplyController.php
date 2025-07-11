@@ -11,6 +11,7 @@ use App\Models\SupplyPurchaseBatch;
 use App\Models\SupplyStock;
 use App\DataTables\SupplyDataTable;
 use App\DataTables\SupplyMutationDataTable;
+use App\DataTables\SupplyUsageDataTable;
 
 class SupplyController extends Controller
 {
@@ -22,6 +23,12 @@ class SupplyController extends Controller
         return $dataTable->render('pages/masterdata.supply.index');
     }
 
+    public function usageIndex(SupplyUsageDataTable $dataTable)
+    {
+        addVendors(['datatables']);
+        return $dataTable->render('pages.masterdata.supply.usage');
+    }
+
     public function mutasi(SupplyMutationDataTable $dataTable)
     {
         //
@@ -29,7 +36,6 @@ class SupplyController extends Controller
         addVendors(['datatables']);
 
         return $dataTable->render('pages.masterdata.supply.mutasi');
-
     }
 
     public function getFeedPurchaseBatchDetail($batchId)
@@ -39,8 +45,8 @@ class SupplyController extends Controller
             'supplyItem:id,code,name,unit,unit_conversion,conversion',
             'supplyStocks' // <- relasi baru nanti ditambahkan
         ])
-        ->where('supply_purchase_batch_id', $batchId)
-        ->get(['id', 'supply_purchase_batch_id', 'supply_id', 'quantity', 'price_per_unit']);
+            ->where('supply_purchase_batch_id', $batchId)
+            ->get(['id', 'supply_purchase_batch_id', 'supply_id', 'quantity', 'price_per_unit']);
 
         $formatted = $supplyPurchases->map(function ($item) {
             $supplyItem = optional($item->supplyItem);
@@ -101,21 +107,21 @@ class SupplyController extends Controller
                 $usedQty = $supplyStock->quantity_used ?? 0;
                 $mutatedQty = $supplyStock->quantity_mutated ?? 0;
                 $sisa = $usedQty + $mutatedQty;
-            
+
                 if (($value * $conversion) < $sisa) {
                     return response()->json([
                         'message' => 'Jumlah baru lebih kecil dari jumlah yang sudah terpakai atau dimutasi',
                         'status' => 'error'
                     ], 422);
                 }
-            
+
                 // Update FeedStock
                 $supplyStock->update([
                     'quantity_in' => $value * $conversion,
                     'available' => ($value * $conversion) - $sisa,
                     'updated_by' => $user_id,
                 ]);
-            
+
                 // Update FeedPurchase
                 $supplyPurchase->update([
                     'quantity' => $value,
@@ -165,7 +171,6 @@ class SupplyController extends Controller
             DB::commit();
 
             return response()->json(['message' => 'Berhasil Update Data', 'status' => 'success']);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 400);

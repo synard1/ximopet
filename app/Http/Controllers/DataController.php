@@ -5,17 +5,18 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\CurrentStock;
+use App\Models\CurrentSupply;
 use App\Models\CurrentTernak;
 use App\Models\Farm;
-use App\Models\Kandang;
+use App\Models\Coop;
 use App\Models\FarmOperator;
 use App\Models\FarmSilo;
 use App\Models\InventoryLocation;
 use App\Models\User;
 use App\Models\ItemLocation;
 use App\Models\Item; // Assuming there is an Item model
-use App\Models\KelompokTernak;
-use App\Models\KematianTernak;
+use App\Models\Livestock;
+use App\Models\LivestockDepletion;
 use App\Models\StockHistory;
 use App\Models\TernakAfkir;
 use App\Models\TernakJual;
@@ -142,6 +143,7 @@ class DataController extends Controller
             } elseif ($submodul && $submodul === 'details') {
                 if ($task === 'GET') {
                     $farmId = $request->input('farm_id');
+                    // dd($farmId);
                     $data = $this->getFarmDetails($farmId);
                     if (isset($data['error'])) {
                         return response()->json($data, 404);
@@ -162,7 +164,7 @@ class DataController extends Controller
                     $farmId = $request->input('farm_id');
                     $data = $this->getFarmStorage($farmId);
                 } else {
-                    $data = $this->getActiveFarms();
+                    // $data = $this->getActiveFarms();
                 }
             } elseif ($type === 'ternaks') {
                 $data = $this->getActiveTernaks();
@@ -196,9 +198,10 @@ class DataController extends Controller
     public function getFarmStocks($farmId)
     {
         // Retrieve the current stock using the location relation to get the farm ID
-        $currentStocks = CurrentStock::whereHas('inventoryLocation', function ($query) use ($farmId) {
-            $query->where('farm_id', $farmId);
-        })->get();
+        $currentStocks = CurrentStock::where('farm_id', $farmId)->get();
+        // $currentStocks = CurrentStock::whereHas('inventoryLocation', function ($query) use ($farmId) {
+        //     $query->where('farm_id', $farmId);
+        // })->get();
 
         // Format the data to include necessary details
         $formattedStocks = $currentStocks->map(function ($stock) {
@@ -230,57 +233,114 @@ class DataController extends Controller
 
     public function getFarmDetails($farmId)
     {
-        // Retrieve the current stock using the location relation to get the farm ID
-        // Skip If Quantity 0
-        $currentStocks = CurrentStock::whereHas('inventoryLocation', function ($query) use ($farmId) {
-            $query->where('farm_id', $farmId);
-        })->where('quantity', '>', 0)->get();
+        // Get farm supplies with quantity > 0
+        $currentSupplies = CurrentSupply::where('farm_id', $farmId)
+            ->where('quantity', '>', 0)
+            ->with(['item.itemCategory']) // Eager load relationships
+            ->get();
 
-        // $currentTernak = CurrentTernak::where('farm_id', $farmId)->get();
+        // Format supplies data
+        $formattedSupplies = $currentSupplies->map(function ($supply) {
+            $item = $supply->item;
+            $itemCategory = $item && $item->itemCategory ? $item->itemCategory : null;
 
-        // Format the data to include necessary details
-        $formattedStocks = $currentStocks->map(function ($stock) {
             return [
-                'item_jenis' => $stock->item ? $stock->item->itemCategory->name : 'N/A',
-                'item_id' => $stock->item ? $stock->item->id : 'N/A',
-                'item_name' => $stock->item ? $stock->item->name : 'N/A',
-                'total' => $stock->quantity,
+                'item_jenis' => $itemCategory ? $itemCategory->name : 'N/A',
+                'item_id' => $item ? $item->id : 'N/A',
+                'item_name' => $item ? $item->name : 'N/A',
+                'total' => $supply->quantity,
             ];
         });
 
-        $oldestDate = $currentStocks->min('created_at');
+        $oldestDate = $currentSupplies->min('created_at');
 
-        $kandangs = Kandang::whereHas('kelompokTernak', function ($query) {
-            $query->where('status', 'Aktif');
-        })
+        // Get active coops with active livestock groups
+        $coops = Coop::with(['livestock' => function ($query) {
+                $query->select('id', 'coop_id', 'start_date')
+                    ->where('status', 'Aktif');
+            }])
             ->where('farm_id', $farmId)
             ->where('status', 'Digunakan')
-            ->with(['kelompokTernak' => function ($query) {
-                $query->select('id', 'start_date')->where('status', 'Aktif');
-            }])
-            ->get(['id', 'nama', 'kelompok_ternak_id'])
-            ->map(function ($kandang) {
+            ->get(['id', 'nama']) // Fix: use 'nama' instead of 'name'
+            ->map(function ($coop) {
+                // Defensive: livestock relation may not be loaded or may be null
+                $startDate = null;
+                if ($coop->relationLoaded('livestock') && $coop->livestock && $coop->livestock->isNotEmpty()) {
+                    $startDate = $coop->livestock->first()->start_date;
+                }
                 return [
-                    'id' => $kandang->id,
-                    'nama' => $kandang->nama,
-                    'start_date' => $kandang->kelompokTernak && $kandang->kelompokTernak->first()
-                        ? $kandang->kelompokTernak->first()->start_date
-                        : null,
+                    'id' => $coop->id,
+                    'nama' => $coop->nama,
+                    'start_date' => $startDate,
                 ];
             });
 
         $result = [
-            'stock' => $formattedStocks,
+            'stock' => $formattedSupplies,
             'parameter' => ['oldestDate' => $oldestDate],
-            'kandangs' => $kandangs
+            'kandangs' => $coops
         ];
 
-        if ($formattedStocks->isEmpty()) {
+        if ($formattedSupplies->isEmpty()) {
             $result['error'] = trans('menu.no_inventory_stock_farm', [], 'id');
         }
 
         return $result;
     }
+    // public function getFarmDetails($farmId)
+    // {
+    //     // Retrieve the current stock using the location relation to get the farm ID
+    //     // Skip If Quantity 0
+    //     $currentStocks = CurrentSupply::where('farm_id', $farmId)->where('quantity', '>', 0)->get();
+    //     // $currentStocks = CurrentStock::whereHas('inventoryLocation', function ($query) use ($farmId) {
+    //     //     $query->where('farm_id', $farmId);
+    //     // })->where('quantity', '>', 0)->get();
+
+    //     // $currentTernak = CurrentTernak::where('farm_id', $farmId)->get();
+
+    //     // Format the data to include necessary details
+    //     $formattedStocks = $currentStocks->map(function ($stock) {
+    //         return [
+    //             'item_jenis' => $stock->item ? $stock->item->itemCategory->name : 'N/A',
+    //             'item_id' => $stock->item ? $stock->item->id : 'N/A',
+    //             'item_name' => $stock->item ? $stock->item->name : 'N/A',
+    //             'total' => $stock->quantity,
+    //         ];
+    //     });
+
+    //     $oldestDate = $currentStocks->min('created_at');
+
+    //     $kandangs = Kandang::whereHas('kelompokTernak', function ($query) {
+    //         $query->where('status', 'Aktif');
+    //     })
+    //         ->where('farm_id', $farmId)
+    //         ->where('status', 'Digunakan')
+    //         ->with(['kelompokTernak' => function ($query) {
+    //             $query->select('id', 'start_date')->where('status', 'Aktif');
+    //         }])
+    //         ->get(['id', 'nama', 'kelompok_ternak_id'])
+    //         ->map(function ($kandang) {
+    //             return [
+    //                 'id' => $kandang->id,
+    //                 'nama' => $kandang->nama,
+    //                 'start_date' => $kandang->kelompokTernak && $kandang->kelompokTernak->first()
+    //                     ? $kandang->kelompokTernak->first()->start_date
+    //                     : null,
+    //             ];
+    //         });
+
+    //     $result = [
+    //         'stock' => $formattedStocks,
+    //         'parameter' => ['oldestDate' => $oldestDate],
+    //         'kandangs' => $kandangs
+    //     ];
+
+    //     if ($formattedStocks->isEmpty()) {
+    //         $result['error'] = trans('menu.no_inventory_stock_farm', [], 'id');
+    //     }
+
+    //     return $result;
+    // }
 
     private function getFarmData($type)
     {
@@ -294,7 +354,7 @@ class DataController extends Controller
     public function getFarmOperator()
     {
         $companyId = auth()->user()->company_id;
-        
+
         $data = FarmOperator::with(['user:id,name,email', 'farm:id,name,company_id'])
             ->whereHas('farm', function ($query) use ($companyId) {
                 $query->where('company_id', $companyId);
@@ -355,6 +415,7 @@ class DataController extends Controller
 
     public function getActiveFarms()
     {
+
         $activeItems = Farm::where('status', 'Aktif')->get(['id', 'name']);
 
         return $activeItems->map(function ($item) {

@@ -50,7 +50,7 @@ class SupplyPurchaseDataTable extends DataTable
             })
             ->editColumn('total', function (SupplyPurchaseBatch $transaction) {
                 $total = $transaction->supplyPurchases->sum(function ($purchase) {
-                    return $purchase->quantity * $purchase->price_per_converted_unit;
+                    return $purchase->converted_quantity * $purchase->price_per_converted_unit;
                     // dd($purchase);
                 });
 

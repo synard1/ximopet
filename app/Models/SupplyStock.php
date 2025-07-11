@@ -78,7 +78,7 @@ class SupplyStock extends BaseModel
     public function recalculateQuantityUsed(): void
     {
         // Explicitly query SupplyUsageDetail within the transaction for this stock_id
-        $totalUsed = \App\Models\SupplyUsageDetail::where('supply_stock_id', $this->id)->sum('quantity_taken');
+        $totalUsed = \App\Models\SupplyUsageDetail::where('supply_stock_id', $this->id)->sum('converted_quantity');
         $this->update(['quantity_used' => $totalUsed]);
     }
 

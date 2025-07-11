@@ -13,8 +13,6 @@ class FeedUsageService
 {
     public function process(FeedUsage $usage, array $usages)
     {
-
-        // dd($usages);
         foreach ($usages as $usageRow) {
             $feedId = $usageRow['feed_id'];
             $requiredQty = $usageRow['quantity'];
@@ -34,12 +32,22 @@ class FeedUsageService
                 $available = $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated;
                 $usedQty = min($requiredQty, $available);
 
-                // dd($usedQty);
-
                 // Update stok
-                // $stock->used += $usedQty;
                 $stock->quantity_used += $usedQty;
                 $stock->save();
+
+                // Update CurrentFeed (CurrentSupply) jika ada
+                if (method_exists($stock, 'currentFeed')) {
+                    $currentFeed = $stock->currentFeed;
+                    if ($currentFeed) {
+                        // Hitung ulang sisa quantity dari semua stock terkait feed & livestock
+                        $totalRemaining = FeedStock::where('livestock_id', $usage->livestock_id)
+                            ->where('feed_id', $feedId)
+                            ->sum(DB::raw('quantity_in - quantity_used - quantity_mutated'));
+                        $currentFeed->quantity = $totalRemaining;
+                        $currentFeed->save();
+                    }
+                }
 
                 // Simpan detail pemakaian
                 FeedUsageDetail::create([
@@ -73,13 +81,62 @@ class FeedUsageService
             $processedFeeds = [];
             $detailsCount = 0;
 
-            // dd($items);
+            // Add comprehensive validation and logging
+            Log::info("FeedUsageService::processWithMetadata called", [
+                'usage_id' => $usage->id,
+                'items_count' => count($items),
+                'items_type' => gettype($items),
+                'items_sample' => array_slice($items, 0, 2), // Log first 2 items for debugging
+            ]);
 
-            foreach ($items as $item) {
+            // Validate items structure
+            if (!is_array($items)) {
+                throw new \Exception("Items parameter must be an array, got: " . gettype($items));
+            }
+
+            foreach ($items as $index => $item) {
+                // Validate each item
+                if (!is_array($item)) {
+                    Log::error("Invalid item structure at index {$index}", [
+                        'item_type' => gettype($item),
+                        'item_value' => $item,
+                        'usage_id' => $usage->id
+                    ]);
+                    throw new \Exception("Item at index {$index} must be an array, got: " . gettype($item));
+                }
+
+                // Validate required fields
+                if (!isset($item['feed_id'])) {
+                    Log::error("Missing feed_id in item at index {$index}", [
+                        'item' => $item,
+                        'usage_id' => $usage->id
+                    ]);
+                    throw new \Exception("Missing feed_id in item at index {$index}");
+                }
+
+                if (!isset($item['quantity'])) {
+                    Log::error("Missing quantity in item at index {$index}", [
+                        'item' => $item,
+                        'usage_id' => $usage->id
+                    ]);
+                    throw new \Exception("Missing quantity in item at index {$index}");
+                }
+
                 $feedId = $item['feed_id'];
                 $requiredQty = floatval($item['quantity']);
 
+                Log::info("Processing feed item", [
+                    'index' => $index,
+                    'feed_id' => $feedId,
+                    'quantity' => $requiredQty,
+                    'item_data' => $item
+                ]);
+
                 if ($requiredQty <= 0) {
+                    Log::info("Skipping item with zero or negative quantity", [
+                        'feed_id' => $feedId,
+                        'quantity' => $requiredQty
+                    ]);
                     continue;
                 }
 
@@ -91,6 +148,12 @@ class FeedUsageService
                     ->orderBy('created_at')
                     ->lockForUpdate()
                     ->get();
+
+                Log::info("Found available stocks", [
+                    'feed_id' => $feedId,
+                    'stocks_count' => $stocks->count(),
+                    'livestock_id' => $usage->livestock_id
+                ]);
 
                 $remainingQty = $requiredQty;
                 $stocksUsed = [];
@@ -104,11 +167,13 @@ class FeedUsageService
                     // Update stock usage
                     $stock->quantity_used += $qtyToTake;
 
-                    // Update CurrentSupply quantity instead of using $stock->available
-                    $currentSupply = $stock->currentSupply;
-                    if ($currentSupply) {
-                        $currentSupply->quantity -= $qtyToTake;
-                        $currentSupply->save();
+                    // Update CurrentFeed (CurrentSupply) jika ada
+                    if (method_exists($stock, 'currentFeed')) {
+                        $currentFeed = $stock->currentFeed;
+                        if ($currentFeed) {
+                            $currentFeed->quantity -= $qtyToTake;
+                            $currentFeed->save();
+                        }
                     }
 
                     $stock->save();
@@ -148,9 +213,9 @@ class FeedUsageService
                                 'batch_number' => $stock->feedPurchase->batch->invoice_number ?? null,
                                 'supplier' => $stock->feedPurchase->batch->supplier->name ?? 'Unknown',
                             ],
-                            'current_supply_info' => [
-                                'id' => $currentSupply->id ?? null,
-                                'previous_quantity' => $currentSupply->quantity ?? null,
+                            'current_feed_info' => [
+                                'id' => $currentFeed->id ?? null,
+                                'previous_quantity' => $currentFeed->quantity ?? null,
                                 'quantity_reduced' => $qtyToTake,
                             ],
                             'created_at' => now()->toIso8601String(),
@@ -160,8 +225,6 @@ class FeedUsageService
                         'created_by' => auth()->id(),
                     ]);
 
-                    // dd($detail);
-
                     $stocksUsed[] = [
                         'stock_id' => $stock->id,
                         'quantity_taken' => $qtyToTake,
@@ -170,6 +233,16 @@ class FeedUsageService
 
                     $remainingQty -= $qtyToTake;
                     $detailsCount++;
+                }
+
+                // Setelah semua stock diambil, update CurrentFeed (CurrentSupply) dengan quantity terakhir
+                // (jumlah sisa dari semua stock feed & livestock terkait)
+                if (isset($currentFeed) && $currentFeed) {
+                    $totalRemaining = FeedStock::where('livestock_id', $usage->livestock_id)
+                        ->where('feed_id', $feedId)
+                        ->sum(DB::raw('quantity_in - quantity_used - quantity_mutated'));
+                    $currentFeed->quantity = $totalRemaining;
+                    $currentFeed->save();
                 }
 
                 if ($remainingQty > 0) {
@@ -223,6 +296,8 @@ class FeedUsageService
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'items_count' => count($items),
+                'items_sample' => array_slice($items, 0, 2),
             ]);
 
             throw $e;

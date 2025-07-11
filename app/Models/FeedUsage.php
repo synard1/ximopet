@@ -36,6 +36,11 @@ class FeedUsage extends BaseModel
         return $this->hasMany(FeedUsageDetail::class);
     }
 
+    public function feedUsageDetails()
+    {
+        return $this->hasMany(FeedUsageDetail::class);
+    }
+
     public function livestock()
     {
         return $this->belongsTo(Livestock::class);

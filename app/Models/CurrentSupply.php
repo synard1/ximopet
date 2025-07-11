@@ -28,4 +28,14 @@ class CurrentSupply extends BaseModel
     {
         return $this->belongsTo(Supply::class, 'item_id', 'id');
     }
+
+    public function item()
+    {
+        return match ($this->item_type) {
+            'feed' => $this->belongsTo(\App\Models\Feed::class, 'item_id', 'id'),
+            'supply' => $this->belongsTo(\App\Models\Supply::class, 'item_id', 'id'),
+            'livestock' => $this->belongsTo(\App\Models\Livestock::class, 'item_id', 'id'),
+            default => null,
+        };
+    }
 }

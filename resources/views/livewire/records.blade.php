@@ -337,6 +337,8 @@
                     @endif
                 </div>
 
+                <!-- Hide Supply Usage, use dedicated page -->
+                {{--
                 <!-- Tabel Penggunaan OVK/Supply -->
                 <div class="bg-white border border-gray-200 rounded-lg p-4">
                     @if(Auth::user()->can('create supply usage'))
@@ -401,7 +403,7 @@
                         </p>
                     </div>
                     @endif
-                </div>
+                </div> --}}
 
             </div>
         </div>
@@ -414,9 +416,14 @@
                 </button>
             </div> --}}
             <div>
-                <button wire:click="closeForm" class="btn btn-danger rounded-lg px-6 py-2 me-2">Kembali ke
+                <button type="button" wire:click="closeForm" class="btn btn-danger rounded-lg px-6 py-2 me-2">Kembali ke
                     Tabel</button>
-                <!-- Tombol Simpan -->
+                {{--
+                <!-- Test Notification Button -->
+                <button type="button" wire:click="testNotification" class="btn btn-warning rounded-lg px-4 py-2 me-2">🧪
+                    Test
+                    Notif</button>
+                <!-- Tombol Simpan --> --}}
                 @if($isEditing)
                 <button type="submit" class="btn btn-primary rounded-lg px-6 py-2" id='submitData'>💾 Ubah Data</button>
                 @else
@@ -441,6 +448,24 @@
             } else {
                 console.warn('Element with ID "submitData" not found.');
             }
+        });
+
+        // Listen for data refresh events
+        Livewire.on('refreshData', () => {
+            console.log('🔄 Refreshing data after save...');
+            // Force reload the page to ensure fresh data
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        });
+
+        // Listen for data saved events
+        Livewire.on('data-saved', () => {
+            console.log('✅ Data saved successfully, refreshing...');
+            // Force reload the page to ensure fresh data
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
         });
     
         const validateInput = (input) => {

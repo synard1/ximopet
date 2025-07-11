@@ -72,6 +72,11 @@ class FeedStock extends BaseModel
             ->with('mutation.fromLivestock');
     }
 
+    public function currentFeed()
+    {
+        return $this->hasOne(CurrentFeed::class, 'feed_id', 'feed_id');
+    }
+
     // public function mutationDetails()
     // {
     //     return $this->hasMany(FeedMutationItem::class);

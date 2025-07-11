@@ -111,9 +111,14 @@ return new class extends Migration
 
         Schema::create('supply_usages', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('company_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('farm_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignUuid('coop_id')->nullable()->constrained()->onDelete('cascade');
             $table->dateTime('usage_date');
-            $table->uuid('livestock_id')->constrained()->onDelete('cascade');
-            $table->decimal('total_quantity', 12, 2);
+            $table->foreignUuid('livestock_id')->nullable()->constrained()->onDelete('cascade');
+            $table->decimal('total_quantity', 12, 2)->default(0);
+            $table->text('notes')->nullable();
+            $table->string('status')->index();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -126,12 +131,19 @@ return new class extends Migration
 
         Schema::create('supply_usage_details', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('supply_usage_id');
-            $table->uuid('supply_stock_id');
-            $table->uuid('supply_id');
+            $table->foreignUuid('supply_usage_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('supply_stock_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('supply_id')->constrained()->onDelete('cascade');
             $table->decimal('quantity_taken', 12, 2);
-            $table->foreign('supply_usage_id')->references('id')->on('supply_usages')->cascadeOnDelete();
-            $table->foreign('supply_stock_id')->references('id')->on('supply_stocks')->cascadeOnDelete();
+            $table->foreignUuid('unit_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('converted_unit_id')->nullable()->constrained('units')->onDelete('set null');
+            $table->decimal('converted_quantity', 12, 2);
+            $table->decimal('price_per_unit', 12, 2)->nullable();
+            $table->decimal('price_per_converted_unit', 12, 2)->nullable();
+            $table->decimal('total_price', 12, 2)->nullable();
+            $table->text('notes')->nullable();
+            $table->string('batch_number', 100)->nullable();
+            $table->date('expiry_date')->nullable();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -139,7 +151,6 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-            $table->foreign('supply_id')->references('id')->on('supplies')->cascadeOnDelete();
         });
 
 

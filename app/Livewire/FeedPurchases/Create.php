@@ -618,23 +618,73 @@ class Create extends Component
         $companyId = $user->company_id;
 
         $isSuperAdmin = $user->hasRole('SuperAdmin');
+        $isCompanyRole = $user->hasAnyRole(['Supervisor', 'Manager', 'Administrator']);
+        $isOperator = $user->hasRole('Operator');
+
+        // Logging for debugging role-based data filtering
+        Log::debug('FeedPurchases/Create render() called', [
+            'user_id' => $user->id,
+            'roles' => $user->getRoleNames(),
+            'company_id' => $companyId,
+            'isSuperAdmin' => $isSuperAdmin,
+            'isCompanyRole' => $isCompanyRole,
+            'isOperator' => $isOperator,
+        ]);
+
+        // Vendors (Partners)
+        if ($isSuperAdmin) {
+            $vendors = Partner::where('type', 'Supplier')->get();
+        } elseif ($isCompanyRole) {
+            $vendors = Partner::where('type', 'Supplier')->where('company_id', $companyId)->get();
+        } elseif ($isOperator) {
+            $vendors = Partner::where('type', 'Supplier')
+                ->where('company_id', $companyId)
+                ->get();
+        } else {
+            $vendors = collect();
+        }
+
+        // Expeditions
+        if ($isSuperAdmin) {
+            $expeditions = Expedition::all();
+        } elseif ($isCompanyRole) {
+            $expeditions = Expedition::where('company_id', $companyId)->get();
+        } elseif ($isOperator) {
+            $expeditions = Expedition::where('company_id', $companyId)->get();
+        } else {
+            $expeditions = collect();
+        }
+
+        // Feed Items
+        if ($isSuperAdmin) {
+            $feedItems = Feed::all();
+        } elseif ($isCompanyRole) {
+            $feedItems = Feed::where('company_id', $companyId)->get();
+        } elseif ($isOperator) {
+            $feedItems = Feed::where('company_id', $companyId)->get();
+        } else {
+            $feedItems = collect();
+        }
+
+        // Livestocks
+        if ($isSuperAdmin) {
+            $livestocks = Livestock::all();
+        } elseif ($isCompanyRole) {
+            $livestocks = Livestock::where('company_id', $companyId)->get();
+        } elseif ($isOperator) {
+            // Operator hanya bisa melihat livestock yang farm-nya dioperasikan oleh user ini
+            $livestocks = Livestock::whereHas('farm.farmOperators', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })->get();
+        } else {
+            $livestocks = collect();
+        }
 
         return view('livewire.feed-purchases.create', [
-            'vendors' => $isSuperAdmin
-                ? Partner::where('type', 'Supplier')->get()
-                : Partner::where('type', 'Supplier')->where('company_id', $companyId)->get(),
-            'expeditions' => $isSuperAdmin
-                ? Expedition::all()
-                : Expedition::where('company_id', $companyId)->get(),
-            'feedItems' => $isSuperAdmin
-                ? Feed::all()
-                : Feed::where('company_id', $companyId)->get(),
-            'livestocks' => $isSuperAdmin
-                ? Livestock::all()
-                : Livestock::where('company_id', $companyId)
-                ->whereHas('farm.farmOperators', function ($query) use ($user) {
-                    $query->where('user_id', $user->id);
-                })->get(),
+            'vendors' => $vendors,
+            'expeditions' => $expeditions,
+            'feedItems' => $feedItems,
+            'livestocks' => $livestocks,
         ]);
     }
 

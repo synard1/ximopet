@@ -25,6 +25,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
+use function App\Helpers\logInfoIfDebug;
+use function App\Helpers\logDebugIfDebug;
+use function App\Helpers\logWarningIfDebug;
+use function App\Helpers\logErrorIfDebug;
+use App\Services\SupplyPurchaseIntegrityService;
 
 class Create extends Component
 {
@@ -345,34 +350,70 @@ class Create extends Component
      */
     private function recalculateCurrentSupply(Farm $farm, Supply $supply)
     {
-        // Calculate total quantity from all arrived supplies
-        $totalQuantity = SupplyStock::join('supply_purchases', 'supply_stocks.supply_purchase_id', '=', 'supply_purchases.id')
+        logDebugIfDebug('recalculateCurrentSupply: start', [
+            'farm_id' => $farm->id,
+            'supply_id' => $supply->id,
+            'supply_data' => $supply->data,
+        ]);
+        // Query supply stocks yang digunakan untuk sum
+        $supplyStocksQuery = \App\Models\SupplyStock::join('supply_purchases', 'supply_stocks.supply_purchase_id', '=', 'supply_purchases.id')
             ->join('supply_purchase_batches', 'supply_purchases.supply_purchase_batch_id', '=', 'supply_purchase_batches.id')
             ->where('supply_stocks.farm_id', $farm->id)
             ->where('supply_stocks.supply_id', $supply->id)
-            ->where('supply_purchase_batches.status', SupplyPurchaseBatch::STATUS_ARRIVED)
+            ->where('supply_purchase_batches.status', \App\Models\SupplyPurchaseBatch::STATUS_ARRIVED)
             ->when(!$this->withHistory, function ($q) {
                 return $q->whereNull('supply_stocks.deleted_at');
-            })
-            ->sum('supply_stocks.quantity_in');
+            });
+        $supplyStocks = $supplyStocksQuery->get(['supply_stocks.id', 'supply_stocks.quantity_in', 'supply_stocks.quantity_used', 'supply_stocks.quantity_mutated']);
+        logDebugIfDebug('recalculateCurrentSupply: supplyStocks used for sum', [
+            'farm_id' => $farm->id,
+            'supply_id' => $supply->id,
+            'stocks' => $supplyStocks->toArray(),
+        ]);
+        $totalQuantity = $supplyStocks->sum(function ($stock) {
+            return $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated;
+        });
+        logDebugIfDebug('recalculateCurrentSupply: calculated', [
+            'farm_id' => $farm->id,
+            'supply_id' => $supply->id,
+            'totalQuantity' => $totalQuantity,
+        ]);
 
-        CurrentSupply::updateOrCreate(
-            [
-                'farm_id' => $farm->id,
-                'coop_id' => $farm->coop_id,
-                'item_id' => $supply->id,
-                'unit_id' => $supply->data['unit_id'],
-                'type' => 'supply',
-            ],
-            [
-                'quantity' => $totalQuantity,
-                'status' => 'active',
-                'created_by' => auth()->id(),
-                'updated_by' => auth()->id(),
-            ]
-        );
-
-        Log::info("Recalculated CurrentSupply for Farm {$farm->id}, Supply {$supply->id}: {$totalQuantity}");
+        // Get default unit_id from supply
+        $unitId = null;
+        if (isset($supply->data['conversion_units']) && is_array($supply->data['conversion_units'])) {
+            $units = collect($supply->data['conversion_units']);
+            $defaultUnit = $units->firstWhere('is_default_purchase', true) ?? $units->first();
+            if ($defaultUnit) {
+                $unitId = $defaultUnit['unit_id'];
+            }
+        }
+        if (!$unitId) {
+            $unitId = \App\Models\Unit::first()?->id;
+        }
+        logDebugIfDebug('recalculateCurrentSupply: before save', [
+            'farm_id' => $farm->id,
+            'supply_id' => $supply->id,
+            'unit_id' => $unitId,
+            'totalQuantity' => $totalQuantity,
+        ]);
+        $currentSupply = \App\Models\CurrentSupply::firstOrNew([
+            'farm_id' => $farm->id,
+            'item_id' => $supply->id,
+        ]);
+        $before = $currentSupply->quantity;
+        $currentSupply->quantity = $totalQuantity;
+        $currentSupply->unit_id = $unitId;
+        $currentSupply->type = 'supply';
+        $currentSupply->status = 'active';
+        $currentSupply->save();
+        logInfoIfDebug('recalculateCurrentSupply: updated', [
+            'farm_id' => $farm->id,
+            'supply_id' => $supply->id,
+            'before' => $before,
+            'after' => $currentSupply->quantity,
+            'unit_id' => $unitId,
+        ]);
     }
 
     /**
@@ -478,23 +519,55 @@ class Create extends Component
         $user = auth()->user();
         $companyId = $user->company_id;
         $isSuperAdmin = $user->hasRole('SuperAdmin');
+        $isCompanyRole = $user->hasAnyRole(['Supervisor', 'Manager', 'Administrator']);
+        $isOperator = $user->hasRole('Operator');
 
-        $supply = $isSuperAdmin
-            ? Supply::where('status', 'active')->orderBy('name')->get()
-            : Supply::where('status', 'active')->where('company_id', $companyId)->orderBy('name')->get();
+        if ($isSuperAdmin) {
+            $supply = Supply::where('status', 'active')->orderBy('name')->get();
+        } elseif ($isCompanyRole) {
+            $supply = Supply::where('status', 'active')->where('company_id', $companyId)->orderBy('name')->get();
+        } elseif ($isOperator) {
+            $supply = Supply::where('status', 'active')->where('company_id', $companyId)->orderBy('name')->get();
+        } else {
+            $supply = collect();
+        }
 
         $farmIds = $user->farmOperators()->pluck('farm_id')->toArray();
-        $farms = $isSuperAdmin
-            ? Farm::whereIn('id', $farmIds)->get(['id', 'name'])
-            : Farm::whereIn('id', $farmIds)->where('company_id', $companyId)->get(['id', 'name']);
+        if ($isSuperAdmin) {
+            $farms = Farm::all(['id', 'name']);
+        } elseif ($isCompanyRole) {
+            $farms = Farm::where('company_id', $companyId)->get(['id', 'name']);
+        } elseif ($isOperator) {
+            $farms = Farm::whereIn('id', $farmIds)->where('company_id', $companyId)->get(['id', 'name']);
+        } else {
+            $farms = collect();
+        }
+
+        if ($isSuperAdmin) {
+            $vendors = Partner::where('type', 'Supplier')->get();
+        } elseif ($isCompanyRole) {
+            $vendors = Partner::where('type', 'Supplier')->where('company_id', $companyId)->get();
+        } elseif ($isOperator) {
+            $vendors = Partner::where('type', 'Supplier')
+                ->where('company_id', $companyId)
+                ->get();
+        } else {
+            $vendors = collect();
+        }
+
+        if ($isSuperAdmin) {
+            $expeditions = Expedition::all();
+        } elseif ($isCompanyRole) {
+            $expeditions = Expedition::where('company_id', $companyId)->get();
+        } elseif ($isOperator) {
+            $expeditions = Expedition::where('company_id', $companyId)->get();
+        } else {
+            $expeditions = collect();
+        }
 
         return view('livewire.supply-purchases.create', [
-            'vendors' => $isSuperAdmin
-                ? Partner::where('type', 'Supplier')->get()
-                : Partner::where('type', 'Supplier')->where('company_id', $companyId)->get(),
-            'expeditions' => $isSuperAdmin
-                ? Expedition::all()
-                : Expedition::where('company_id', $companyId)->get(),
+            'vendors' => $vendors,
+            'expeditions' => $expeditions,
             'supplyItems' => $supply,
             'farms' => $farms,
         ]);
@@ -731,27 +804,53 @@ class Create extends Component
             'notes' => $notes
         ]);
 
-
-
-        // If status is arrived, process stock arrival
+        // If status is arrived, validate data integrity first
         if ($status === \App\Models\SupplyPurchaseBatch::STATUS_ARRIVED) {
-            // dd($status, $oldStatus);
+            // First process stock arrival
+            try {
+                $this->processStockArrival($batch);
+                logInfoIfDebug("Stock arrival processed successfully for batch ID: {$batch->id}");
+            } catch (\Exception $e) {
+                logErrorIfDebug("Failed to process stock arrival for batch ID: {$batch->id}", [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]);
+                $this->dispatch('error', 'Gagal memproses kedatangan stock: ' . $e->getMessage());
+                return;
+            }
 
-            // try {
-            // Process stock arrival - create SupplyStock and update CurrentSupply
-            $this->processStockArrival($batch);
+            // Then validate data integrity
+            $integrityService = new SupplyPurchaseIntegrityService();
+            $validationResult = $integrityService->validateArrivalIntegrity($batch);
 
-            Log::info("Stock arrival processed successfully for batch ID: {$batch->id}");
-            // } catch (\Exception $e) {
-            //     Log::error("Failed to process stock arrival for batch ID: {$batch->id}", [
-            //         'error' => $e->getMessage(),
-            //         'file' => $e->getFile(),
-            //         'line' => $e->getLine()
-            //     ]);
+            if (!$validationResult['valid']) {
+                logErrorIfDebug('SupplyPurchase: Arrival integrity validation failed', [
+                    'batch_id' => $batch->id,
+                    'validation_result' => $validationResult
+                ]);
 
-            //     $this->dispatch('error', 'Gagal memproses kedatangan stock: ' . $e->getMessage());
-            //     return;
-            // }
+                // Rollback the stock arrival changes
+                $rollbackResult = $integrityService->rollbackArrivalChanges($batch);
+
+                $errorMessage = 'Validasi integritas data gagal: ' . ($validationResult['error'] ?? 'Unknown error');
+                if (isset($validationResult['details']) && is_array($validationResult['details'])) {
+                    $errorMessage .= ' Details: ' . implode(', ', $validationResult['details']);
+                }
+
+                if ($rollbackResult['success']) {
+                    $errorMessage .= ' Data telah dikembalikan ke kondisi sebelumnya.';
+                } else {
+                    $errorMessage .= ' PERINGATAN: Rollback gagal, data mungkin tidak konsisten.';
+                }
+
+                $this->dispatch('error', $errorMessage);
+                return;
+            }
+
+            logInfoIfDebug('SupplyPurchase: Arrival integrity validation passed', [
+                'batch_id' => $batch->id
+            ]);
         }
 
         // If status is being changed from ARRIVED to something else, handle stock rollback
@@ -781,6 +880,54 @@ class Create extends Component
             'status_change_trigger' => 'manual_update',
             'updated_via' => 'livewire_component'
         ]);
+
+        // Jika status baru adalah arrived, panggil ulang recalculateCurrentSupply
+        if ($status === \App\Models\SupplyPurchaseBatch::STATUS_ARRIVED) {
+            logDebugIfDebug('recalculateCurrentSupply: post-status-update loop', [
+                'batch_id' => $batch->id,
+                'supply_count' => $batch->supplyPurchases->count(),
+            ]);
+            $validationErrors = [];
+            foreach ($batch->supplyPurchases as $purchase) {
+                $supply = \App\Models\Supply::find($purchase->supply_id);
+                $farm = \App\Models\Farm::find($purchase->farm_id);
+                if ($supply && $farm) {
+                    $this->recalculateCurrentSupply($farm, $supply);
+                    // Validasi CurrentSupply
+                    $currentSupply = \App\Models\CurrentSupply::where('farm_id', $farm->id)
+                        ->where('item_id', $supply->id)
+                        ->first();
+                    $supplyStock = \App\Models\SupplyStock::where('farm_id', $farm->id)
+                        ->where('supply_id', $supply->id)
+                        ->where('supply_purchase_id', $purchase->id)
+                        ->first();
+                    if (!$currentSupply || $currentSupply->quantity <= 0) {
+                        $validationErrors[] = "CurrentSupply untuk supply {$supply->name} tidak valid (quantity: " . ($currentSupply ? $currentSupply->quantity : 'null') . ")";
+                    }
+                    if (!$supplyStock || $supplyStock->quantity_in <= 0) {
+                        $validationErrors[] = "SupplyStock untuk supply {$supply->name} tidak valid (quantity_in: " . ($supplyStock ? $supplyStock->quantity_in : 'null') . ")";
+                    }
+                }
+            }
+            logDebugIfDebug('recalculateCurrentSupply: post-status-update loop done', [
+                'batch_id' => $batch->id,
+                'validationErrors' => $validationErrors
+            ]);
+            if (!empty($validationErrors)) {
+                // Rollback status batch ke draft
+                $batch->updateStatus(\App\Models\SupplyPurchaseBatch::STATUS_DRAFT, 'Auto-rollback: integritas data gagal setelah proses arrived', [
+                    'previous_status' => $status,
+                    'status_change_trigger' => 'auto_rollback',
+                    'updated_via' => 'livewire_component'
+                ]);
+                logErrorIfDebug('SupplyPurchase: Validasi CurrentSupply/SupplyStock gagal setelah arrived', [
+                    'batch_id' => $batch->id,
+                    'errors' => $validationErrors
+                ]);
+                $this->dispatch('error', 'Gagal menyimpan status arrived: ' . implode('; ', $validationErrors));
+                return;
+            }
+        }
 
         // ✅ IMMEDIATE REAL-TIME NOTIFICATION TO ALL LIVEWIRE COMPONENTS
         if ($oldStatus !== $status) {
@@ -848,7 +995,7 @@ class Create extends Component
         $this->dispatch('statusUpdated');
 
         $statusMessage = $status === \App\Models\SupplyPurchaseBatch::STATUS_ARRIVED
-            ? 'Status berhasil diperbarui dan stock telah diproses.'
+            ? 'Status berhasil diperbarui dan stock telah diproses dengan validasi integritas.'
             : 'Status pembelian berhasil diperbarui.';
 
         $this->dispatch('success', $statusMessage);

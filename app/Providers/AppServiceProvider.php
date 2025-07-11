@@ -18,17 +18,22 @@ use Laravel\Sanctum\Sanctum;
 use App\Models\PersonalAccessToken;
 use App\Models\Company;
 use App\Observers\CompanyObserver;
+use App\Services\Recording\Contracts\RecordingDataServiceInterface;
+use App\Services\Recording\RecordingDataService;
+use App\Services\Recording\Contracts\RecordingPersistenceServiceInterface;
+use App\Services\Recording\RecordingPersistenceService;
 
 class AppServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
-     *
-     * @return void
      */
-    public function register()
+    public function register(): void
     {
-        //
+        // Bind the modular recording services to their contracts.
+        // This allows us to easily swap implementations in the future.
+        $this->app->bind(RecordingDataServiceInterface::class, RecordingDataService::class);
+        $this->app->bind(RecordingPersistenceServiceInterface::class, RecordingPersistenceService::class);
     }
 
     /**

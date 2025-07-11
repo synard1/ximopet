@@ -3,37 +3,72 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use App\Models\BaseModel;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SupplyUsageDetail extends BaseModel
 {
-    use HasFactory, SoftDeletes, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
+
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = [
         'id',
         'supply_usage_id',
-        'supply_id',
         'supply_stock_id',
+        'supply_id',
         'quantity_taken',
+        'unit_id',
+        'converted_unit_id',
+        'converted_quantity',
+        'price_per_unit',
+        'price_per_converted_unit',
+        'total_price',
+        'notes',
+        'batch_number',
+        'expiry_date',
         'created_by',
         'updated_by',
     ];
 
-    public function supplyUsage()
+    protected $casts = [
+        'quantity_taken' => 'decimal:2',
+        'converted_quantity' => 'decimal:2',
+        'price_per_unit' => 'decimal:2',
+        'price_per_converted_unit' => 'decimal:2',
+        'total_price' => 'decimal:2',
+        'expiry_date' => 'date',
+    ];
+
+    public function supplyUsage(): BelongsTo
     {
-        return $this->belongsTo(SupplyUsage::class, 'supply_usage_id');
+        return $this->belongsTo(SupplyUsage::class);
     }
 
-    public function supply()
+    public function supplyStock(): BelongsTo
+    {
+        return $this->belongsTo(SupplyStock::class);
+    }
+
+    public function supply(): BelongsTo
     {
         return $this->belongsTo(Supply::class);
     }
 
-    public function supplyStock()
+    public function unit(): BelongsTo
     {
-        return $this->belongsTo(SupplyStock::class, 'supply_stock_id');
+        return $this->belongsTo(Unit::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

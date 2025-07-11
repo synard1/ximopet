@@ -251,10 +251,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Supply Routes
         Route::get('/supply-mutation', [SupplyController::class, 'mutasi'])->name('supply.mutation');
+        Route::get('/supply-usage', [SupplyController::class, 'usageIndex'])->name('supply.usage');
         Route::get('/supply', [TransactionController::class, 'supplyIndex'])->name('supply');
 
         // Stock Usage Routes
-        Route::get('/transaction/stock-usage', [TransaksiController::class, 'stokPakaiIndex'])->name('stock-usage.index');
+        Route::get('/stock-usage', [TransaksiController::class, 'stokPakaiIndex'])->name('stock-usage.index');
 
         // Document Routes
         // Route::get('/transaction/documents', [TransaksiController::class, 'docIndex'])->name('documents.index');

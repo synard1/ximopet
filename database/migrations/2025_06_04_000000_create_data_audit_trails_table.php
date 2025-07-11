@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->string('action'); // fix, rollback, update, delete, etc
             $table->json('before_data')->nullable();
             $table->json('after_data')->nullable();
-            $table->unsignedBigInteger('user_id')->nullable();
+            $table->uuid('user_id')->nullable();
             $table->uuid('rollback_to_id')->nullable();
             $table->timestamps();
         });
