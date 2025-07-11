@@ -1,4 +1,4 @@
-#  (2025-07-05)
+#  (2025-07-11)
 
 
 ### Bug Fixes
@@ -85,6 +85,7 @@
 * implement OVK management and system improvements ([27a7b73](https://github.com/synard1/ximopet/commit/27a7b7327a66b5c3c22b7ffb04707731ffd6481f))
 * implement permission and role management helper and display service ([410ed58](https://github.com/synard1/ximopet/commit/410ed58364163170857b0b71e1d7be4b340c9595))
 * implement QA checklist management and enhance menu functionality ([76d1496](https://github.com/synard1/ximopet/commit/76d149610f8c5677f8657ea2c46214101bc1498b))
+* implement recording services and supply usage management ([7c1c9b0](https://github.com/synard1/ximopet/commit/7c1c9b0aa249ebd26d7f986fe5efba8774ae1687))
 * implement security blacklist and violation management system ([f0bb1a2](https://github.com/synard1/ximopet/commit/f0bb1a236375f81a8c7d1381fc11e4b5304fbff9))
 * implement security blacklist notification and protection systems ([b3c98c5](https://github.com/synard1/ximopet/commit/b3c98c55803df2454b3349d083277a0d0117666d))
 * implement sidebar collapse functionality with custom styles and JavaScript ([5052b8d](https://github.com/synard1/ximopet/commit/5052b8d434ed185a947715e87460bc0255821b99))
