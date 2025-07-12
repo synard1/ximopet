@@ -62,6 +62,11 @@ class SupplyUsageDetail extends BaseModel
         return $this->belongsTo(Unit::class);
     }
 
+    public function convertedUnit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class, 'converted_unit_id');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -70,5 +75,18 @@ class SupplyUsageDetail extends BaseModel
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function setPricePerUnitAttribute($value)
+    {
+        $this->attributes['price_per_unit'] = ($value === '' || $value === null) ? null : $value;
+    }
+    public function setPricePerConvertedUnitAttribute($value)
+    {
+        $this->attributes['price_per_converted_unit'] = ($value === '' || $value === null) ? null : $value;
+    }
+    public function setTotalPriceAttribute($value)
+    {
+        $this->attributes['total_price'] = ($value === '' || $value === null) ? null : $value;
     }
 }

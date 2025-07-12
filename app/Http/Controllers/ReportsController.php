@@ -19,6 +19,7 @@ use App\Services\Report\PurchaseReportService;
 use App\Services\Report\SalesReportService;
 use App\Services\Report\LivestockCostReportService;
 use App\Services\Report\ReportIndexOptimizationService;
+use App\Services\Report\SupplyUsageReportService;
 
 
 class ReportsController extends Controller
@@ -37,6 +38,7 @@ class ReportsController extends Controller
     protected $salesReportService;
     protected $livestockCostReportService;
     protected $indexOptimizationService;
+    protected $supplyUsageReportService;
 
     public function __construct(
         DaillyReportExcelExportService $daillyReportExcelExportService,
@@ -52,7 +54,8 @@ class ReportsController extends Controller
         PurchaseReportService $purchaseReportService,
         SalesReportService $salesReportService,
         LivestockCostReportService $livestockCostReportService,
-        ReportIndexOptimizationService $indexOptimizationService
+        ReportIndexOptimizationService $indexOptimizationService,
+        SupplyUsageReportService $supplyUsageReportService
     ) {
         $this->daillyReportExcelExportService = $daillyReportExcelExportService;
         $this->depletionReportService = $depletionReportService;
@@ -68,6 +71,7 @@ class ReportsController extends Controller
         $this->salesReportService = $salesReportService;
         $this->livestockCostReportService = $livestockCostReportService;
         $this->indexOptimizationService = $indexOptimizationService;
+        $this->supplyUsageReportService = $supplyUsageReportService;
     }
 
     /**
@@ -189,6 +193,27 @@ class ReportsController extends Controller
             return view('pages.reports.index_report_pembelian_supply', $data);
         } catch (\Exception $e) {
             Log::error('Error in indexPembelianSupply: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat memuat data: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Display Supply Usage Report Index
+     */
+    public function indexSupplyUsage()
+    {
+        try {
+            $data = $this->indexOptimizationService->prepareCommonIndexData('livestock');
+
+            // Add supplies data for dropdown
+            $supplies = \App\Models\Supply::query();
+            $this->dataAccessService->applyCompanyFilter($supplies);
+            $data['supplies'] = $supplies->get();
+
+            // dd($data);
+            return view('pages.reports.index_report_supply_usage', $data);
+        } catch (\Exception $e) {
+            Log::error('Error in indexSupplyUsage: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Terjadi kesalahan saat memuat data: ' . $e->getMessage());
         }
     }
@@ -360,6 +385,21 @@ class ReportsController extends Controller
             return $this->purchaseReportService->exportSupplyPurchaseReport($request);
         } catch (\Exception $e) {
             Log::error('Error exporting supply purchase report: ' . $e->getMessage());
+            Log::debug('Stack trace: ' . $e->getTraceAsString());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat mengekspor laporan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Export Supply Usage Report
+     */
+    public function exportSupplyUsage(Request $request)
+    {
+        try {
+            // Use SupplyUsageReportService for complete export handling
+            return $this->supplyUsageReportService->exportSupplyUsageReport($request);
+        } catch (\Exception $e) {
+            Log::error('Error exporting supply usage report: ' . $e->getMessage());
             Log::debug('Stack trace: ' . $e->getTraceAsString());
             return redirect()->back()->with('error', 'Terjadi kesalahan saat mengekspor laporan: ' . $e->getMessage());
         }

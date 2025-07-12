@@ -379,8 +379,24 @@
                     <td class="p-2">{{ number_format($daily['ip_actual']) }}</td>
                     <td class="p-2">{{-- ip_standard needed --}}</td>
                     <td class="p-2">{{-- ip_difference needed --}}</td>
-                    <td class="p-2 ovk-highlight hide-on-print">{{-- ovk details needed --}}</td>
-                    <td class="p-2 ovk-highlight hide-on-print">{{-- ovk total needed --}}</td>
+                    <td class="p-2 ovk-highlight hide-on-print">
+                        @if(!empty($daily['supply_usage_by_type']))
+                        @foreach($daily['supply_usage_by_type'] as $supplyName => $supply)
+                        <div>{{ $supplyName }}</div>
+                        @endforeach
+                        @else
+                        <span>-</span>
+                        @endif
+                    </td>
+                    <td class="p-2 ovk-highlight hide-on-print">
+                        @if(!empty($daily['supply_usage_by_type']))
+                        @foreach($daily['supply_usage_by_type'] as $supply)
+                        <div>{{ number_format($supply['quantity'], 2) }} {{ $supply['unit'] ?? '' }}</div>
+                        @endforeach
+                        @else
+                        <span>-</span>
+                        @endif
+                    </td>
                 </tr>
                 @empty
                 <tr>

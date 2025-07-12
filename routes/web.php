@@ -429,6 +429,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reports/batch-worker', [ReportsController::class, 'indexBatchWorker'])->name('reports.batch-worker');
     Route::get('/reports/batch-worker/export', [ReportsController::class, 'exportBatchWorker'])->name('reports.batch-worker.export');
 
+    // Supply Usage Report
+    Route::get('/reports/supply-usage', [ReportsController::class, 'indexSupplyUsage'])->name('reports.supply-usage');
+    Route::post('/reports/supply-usage/export', [ReportsController::class, 'exportSupplyUsage'])->name('reports.supply-usage.export');
+
     Route::name('setting.')->prefix('setting')->group(function () {
         // Company Management
         Route::get('/companies', [App\Http\Controllers\Pages\CompanyController::class, 'index'])->name('companies.index');
@@ -481,3 +485,12 @@ require __DIR__ . '/auth.php';
 //     $token = $request->user()->createToken($request->token_name);
 //     return ['token' => $token->plainTextToken];
 // });
+
+// Test routes for Performance Report Service
+Route::prefix('test')->group(function () {
+    Route::get('/performance-report/{livestockId?}', [\App\Http\Controllers\TestController::class, 'testPerformanceReport'])
+        ->name('test.performance.report');
+
+    Route::get('/debug-supply-usage/{livestockId?}', [\App\Http\Controllers\TestController::class, 'debugSupplyUsage'])
+        ->name('test.debug.supply.usage');
+});
