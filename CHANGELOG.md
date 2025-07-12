@@ -1,4 +1,4 @@
-#  (2025-07-11)
+#  (2025-07-12)
 
 
 ### Bug Fixes
@@ -50,6 +50,8 @@
 * add Pulse and Telescope migrations for local development ([d8ccc9e](https://github.com/synard1/ximopet/commit/d8ccc9ef700e672861ea786b635fd11e094de8e0))
 * add purchase reports functionality for livestock, feed, and supply ([3d05a3c](https://github.com/synard1/ximopet/commit/3d05a3c4e76ee2327955d5b7ed6188c281dea3f9))
 * add Pusher and Laravel Echo support for real-time notifications ([7fa315b](https://github.com/synard1/ximopet/commit/7fa315b3869447d50bfc02af7e95b869269ba32e))
+* add supply usage report functionality ([6640ac8](https://github.com/synard1/ximopet/commit/6640ac898d5a7a0b15fc71562e9e4a7454179a81))
+* add supply usage report view ([63dfceb](https://github.com/synard1/ximopet/commit/63dfceb90880c1dc846c6a77be94faa15d739356))
 * add SyncUserCompanyId command and refactor user-company mapping ([fdb08dd](https://github.com/synard1/ximopet/commit/fdb08dd7f1027240eab3b7824f37ec46fcad8841))
 * add URL field to QA Todo List component and database schema ([8aa780a](https://github.com/synard1/ximopet/commit/8aa780aedc078385a9d87f5eff683e3a2a6d63d9))
 * add URL handling and QA Checklist Monitor component ([81bfd1a](https://github.com/synard1/ximopet/commit/81bfd1a887ff2e35c10385b59e064b74a05a334c))
