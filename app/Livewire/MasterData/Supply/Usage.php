@@ -346,12 +346,12 @@ class Usage extends Component
         }
     }
 
-    public function updatedLivestockId($value)
-    {
-        $this->availableSupplies = [];
-        $this->resetItems();
-        // Tidak perlu loadAvailableSupplies di sini
-    }
+    // public function updatedLivestockId($value)
+    // {
+    //     $this->availableSupplies = [];
+    //     $this->resetItems();
+    //     // Tidak perlu loadAvailableSupplies di sini
+    // }
 
     private function loadFarms()
     {
@@ -365,7 +365,7 @@ class Usage extends Component
         // Logging for debugging role-based data filtering
         logDebugIfDebug('Supply Usage loadFarms() called', [
             'user_id' => $user->id,
-            'roles' => $user->getRoleNames(),
+            'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : null,
             'company_id' => $companyId,
             'isSuperAdmin' => $isSuperAdmin,
             'isCompanyRole' => $isCompanyRole,
@@ -938,7 +938,7 @@ class Usage extends Component
     public function save()
     {
         logDebugIfDebug('Usage@save: Method triggered.');
-
+        $this->updateAllConvertedUnitIds();
         try {
             $this->validate();
             logDebugIfDebug('Usage@save: Basic validation passed.');
@@ -1014,6 +1014,22 @@ class Usage extends Component
             ->where('supply_id', $supplyId)
             ->sum(DB::raw('quantity_in - quantity_used - quantity_mutated'));
 
+        // Get default unit_id from supply
+        $unitId = null;
+        $supply = Supply::find($supplyId);
+        if ($supply && isset($supply->data['conversion_units']) && is_array($supply->data['conversion_units'])) {
+            $units = collect($supply->data['conversion_units']);
+            $defaultUnit = $units->firstWhere('is_default_purchase', true) ?? $units->first();
+            if ($defaultUnit) {
+                $unitId = $defaultUnit['unit_id'];
+            }
+        }
+
+        // Fallback to first available unit if no default found
+        if (!$unitId) {
+            $unitId = Unit::first()?->id;
+        }
+
         \App\Models\CurrentSupply::updateOrCreate(
             [
                 'farm_id' => $farmId,
@@ -1023,6 +1039,7 @@ class Usage extends Component
             ],
             [
                 'quantity' => $total,
+                'unit_id' => $unitId,
                 'updated_by' => Auth::id(),
             ]
         );
@@ -1072,6 +1089,7 @@ class Usage extends Component
 
     private function updateUsageWithService($service)
     {
+        $this->updateAllConvertedUnitIds();
         $usage = SupplyUsage::findOrFail($this->usageId);
         logDebugIfDebug('Usage@updateUsageWithService: Usage record loaded.', ['usage_id' => $usage->id]);
 
@@ -1125,14 +1143,14 @@ class Usage extends Component
             foreach ($this->items as $item) {
                 $key = $item['supply_stock_id'] . '-' . $item['supply_id'] . '-' . $item['unit_id'];
                 $detail = $details[$key] ?? null;
-
+                $converted_unit_id = $item['converted_unit_id'] ?? $this->getSmallestUnitId($item['supply_id'] ?? null) ?? ($item['unit_id'] ?? null);
                 if ($detail) {
                     // Update existing detail
                     $detail->update([
                         'quantity_taken' => $item['quantity_taken'],
                         'unit_id' => $item['unit_id'],
                         'converted_quantity' => $item['converted_quantity'],
-                        'converted_unit_id' => $item['converted_unit_id'] ?? $item['unit_id'],
+                        'converted_unit_id' => $converted_unit_id,
                         'price_per_unit' => $item['price_per_unit'] ?? null,
                         'price_per_converted_unit' => $item['price_per_converted_unit'] ?? null,
                         'total_price' => $item['total_price'] ?? null,
@@ -1150,7 +1168,7 @@ class Usage extends Component
                         'quantity_taken' => $item['quantity_taken'],
                         'unit_id' => $item['unit_id'],
                         'converted_quantity' => $item['converted_quantity'],
-                        'converted_unit_id' => $item['converted_unit_id'] ?? $item['unit_id'],
+                        'converted_unit_id' => $converted_unit_id,
                         'price_per_unit' => $item['price_per_unit'] ?? null,
                         'price_per_converted_unit' => $item['price_per_converted_unit'] ?? null,
                         'total_price' => $item['total_price'] ?? null,
@@ -1200,23 +1218,14 @@ class Usage extends Component
 
     private function createUsageDetails($usage)
     {
-        logDebugIfDebug('Usage@createUsageDetails: Creating details.', ['usage_id' => $usage->id, 'item_count' => count($this->items)]);
         foreach ($this->items as $index => $item) {
-            // Ambil converted_unit_id dari unit terkecil pada model Supply
-            $supply = \App\Models\Supply::find($item['supply_id']);
-            $converted_unit_id = null;
-            if ($supply && $supply->data) {
-                $data = is_array($supply->data) ? $supply->data : json_decode($supply->data, true);
-                if (isset($data['conversion_units']) && is_array($data['conversion_units'])) {
-                    foreach ($data['conversion_units'] as $unit) {
-                        if (isset($unit['is_smallest']) && $unit['is_smallest']) {
-                            $converted_unit_id = $unit['unit_id'];
-                            break;
-                        }
-                    }
+            // Patch: ensure decimal fields are never empty string
+            foreach (['price_per_unit', 'price_per_converted_unit', 'total_price'] as $field) {
+                if (isset($item[$field]) && $item[$field] === '') {
+                    $item[$field] = null;
                 }
             }
-
+            $converted_unit_id = $item['converted_unit_id'] ?? $this->getSmallestUnitId($item['supply_id'] ?? null) ?? ($item['unit_id'] ?? null);
             SupplyUsageDetail::create([
                 'supply_usage_id' => $usage->id,
                 'supply_stock_id' => $item['supply_stock_id'],
@@ -1225,12 +1234,12 @@ class Usage extends Component
                 'unit_id'         => $item['unit_id'],
                 'converted_quantity' => $item['converted_quantity'],
                 'converted_unit_id'  => $converted_unit_id,
-                'price_per_unit'       => $item['price_per_unit'] ?: null,
-                'price_per_converted_unit' => $item['price_per_converted_unit'] ?: null,
-                'total_price'              => $item['total_price'] ?: null,
-                'notes'                    => $item['notes'],
-                'batch_number'             => $item['batch_number'],
-                'expiry_date'              => $item['expiry_date'] ? Carbon::parse($item['expiry_date']) : null,
+                'price_per_unit'       => $item['price_per_unit'] ?? null,
+                'price_per_converted_unit' => $item['price_per_converted_unit'] ?? null,
+                'total_price'              => $item['total_price'] ?? null,
+                'notes'                    => $item['notes'] ?? null,
+                'batch_number'             => $item['batch_number'] ?? null,
+                'expiry_date'              => !empty($item['expiry_date']) ? Carbon::parse($item['expiry_date']) : null,
                 'created_by'               => Auth::id(),
                 'updated_by'               => Auth::id(),
             ]);
@@ -1428,7 +1437,7 @@ class Usage extends Component
             $isSuperAdmin = $user && $user->hasRole('SuperAdmin');
             logDebugIfDebug('deleteSupplyUsage: Entry', [
                 'user_id' => $user ? $user->id : null,
-                'user_roles' => $user ? $user->getRoleNames() : null,
+                'user_roles' => $user && method_exists($user, 'getRoleNames') ? $user->getRoleNames() : null,
                 'isSuperAdmin' => $isSuperAdmin,
                 'usage_id' => $usage->id,
                 'usage_status' => $usage->status,
@@ -1536,7 +1545,7 @@ class Usage extends Component
     private function isValidStatusTransition($currentStatus, $newStatus): bool
     {
         $user = \Illuminate\Support\Facades\Auth::user();
-        $role = $user->getRoleNames()->first();
+        $role = method_exists($user, 'getRoleNames') ? $user->getRoleNames()->first() : null;
         $allowed = SupplyUsageStatusHelper::getAllowedStatusOptions($role, $currentStatus);
         return in_array($newStatus, $allowed);
     }
@@ -1868,6 +1877,24 @@ class Usage extends Component
             if (!$stockResult['success']) {
                 $this->dispatch('error', 'Gagal update stock: ' . $stockResult['message']);
             }
+        }
+    }
+
+    // Helper to get smallest unit_id for a supply
+    private function getSmallestUnitId($supplyId)
+    {
+        $supply = Supply::find($supplyId);
+        if (!$supply || !isset($supply->data['conversion_units'])) return null;
+        $units = collect($supply->data['conversion_units']);
+        $smallest = $units->firstWhere('is_smallest', true);
+        return $smallest['unit_id'] ?? null;
+    }
+
+    // Update all items' converted_unit_id to always be smallest unit before save
+    private function updateAllConvertedUnitIds()
+    {
+        foreach ($this->items as $i => &$item) {
+            $item['converted_unit_id'] = $this->getSmallestUnitId($item['supply_id'] ?? null) ?? $item['unit_id'] ?? null;
         }
     }
 }

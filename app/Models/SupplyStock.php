@@ -57,6 +57,11 @@ class SupplyStock extends BaseModel
         return $this->belongsTo(SupplyPurchase::class, 'supply_purchase_id', 'id');
     }
 
+    public function supplyPurchaseDetail()
+    {
+        return $this->belongsTo(SupplyPurchase::class, 'supply_purchase_id', 'id');
+    }
+
     public function supplyUsageDetails()
     {
         return $this->hasMany(SupplyUsageDetail::class);

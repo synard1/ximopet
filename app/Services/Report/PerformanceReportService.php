@@ -72,8 +72,18 @@ class PerformanceReportService
             'livestock_count' => count($report),
             'overall_fcr' => $overallTotals['overall_fcr'],
             'overall_survival_rate' => $overallTotals['overall_survival_rate'],
-            'overall_ip' => $overallTotals['overall_ip']
+            'overall_ip' => $overallTotals['overall_ip'],
+            'total_supply_cost' => $overallTotals['total_supply_cost'],
+            'supply_cost_per_head' => $overallTotals['supply_cost_per_head']
         ]);
+
+        // Collect supply names from this livestock's daily records
+        $allSupplyNamesAcrossReport = collect();
+        foreach ($report as $livestockData) {
+            $suppliesForThisLivestock = collect($livestockData['daily_records'])->pluck('supply_usage_by_type')->flatMap(fn($item) => array_keys($item));
+            $allSupplyNamesAcrossReport = $allSupplyNamesAcrossReport->merge($suppliesForThisLivestock);
+        }
+        $uniqueSupplyNames = $allSupplyNamesAcrossReport->unique()->sort()->values();
 
         return [
             'report' => $report,
@@ -81,7 +91,8 @@ class PerformanceReportService
             'start_date' => $startDate,
             'end_date' => $endDate,
             'livestock_count' => count($report),
-            'all_feed_names' => $uniqueFeedNames
+            'all_feed_names' => $uniqueFeedNames,
+            'all_supply_names' => $uniqueSupplyNames
         ];
     }
 
@@ -115,6 +126,9 @@ class PerformanceReportService
             $feedUsageData = $this->getFeedUsageData($livestock, $currentDate, $currentDate); // For a single day
             $cumulativeFeedConsumption += $feedUsageData['total_consumption'];
 
+            // Daily Supply Usage
+            $supplyUsageData = $this->getSupplyUsageData($livestock, $currentDate, $currentDate); // For a single day
+
             // Daily Weight
             $recording = Recording::where('livestock_id', $livestock->id)->whereDate('tanggal', $currentDate)->first();
             $dailyWeight = $recording->berat_hari_ini ?? 0;
@@ -143,14 +157,18 @@ class PerformanceReportService
                 'stock_akhir' => $stockAkhirHari,
                 'feed_consumption_by_type' => $feedUsageData['by_type'],
                 'feed_total' => $feedUsageData['total_consumption'],
+                'supply_usage_by_type' => $supplyUsageData['by_type'],
+                'supply_total_cost' => $supplyUsageData['total_cost'],
                 'bw_actual' => $dailyWeight,
                 'fcr_actual' => $fcrActual,
                 'ip_actual' => $ipActual,
-                // Add other required fields...
             ];
 
             $currentDate->addDay();
         }
+
+        // Calculate summary for this livestock
+        $summary = $this->summarizeDailyRecords($dailyRecords);
 
         return [
             'livestock_id' => $livestock->id,
@@ -162,6 +180,7 @@ class PerformanceReportService
             'initial_quantity' => $initialQuantity,
             'initial_weight' => (float) $livestock->initial_weight,
             'daily_records' => $dailyRecords,
+            'summary' => $summary,
         ];
     }
 
@@ -192,36 +211,59 @@ class PerformanceReportService
     }
 
     /**
-     * Get supply usage data
+     * Get supply usage data with detailed cost calculation
      */
     private function getSupplyUsageData(Livestock $livestock, Carbon $startDate, Carbon $endDate): array
     {
+        Log::debug('getSupplyUsageData: Query params', [
+            'livestock_id' => $livestock->id,
+            'start' => $startDate->format('Y-m-d'),
+            'end' => $endDate->format('Y-m-d')
+        ]);
+
         $supplyUsageDetails = SupplyUsageDetail::whereHas('supplyUsage', function ($query) use ($livestock, $startDate, $endDate) {
             $query->where('livestock_id', $livestock->id)
-                ->whereBetween('usage_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')]);
+                ->whereDate('usage_date', '>=', $startDate->format('Y-m-d'))
+                ->whereDate('usage_date', '<=', $endDate->format('Y-m-d'))
+                ->whereIn('status', ['pending', 'in_process', 'completed']);
         })
-            ->with('supply')
+            ->with(['supply', 'unit', 'supplyUsage'])
             ->get();
+
+        Log::debug('getSupplyUsageData: Found', ['count' => $supplyUsageDetails->count()]);
 
         $byType = [];
         $totalCost = 0;
+        $totalQuantity = 0;
 
         foreach ($supplyUsageDetails as $detail) {
             $supplyName = $detail->supply->name ?? 'Unknown';
-            $quantity = $detail->quantity_taken;
-            $cost = $detail->supply->price * $quantity;
+            $quantity = (float) $detail->quantity_taken;
+            $unitName = $detail->unit->name ?? 'pcs';
 
-            $byType[$supplyName] = [
-                'quantity' => ($byType[$supplyName]['quantity'] ?? 0) + $quantity,
-                'cost' => ($byType[$supplyName]['cost'] ?? 0) + $cost
-            ];
+            // Calculate cost using price_per_unit if available, otherwise use supply price
+            $unitCost = $detail->price_per_unit ?? $detail->supply->price ?? 0;
+            $cost = $quantity * $unitCost;
 
+            if (!isset($byType[$supplyName])) {
+                $byType[$supplyName] = [
+                    'quantity' => 0,
+                    'cost' => 0,
+                    'unit' => $unitName,
+                    'unit_cost' => $unitCost
+                ];
+            }
+
+            $byType[$supplyName]['quantity'] += $quantity;
+            $byType[$supplyName]['cost'] += $cost;
             $totalCost += $cost;
+            $totalQuantity += $quantity;
         }
 
         return [
             'by_type' => $byType,
-            'total_cost' => $totalCost
+            'total_cost' => $totalCost,
+            'total_quantity' => $totalQuantity
         ];
     }
 
@@ -251,7 +293,9 @@ class PerformanceReportService
             'fcr_standard' => 0,
             'ip_actual' => 0,
             'feed_per_head' => 0,
+            'supply_cost_per_head' => 0,
             'feed_by_type' => [],
+            'supply_by_type' => [],
             'overall_fcr' => 0,
             'overall_survival_rate' => 0,
             'overall_ip' => 0
@@ -272,16 +316,16 @@ class PerformanceReportService
         $totals['total_initial_quantity'] += $livestockData['initial_quantity'];
         $totals['total_current_quantity'] += $lastDailyRecord['stock_akhir'];
         $totals['total_initial_weight'] += $livestockData['initial_weight'];
-        // 'current_weight' is not a summary key, it's a daily metric. We'll sum total weight from daily records if needed or calculate avg later.
 
         // Sum up totals from the summary of daily records
-        $dailySummary = $this->summarizeDailyRecords($livestockData['daily_records']);
+        $dailySummary = $livestockData['summary'] ?? $this->summarizeDailyRecords($livestockData['daily_records']);
         $totals['total_mortality'] += $dailySummary['total_mortality'];
         $totals['total_culling'] += $dailySummary['total_culling'];
         $totals['total_depletion'] += $dailySummary['total_depletion'];
         $totals['total_sales_quantity'] += $dailySummary['total_sales_quantity'];
         $totals['total_sales_weight'] += $dailySummary['total_sales_weight'];
         $totals['total_feed_consumption'] += $dailySummary['total_feed_consumption'];
+        $totals['total_supply_cost'] += $dailySummary['total_supply_cost'];
 
         // Accumulate for averages from the final daily record or summary
         $totals['average_age'] += $lastDailyRecord['age'];
@@ -290,10 +334,24 @@ class PerformanceReportService
         $totals['fcr_actual'] += $lastDailyRecord['fcr_actual'] ?? 0;
         $totals['ip_actual'] += $lastDailyRecord['ip_actual'] ?? 0;
         $totals['feed_per_head'] += $lastDailyRecord['stock_akhir'] > 0 ? ($dailySummary['total_feed_consumption'] / $lastDailyRecord['stock_akhir']) : 0;
+        $totals['supply_cost_per_head'] += $lastDailyRecord['stock_akhir'] > 0 ? ($dailySummary['total_supply_cost'] / $lastDailyRecord['stock_akhir']) : 0;
 
         // Aggregate feed by type
         foreach ($dailySummary['feed_by_type'] as $feedType => $consumption) {
             $totals['feed_by_type'][$feedType] = ($totals['feed_by_type'][$feedType] ?? 0) + $consumption;
+        }
+
+        // Aggregate supply by type
+        foreach ($dailySummary['supply_by_type'] as $supplyType => $data) {
+            if (!isset($totals['supply_by_type'][$supplyType])) {
+                $totals['supply_by_type'][$supplyType] = [
+                    'quantity' => 0,
+                    'cost' => 0,
+                    'unit' => $data['unit'] ?? 'pcs'
+                ];
+            }
+            $totals['supply_by_type'][$supplyType]['quantity'] += $data['quantity'];
+            $totals['supply_by_type'][$supplyType]['cost'] += $data['cost'];
         }
     }
 
@@ -309,7 +367,9 @@ class PerformanceReportService
             'total_sales_quantity' => 0,
             'total_sales_weight' => 0,
             'total_feed_consumption' => 0,
+            'total_supply_cost' => 0,
             'feed_by_type' => [],
+            'supply_by_type' => [],
         ];
 
         foreach ($dailyRecords as $daily) {
@@ -319,8 +379,24 @@ class PerformanceReportService
             $summary['total_sales_quantity'] += $daily['jual_ekor'];
             $summary['total_sales_weight'] += $daily['jual_kg'];
             $summary['total_feed_consumption'] += $daily['feed_total'];
+            $summary['total_supply_cost'] += $daily['supply_total_cost'];
+
+            // Aggregate feed by type
             foreach ($daily['feed_consumption_by_type'] as $feedType => $consumption) {
                 $summary['feed_by_type'][$feedType] = ($summary['feed_by_type'][$feedType] ?? 0) + $consumption;
+            }
+
+            // Aggregate supply by type
+            foreach ($daily['supply_usage_by_type'] as $supplyType => $data) {
+                if (!isset($summary['supply_by_type'][$supplyType])) {
+                    $summary['supply_by_type'][$supplyType] = [
+                        'quantity' => 0,
+                        'cost' => 0,
+                        'unit' => $data['unit'] ?? 'pcs'
+                    ];
+                }
+                $summary['supply_by_type'][$supplyType]['quantity'] += $data['quantity'];
+                $summary['supply_by_type'][$supplyType]['cost'] += $data['cost'];
             }
         }
         return $summary;
@@ -340,6 +416,7 @@ class PerformanceReportService
             $totals['fcr_standard'] = round($totals['fcr_standard'] / $livestockCount, 3);
             $totals['ip_actual'] = round($totals['ip_actual'] / $livestockCount, 0);
             $totals['feed_per_head'] = round($totals['feed_per_head'] / $livestockCount, 0);
+            $totals['supply_cost_per_head'] = round($totals['supply_cost_per_head'] / $livestockCount, 2);
         }
 
         // Calculate overall FCR and IP from totals
@@ -366,6 +443,36 @@ class PerformanceReportService
             'overall_survival_rate' => $totals['overall_survival_rate'],
             'overall_ip' => $totals['overall_ip']
         ]);
+    }
+
+    /**
+     * Get supply usage summary for a specific livestock
+     * 
+     * @param Livestock $livestock
+     * @param Carbon $startDate
+     * @param Carbon $endDate
+     * @return array
+     */
+    public function getSupplyUsageSummary(Livestock $livestock, Carbon $startDate, Carbon $endDate): array
+    {
+        $supplyUsageData = $this->getSupplyUsageData($livestock, $startDate, $endDate);
+
+        $summary = [
+            'total_cost' => $supplyUsageData['total_cost'],
+            'total_quantity' => $supplyUsageData['total_quantity'],
+            'by_type' => $supplyUsageData['by_type'],
+            'cost_per_head' => 0,
+            'quantity_per_head' => 0
+        ];
+
+        // Calculate per head metrics if livestock has current quantity
+        $currentQuantity = $livestock->current_quantity ?? $livestock->initial_quantity ?? 0;
+        if ($currentQuantity > 0) {
+            $summary['cost_per_head'] = round($summary['total_cost'] / $currentQuantity, 2);
+            $summary['quantity_per_head'] = round($summary['total_quantity'] / $currentQuantity, 2);
+        }
+
+        return $summary;
     }
 
     /**
@@ -397,6 +504,12 @@ class PerformanceReportService
 
             // Generate report data
             $reportData = $this->generateEnhancedPerformanceReport([$livestockId], $startDate, $endDate);
+            // dd($reportData);
+
+            // Debug mode for testing specific livestock
+            if (request()->has('debug') && request()->debug == 1) {
+                $this->debugReportData($reportData, $livestockId);
+            }
 
             // Export in requested format
             $format = $request->format ?? 'html';
@@ -406,6 +519,220 @@ class PerformanceReportService
             Log::debug('Stack trace: ' . $e->getTraceAsString());
             throw $e;
         }
+    }
+
+    /**
+     * Test method for specific livestock and date
+     * 
+     * @param string $livestockId
+     * @param string $date
+     * @return array
+     */
+    public function testPerformanceReport(string $livestockId, string $date = null): array
+    {
+        try {
+            $livestock = Livestock::findOrFail($livestockId);
+            $startDate = Carbon::parse($livestock->start_date);
+            $endDate = $date ? Carbon::parse($date) : Carbon::today();
+
+            Log::info('Testing Performance Report', [
+                'livestock_id' => $livestockId,
+                'livestock_name' => $livestock->name,
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
+                'test_mode' => true
+            ]);
+
+            // Generate report data
+            $reportData = $this->generateEnhancedPerformanceReport([$livestockId], $startDate, $endDate);
+
+            // Debug the data
+            $this->debugReportData($reportData, $livestockId, true);
+
+            return $reportData;
+        } catch (\Exception $e) {
+            Log::error('Error testing performance report: ' . $e->getMessage());
+            Log::debug('Stack trace: ' . $e->getTraceAsString());
+            throw $e;
+        }
+    }
+
+    /**
+     * Debug report data with detailed analysis
+     * 
+     * @param array $reportData
+     * @param string $livestockId
+     * @param bool $isTestMode
+     */
+    private function debugReportData(array $reportData, string $livestockId, bool $isTestMode = false): void
+    {
+        $mode = $isTestMode ? 'TEST' : 'DEBUG';
+
+        echo "<div style='background:#1a1a1a;color:#00ff00;padding:20px;border-radius:8px;max-width:95vw;overflow:auto;font-family:monospace;font-size:12px;margin:20px;'>";
+        echo "<h2 style='color:#ffff00;'>🔍 {$mode} MODE - Performance Report Analysis</h2>";
+        echo "<h3 style='color:#00ffff;'>📊 Report Overview</h3>";
+        echo "<pre>";
+        echo "Livestock Count: " . $reportData['livestock_count'] . "\n";
+        echo "Start Date: " . $reportData['start_date']->format('Y-m-d') . "\n";
+        echo "End Date: " . $reportData['end_date']->format('Y-m-d') . "\n";
+        echo "All Feed Names: " . implode(', ', $reportData['all_feed_names']->toArray()) . "\n";
+        echo "All Supply Names: " . implode(', ', $reportData['all_supply_names']->toArray()) . "\n";
+        echo "</pre>";
+
+        echo "<h3 style='color:#00ffff;'>💰 Overall Totals</h3>";
+        echo "<pre>";
+        $totals = $reportData['overall_totals'];
+        echo "Total Supply Cost: Rp " . number_format($totals['total_supply_cost']) . "\n";
+        echo "Supply Cost per Head: Rp " . number_format($totals['supply_cost_per_head']) . "\n";
+        echo "Total Feed Consumption: " . number_format($totals['total_feed_consumption']) . "\n";
+        echo "Feed per Head: " . number_format($totals['feed_per_head']) . "\n";
+        echo "</pre>";
+
+        if (!empty($totals['supply_by_type'])) {
+            echo "<h3 style='color:#00ffff;'>📦 Supply by Type (Overall)</h3>";
+            echo "<pre>";
+            foreach ($totals['supply_by_type'] as $supplyName => $data) {
+                echo "{$supplyName}: {$data['quantity']} {$data['unit']} - Rp " . number_format($data['cost']) . "\n";
+            }
+            echo "</pre>";
+        }
+
+        if (!empty($reportData['report'])) {
+            $livestockData = $reportData['report'][0];
+            echo "<h3 style='color:#00ffff;'>🐄 Livestock Details: {$livestockData['livestock_name']}</h3>";
+            echo "<pre>";
+            echo "Livestock ID: {$livestockData['livestock_id']}\n";
+            echo "Coop: {$livestockData['coop_name']}\n";
+            echo "Farm: {$livestockData['farm_name']}\n";
+            echo "Initial Quantity: {$livestockData['initial_quantity']}\n";
+            echo "Initial Weight: {$livestockData['initial_weight']}\n";
+            echo "</pre>";
+
+            if (!empty($livestockData['summary'])) {
+                $summary = $livestockData['summary'];
+                echo "<h3 style='color:#00ffff;'>📈 Livestock Summary</h3>";
+                echo "<pre>";
+                echo "Total Supply Cost: Rp " . number_format($summary['total_supply_cost']) . "\n";
+                echo "Total Feed Consumption: " . number_format($summary['total_feed_consumption']) . "\n";
+                echo "Total Mortality: {$summary['total_mortality']}\n";
+                echo "Total Culling: {$summary['total_culling']}\n";
+                echo "</pre>";
+
+                if (!empty($summary['supply_by_type'])) {
+                    echo "<h3 style='color:#00ffff;'>📦 Supply by Type (Livestock)</h3>";
+                    echo "<pre>";
+                    foreach ($summary['supply_by_type'] as $supplyName => $data) {
+                        echo "{$supplyName}: {$data['quantity']} {$data['unit']} - Rp " . number_format($data['cost']) . "\n";
+                    }
+                    echo "</pre>";
+                }
+            }
+
+            // Show first few daily records
+            if (!empty($livestockData['daily_records'])) {
+                echo "<h3 style='color:#00ffff;'>📅 Sample Daily Records (First 5)</h3>";
+                $sampleRecords = array_slice($livestockData['daily_records'], 0, 5);
+                foreach ($sampleRecords as $index => $record) {
+                    $dayNumber = $index + 1;
+                    $dateStr = $record['date']->format('Y-m-d');
+                    echo "<h4 style='color:#ffff00;'>Day {$dayNumber}: {$dateStr}</h4>";
+                    echo "<pre>";
+                    echo "Age: {$record['age']} days\n";
+                    echo "Stock: {$record['stock_awal']} → {$record['stock_akhir']}\n";
+                    echo "Feed Total: {$record['feed_total']}\n";
+                    echo "Supply Total Cost: Rp " . number_format($record['supply_total_cost']) . "\n";
+
+                    if (!empty($record['supply_usage_by_type'])) {
+                        echo "Supply Usage:\n";
+                        foreach ($record['supply_usage_by_type'] as $supplyName => $data) {
+                            echo "  - {$supplyName}: {$data['quantity']} {$data['unit']} (Rp " . number_format($data['cost']) . ")\n";
+                        }
+                    } else {
+                        echo "Supply Usage: No data\n";
+                    }
+                    echo "</pre>";
+                }
+            }
+        }
+
+        echo "<h3 style='color:#00ffff;'>🔍 Supply Usage Analysis</h3>";
+        $this->debugSupplyUsageData($livestockId, $reportData['start_date'], $reportData['end_date']);
+
+        echo "</div>";
+
+        if ($isTestMode) {
+            exit;
+        }
+    }
+
+    /**
+     * Debug supply usage data specifically
+     * 
+     * @param string $livestockId
+     * @param Carbon $startDate
+     * @param Carbon $endDate
+     */
+    private function debugSupplyUsageData(string $livestockId, Carbon $startDate, Carbon $endDate): void
+    {
+        echo "<h4 style='color:#ffff00;'>🔍 Supply Usage Database Query Analysis</h4>";
+
+        // Check supply usage records
+        $supplyUsages = \App\Models\SupplyUsage::where('livestock_id', $livestockId)
+            ->whereBetween('usage_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->with(['details.supply', 'details.unit'])
+            ->get();
+
+        echo "<pre>";
+        echo "📊 Supply Usage Records Found: {$supplyUsages->count()}\n\n";
+
+        foreach ($supplyUsages as $usage) {
+            echo "Supply Usage ID: {$usage->id}\n";
+            echo "Date: {$usage->usage_date->format('Y-m-d')}\n";
+            echo "Status: {$usage->status}\n";
+            echo "Details Count: {$usage->details->count()}\n";
+
+            foreach ($usage->details as $detail) {
+                $supplyName = $detail->supply->name ?? 'Unknown';
+                $unitName = $detail->unit->name ?? 'pcs';
+                $quantity = $detail->quantity_taken;
+                $pricePerUnit = $detail->price_per_unit ?? $detail->supply->price ?? 0;
+                $cost = $quantity * $pricePerUnit;
+
+                echo "  - {$supplyName}: {$quantity} {$unitName} @ Rp " . number_format($pricePerUnit) . " = Rp " . number_format($cost) . "\n";
+            }
+            echo "\n";
+        }
+
+        // Check supply usage details directly
+        $supplyUsageDetails = SupplyUsageDetail::whereHas('supplyUsage', function ($query) use ($livestockId, $startDate, $endDate) {
+            $query->where('livestock_id', $livestockId)
+                ->whereBetween('usage_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')]);
+        })
+            ->with(['supplyUsage', 'supply', 'unit'])
+            ->get();
+
+        echo "📋 Supply Usage Details Found: {$supplyUsageDetails->count()}\n\n";
+
+        foreach ($supplyUsageDetails as $detail) {
+            Log::debug('SupplyUsageDetail', [
+                'id' => $detail->id,
+                'supplyUsage_id' => $detail->supply_usage_id,
+                'usage_date' => $detail->supplyUsage->usage_date ?? null,
+                'status' => $detail->supplyUsage->status ?? null,
+                'quantity' => $detail->quantity_taken,
+            ]);
+            $supplyName = $detail->supply->name ?? 'Unknown';
+            $unitName = $detail->unit->name ?? 'pcs';
+            $quantity = $detail->quantity_taken;
+            $pricePerUnit = $detail->price_per_unit ?? $detail->supply->price ?? 0;
+            $cost = $quantity * $pricePerUnit;
+            $usageDate = $detail->supplyUsage->usage_date->format('Y-m-d');
+            $status = $detail->supplyUsage->status;
+
+            echo "Date: {$usageDate} | Status: {$status} | {$supplyName}: {$quantity} {$unitName} @ Rp " . number_format($pricePerUnit) . " = Rp " . number_format($cost) . "\n";
+        }
+
+        echo "</pre>";
     }
 
     /**
