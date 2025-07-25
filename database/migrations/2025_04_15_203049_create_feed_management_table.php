@@ -30,9 +30,13 @@ return new class extends Migration
             $table->foreign('updated_by')->references('id')->on('users');
         });
 
-        // Tabel feed_purchase_batches (1 nota bisa beberapa jenis pakan)
-        Schema::create('feed_purchase_batches', function (Blueprint $table) {
+        // Tabel feed_purchases (header - 1 nota bisa beberapa jenis pakan)
+        Schema::create('feed_purchases', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('company_id')->constrained('companies')->onDelete('cascade');
+            $table->foreignUuid('farm_id')->nullable()->constrained('farms')->onDelete('set null');
+            $table->foreignUuid('coop_id')->nullable()->constrained('coops')->onDelete('set null');
+            $table->foreignUuid('livestock_id')->nullable()->constrained('livestocks')->onDelete('set null');
             $table->string('invoice_number');
             $table->string('do_number')->nullable(); // delivery order number / surat jalan
             $table->foreignUuid('supplier_id')->constrained('partners')->onDelete('cascade');
@@ -42,6 +46,8 @@ return new class extends Migration
             $table->json('data')->nullable(); // simpan kebutuhan data mendatang
             $table->text('notes')->nullable();
             $table->string('status')->default('draft')->index();
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
 
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
@@ -52,11 +58,10 @@ return new class extends Migration
             $table->foreign('updated_by')->references('id')->on('users');
         });
 
-        // Tabel feed_purchases (detail per jenis pakan)
-        Schema::create('feed_purchases', function (Blueprint $table) {
+        // Tabel feed_purchase_items (detail per jenis pakan)
+        Schema::create('feed_purchase_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('feed_purchase_batch_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('feed_purchase_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('feed_id')->constrained('feeds')->onDelete('cascade');
             $table->uuid('unit_id')->nullable();
             $table->decimal('quantity', 12, 2);
@@ -78,13 +83,15 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('feed_id')->constrained('feeds')->onDelete('cascade');
-            $table->foreignUuid('feed_purchase_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignUuid('feed_purchase_id')->nullable()->constrained('feed_purchases')->onDelete('set null');
             $table->date('date');
             $table->string('source_type');
-            $table->uuid('source_id'); // purchase_id / mutation_id
+            $table->uuid('source_id'); // purchase_item_id / mutation_id
             $table->decimal('quantity_in', 12, 2)->default(0);
             $table->decimal('quantity_used', 12, 2)->default(0);
             $table->decimal('quantity_mutated', 12, 2)->default(0);
+            $table->decimal('quantity_reserved', 12, 2)->default(0);
+            $table->decimal('quantity_available', 12, 2)->default(0);
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -101,6 +108,8 @@ return new class extends Migration
             $table->foreignUuid('recording_id')->constrained()->onDelete('cascade');
             $table->date('usage_date');
             $table->decimal('total_quantity', 10, 2); // jumlah awal
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -133,6 +142,8 @@ return new class extends Migration
             $table->date('date');
             $table->foreignUuid('from_livestock_id')->constrained('livestocks')->onDelete('cascade');
             $table->foreignUuid('to_livestock_id')->constrained('livestocks')->onDelete('cascade');
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -237,7 +248,7 @@ return new class extends Migration
         Schema::dropIfExists('feed_mutations');
         Schema::dropIfExists('feed_stocks');
         Schema::dropIfExists('feed_purchases');
-        Schema::dropIfExists('feed_purchase_batches');
+        Schema::dropIfExists('feed_purchase_items');
         Schema::dropIfExists('current_feeds');
     }
 };

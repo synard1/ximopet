@@ -51,6 +51,8 @@ class LivestockMutation extends Model
         'keterangan',
         'data',
         'metadata',
+        'number',
+        'number_full',
         'created_by',
         'updated_by'
     ];

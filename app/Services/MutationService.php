@@ -26,6 +26,7 @@ use App\Models\FeedPurchase;
 use App\Models\CurrentLivestock;
 use App\Models\LivestockBatch;
 use App\Events\LivestockMutated;
+use App\Services\Recording\UnitConversionService;
 
 class MutationService
 {
@@ -203,9 +204,6 @@ class MutationService
      */
     private static function updateCurrentSupply(string $livestockId, string $itemId, string $type = 'supply'): void
     {
-
-        // dd($livestockId);
-        // $livestock = Livestock::findOrFail($livestockId);
         $model = $type === 'feed' ? FeedStock::class : SupplyStock::class;
         $itemField = $type === 'feed' ? 'feed_id' : 'supply_id';
 
@@ -215,32 +213,35 @@ class MutationService
             ->selectRaw('COALESCE(SUM(quantity_in - quantity_used - quantity_mutated), 0) as total')
             ->value('total');
 
-        // dd([
-        //     'model' => $model,
-        //     'itemField' => $itemField,
-        //     'totalQuantity' => $totalQuantity,
-        //     'livestockId' => $livestockId,
-        //     'itemId' => $itemId,
-        //     'type' => $type,
-        //     'farm_id' => $livestockId,
-
-        // ]);
-
         // Get item details
         $item = $type === 'feed' ? Feed::find($itemId) : Supply::find($itemId);
         if (!$item) return;
 
+        // Cari unit_id dengan fallback berlapis
+        $unitId = $item->payload['unit_id'] ?? null;
+        if (!$unitId && isset($item->payload['conversion_units'])) {
+            $units = collect($item->payload['conversion_units']);
+            $defaultUnit = $units->firstWhere('is_smallest', true) ?? $units->first();
+            if ($defaultUnit) {
+                $unitId = $defaultUnit['unit_id'] ?? null;
+            }
+        }
+        if (!$unitId) {
+            $unitId = \App\Models\Unit::first()?->id;
+        }
+        if (!$unitId) {
+            throw new \Exception('Unit ID tidak ditemukan untuk supply: ' . $item->name);
+        }
+
         // Update or create CurrentSupply record
         CurrentSupply::updateOrCreate(
             [
-                // 'livestock_id' => $livestockId,
                 'farm_id' => $livestockId,
-                // 'kandang_id' => $livestock->kandang_id,
                 'item_id' => $itemId,
                 'type' => $type
             ],
             [
-                'unit_id' => $item->payload['unit_id'] ?? null,
+                'unit_id' => $unitId,
                 'quantity' => $totalQuantity,
                 'created_by' => auth()->id(),
                 'updated_by' => auth()->id(),
@@ -286,8 +287,10 @@ class MutationService
                 $inputUnitValue = floatval($inputUnit['value']);
                 $smallestUnitValue = floatval($smallestUnit['value']);
 
-                // Convert from input unit to smallest unit
-                $requiredQtySmallest = ($inputQty * $inputUnitValue) / $smallestUnitValue;
+                // === REFACTOR: Gunakan UnitConversionService untuk konversi ===
+                $conversion = UnitConversionService::getConvertedQuantityAndUnitId('feed', $itemId, $unitId, $inputQty);
+                $requiredQtySmallest = $conversion['converted_quantity'];
+                $smallestUnitId = $conversion['converted_unit_id'];
 
                 // Ambil model stok (Current*) dari farm asal
                 $stockQuerySource = FeedStock::where('livestock_id', $sourceLivestockId)
@@ -377,13 +380,13 @@ class MutationService
                             'item_id' => $itemId,
                             'stock_id' => $stockSource->id,
                             'quantity' => $takeQtySmallest,
-                            'unit_id' => $smallestUnit['unit_id'], // Store in smallest unit
+                            'unit_id' => $smallestUnitId, // Store in smallest unit
                             'source_unit_id' => $unitId, // Original input unit
                             'conversion_rate' => $inputUnitValue / $smallestUnitValue, // Store conversion rate
                             'unit_metadata' => [
                                 'input_unit_id' => $unitId,
                                 'input_quantity' => $inputQty,
-                                'smallest_unit_id' => $smallestUnit['unit_id'],
+                                'smallest_unit_id' => $smallestUnitId,
                                 'smallest_quantity' => $takeQtySmallest,
                                 'conversion_rate' => $inputUnitValue / $smallestUnitValue,
                             ],
@@ -492,10 +495,14 @@ class MutationService
     {
         DB::beginTransaction();
         try {
+            $supplyStockService = app(\App\Services\SupplyStockManagementService::class);
             foreach ($items as $item) {
-                $type = $item['type']; // e.g., feed, supply, vitamin, medicine
+                $type = $item['type'];
                 $itemId = $item['item_id'];
-                $unitId = $item['unit_id'];
+                $unitId = $item['unit_id'] ?? null;
+                if (empty($unitId)) {
+                    throw new \Exception('unit_id wajib diisi untuk mutasi supply!');
+                }
                 $inputQty = $item['quantity'];
                 $farm = Farm::find($sourceFarmId);
                 $targetFarm = Farm::find($targetFarmId);
@@ -504,16 +511,13 @@ class MutationService
                     throw new \Exception("Farm asal atau tujuan tidak ditemukan.");
                 }
 
-                // Konversi ke satuan terkecil
-                $requiredQtySmallest = ItemConversionService::toSmallest($type, $itemId, $unitId, $inputQty);
+                $conversion = UnitConversionService::getConvertedQuantityAndUnitId('supply', $itemId, $unitId, $inputQty);
+                $requiredQtySmallest = $conversion['converted_quantity'];
+                $smallestUnitId = $conversion['converted_unit_id'];
 
-                // Ambil model stok (Current*) dari farm asal
-                $stockQuerySource = match ($type) {
-                    'feed' => FeedStock::where('farm_id', $sourceFarmId)->where('feed_id', $itemId),
-                    default => SupplyStock::where('farm_id', $sourceFarmId)->where('supply_id', $itemId),
-                };
-
-                $stocksSource = $stockQuerySource->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
+                $stocksSource = SupplyStock::where('farm_id', $sourceFarmId)
+                    ->where('supply_id', $itemId)
+                    ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
                     ->orderBy('date')
                     ->orderBy('created_at')
                     ->lockForUpdate()
@@ -534,37 +538,25 @@ class MutationService
                         $stockSource->quantity_mutated += $takeQtySmallest;
                         $stockSource->save();
 
-                        // Tambah stok ke farm tujuan
-                        $targetModel = $type === 'feed' ? FeedStock::class : SupplyStock::class;
-                        $stockField = $type === 'feed' ? 'feed_id' : 'supply_id';
-                        $purchaseField = $type === 'feed' ? 'feed_purchase_id' : 'supply_purchase_id';
-                        $purchaseValue = $type === 'feed' ? $stockSource->feed_purchase_id : $stockSource->supply_purchase_id;
-
-                        // Get supply and unit information for metadata
-                        $supply = Supply::findOrFail($itemId);
-                        $unit = Unit::find($unitId);
-                        $conversionUnits = collect($supply->payload['conversion_units'] ?? []);
-                        $smallestUnit = $conversionUnits->firstWhere('is_smallest', true);
-
-                        $targetModel::create([
-                            'id' => Str::uuid(),
-                            'farm_id' => $targetFarmId,
-                            $stockField => $itemId,
-                            $purchaseField => $purchaseValue,
-                            'date' => $date,
-                            'source_type' => 'mutation',
-                            'source_id' => $mutationId,
-                            'quantity_in' => $takeQtySmallest,
-                            'quantity_used' => 0,
-                            'quantity_mutated' => 0,
-                            'unit_metadata' => [
-                                'input_unit_id' => $unitId,
-                                'input_quantity' => $inputQty,
-                                'smallest_unit_id' => $smallestUnit['unit_id'],
-                                'smallest_quantity' => $takeQtySmallest,
-                                'conversion_rate' => $unit ? $unit->value / $smallestUnit['value'] : 1,
-                            ],
-                            'created_by' => auth()->id(),
+                        // Buat stok tujuan dengan metadata lengkap
+                        $result = $supplyStockService->createInboundMutationStock([
+                            'from_farm_id' => $sourceFarmId,
+                            'to_farm_id' => $targetFarmId,
+                            'supply_id' => $itemId,
+                            'quantity' => $takeQtySmallest,
+                            'mutation_id' => $mutationId,
+                            'mutation_date' => $date,
+                            'unit_id' => $unitId,
+                            'converted_quantity' => $takeQtySmallest, // Sudah dalam unit terkecil
+                            'supply_purchase_id' => $stockSource->supply_purchase_id, // Fix: pass from source stock
+                        ]);
+                        if (empty($result['success']) || !$result['success']) {
+                            Log::error('Failed to create inbound mutation stock', ['result' => $result]);
+                            throw new \Exception('Failed to create inbound mutation stock: ' . ($result['error'] ?? 'Unknown error'));
+                        }
+                        Log::info('Created inbound mutation stock', [
+                            'stock_id' => isset($result['stock_entry']) && is_object($result['stock_entry']) ? $result['stock_entry']->id : null,
+                            'result' => $result
                         ]);
 
                         // Catat mutation_items
@@ -575,13 +567,13 @@ class MutationService
                             'item_id' => $itemId,
                             'stock_id' => $stockSource->id,
                             'quantity' => $takeQtySmallest,
-                            'unit_id' => $smallestUnit['unit_id'],
+                            'unit_id' => $smallestUnitId,
                             'unit_metadata' => [
                                 'input_unit_id' => $unitId,
                                 'input_quantity' => $inputQty,
-                                'smallest_unit_id' => $smallestUnit['unit_id'],
+                                'smallest_unit_id' => $smallestUnitId,
                                 'smallest_quantity' => $takeQtySmallest,
-                                'conversion_rate' => $unit ? $unit->value / $smallestUnit['value'] : 1,
+                                'conversion_rate' => $conversion['conversion_rate'] ?? 1,
                             ],
                             'created_by' => auth()->id(),
                         ]);
@@ -591,7 +583,6 @@ class MutationService
                 }
 
                 if ($remainingRequiredQtySmallest > 0) {
-                    // Fix: Use supply's conversion units to convert remaining quantity back to input unit
                     $supply = Supply::findOrFail($itemId);
                     $conversionUnits = collect($supply->payload['conversion_units'] ?? []);
                     $inputUnit = $conversionUnits->firstWhere('unit_id', $unitId);
@@ -600,23 +591,20 @@ class MutationService
                     if ($inputUnit && $smallestUnit && $smallestUnit['value'] > 0) {
                         $remainingInputQty = ($remainingRequiredQtySmallest * $smallestUnit['value']) / $inputUnit['value'];
                         $unitName = Unit::find($unitId)?->name ?? '';
-
                         throw new \Exception("Stok tidak cukup untuk {$type}: {$supply->name}. Kekurangan: " . number_format($remainingInputQty, 2) . " {$unitName}");
                     } else {
-                        // Fallback error if conversion data is missing
                         throw new \Exception("Stok tidak cukup untuk {$type}: {$supply->name}. Informasi konversi unit tidak lengkap.");
                     }
                 }
 
-                // Update CurrentSupply for source and target farms after processing the item
+                // Update CurrentSupply untuk source dan target
                 self::updateCurrentSupply(
-                    livestockId: $sourceFarmId, // Note: updateCurrentSupply uses livestock_id, but supply mutations are farm-based. Need to clarify or adjust.
+                    livestockId: $sourceFarmId,
                     itemId: $itemId,
                     type: 'supply'
                 );
-
                 self::updateCurrentSupply(
-                    livestockId: $targetFarmId, // Note: updateCurrentSupply uses livestock_id, but supply mutations are farm-based. Need to clarify or adjust.
+                    livestockId: $targetFarmId,
                     itemId: $itemId,
                     type: 'supply'
                 );
@@ -625,10 +613,11 @@ class MutationService
             if (!$dryRun) {
                 DB::commit();
             } else {
-                DB::rollBack(); // Rollback jika dry run
+                DB::rollBack();
             }
         } catch (Throwable $e) {
             DB::rollBack();
+            Log::error('Error in mutateSupplyItems', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             throw $e;
         }
     }
@@ -1065,6 +1054,26 @@ class MutationService
                                 $conversionUnits = collect($supply->payload['conversion_units'] ?? []);
                                 $smallestUnit = $conversionUnits->firstWhere('is_smallest', true);
 
+                                // Fallback jika $smallestUnit null
+                                if (!$smallestUnit) {
+                                    // Cari unit dengan value terkecil
+                                    $smallestUnit = $conversionUnits->sortBy('value')->first();
+                                }
+                                // Jika masih null, fallback ke unit input
+                                if (!$smallestUnit && $unit) {
+                                    $smallestUnit = [
+                                        'unit_id' => $unit->id,
+                                        'value' => $unit->value ?? 1,
+                                    ];
+                                }
+                                // Jika masih null, fallback default
+                                if (!$smallestUnit) {
+                                    $smallestUnit = [
+                                        'unit_id' => $unitId,
+                                        'value' => 1,
+                                    ];
+                                }
+
                                 // Update existing mutation item
                                 $oldItem->update([
                                     'quantity' => $smallestQuantity,
@@ -1074,7 +1083,7 @@ class MutationService
                                         'input_quantity' => $newItemData['quantity'],
                                         'smallest_unit_id' => $smallestUnit['unit_id'],
                                         'smallest_quantity' => $smallestQuantity,
-                                        'conversion_rate' => $unit ? $unit->value / $smallestUnit['value'] : 1,
+                                        'conversion_rate' => $unit && $smallestUnit['value'] ? $unit->value / $smallestUnit['value'] : 1,
                                         'updated_at' => now(),
                                     ],
                                     'updated_by' => auth()->id(),
@@ -1128,6 +1137,26 @@ class MutationService
                     $conversionUnits = collect($supply->payload['conversion_units'] ?? []);
                     $smallestUnit = $conversionUnits->firstWhere('is_smallest', true);
 
+                    // Fallback jika $smallestUnit null
+                    if (!$smallestUnit) {
+                        // Cari unit dengan value terkecil
+                        $smallestUnit = $conversionUnits->sortBy('value')->first();
+                    }
+                    // Jika masih null, fallback ke unit input
+                    if (!$smallestUnit && $unit) {
+                        $smallestUnit = [
+                            'unit_id' => $unit->id,
+                            'value' => $unit->value ?? 1,
+                        ];
+                    }
+                    // Jika masih null, fallback default
+                    if (!$smallestUnit) {
+                        $smallestUnit = [
+                            'unit_id' => $unitId,
+                            'value' => 1,
+                        ];
+                    }
+
                     $itemsMetadata[] = [
                         'item_id' => $item['item_id'],
                         'item_name' => $supply->name,
@@ -1145,7 +1174,7 @@ class MutationService
                                 'id' => $smallestUnit['unit_id'],
                                 'value' => $smallestUnit['value'],
                             ],
-                            'conversion_rate' => $unit ? $unit->value / $smallestUnit['value'] : 1,
+                            'conversion_rate' => $unit && $smallestUnit['value'] ? $unit->value / $smallestUnit['value'] : 1,
                             'smallest_quantity' => $smallestQuantity,
                         ],
                         'original_input' => [
@@ -1349,6 +1378,115 @@ class MutationService
             }
 
             return $mutation;
+        });
+    }
+
+    /**
+     * Entry point utama untuk semua jenis mutasi (supply, feed, livestock)
+     * Akan membuat record di table mutations (master), lalu memanggil service detail sesuai jenis mutasi
+     *
+     * @param array $data
+     * @param array $items
+     * @param string $type (supply|feed|livestock)
+     * @param string|null $mutationId
+     * @param bool $withHistory
+     * @return Mutation
+     */
+    public static function createMutation(array $data, array $items, string $type = 'supply', ?string $mutationId = null, bool $withHistory = false)
+    {
+        return \DB::transaction(function () use ($data, $items, $type, $mutationId, $withHistory) {
+            try {
+                \Log::info('🔄 Starting mutation creation process', [
+                    'type' => $type,
+                    'mutationId' => $mutationId,
+                    'items_count' => count($items),
+                    'data' => $data
+                ]);
+
+                // 1. Buat atau update master mutation
+                $isUpdate = !empty($mutationId);
+                $mutation = $isUpdate
+                    ? \App\Models\Mutation::findOrFail($mutationId)
+                    : new \App\Models\Mutation();
+
+                $mutation->fill([
+                    'id' => $mutationId ?? \Str::uuid(),
+                    'date' => $data['date'],
+                    'type' => $type,
+                    'from_farm_id' => $data['source_farm_id'] ?? null,
+                    'to_farm_id' => $data['destination_farm_id'] ?? null,
+                    'from_livestock_id' => $data['source_livestock_id'] ?? null,
+                    'to_livestock_id' => $data['destination_livestock_id'] ?? null,
+                    'from_coop_id' => $data['source_coop_id'] ?? null,
+                    'to_coop_id' => $data['destination_coop_id'] ?? null,
+                    'notes' => $data['notes'] ?? null,
+                    'created_by' => auth()->id(),
+                    'updated_by' => auth()->id(),
+                ]);
+
+                if (!$isUpdate) {
+                    $mutation->save();
+                    \Log::info('✅ Master mutation created', ['mutationId' => $mutation->id]);
+                } else {
+                    $mutation->update();
+                    \Log::info('✅ Master mutation updated', ['mutationId' => $mutation->id]);
+                }
+
+                // 2. Panggil service detail sesuai type
+                if ($type === 'supply') {
+                    \Log::info('🔄 Calling SupplyMutationService for supply mutation', [
+                        'mutationId' => $mutation->id,
+                        'items_count' => count($items)
+                    ]);
+
+                    // Integrasi ke SupplyMutationService dengan validasi
+                    $supplyMutationResult = \App\Services\SupplyMutationService::createSupplyMutation(
+                        $mutation,
+                        $items,
+                        $data,
+                        $withHistory
+                    );
+
+                    if (!$supplyMutationResult) {
+                        throw new \Exception('SupplyMutation creation failed');
+                    }
+
+                    \Log::info('✅ SupplyMutation and SupplyMutationItems created successfully', [
+                        'mutationId' => $mutation->id,
+                        'supplyMutationId' => $supplyMutationResult->id,
+                        'items_created' => $supplyMutationResult->supplyMutationDetails()->count()
+                    ]);
+                }
+                // else if ($type === 'feed') { ... }
+                // else if ($type === 'livestock') { ... }
+
+                \Log::info('✅ Complete mutation process successful', [
+                    'mutationId' => $mutation->id,
+                    'type' => $type
+                ]);
+
+                return $mutation;
+            } catch (\Exception $e) {
+                \Log::error('❌ Mutation creation failed', [
+                    'type' => $type,
+                    'mutationId' => $mutationId ?? 'new',
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+
+                // Rollback transaction
+                \DB::rollBack();
+
+                // Re-throw exception untuk handling di Livewire
+                throw new \Exception(
+                    "Gagal membuat mutasi {$type}. " .
+                        "Error: " . $e->getMessage() .
+                        " | File: " . basename($e->getFile()) .
+                        " | Line: " . $e->getLine()
+                );
+            }
         });
     }
 }

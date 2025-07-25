@@ -22,6 +22,8 @@ use function App\Helpers\logInfoIfDebug;
 use function App\Helpers\logDebugIfDebug;
 use function App\Helpers\logErrorIfDebug;
 
+use App\Services\Recording\Contracts\RecordingSaleServiceInterface;
+
 /**
  * Concrete implementation for loading recording-related data.
  * In this initial phase, it contains placeholder logic. The actual
@@ -32,7 +34,14 @@ use function App\Helpers\logErrorIfDebug;
  */
 class RecordingDataService implements RecordingDataServiceInterface
 {
-    public function loadCurrentDateData(string $livestockId, string $date): ServiceResult
+    private RecordingSaleServiceInterface $recordingSaleService;
+
+    public function __construct(RecordingSaleServiceInterface $recordingSaleService)
+    {
+        $this->recordingSaleService = $recordingSaleService;
+    }
+
+    public function loadCurrentDateData(string $livestockId, string $date, bool $bypassCache = false): ServiceResult
     {
         $performanceService = app(\App\Services\Recording\RecordingPerformanceService::class);
         $startTime = microtime(true);
@@ -41,23 +50,30 @@ class RecordingDataService implements RecordingDataServiceInterface
         logInfoIfDebug('🔄 RecordingDataService::loadCurrentDateData started', [
             'livestock_id' => $livestockId,
             'date' => $date,
-            'cache_enabled' => true
+            'cache_enabled' => !$bypassCache
         ]);
 
         // 1. Cek cache sebelum query berat
-        $cached = $performanceService->getCachedRecordingData($livestockId, $carbonDate);
-        if ($cached) {
-            $performanceService->logPerformanceMetrics('loadCurrentDateData_cache_hit', microtime(true) - $startTime, [
+        if (!$bypassCache) {
+            $cached = $performanceService->getCachedRecordingData($livestockId, $carbonDate);
+            if ($cached) {
+                $performanceService->logPerformanceMetrics('loadCurrentDateData_cache_hit', microtime(true) - $startTime, [
+                    'livestock_id' => $livestockId,
+                    'date' => $date,
+                    'cache' => true
+                ]);
+                logInfoIfDebug('✅ MODULAR_PATH: Cache hit for loadCurrentDateData', [
+                    'livestock_id' => $livestockId,
+                    'date' => $date,
+                    'cached_data_keys' => array_keys($cached)
+                ]);
+                return ServiceResult::success('Data loaded from cache.', $cached);
+            }
+        } else {
+            logInfoIfDebug('🔄 Bypass cache: loadCurrentDateData will query DB directly', [
                 'livestock_id' => $livestockId,
-                'date' => $date,
-                'cache' => true
+                'date' => $date
             ]);
-            logInfoIfDebug('✅ MODULAR_PATH: Cache hit for loadCurrentDateData', [
-                'livestock_id' => $livestockId,
-                'date' => $date,
-                'cached_data_keys' => array_keys($cached)
-            ]);
-            return ServiceResult::success('Data loaded from cache.', $cached);
         }
 
         logInfoIfDebug('🔄 MODULAR_PATH: RecordingDataService::loadCurrentDateData called.', compact('livestockId', 'date'));
@@ -77,7 +93,8 @@ class RecordingDataService implements RecordingDataServiceInterface
                 'weight_today' => null,
                 'mortality' => 0,
                 'culling' => 0,
-                'sales_quantity' => null,
+                'sales_quantity' => 0,
+                'sales_weight' => 0,
                 'sales_price' => null,
                 'total_sales' => null,
                 'itemQuantities' => [],
@@ -88,6 +105,65 @@ class RecordingDataService implements RecordingDataServiceInterface
                 'isManualFeedUsageEnabled' => false,
                 'recording_exists' => false,
             ];
+
+            // --- OPTIMIZED: Fetch sales draft from RecordingSaleService ---
+            $salesDraftCacheKey = "sales_draft_{$livestockId}_{$date}";
+            $salesDraft = cache()->remember($salesDraftCacheKey, 60, function () use ($livestockId, $date) {
+                $saleDraftResult = $this->recordingSaleService->listByLivestockAndDate($livestockId, $date, ['status' => 'draft']);
+                if ($saleDraftResult->isSuccess() && is_array($saleDraftResult->getData()) && count($saleDraftResult->getData()) > 0) {
+                    return $saleDraftResult->getData()[0];
+                }
+                return null;
+            });
+            if ($salesDraft) {
+                $data['sales_quantity'] = $salesDraft['quantity'] ?? 0;
+                $data['sales_weight'] = $salesDraft['weight'] ?? 0;
+                $data['sales_price'] = $salesDraft['price'] ?? null;
+                logInfoIfDebug('Sales data loaded from RecordingSaleService (sales draft)', [
+                    'sales_quantity' => $data['sales_quantity'],
+                    'sales_weight' => $data['sales_weight'],
+                    'sales_price' => $data['sales_price'],
+                    'source' => 'sales_draft',
+                    'sales_draft_id' => $salesDraft['id'] ?? null
+                ]);
+            } else if ($recording) {
+                $payload = is_array($recording->payload)
+                    ? $recording->payload
+                    : json_decode($recording->payload, true);
+                $data['weight_today'] = $recording->berat_hari_ini;
+                $data['recording_exists'] = true;
+
+                logDebugIfDebug('Recording data loaded', [
+                    'weight_today' => $data['weight_today'],
+                    'payload_keys' => $payload ? array_keys($payload) : null
+                ]);
+
+                if (isset($payload['config']['manual_depletion_enabled']) && $payload['config']['manual_depletion_enabled']) {
+                    $data['isManualDepletionEnabled'] = true;
+                } else {
+                    $data['isManualDepletionEnabled'] = false;
+                }
+
+                // Fallback: Ambil sales_quantity dan sales_weight dari payload['production']['sales'] jika ada
+                if (isset($payload['production']['sales'])) {
+                    $sales = $payload['production']['sales'];
+                    $data['sales_quantity'] = isset($sales['quantity']) ? (float)$sales['quantity'] : 0;
+                    $data['sales_weight'] = isset($sales['weight']) ? (float)$sales['weight'] : 0;
+                    $data['sales_price'] = isset($sales['price_per_unit']) ? (float)$sales['price_per_unit'] : null;
+                    logDebugIfDebug('Sales data loaded from payload.production.sales (fallback)', [
+                        'sales_quantity' => $data['sales_quantity'],
+                        'sales_weight' => $data['sales_weight'],
+                        'sales_section' => $sales,
+                        'source' => 'payload_fallback'
+                    ]);
+                } else {
+                    $data['sales_quantity'] = 0;
+                    $data['sales_weight'] = 0;
+                    logDebugIfDebug('Sales data not found in payload.production.sales, defaulting to 0', [
+                        'payload' => $payload
+                    ]);
+                }
+            }
 
             // ALWAYS fetch depletion data, regardless of recording existence
             $data['mortality'] = LivestockDepletion::where('livestock_id', $livestockId)
@@ -105,29 +181,11 @@ class RecordingDataService implements RecordingDataServiceInterface
                 'culling' => $data['culling']
             ]);
 
-            if ($recording) {
-                $payload = is_array($recording->payload)
-                    ? $recording->payload
-                    : json_decode($recording->payload, true);
-                $data['weight_today'] = $recording->berat_hari_ini;
-                $data['recording_exists'] = true;
-
-                logDebugIfDebug('Recording data loaded', [
-                    'weight_today' => $data['weight_today'],
-                    'payload_keys' => $payload ? array_keys($payload) : null
-                ]);
-
-                // The manual depletion flag check can remain as it controls UI behavior
-                if (isset($payload['config']['manual_depletion_enabled']) && $payload['config']['manual_depletion_enabled']) {
-                    $data['isManualDepletionEnabled'] = true;
-                } else {
-                    $data['isManualDepletionEnabled'] = false;
-                }
-            }
-
             // ALWAYS fetch feed and supply usage, regardless of recording existence.
             // This ensures feedUsageId and supplyUsageId are always present.
-            $feedUsage = FeedUsage::where('livestock_id', $livestockId)->where('usage_date', $date)->with('details')->first();
+            $feedUsage = FeedUsage::where('livestock_id', $livestockId)
+                ->whereDate('usage_date', $date)
+                ->first();
             if ($feedUsage) {
                 logInfoIfDebug('✅ MODULAR_PATH: FeedUsage found for today.', [
                     'feedUsageId' => $feedUsage->id,
@@ -153,7 +211,13 @@ class RecordingDataService implements RecordingDataServiceInterface
             }
 
             $supplyUsage = SupplyUsage::where('livestock_id', $livestockId)
-                ->where('usage_date', $date)
+                ->whereDate('usage_date', $date)
+                ->whereIn('status', [
+                    SupplyUsage::STATUS_PENDING,
+                    SupplyUsage::STATUS_IN_PROCESS,
+                    SupplyUsage::STATUS_COMPLETED,
+                    SupplyUsage::STATUS_PARTIALLY_USED
+                ])
                 ->first();
             if ($supplyUsage) {
                 $supplyQuantities = [];
@@ -165,7 +229,13 @@ class RecordingDataService implements RecordingDataServiceInterface
 
                 logDebugIfDebug('Supply usage loaded', [
                     'supplyUsageId' => $data['supplyUsageId'],
-                    'supplyQuantities_count' => count($supplyQuantities)
+                    'supplyQuantities_count' => count($supplyQuantities),
+                    'supplyQuantities' => $supplyQuantities
+                ]);
+            } else {
+                logDebugIfDebug('No supply usage found for date', [
+                    'livestock_id' => $livestockId,
+                    'date' => $date
                 ]);
             }
 
@@ -225,6 +295,7 @@ class RecordingDataService implements RecordingDataServiceInterface
                 'performance_threshold' => $threshold,
             ], $envMeta);
             $performanceService->logPerformanceMetrics('loadCurrentDateData', $executionTime, $metadata);
+
             return ServiceResult::success('Data for the current date loaded successfully.', $data);
         } catch (Exception $e) {
             logErrorIfDebug('❌ MODULAR_PATH: Error in RecordingDataService::loadCurrentDateData', [
@@ -255,6 +326,12 @@ class RecordingDataService implements RecordingDataServiceInterface
 
             $yesterdaySupplyUsage = SupplyUsage::where('livestock_id', $livestockId)
                 ->where('usage_date', $yesterdayDate)
+                ->whereIn('status', [
+                    SupplyUsage::STATUS_PENDING,
+                    SupplyUsage::STATUS_IN_PROCESS,
+                    SupplyUsage::STATUS_COMPLETED,
+                    SupplyUsage::STATUS_PARTIALLY_USED
+                ])
                 ->with('details.supply.unit') // Eager load relations
                 ->first();
 
@@ -380,6 +457,49 @@ class RecordingDataService implements RecordingDataServiceInterface
                 'trace' => $e->getTraceAsString(),
             ]);
             return ServiceResult::error('Failed to load recording history.', $e);
+        }
+    }
+
+    /**
+     * Return the sales_changes array from the latest (or specified date's) recording payload for the given livestockId.
+     * If $date is null, use the latest recording (by tanggal desc).
+     * If no sales_changes found, return an empty array.
+     */
+    public function getSalesHistory(string $livestockId, ?string $date = null): array
+    {
+        try {
+            $query = Recording::where('livestock_id', $livestockId);
+            if ($date) {
+                $query->where('tanggal', $date);
+            }
+            $recording = $query->orderBy('tanggal', 'desc')->first();
+            if (!$recording) {
+                logDebugIfDebug('getSalesHistory: No recording found', compact('livestockId', 'date'));
+                return [];
+            }
+            $payload = is_array($recording->payload)
+                ? $recording->payload
+                : json_decode($recording->payload, true);
+            if (!isset($payload['history']['sales_changes']) || !is_array($payload['history']['sales_changes'])) {
+                logDebugIfDebug('getSalesHistory: No sales_changes found in payload', [
+                    'recording_id' => $recording->id,
+                    'payload_keys' => array_keys($payload)
+                ]);
+                return [];
+            }
+            logDebugIfDebug('getSalesHistory: Returning sales_changes', [
+                'recording_id' => $recording->id,
+                'sales_changes_count' => count($payload['history']['sales_changes'])
+            ]);
+            return $payload['history']['sales_changes'];
+        } catch (\Exception $e) {
+            logErrorIfDebug('getSalesHistory: Exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'livestockId' => $livestockId,
+                'date' => $date
+            ]);
+            return [];
         }
     }
 

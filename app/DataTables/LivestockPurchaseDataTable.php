@@ -527,6 +527,7 @@ class LivestockPurchaseDataTable extends DataTable
     {
         return [
             Column::make('DT_RowIndex')->title('No')->searchable(false),
+            Column::make('number_full')->title('Nomor')->searchable(true)->visible(true),
             Column::make('id')->title('ID')->searchable(true)->visible(env('APP_ENV') === 'local'),
             Column::make('invoice_number')->searchable(true),
             Column::make('tanggal')->title('Tanggal Pembelian')->searchable(true),

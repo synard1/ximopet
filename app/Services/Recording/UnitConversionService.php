@@ -49,7 +49,7 @@ class UnitConversionService
 
         try {
             $cacheKey = self::CACHE_PREFIX . "feed_{$feed->id}";
-            
+
             $unitInfo = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($feed) {
                 return $this->processFeedUnitConversion($feed);
             });
@@ -98,7 +98,7 @@ class UnitConversionService
 
         try {
             $cacheKey = self::CACHE_PREFIX . "supply_{$supply->id}";
-            
+
             $unitInfo = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($supply) {
                 return $this->processSupplyUnitConversion($supply);
             });
@@ -359,7 +359,7 @@ class UnitConversionService
     {
         try {
             $feed = Feed::find($feedId);
-            
+
             if (!$feed) {
                 return ProcessingResult::failure(['Feed not found'], 'Feed not found');
             }
@@ -394,7 +394,7 @@ class UnitConversionService
     {
         try {
             $supply = Supply::find($supplyId);
-            
+
             if (!$supply) {
                 return ProcessingResult::failure(['Supply not found'], 'Supply not found');
             }
@@ -504,4 +504,67 @@ class UnitConversionService
             return ProcessingResult::failure(['Validation failed'], 'Conversion data validation failed');
         }
     }
-} 
+
+    /**
+     * Static helper: get converted_quantity and converted_unit_id for feed/supply
+     * @param string $type 'feed'|'supply'
+     * @param int|string $itemId
+     * @param int|string $unitId
+     * @param float $quantity
+     * @return array ['converted_quantity'=>float, 'converted_unit_id'=>int|null]
+     */
+    public static function getConvertedQuantityAndUnitId(string $type, $itemId, $unitId, float $quantity): array
+    {
+        try {
+            if ($type === 'feed') {
+                $feed = \App\Models\Feed::find($itemId);
+                $conversionUnits = collect($feed->payload['conversion_units'] ?? []);
+            } elseif ($type === 'supply') {
+                $supply = \App\Models\Supply::find($itemId);
+                // PATCH: gunakan data['conversion_units']
+                $conversionUnits = collect($supply->data['conversion_units'] ?? []);
+                if ($conversionUnits->isEmpty()) {
+                    \Log::warning('[UnitConversionService] Supply conversion_units kosong di data', compact('type', 'itemId', 'unitId', 'quantity'));
+                }
+            } else {
+                \Log::error('[UnitConversionService] Unknown type for conversion', compact('type', 'itemId', 'unitId', 'quantity'));
+                return ['converted_quantity' => $quantity, 'converted_unit_id' => $unitId];
+            }
+
+            $inputUnit = $conversionUnits->firstWhere('unit_id', $unitId);
+            $smallestUnit = $conversionUnits->firstWhere('is_smallest', true);
+            if (!$smallestUnit) {
+                $smallestUnit = $conversionUnits->sortBy('value')->first();
+            }
+
+            if (!$inputUnit || !$smallestUnit || empty($inputUnit['value']) || empty($smallestUnit['value'])) {
+                Log::warning('[UnitConversionService] Conversion unit data incomplete', compact('type', 'itemId', 'unitId', 'quantity', 'inputUnit', 'smallestUnit'));
+                return ['converted_quantity' => $quantity, 'converted_unit_id' => $unitId];
+            }
+
+            // Jika unit sama, tidak perlu konversi
+            if ($unitId == $smallestUnit['unit_id']) {
+                return [
+                    'converted_quantity' => $quantity,
+                    'converted_unit_id' => $unitId,
+                ];
+            }
+
+            // Konversi: (qty * input_unit_value) / smallest_unit_value
+            $converted_quantity = ($quantity * $inputUnit['value']) / $smallestUnit['value'];
+            return [
+                'converted_quantity' => $converted_quantity,
+                'converted_unit_id' => $smallestUnit['unit_id'],
+            ];
+        } catch (\Throwable $e) {
+            Log::error('[UnitConversionService] Error in getConvertedQuantityAndUnitId', [
+                'type' => $type,
+                'itemId' => $itemId,
+                'unitId' => $unitId,
+                'quantity' => $quantity,
+                'error' => $e->getMessage(),
+            ]);
+            return ['converted_quantity' => $quantity, 'converted_unit_id' => $unitId];
+        }
+    }
+}

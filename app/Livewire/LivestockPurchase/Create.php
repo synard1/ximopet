@@ -41,6 +41,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use App\Config\CompanyConfig;
 use App\Models\CompanyUser;
+use App\Services\Livestock\LivestockNumberGeneratorService;
 
 class Create extends Component
 {
@@ -716,6 +717,29 @@ class Create extends Component
             } else {
                 // CREATE MODE
                 $purchase = LivestockPurchase::create($purchaseData);
+
+                // Generate automatic numbering for livestock purchase
+                if (empty($purchase->number) || empty($purchase->number_full)) {
+                    try {
+                        $numbering = LivestockNumberGeneratorService::generateNumber('livestock_purchases', $purchase->tanggal ?? now(), []);
+                        $purchase->number = $numbering['number'];
+                        $purchase->number_full = $numbering['full_number'];
+                        $purchase->save();
+
+                        Log::info('Generated automatic numbering for LivestockPurchase', [
+                            'purchase_id' => $purchase->id,
+                            'number' => $purchase->number,
+                            'number_full' => $purchase->number_full,
+                            'date' => $purchase->tanggal
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to generate automatic numbering for LivestockPurchase', [
+                            'purchase_id' => $purchase->id,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Continue without numbering - not critical
+                    }
+                }
             }
             Log::info('LivestockPurchase saved', ['id' => $purchase->id]);
 
@@ -1529,8 +1553,35 @@ class Create extends Component
                     'livestock_id' => $livestock->id,
                     'current_initial_quantity' => $livestock->initial_quantity,
                     'current_initial_weight' => $livestock->initial_weight,
-                    'current_price' => $livestock->price
+                    'current_price' => $livestock->price,
+                    'current_number' => $livestock->number,
+                    'current_number_full' => $livestock->number_full
                 ]);
+
+                // Generate automatic numbering for existing livestock if missing
+                if (empty($livestock->number) || empty($livestock->number_full)) {
+                    try {
+                        $numbering = LivestockNumberGeneratorService::generateNumber('livestocks', $purchase->tanggal ?? now(), []);
+                        $livestock->number = $numbering['number'];
+                        $livestock->number_full = $numbering['full_number'];
+                        $livestock->save();
+
+                        Log::info('Generated automatic numbering for existing Livestock', [
+                            'livestock_id' => $livestock->id,
+                            'number' => $livestock->number,
+                            'number_full' => $livestock->number_full,
+                            'date' => $purchase->tanggal,
+                            'reason' => 'Missing numbering on existing livestock'
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to generate automatic numbering for existing Livestock', [
+                            'livestock_id' => $livestock->id,
+                            'error' => $e->getMessage(),
+                            'reason' => 'Missing numbering on existing livestock'
+                        ]);
+                        // Continue without numbering - not critical
+                    }
+                }
             } else {
                 // Buat Livestock baru, nilai total akan diupdate setelah batch creation
                 $livestock = \App\Models\Livestock::create([
@@ -1545,6 +1596,30 @@ class Create extends Component
                     'created_by' => auth()->id(),
                     'updated_by' => auth()->id(),
                 ]);
+
+                // Generate automatic numbering for livestock
+                if (empty($livestock->number) || empty($livestock->number_full)) {
+                    try {
+                        $numbering = LivestockNumberGeneratorService::generateNumber('livestocks', $purchase->tanggal ?? now(), []);
+                        $livestock->number = $numbering['number'];
+                        $livestock->number_full = $numbering['full_number'];
+                        $livestock->save();
+
+                        Log::info('Generated automatic numbering for Livestock', [
+                            'livestock_id' => $livestock->id,
+                            'number' => $livestock->number,
+                            'number_full' => $livestock->number_full,
+                            'date' => $purchase->tanggal
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to generate automatic numbering for Livestock', [
+                            'livestock_id' => $livestock->id,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Continue without numbering - not critical
+                    }
+                }
+
                 Log::info('Created new Livestock (will be updated after batch creation):', [
                     'livestock_id' => $livestock->id
                 ]);
@@ -1705,6 +1780,29 @@ class Create extends Component
                 ]);
 
                 $batch = \App\Models\LivestockBatch::create($batchData);
+
+                // Generate automatic numbering for livestock batch
+                if (empty($batch->number) || empty($batch->number_full)) {
+                    try {
+                        $numbering = LivestockNumberGeneratorService::generateNumber('livestock_batches', $purchase->tanggal ?? now(), []);
+                        $batch->number = $numbering['number'];
+                        $batch->number_full = $numbering['full_number'];
+                        $batch->save();
+
+                        Log::info('Generated automatic numbering for LivestockBatch', [
+                            'batch_id' => $batch->id,
+                            'number' => $batch->number,
+                            'number_full' => $batch->number_full,
+                            'date' => $purchase->tanggal
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to generate automatic numbering for LivestockBatch', [
+                            'batch_id' => $batch->id,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Continue without numbering - not critical
+                    }
+                }
 
                 $actualCreatedBatches++;
                 Log::info('Successfully created LivestockBatch:', [
@@ -1896,7 +1994,21 @@ class Create extends Component
             Log::info('Finished generateLivestockAndBatch for purchase ID: ' . $purchaseId, [
                 'createdBatchCount' => $actualCreatedBatches,
                 'expectedBatchCount' => $expectedBatchCount,
-                'success' => true
+                'success' => true,
+                'livestock_info' => [
+                    'livestock_id' => $livestock->id,
+                    'livestock_name' => $livestock->name,
+                    'number' => $livestock->number,
+                    'number_full' => $livestock->number_full,
+                    'final_initial_quantity' => $livestock->initial_quantity,
+                    'final_initial_weight' => $livestock->initial_weight,
+                    'final_price' => $livestock->price
+                ],
+                'numbering_status' => [
+                    'has_number' => !empty($livestock->number),
+                    'has_number_full' => !empty($livestock->number_full),
+                    'numbering_generated' => !empty($livestock->number) && !empty($livestock->number_full)
+                ]
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -1904,6 +2016,17 @@ class Create extends Component
                 'purchase_id' => $purchaseId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
+                'livestock_info' => isset($livestock) ? [
+                    'livestock_id' => $livestock->id ?? null,
+                    'livestock_name' => $livestock->name ?? null,
+                    'number' => $livestock->number ?? null,
+                    'number_full' => $livestock->number_full ?? null,
+                    'numbering_status' => [
+                        'has_number' => !empty($livestock->number ?? null),
+                        'has_number_full' => !empty($livestock->number_full ?? null)
+                    ]
+                ] : null,
+                'rollback_reason' => 'Error during livestock and batch generation process'
             ]);
             throw $e;
         }
@@ -2387,5 +2510,71 @@ class Create extends Component
         $purchase = LivestockPurchase::findOrFail($purchaseId);
         $verificationService = app(VerificationService::class);
         return $verificationService->getStatus($purchase);
+    }
+
+    /**
+     * Generate automatic numbering for livestock purchase records
+     * 
+     * @param string $table Table name (livestock_purchases, livestocks, livestock_batches)
+     * @param string $date Date for numbering context
+     * @param array $context Additional context for placeholders
+     * @return array|null Generated numbering data or null if failed
+     */
+    private function generateAutomaticNumbering(string $table, string $date, array $context = []): ?array
+    {
+        try {
+            $numbering = LivestockNumberGeneratorService::generateNumber($table, $date, $context);
+
+            Log::info("Generated automatic numbering for {$table}", [
+                'table' => $table,
+                'date' => $date,
+                'number' => $numbering['number'],
+                'number_full' => $numbering['full_number'],
+                'context' => $context
+            ]);
+
+            return $numbering;
+        } catch (\Exception $e) {
+            Log::warning("Failed to generate automatic numbering for {$table}", [
+                'table' => $table,
+                'date' => $date,
+                'error' => $e->getMessage(),
+                'context' => $context
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Apply automatic numbering to a model
+     * 
+     * @param \Illuminate\Database\Eloquent\Model $model Model to apply numbering to
+     * @param string $table Table name for numbering context
+     * @param string $date Date for numbering context
+     * @param array $context Additional context for placeholders
+     * @return bool Success status
+     */
+    private function applyAutomaticNumbering($model, string $table, string $date, array $context = []): bool
+    {
+        if (empty($model->number) || empty($model->number_full)) {
+            $numbering = $this->generateAutomaticNumbering($table, $date, $context);
+
+            if ($numbering) {
+                $model->number = $numbering['number'];
+                $model->number_full = $numbering['full_number'];
+                $model->save();
+
+                Log::info("Applied automatic numbering to {$table}", [
+                    'model_id' => $model->id,
+                    'number' => $model->number,
+                    'number_full' => $model->number_full
+                ]);
+
+                return true;
+            }
+        }
+
+        return false;
     }
 }

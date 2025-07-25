@@ -309,8 +309,8 @@
                                     <div>• Livestock Purchases: {{
                                         number_format($preview['purchase_status_to_change']['livestock_purchases_non_draft'])
                                         }}</div>
-                                    <div>• Feed Purchase Batches: {{
-                                        number_format($preview['purchase_status_to_change']['feed_purchase_batches_non_draft'])
+                                    <div>• Feed Purchases: {{
+                                        number_format($preview['purchase_status_to_change']['feed_purchases_non_draft'])
                                         }}</div>
                                     <div>• Supply Purchase Batches: {{
                                         number_format($preview['purchase_status_to_change']['supply_purchase_batches_non_draft'])
@@ -696,7 +696,7 @@
                     <h5 class="text-warning">📝 Status Pembelian Diubah ke Draft</h5>
                     <div class="small">
                         <div>• Livestock Purchases: ${response.purchase_status_changed.livestock_purchases || 0}</div>
-                        <div>• Feed Purchase Batches: ${response.purchase_status_changed.feed_purchase_batches || 0}</div>
+                        <div>• Feed Purchases: ${response.purchase_status_changed.feed_purchases || 0}</div>
                         <div>• Supply Purchase Batches: ${response.purchase_status_changed.supply_purchase_batches || 0}</div>
                     </div>
                 </div>

@@ -7,22 +7,26 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Traits\HasFeedStatusHistory;
 
 class FeedPurchase extends BaseModel
 {
-    use HasFactory, SoftDeletes, HasUuids;
+    use HasFactory, SoftDeletes, HasUuids, HasFeedStatusHistory;
+
+    /**
+     * This is a detail model that inherits company_id from FeedPurchase parent
+     * No need to handle company_id separately
+     */
+    protected $requiresCompanyId = true;
 
     // Status Constants
     const STATUS_DRAFT = 'draft';
     const STATUS_PENDING = 'pending';
     const STATUS_CONFIRMED = 'confirmed';
     const STATUS_IN_TRANSIT = 'in_transit';
-    const STATUS_IN_USE = 'in_use';
     const STATUS_ARRIVED = 'arrived';
     const STATUS_CANCELLED = 'cancelled';
     const STATUS_COMPLETED = 'completed';
-    const STATUS_READY = 'ready'; // New status for when quantity stock is ready to be used
-    const STATUS_EXHAUSTED = 'exhausted'; // New status for when quantity is fully used
 
     // Status Labels
     const STATUS_LABELS = [
@@ -30,31 +34,36 @@ class FeedPurchase extends BaseModel
         self::STATUS_PENDING => 'Pending',
         self::STATUS_CONFIRMED => 'Confirmed',
         self::STATUS_IN_TRANSIT => 'In Transit',
-        self::STATUS_IN_USE => 'In Use',
         self::STATUS_ARRIVED => 'Arrived',
         self::STATUS_CANCELLED => 'Cancelled',
-        self::STATUS_COMPLETED => 'Completed',
-        self::STATUS_READY => 'Ready',
-        self::STATUS_EXHAUSTED => 'Exhausted' // Label for the new status
+        self::STATUS_COMPLETED => 'Completed'
     ];
 
     protected $fillable = [
         'id',
+        'company_id',
+        'farm_id',
+        'coop_id',
         'livestock_id',
-        'feed_purchase_batch_id',
-        'feed_id',
-        'unit_id',
-        'quantity',
-        'converted_unit',
-        'converted_quantity',
-        'price_per_unit',
-        'price_per_converted_unit',
+        'invoice_number',
+        'do_number',
+        'supplier_id',
+        'expedition_id',
+        'date',
+        'expedition_fee',
+        'data',
+        'notes',
+        'status',
+        'number',
+        'number_full',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
         'date' => 'date',
+        'data' => 'array',
+
     ];
 
     // Helper Methods
@@ -78,11 +87,6 @@ class FeedPurchase extends BaseModel
         return $this->status === self::STATUS_IN_TRANSIT;
     }
 
-    public function isInUse()
-    {
-        return $this->status === self::STATUS_IN_USE;
-    }
-
     public function isArrived()
     {
         return $this->status === self::STATUS_ARRIVED;
@@ -96,16 +100,6 @@ class FeedPurchase extends BaseModel
     public function isCompleted()
     {
         return $this->status === self::STATUS_COMPLETED;
-    }
-
-    public function isReady()
-    {
-        return $this->status === self::STATUS_READY;
-    }
-
-    public function isExhausted() // New method to check if the status is exhausted
-    {
-        return $this->status === self::STATUS_EXHAUSTED;
     }
 
     public function canBeEdited()
@@ -129,74 +123,61 @@ class FeedPurchase extends BaseModel
         return self::STATUS_LABELS[$this->status] ?? 'Unknown';
     }
 
+    // Relations
+
+    public function farm()
+    {
+        return $this->belongsTo(Farm::class, 'farm_id', 'id');
+    }
+
+    public function coop()
+    {
+        return $this->belongsTo(Coop::class, 'coop_id', 'id');
+    }
+
     public function livestock()
     {
         return $this->belongsTo(Livestock::class, 'livestock_id', 'id');
     }
 
-    public function feedItem()
+    public function supplier()
     {
-        return $this->belongsTo(Feed::class, 'feed_id');
+        return $this->belongsTo(Partner::class, 'supplier_id', 'id');
     }
 
-    public function feed()
+    public function expedition()
     {
-        return $this->belongsTo(Feed::class, 'feed_id');
+        return $this->belongsTo(Partner::class, 'expedition_id', 'id');
     }
 
-    public function batch()
+    public function feedPurchaseItems()
     {
-        return $this->belongsTo(FeedPurchaseBatch::class, 'feed_purchase_batch_id');
+        return $this->hasMany(FeedPurchaseItem::class);
     }
 
-    public function unit()
+    /**
+     * Override trait method to define which statuses require notes
+     */
+    protected function requiresNotesForStatus($status)
     {
-        return $this->belongsTo(Unit::class, 'unit_id', 'id');
+        return in_array($status, [self::STATUS_CANCELLED, self::STATUS_COMPLETED]);
     }
 
-    public function convertedUnit()
+    /**
+     * Override trait method to get available statuses
+     */
+    public function getAvailableStatuses()
     {
-        return $this->belongsTo(Unit::class, 'converted_unit', 'id');
+        return array_keys(self::STATUS_LABELS);
     }
 
-    // FeedPurchase.php
-    public function feedStocks()
+    /**
+     * Update status using the new universal system
+     * 
+     * @deprecated Use updateFeedStatus() instead
+     */
+    public function updateStatus($newStatus, $notes = null, $metadata = [])
     {
-        return $this->hasMany(FeedStock::class, 'feed_purchase_id');
-    }
-
-    public function calculateConvertedQuantity()
-    {
-        // Jika tidak ada converted_unit, return quantity apa adanya
-        if (!$this->converted_unit || !$this->unit_id) {
-            return (float) $this->quantity;
-        }
-        // Ambil rasio konversi dari unit ke converted_unit
-        $conversion = \App\Models\UnitConversion::where('unit_id', $this->unit_id)
-            ->where('conversion_unit_id', $this->converted_unit)
-            ->first();
-        if ($conversion && $conversion->conversion_value) {
-            return (float) $this->quantity * (float) $conversion->conversion_value;
-        }
-        // Jika tidak ada data konversi, fallback ke quantity
-        return (float) $this->quantity;
-    }
-
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::deleting(function ($feedPurchase) {
-            // Update CurrentFeed quantity when FeedPurchase is deleted
-            $currentFeed = CurrentFeed::where('livestock_id', $feedPurchase->livestock_id)
-                ->where('feed_id', $feedPurchase->feed_id)
-                ->first();
-
-            if ($currentFeed) {
-                // Decrease the quantity based on the deleted feed purchase
-                $currentFeed->quantity -= $feedPurchase->converted_quantity;
-                $currentFeed->save();
-            }
-        });
+        return $this->updateFeedStatus($newStatus, $notes, $metadata);
     }
 }

@@ -163,8 +163,9 @@
                 <tr @if(isset($item['is_initial_purchase']) && $item['is_initial_purchase'])
                     class="initial-purchase-highlight" @elseif(str_contains(strtolower($item['kategori'] ?? ''
                     ), 'pakan' ) || str_contains(strtolower($item['kategori'] ?? '' ), 'feed' )) class="feed-highlight"
-                    @elseif(str_contains(strtolower($item['kategori'] ?? '' ), 'supply' ) ||
-                    str_contains(strtolower($item['kategori'] ?? '' ), 'ovk' ) ||
+                    @elseif(str_contains(strtolower($item['kategori'] ?? '' ), 'supply' ) &&
+                    isset($item['harga_satuan'])) class="supply-highlight"
+                    @elseif(str_contains(strtolower($item['kategori'] ?? '' ), 'ovk' ) ||
                     str_contains(strtolower($item['kategori'] ?? '' ), 'biocid' ) ||
                     str_contains(strtolower($item['kategori'] ?? '' ), 'cevamune' )) class="supply-highlight"
                     @elseif(str_contains(strtolower($item['kategori'] ?? '' ), 'deplesi' )) class="deplesi-highlight"
@@ -173,6 +174,11 @@
                         {{ $item['kategori'] ?? '-' }}
                         @if(isset($item['is_initial_purchase']) && $item['is_initial_purchase'])
                         <small style="color: #0066cc;">(Harga Pembelian Awal)</small>
+                        @endif
+                        @if(isset($item['kategori']) && str_contains(strtolower($item['kategori']), 'supply'))
+                        <span
+                            style="background:#e0f7fa;color:#00796b;font-size:9pt;padding:2px 6px;border-radius:6px;margin-left:6px;">Supply
+                            Usage</span>
                         @endif
                         @if(isset($item['calculation_note']))
                         <br><small style="color: #666;">{{ $item['calculation_note'] }}</small>
@@ -213,7 +219,7 @@
 
         <!-- Summary Information for Detail Report -->
         @if($report_type === 'detail' && isset($summary_data))
-        <div style="margin-top: 15px; padding: 10px; background-color: #f9f9f9; border: 1px solid #ddd;">
+        {{-- <div style="margin-top: 15px; padding: 10px; background-color: #f9f9f9; border: 1px solid #ddd;">
             <h5 style="margin: 0 0 10px 0;">Ringkasan Biaya Harian:</h5>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 10pt;">
                 <div><strong>Pakan:</strong> {{ formatNumber($summary_data['daily_feed_cost'] ?? 0, 2) }}</div>
@@ -226,7 +232,7 @@
                     }}</div>
                 <div></div>
             </div>
-        </div>
+        </div> --}}
         @endif
     </div>
     @else

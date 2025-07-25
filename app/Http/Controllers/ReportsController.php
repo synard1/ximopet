@@ -291,7 +291,9 @@ class ReportsController extends Controller
         try {
             // Use HarianReportService for complete export handling
             $format = $request->export_format ?? 'html';
-            return $this->harianReportService->exportHarianReport($request, $format);
+            $livestockId = $request->input('livestock');
+            // Pastikan parameter diteruskan ke service
+            return $this->harianReportService->exportHarianReport($request, $format, $livestockId);
         } catch (\Exception $e) {
             Log::error('Error exporting harian report: ' . $e->getMessage());
             Log::debug('Stack trace: ' . $e->getTraceAsString());
@@ -407,8 +409,6 @@ class ReportsController extends Controller
 
     public function exportPerformance(Request $request)
     {
-        return $this->performanceReportService->exportPerformanceReport($request);
-
         try {
             // Use PerformanceReportService for complete export handling
             return $this->performanceReportService->exportPerformanceReport($request);

@@ -53,4 +53,81 @@ class CurrentLivestock extends BaseModel
     {
         return $this->belongsTo(InventoryLocation::class, 'location_id', 'id');
     }
+
+    /**
+     * Sync quantity with total available quantity from batches
+     * 
+     * @return bool
+     */
+    public function syncQuantityFromBatches(): bool
+    {
+        $livestock = $this->livestock;
+        if (!$livestock) {
+            return false;
+        }
+
+        $totalAvailable = $livestock->getTotalAvailableQuantity();
+
+        if ($this->quantity !== $totalAvailable) {
+            $this->quantity = $totalAvailable;
+            return $this->save();
+        }
+
+        return true;
+    }
+
+    /**
+     * Get quantity breakdown from batches
+     * 
+     * @return array
+     */
+    public function getQuantityBreakdownFromBatches(): array
+    {
+        $livestock = $this->livestock;
+        if (!$livestock) {
+            return [];
+        }
+
+        return $livestock->getOverallQuantityBreakdown();
+    }
+
+    /**
+     * Check if current livestock has available quantity
+     * 
+     * @return bool
+     */
+    public function hasAvailableQuantity(): bool
+    {
+        return $this->quantity > 0;
+    }
+
+    /**
+     * Get availability percentage
+     * 
+     * @return float
+     */
+    public function getAvailabilityPercentage(): float
+    {
+        $livestock = $this->livestock;
+        if (!$livestock) {
+            return 0;
+        }
+
+        return $livestock->getOverallAvailabilityPercentage();
+    }
+
+    /**
+     * Get availability status
+     * 
+     * @return string
+     */
+    public function getAvailabilityStatus(): string
+    {
+        $livestock = $this->livestock;
+        if (!$livestock) {
+            return 'unknown';
+        }
+
+        return $livestock->getOverallAvailabilityStatus();
+    }
 }

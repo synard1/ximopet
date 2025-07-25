@@ -129,8 +129,56 @@ document
         });
     });
 
-// Listen for 'success' event emitted by Livewire
-Livewire.on("success", (message) => {
-    // Reload the suppliers-table datatable
-    LaravelDataTables["suppliers-table"].ajax.reload();
+// ✅ IMPROVED STATUS UPDATE HANDLER - Using event delegation for dynamic content
+$(document).on("change", '[data-kt-action="update_status"]', function (e) {
+    if (this.disabled) return;
+
+    const mutationId = this.getAttribute("data-kt-transaction-id");
+    const status = this.value;
+    const current = this.getAttribute("data-current");
+
+    console.log("Status change triggered:", { mutationId, status, current });
+
+    if (status === "cancelled" || status === "completed") {
+        lastStatusSelect = this;
+        document.getElementById("statusIdInput").value = mutationId;
+        document.getElementById("statusValueInput").value = status;
+        document.getElementById("notesInput").value = "";
+        $("#notesModal").modal("show");
+        this.value = current; // Reset to current value until modal is submitted
+    } else {
+        // Show immediate feedback notification if available
+        if (
+            typeof window.SupplyPurchaseDataTableNotifications !==
+                "undefined" &&
+            typeof window.SupplyPurchaseDataTableNotifications
+                .showStatusChangeNotification === "function"
+        ) {
+            window.SupplyPurchaseDataTableNotifications.showStatusChangeNotification(
+                {
+                    transactionId: mutationId,
+                    oldStatus: current,
+                    newStatus: status,
+                    type: "info",
+                    title: "Status Change Processing",
+                    message: `Updating status from ${current} to ${status}...`,
+                }
+            );
+        }
+        console.log("mutationId", mutationId);
+        console.log("status", status);
+        console.log("notes", "");
+
+        Livewire.dispatch("updateStatusSupplyMutation", {
+            mutationId: mutationId,
+            newStatus: status,
+            notes: "",
+        });
+    }
 });
+
+// // Listen for 'success' event emitted by Livewire
+// Livewire.on("success", (message) => {
+//     // Reload the suppliers-table datatable
+//     LaravelDataTables["suppliers-table"].ajax.reload();
+// });

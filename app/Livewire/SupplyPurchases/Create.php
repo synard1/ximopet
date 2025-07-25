@@ -6,6 +6,7 @@ use App\Services\AuditTrailService;
 use App\Events\SupplyPurchaseStatusChanged;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Auth;
 
 use App\Models\CurrentSupply;
 use Livewire\Component;
@@ -30,6 +31,9 @@ use function App\Helpers\logDebugIfDebug;
 use function App\Helpers\logWarningIfDebug;
 use function App\Helpers\logErrorIfDebug;
 use App\Services\SupplyPurchaseIntegrityService;
+use App\Services\SupplyStockManagementService;
+use App\Services\SupplyMetadataService;
+use App\Services\Supply\SupplyNumberGeneratorService;
 
 class Create extends Component
 {
@@ -50,6 +54,17 @@ class Create extends Component
     public $errorItems = [];
 
     public bool $withHistory = false; // ← Tambahkan ini di atas class Livewire
+
+    public $stockSummary = null;
+
+    protected $stockManagementService;
+    protected $metadataService;
+
+    public function boot(SupplyStockManagementService $stockManagementService, SupplyMetadataService $metadataService)
+    {
+        $this->stockManagementService = $stockManagementService;
+        $this->metadataService = $metadataService;
+    }
 
     // protected $listeners = [
     //     'deleteSupplyPurchaseBatch' => 'deleteSupplyPurchaseBatch',
@@ -77,8 +92,8 @@ class Create extends Component
         ];
 
         // Add user-specific notification listener dynamically
-        if (auth()->check()) {
-            $baseListeners['echo-notification:App.Models.User.' . auth()->id()] = 'handleUserNotification';
+        if (Auth::check()) {
+            $baseListeners['echo-notification:App.Models.User.' . Auth::user()->id] = 'handleUserNotification';
         }
 
         return $baseListeners;
@@ -175,8 +190,8 @@ class Create extends Component
                 'expedition_id' => $this->expedition_id ?? null,
                 'expedition_fee' => $this->expedition_fee ?? 0,
                 'status' => $this->pembelianId ? null : SupplyPurchaseBatch::STATUS_DRAFT, // Set initial status for new batches
-                'created_by' => auth()->id(),
-                'updated_by' => auth()->id(),
+                'created_by' => Auth::user()->id,
+                'updated_by' => Auth::user()->id,
             ];
 
             $batch = SupplyPurchaseBatch::updateOrCreate(
@@ -185,6 +200,21 @@ class Create extends Component
             );
 
             Log::info('Supply Purchase Batch saved or updated with ID: ' . $batch->id);
+
+            // Penomoran otomatis jika belum ada
+            if (empty($batch->number) || empty($batch->number_full)) {
+                $numbering = SupplyNumberGeneratorService::generateNumber('supply_purchase_batches', $batch->date ?? now(), [
+                    // context tambahan jika perlu
+                ]);
+                $batch->number = $numbering['number'];
+                $batch->number_full = $numbering['full_number'];
+                $batch->save();
+                Log::info('Generated numbering for SupplyPurchaseBatch', [
+                    'batch_id' => $batch->id,
+                    'number' => $batch->number,
+                    'number_full' => $batch->number_full
+                ]);
+            }
 
             // Buat key yang digunakan untuk cek data yang tidak lagi dipakai
             $newItemKeys = collect($this->items)->map(fn($item) => $item['supply_id'] . '-' . $item['unit_id'])->toArray();
@@ -239,8 +269,8 @@ class Create extends Component
                         'price_per_converted_unit' => $item['unit_id'] !== $smallestUnit['unit_id']
                             ? round($item['price_per_unit'] * ($smallestUnit['value'] / $selectedUnit['value']), 2)
                             : $item['price_per_unit'],
-                        'created_by' => auth()->id(),
-                        'updated_by' => auth()->id(),
+                        'created_by' => Auth::user()->id,
+                        'updated_by' => Auth::user()->id,
                     ]
                 );
 
@@ -289,6 +319,40 @@ class Create extends Component
     }
 
     /**
+     * Update number and number_full if date is changed (Livewire lifecycle)
+     */
+    public function updatedDate($value)
+    {
+        if (!$this->pembelianId) {
+            // Only update if editing existing batch
+            return;
+        }
+        $batch = \App\Models\SupplyPurchaseBatch::find($this->pembelianId);
+        if (!$batch) {
+            Log::warning('updatedDate: Batch not found for pembelianId ' . $this->pembelianId);
+            return;
+        }
+        if ($batch->date && $batch->date->format('Y-m-d') === $value) {
+            // No change in date
+            return;
+        }
+        // Update date and regenerate number/number_full
+        $batch->date = $value;
+        $numbering = SupplyNumberGeneratorService::generateNumber('supply_purchase_batches', $value, []);
+        $batch->number = $numbering['number'];
+        $batch->number_full = $numbering['full_number'];
+        $batch->save();
+        Log::info('updatedDate: Updated number and number_full for batch ID ' . $batch->id, [
+            'date' => $value,
+            'number' => $batch->number,
+            'number_full' => $batch->number_full
+        ]);
+        // Optionally, update the local property if needed
+        // $this->number = $batch->number;
+        // $this->number_full = $batch->number_full;
+    }
+
+    /**
      * Process stock arrival - create SupplyStock and update CurrentSupply
      * This method is called when status changes to 'arrived'
      */
@@ -303,10 +367,37 @@ class Create extends Component
                 $supply = Supply::findOrFail($purchase->supply_id);
                 $farm = Farm::findOrFail($purchase->farm_id);
 
-                // Create or update SupplyStock
+                // Build metadata for purchase
+                $supplierName = $batch->supplier ? $batch->supplier->name : null;
+                $currentUserId = Auth::user()->id;
+                $metadata = $this->metadataService->buildPurchaseMetadata([
+                    'purchase_id' => $purchase->id,
+                    'invoice_number' => $batch->invoice_number,
+                    'supplier_id' => $batch->supplier_id,
+                    'supplier_name' => $supplierName,
+                    'purchase_date' => $batch->date,
+                    'delivery_date' => $batch->date, // Using batch date as delivery date
+                    'quantity' => $purchase->converted_quantity,
+                    'notes' => $batch->notes,
+                    'quality_passed' => true, // Default to passed for arrived items
+                    'quality_checked_by' => $currentUserId,
+                    'tags' => ['purchase', 'arrived'],
+                    'custom_fields' => [
+                        'batch_id' => $batch->id,
+                        'do_number' => $batch->do_number,
+                        'expedition_id' => $batch->expedition_id,
+                        'expedition_fee' => $batch->expedition_fee,
+                        'unit_id' => $purchase->unit_id,
+                        'converted_unit' => $purchase->converted_unit,
+                        'price_per_unit' => $purchase->price_per_unit,
+                        'price_per_converted_unit' => $purchase->price_per_converted_unit,
+                    ]
+                ]);
+
+                // Create or update SupplyStock with metadata
                 $supplyStock = SupplyStock::updateOrCreate(
                     [
-                        'livestock_id' => $this->livestock_id,
+                        'livestock_id' => $this->livestock_id ?? null,
                         'farm_id' => $purchase->farm_id,
                         'supply_id' => $purchase->supply_id,
                         'supply_purchase_id' => $purchase->id,
@@ -318,12 +409,18 @@ class Create extends Component
                         'quantity_in' => $purchase->converted_quantity,
                         'quantity_mutated' => 0,
                         'quantity_used' => 0,
-                        'created_by' => auth()->id(),
-                        'updated_by' => auth()->id(),
+                        'quantity_reserved' => 0,
+                        'quantity_available' => $purchase->converted_quantity,
+                        'metadata' => $metadata,
+                        'created_by' => Auth::user()->id,
+                        'updated_by' => Auth::user()->id,
                     ]
                 );
 
-                Log::info('Created/Updated SupplyStock for Purchase ID: ' . $purchase->id);
+                Log::info('Created/Updated SupplyStock with metadata for Purchase ID: ' . $purchase->id, [
+                    'stock_id' => $supplyStock->id,
+                    'metadata_summary' => $supplyStock->metadata_summary
+                ]);
 
                 // Recalculate and update CurrentSupply
                 $this->recalculateCurrentSupply($farm, $supply);
@@ -341,8 +438,6 @@ class Create extends Component
             ]);
             throw $e;
         }
-
-        // dd('supplyStock', $supplyStock);
     }
 
     /**
@@ -516,7 +611,7 @@ class Create extends Component
 
     public function render()
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $companyId = $user->company_id;
         $isSuperAdmin = $user->hasRole('SuperAdmin');
         $isCompanyRole = $user->hasAnyRole(['Supervisor', 'Manager', 'Administrator']);
@@ -600,6 +695,23 @@ class Create extends Component
             DB::beginTransaction();
 
             $batch = SupplyPurchaseBatch::with(['supplyPurchases.supply'])->findOrFail($batchId);
+
+            // Check if any stock from this batch has been used in SupplyUsage
+            foreach ($batch->supplyPurchases as $purchase) {
+                $supplyStocks = SupplyStock::where('supply_purchase_id', $purchase->id)->get();
+                foreach ($supplyStocks as $supplyStock) {
+                    if ($supplyStock->supplyUsageDetails()->exists()) {
+                        Log::warning('Cancel blocked: Stock already used in SupplyUsage', [
+                            'batch_id' => $batchId,
+                            'supply_purchase_id' => $purchase->id,
+                            'supply_stock_id' => $supplyStock->id
+                        ]);
+                        $this->dispatch('error', 'Tidak dapat membatalkan pembelian karena sudah ada pemakaian supply pada transaksi lain.');
+                        DB::rollBack();
+                        return;
+                    }
+                }
+            }
 
             // Check if batch has ARRIVED status - need to handle stocks
             $hasStocks = $batch->status === SupplyPurchaseBatch::STATUS_ARRIVED;
@@ -796,11 +908,29 @@ class Create extends Component
         $notes = $notes ?? null;
         $oldStatus = $batch->status;
 
+        // Tambahkan validasi: tidak bisa cancel jika sudah ada pemakaian
+        if ($status === \App\Models\SupplyPurchaseBatch::STATUS_CANCELLED) {
+            foreach ($batch->supplyPurchases as $purchase) {
+                $supplyStocks = \App\Models\SupplyStock::where('supply_purchase_id', $purchase->id)->get();
+                foreach ($supplyStocks as $supplyStock) {
+                    if ($supplyStock->supplyUsageDetails()->exists()) {
+                        Log::warning('Cancel blocked (status change): Stock already used in SupplyUsage', [
+                            'batch_id' => $purchaseId,
+                            'supply_purchase_id' => $purchase->id,
+                            'supply_stock_id' => $supplyStock->id
+                        ]);
+                        $this->dispatch('error', 'Tidak dapat membatalkan pembelian karena sudah ada pemakaian supply pada transaksi lain.');
+                        return;
+                    }
+                }
+            }
+        }
+
         Log::info('Starting status update for Supply Purchase Batch', [
             'batch_id' => $batch->id,
             'old_status' => $oldStatus,
             'new_status' => $status,
-            'updated_by' => auth()->id(),
+            'updated_by' => Auth::user()->id,
             'notes' => $notes
         ]);
 
@@ -938,8 +1068,8 @@ class Create extends Component
                 'batch_id' => $batch->id,
                 'old_status' => $oldStatus,
                 'new_status' => $status,
-                'updated_by' => auth()->id(),
-                'updated_by_name' => auth()->user()->name,
+                'updated_by' => Auth::user()->id,
+                'updated_by_name' => Auth::user()->name,
                 'invoice_number' => $batch->invoice_number,
                 'requires_refresh' => $this->requiresRefresh($oldStatus, $status),
                 'priority' => $this->getPriority($oldStatus, $status),
@@ -965,7 +1095,7 @@ class Create extends Component
                     $batch,
                     $oldStatus,
                     $status,
-                    auth()->id(),
+                    Auth::user()->id,
                     $notes,
                     [
                         'source' => 'livewire_component',
@@ -980,7 +1110,7 @@ class Create extends Component
                     'batch_id' => $batch->id,
                     'old_status' => $oldStatus,
                     'new_status' => $status,
-                    'updated_by' => auth()->id()
+                    'updated_by' => Auth::user()->id
                 ]);
             } catch (\Exception $e) {
                 Log::error('Failed to fire SupplyPurchaseStatusChanged event', [
@@ -1011,7 +1141,7 @@ class Create extends Component
             'old_status' => $event['old_status'] ?? 'unknown',
             'new_status' => $event['new_status'] ?? 'unknown',
             'updated_by' => $event['updated_by'] ?? 'unknown',
-            'current_user' => auth()->id()
+            'current_user' => Auth::user()->id
         ]);
 
         try {
@@ -1029,14 +1159,14 @@ class Create extends Component
 
                 Log::info('Status change notification dispatched to user', [
                     'batch_id' => $event['batch_id'] ?? 'unknown',
-                    'user_id' => auth()->id()
+                    'user_id' => Auth::user()->id
                 ]);
             }
         } catch (\Exception $e) {
             Log::error('Error handling status change notification', [
                 'error' => $e->getMessage(),
                 'event' => $event,
-                'user_id' => auth()->id()
+                'user_id' => Auth::user()->id
             ]);
         }
     }
@@ -1048,7 +1178,7 @@ class Create extends Component
     {
         Log::info('Received user-specific notification', [
             'notification_type' => $notification['type'] ?? 'unknown',
-            'user_id' => auth()->id()
+            'user_id' => Auth::user()->id
         ]);
 
         try {
@@ -1067,7 +1197,7 @@ class Create extends Component
             Log::error('Error handling user notification', [
                 'error' => $e->getMessage(),
                 'notification' => $notification,
-                'user_id' => auth()->id()
+                'user_id' => Auth::user()->id
             ]);
         }
     }
@@ -1182,7 +1312,7 @@ class Create extends Component
         $newLabel = $statusLabels[$newStatus] ?? $newStatus;
         $supplier = Partner::find($batch->supplier_id);
 
-        return "Purchase {$batch->invoice_number} status changed from {$oldLabel} to {$newLabel} by " . auth()->user()->name . " from {$supplier->name}";
+        return "Purchase {$batch->invoice_number} status changed from {$oldLabel} to {$newLabel} by " . Auth::user()->name . " from {$supplier->name}";
     }
 
     /**
@@ -1243,8 +1373,8 @@ class Create extends Component
                 'data' => [
                     'batch_id' => $batch->id,
                     'invoice_number' => $batch->invoice_number,
-                    'updated_by' => auth()->id(),
-                    'updated_by_name' => auth()->user()->name,
+                    'updated_by' => Auth::user()->id,
+                    'updated_by_name' => Auth::user()->name,
                     'old_status' => $notificationData['old_status'],
                     'new_status' => $notificationData['new_status'],
                     'timestamp' => $notificationData['timestamp'],
@@ -1262,13 +1392,13 @@ class Create extends Component
                 Log::info('Successfully stored notification for SSE bridge', [
                     'batch_id' => $batch->id,
                     'notification_id' => $result['id'],
-                    'updated_by' => auth()->id(),
+                    'updated_by' => Auth::user()->id,
                     'sse_system' => 'active'
                 ]);
             } else {
                 Log::warning('Failed to store SSE notification after retries', [
                     'batch_id' => $batch->id,
-                    'updated_by' => auth()->id()
+                    'updated_by' => Auth::user()->id
                 ]);
             }
         } catch (\Exception $e) {
@@ -1442,7 +1572,7 @@ class Create extends Component
                 'data' => [
                     'action' => 'created',
                     'timestamp' => now()->toISOString(),
-                    'created_by' => auth()->user()->name
+                    'created_by' => Auth::user()->name
                 ]
             ];
 
@@ -1465,7 +1595,7 @@ class Create extends Component
             'data' => [
                 'test' => true,
                 'component' => 'supply-purchases.create',
-                'user' => auth()->user()->name,
+                'user' => Auth::user()->name,
                 'timestamp' => now()->toISOString()
             ]
         ];
@@ -1481,8 +1611,91 @@ class Create extends Component
         ]);
 
         Log::info('Test notification sent from Livewire component', [
-            'user_id' => auth()->id(),
+            'user_id' => Auth::user()->id,
             'timestamp' => now()->toISOString()
         ]);
+    }
+
+    /**
+     * Example: Create supply stock with metadata after purchase
+     */
+    public function createSupplyStockWithMetadata()
+    {
+        // Example data for purchase
+        $purchaseData = [
+            'farm_id' => $this->farm_id,
+            'supply_id' => $this->supply_id,
+            'quantity' => $this->quantity,
+            'purchase_id' => $this->purchase_id,
+            'invoice_number' => $this->invoice_number,
+            'supplier_id' => $this->supplier_id,
+            'supplier_name' => $this->supplier_name,
+            'purchase_date' => $this->purchase_date,
+            'delivery_date' => $this->delivery_date,
+            'payment_terms' => $this->payment_terms,
+            'notes' => $this->notes,
+            'quality_passed' => $this->quality_passed ?? true,
+            'quality_checked_by' => Auth::user()->id,
+            'tags' => ['purchase', 'new_stock'],
+            'custom_fields' => [
+                'delivery_method' => $this->delivery_method ?? 'direct',
+                'payment_status' => $this->payment_status ?? 'pending'
+            ]
+        ];
+
+        // Create stock entry with metadata
+        $result = $this->stockManagementService->createPurchaseStock($purchaseData);
+
+        if ($result['success']) {
+            session()->flash('success', $result['message']);
+
+            // Log metadata summary
+            $metadataSummary = $this->metadataService->getMetadataSummary($result['stock_entry']->metadata);
+            Log::info('Supply purchase created with metadata', $metadataSummary);
+        } else {
+            session()->flash('error', $result['error']);
+        }
+    }
+
+    /**
+     * Example: Get stock summary with metadata
+     */
+    public function getStockSummaryWithMetadata()
+    {
+        $summary = $this->stockManagementService->getStockSummary($this->farm_id, $this->supply_id);
+
+        if ($summary['success']) {
+            $this->stockSummary = $summary['summary'];
+
+            // Display metadata summaries
+            foreach ($summary['summary']['metadata_summaries'] as $metadataSummary) {
+                Log::info('Stock metadata summary', $metadataSummary);
+            }
+        }
+    }
+
+    /**
+     * Example: Update stock with metadata history
+     */
+    public function updateStockWithMetadata($stockId, $action, $quantity, $additionalData = [])
+    {
+        $result = $this->stockManagementService->updateStockQuantity($stockId, $action, $quantity, $additionalData);
+
+        if ($result['success']) {
+            session()->flash('success', $result['message']);
+
+            // Get updated metadata
+            $updatedStock = $result['stock'];
+            $metadataSummary = $this->metadataService->getMetadataSummary($updatedStock->metadata);
+
+            Log::info('Stock updated with metadata', [
+                'stock_id' => $stockId,
+                'action' => $action,
+                'quantity' => $quantity,
+                'metadata_summary' => $metadataSummary
+            ]);
+        } else {
+            session()->flash('error', $result['error']);
+        }
     }
 }

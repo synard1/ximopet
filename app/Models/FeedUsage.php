@@ -22,6 +22,8 @@ class FeedUsage extends BaseModel
         'notes',
         'total_quantity',
         'total_cost',
+        'number',
+        'number_full',
         'created_by',
         'updated_by',
     ];

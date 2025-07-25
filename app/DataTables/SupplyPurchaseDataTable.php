@@ -490,10 +490,11 @@ class SupplyPurchaseDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex', 'No.')
-                ->title('No.')
-                ->addClass('text-center')
-                ->width(50),
+            // Column::computed('DT_RowIndex', 'No.')
+            //     ->title('No.')
+            //     ->addClass('text-center')
+            //     ->width(50),
+            Column::make('number_full')->title('Nomor')->searchable(true),
             Column::make('date')->title('Tanggal Pembelian')->searchable(true),
             // Column::make('no_sj')->title('No. SJ')->searchable(false),
             Column::make('invoice_number')->title('Invoice')->searchable(true),

@@ -5,9 +5,13 @@ namespace App\Services;
 use App\Models\FeedStock;
 use App\Models\FeedUsage;
 use App\Models\FeedUsageDetail;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+
+use App\Services\PurchaseTrackingService;
+
 
 class FeedUsageService
 {
@@ -55,7 +59,7 @@ class FeedUsageService
                     'feed_stock_id' => $stock->id,
                     'feed_id' => $feedId,
                     'quantity_taken' => $usedQty,
-                    'created_by' => auth()->id(),
+                    'created_by' => Auth::id(),
                 ]);
 
                 $requiredQty -= $usedQty;
@@ -149,6 +153,8 @@ class FeedUsageService
                     ->lockForUpdate()
                     ->get();
 
+                // dd($stocks);
+
                 Log::info("Found available stocks", [
                     'feed_id' => $feedId,
                     'stocks_count' => $stocks->count(),
@@ -163,6 +169,11 @@ class FeedUsageService
 
                     $available = $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated;
                     $qtyToTake = min($available, $remainingQty);
+
+                    $purchaseInfo = PurchaseTrackingService::getFeedPurchaseInfo($stock);
+
+
+                    // dd($info);
 
                     // Update stock usage
                     $stock->quantity_used += $qtyToTake;
@@ -209,9 +220,12 @@ class FeedUsageService
                                 'conversion_factor' => $item['conversion_factor'] ?? 1,
                             ],
                             'purchase_info' => [
-                                'batch_id' => $stock->feedPurchase->batch->id ?? null,
-                                'batch_number' => $stock->feedPurchase->batch->invoice_number ?? null,
-                                'supplier' => $stock->feedPurchase->batch->supplier->name ?? 'Unknown',
+                                'purchase_id' => $purchaseInfo['purchase_id'] ?? null,
+                                'invoice_number' => $purchaseInfo['invoice_number'] ?? null,
+                                'do_number' => $purchaseInfo['do_number'] ?? null,
+                                'supplier' => $purchaseInfo['supplier'] ?? 'Unknown',
+                                'expedition' => $purchaseInfo['expedition'] ?? null,
+                                'purchase_date' => $purchaseInfo['purchase_date'] ?? null,
                             ],
                             'current_feed_info' => [
                                 'id' => $currentFeed->id ?? null,
@@ -219,10 +233,10 @@ class FeedUsageService
                                 'quantity_reduced' => $qtyToTake,
                             ],
                             'created_at' => now()->toIso8601String(),
-                            'created_by' => auth()->id(),
-                            'created_by_name' => auth()->user()->name ?? 'Unknown User',
+                            'created_by' => Auth::id(),
+                            'created_by_name' => Auth::user()->name ?? 'Unknown User',
                         ],
-                        'created_by' => auth()->id(),
+                        'created_by' => Auth::id(),
                     ]);
 
                     $stocksUsed[] = [
@@ -266,8 +280,8 @@ class FeedUsageService
                     'processed_feeds' => $processedFeeds,
                     'total_details' => $detailsCount,
                     'processed_at' => now()->toIso8601String(),
-                    'processed_by' => auth()->id(),
-                    'processed_by_name' => auth()->user()->name ?? 'Unknown User',
+                    'processed_by' => Auth::id(),
+                    'processed_by_name' => Auth::user()->name ?? 'Unknown User',
                 ]),
             ]);
 

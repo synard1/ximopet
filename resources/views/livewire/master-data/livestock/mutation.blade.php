@@ -62,7 +62,7 @@
                 <label class="form-label">Berat Total (gram)</label>
                 <input type="number" class="form-control @error('items.'.$index.'.weight') is-invalid @enderror"
                     step="0.01" wire:model="items.{{ $index }}.weight" placeholder="0" min="0.01"
-                    max="{{ $item['available_weight'] }}" readonly>
+                    max="{{ $item['available_weight'] }}" readonly value="{{ number_format($item['weight'] ?? 0, 2) }}">
                 @error('items.'.$index.'.weight')
                 <div class="invalid-feedback">{{ $message }}</div>
                 @enderror

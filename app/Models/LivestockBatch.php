@@ -30,6 +30,7 @@ class LivestockBatch extends BaseModel
         'quantity_depletion',
         'quantity_sales',
         'quantity_mutated',
+        'quantity_available',
         'initial_weight', // konversi nilai dari weight / initial_quantity jika weight_type = total
         'weight',
         'weight_type',
@@ -42,6 +43,8 @@ class LivestockBatch extends BaseModel
         'data',
         'status',
         'notes',
+        'number',
+        'number_full',
         'created_by',
         'updated_by',
         'livestock_purchase_item_id',
@@ -77,6 +80,23 @@ class LivestockBatch extends BaseModel
                         'history' => []
                     ];
                 }
+            }
+
+            // Set initial quantity_available
+            $model->quantity_available = $model->initial_quantity ?? 0;
+        });
+
+        static::updating(function ($model) {
+            // Auto-calculate quantity_available when any quantity field changes
+            if ($model->isDirty(['initial_quantity', 'quantity_depletion', 'quantity_sales', 'quantity_mutated'])) {
+                $model->quantity_available = $model->calculateQuantityAvailable();
+            }
+        });
+
+        static::saved(function ($model) {
+            // Ensure quantity_available is always up-to-date after save
+            if ($model->quantity_available !== $model->calculateQuantityAvailable()) {
+                $model->updateQuietly(['quantity_available' => $model->calculateQuantityAvailable()]);
             }
         });
     }
@@ -153,5 +173,114 @@ class LivestockBatch extends BaseModel
     public function getHistory()
     {
         return $this->data['history'] ?? [];
+    }
+
+    /**
+     * Calculate the available quantity for this batch
+     * Formula: initial_quantity - quantity_depletion - quantity_sales - quantity_mutated
+     * 
+     * @return int
+     */
+    public function calculateQuantityAvailable(): int
+    {
+        $initialQuantity = $this->initial_quantity ?? 0;
+        $depletionQuantity = $this->quantity_depletion ?? 0;
+        $salesQuantity = $this->quantity_sales ?? 0;
+        $mutatedQuantity = $this->quantity_mutated ?? 0;
+
+        $available = $initialQuantity - $depletionQuantity - $salesQuantity - $mutatedQuantity;
+
+        // Ensure quantity doesn't go negative
+        return max(0, $available);
+    }
+
+    /**
+     * Get the current available quantity (cached value)
+     * 
+     * @return int
+     */
+    public function getQuantityAvailable(): int
+    {
+        return $this->quantity_available ?? $this->calculateQuantityAvailable();
+    }
+
+    /**
+     * Force recalculate and update quantity_available
+     * 
+     * @return bool
+     */
+    public function recalculateQuantityAvailable(): bool
+    {
+        $newQuantity = $this->calculateQuantityAvailable();
+
+        if ($this->quantity_available !== $newQuantity) {
+            $this->quantity_available = $newQuantity;
+            return $this->save();
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if batch has available quantity
+     * 
+     * @return bool
+     */
+    public function hasAvailableQuantity(): bool
+    {
+        return $this->getQuantityAvailable() > 0;
+    }
+
+    /**
+     * Get batch status based on available quantity
+     * 
+     * @return string
+     */
+    public function getAvailabilityStatus(): string
+    {
+        $available = $this->getQuantityAvailable();
+
+        if ($available <= 0) {
+            return 'exhausted';
+        } elseif ($available <= ($this->initial_quantity * 0.1)) { // Less than 10%
+            return 'low';
+        } elseif ($available <= ($this->initial_quantity * 0.5)) { // Less than 50%
+            return 'medium';
+        } else {
+            return 'high';
+        }
+    }
+
+    /**
+     * Get percentage of available quantity
+     * 
+     * @return float
+     */
+    public function getAvailabilityPercentage(): float
+    {
+        if ($this->initial_quantity <= 0) {
+            return 0;
+        }
+
+        return round(($this->getQuantityAvailable() / $this->initial_quantity) * 100, 2);
+    }
+
+    /**
+     * Get detailed quantity breakdown
+     * 
+     * @return array
+     */
+    public function getQuantityBreakdown(): array
+    {
+        return [
+            'initial_quantity' => $this->initial_quantity ?? 0,
+            'quantity_depletion' => $this->quantity_depletion ?? 0,
+            'quantity_sales' => $this->quantity_sales ?? 0,
+            'quantity_mutated' => $this->quantity_mutated ?? 0,
+            'quantity_available' => $this->getQuantityAvailable(),
+            'availability_percentage' => $this->getAvailabilityPercentage(),
+            'availability_status' => $this->getAvailabilityStatus(),
+            'last_calculated' => now()->toDateTimeString()
+        ];
     }
 }

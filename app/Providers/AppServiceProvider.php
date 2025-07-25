@@ -34,6 +34,10 @@ class AppServiceProvider extends ServiceProvider
         // This allows us to easily swap implementations in the future.
         $this->app->bind(RecordingDataServiceInterface::class, RecordingDataService::class);
         $this->app->bind(RecordingPersistenceServiceInterface::class, RecordingPersistenceService::class);
+        $this->app->bind(
+            \App\Services\Recording\Contracts\RecordingSaleServiceInterface::class,
+            \App\Services\Recording\RecordingSaleService::class
+        );
     }
 
     /**

@@ -279,6 +279,11 @@ class SupplyUsageStockService
                 if ($supplyStock) {
                     $oldQuantityUsed = $supplyStock->quantity_used;
                     $supplyStock->increment('quantity_used', $change['required_change']);
+                    $supplyStock->updateAvailableQuantity();
+                    Log::info('SupplyUsageStockService: quantity_available updated', [
+                        'supply_stock_id' => $supplyStockId,
+                        'quantity_available' => $supplyStock->quantity_available
+                    ]);
                     $newQuantityUsed = $supplyStock->quantity_used;
 
                     $result['stock_actions'][] = [

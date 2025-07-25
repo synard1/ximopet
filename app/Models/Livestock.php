@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use App\Traits\LivestockLockCheck;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class Livestock extends BaseModel
 {
@@ -73,6 +74,8 @@ class Livestock extends BaseModel
         'notes',
         'status',
         'data',
+        'number',
+        'number_full',
         'created_by',
         'updated_by',
     ];
@@ -302,6 +305,122 @@ class Livestock extends BaseModel
     }
 
     /**
+     * Get total available quantity from all batches
+     * 
+     * @return int
+     */
+    public function getTotalAvailableQuantity(): int
+    {
+        return $this->batches()
+            ->where('status', 'active')
+            ->sum('quantity_available');
+    }
+
+    /**
+     * Get total initial quantity from all batches
+     * 
+     * @return int
+     */
+    public function getTotalInitialQuantity(): int
+    {
+        return $this->batches()
+            ->where('status', 'active')
+            ->sum('initial_quantity');
+    }
+
+    /**
+     * Get total depletion quantity from all batches
+     * 
+     * @return int
+     */
+    public function getTotalDepletionQuantity(): int
+    {
+        return $this->batches()
+            ->where('status', 'active')
+            ->sum('quantity_depletion');
+    }
+
+    /**
+     * Get total sales quantity from all batches
+     * 
+     * @return int
+     */
+    public function getTotalSalesQuantity(): int
+    {
+        return $this->batches()
+            ->where('status', 'active')
+            ->sum('quantity_sales');
+    }
+
+    /**
+     * Get total mutated quantity from all batches
+     * 
+     * @return int
+     */
+    public function getTotalMutatedQuantity(): int
+    {
+        return $this->batches()
+            ->where('status', 'active')
+            ->sum('quantity_mutated');
+    }
+
+    /**
+     * Get availability percentage across all batches
+     * 
+     * @return float
+     */
+    public function getOverallAvailabilityPercentage(): float
+    {
+        $totalInitial = $this->getTotalInitialQuantity();
+        if ($totalInitial <= 0) {
+            return 0;
+        }
+
+        return round(($this->getTotalAvailableQuantity() / $totalInitial) * 100, 2);
+    }
+
+    /**
+     * Get overall availability status
+     * 
+     * @return string
+     */
+    public function getOverallAvailabilityStatus(): string
+    {
+        $percentage = $this->getOverallAvailabilityPercentage();
+
+        if ($percentage <= 0) {
+            return 'exhausted';
+        } elseif ($percentage <= 10) {
+            return 'low';
+        } elseif ($percentage <= 50) {
+            return 'medium';
+        } else {
+            return 'high';
+        }
+    }
+
+    /**
+     * Get detailed quantity breakdown for all batches
+     * 
+     * @return array
+     */
+    public function getOverallQuantityBreakdown(): array
+    {
+        return [
+            'total_initial_quantity' => $this->getTotalInitialQuantity(),
+            'total_quantity_depletion' => $this->getTotalDepletionQuantity(),
+            'total_quantity_sales' => $this->getTotalSalesQuantity(),
+            'total_quantity_mutated' => $this->getTotalMutatedQuantity(),
+            'total_quantity_available' => $this->getTotalAvailableQuantity(),
+            'overall_availability_percentage' => $this->getOverallAvailabilityPercentage(),
+            'overall_availability_status' => $this->getOverallAvailabilityStatus(),
+            'batches_count' => $this->batches()->where('status', 'active')->count(),
+            'active_batches_count' => $this->batches()->where('status', 'active')->where('quantity_available', '>', 0)->count(),
+            'last_calculated' => now()->toDateTimeString()
+        ];
+    }
+
+    /**
      * Get default recording method configuration
      */
     public static function getDefaultRecordingConfig(): array
@@ -401,7 +520,7 @@ class Livestock extends BaseModel
     {
         $query = $this->batches()
             ->where('status', 'active')
-            ->whereRaw('(initial_quantity - quantity_depletion - quantity_sales - quantity_mutated) > 0');
+            ->where('quantity_available', '>', 0);
 
         switch ($depletionMethod) {
             case 'fifo':
@@ -1196,5 +1315,13 @@ class Livestock extends BaseModel
             'id', // Local key di Livestock
             'id' // Local key di FeedUsage
         );
+    }
+
+    public function setLastCostCalculatedAt(Carbon $timestamp)
+    {
+        $data = $this->data ?? [];
+        $data['last_cost_calculated_at'] = $timestamp->toDateTimeString();
+        $this->data = $data;
+        $this->save();
     }
 }

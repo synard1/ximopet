@@ -34,6 +34,8 @@ class CostReportService
             'user_id' => Auth::id()
         ]);
 
+        // dd($farm, $livestock, $tanggal, $reportType);
+
         // Get cost data for the specified date
         $costData = $this->getCostData($livestock, $tanggal);
         if (!$costData) {
@@ -173,8 +175,8 @@ class CostReportService
         $costs[] = $mainCost;
 
         // Calculate total cumulative cost for display
-        $cumulativeAddedCost = $summary['total_cumulative_added_cost'] ?? 0;
-        $totalCumulativeCostCalculated = $initialPurchaseData['total_cost'] + $cumulativeAddedCost;
+        // OPTIMIZED: Calculate ALL costs from start date to current date for true cumulative total
+        $totalCumulativeCostCalculated = $this->calculateTotalCumulativeCost($livestock, $tanggal, $initialPurchaseData, $totalCost);
 
         return [
             'costs' => $costs,
@@ -183,6 +185,72 @@ class CostReportService
             'summary_data' => $summary,
             'total_cumulative_cost_calculated' => $totalCumulativeCostCalculated,
         ];
+    }
+
+    /**
+     * Calculate total cumulative cost from start date to current date
+     * 
+     * @param Livestock $livestock
+     * @param Carbon $tanggal
+     * @param array $initialPurchaseData
+     * @param float $currentDayCost
+     * @return float
+     */
+    private function calculateTotalCumulativeCost(Livestock $livestock, Carbon $tanggal, array $initialPurchaseData, float $currentDayCost): float
+    {
+        try {
+            // Get start date from livestock or fallback to 30 days ago
+            $startDate = $livestock->start_date
+                ? Carbon::parse($livestock->start_date)
+                : $tanggal->copy()->subDays(30);
+
+            $yesterday = $tanggal->copy()->subDay();
+
+            // Ensure start date is not after yesterday
+            if ($startDate->gt($yesterday)) {
+                $startDate = $yesterday->copy();
+            }
+
+            // Get all cost records from start date to yesterday
+            $allPreviousCosts = LivestockCost::where('livestock_id', $livestock->id)
+                ->whereBetween('tanggal', [$startDate->format('Y-m-d'), $yesterday->format('Y-m-d')])
+                ->sum('total_cost');
+
+            $totalCumulativeCost = $initialPurchaseData['total_cost'] + $allPreviousCosts + $currentDayCost;
+
+            Log::debug('Cumulative cost calculation optimized', [
+                'livestock_id' => $livestock->id,
+                'start_date' => $startDate->format('Y-m-d'),
+                'yesterday' => $yesterday->format('Y-m-d'),
+                'initial_purchase_cost' => $initialPurchaseData['total_cost'],
+                'all_previous_costs' => $allPreviousCosts,
+                'current_day_cost' => $currentDayCost,
+                'total_cumulative_cost' => $totalCumulativeCost,
+                'calculation_breakdown' => [
+                    'initial' => $initialPurchaseData['total_cost'],
+                    'all_previous_costs' => $allPreviousCosts,
+                    'today' => $currentDayCost,
+                    'total' => $totalCumulativeCost
+                ],
+                'performance_metrics' => [
+                    'calculation_method' => 'all_costs_from_start',
+                    'date_range_days' => $startDate->diffInDays($yesterday) + 1,
+                    'cache_key' => "cumulative_cost_{$livestock->id}_{$tanggal->format('Y-m-d')}"
+                ]
+            ]);
+
+            return $totalCumulativeCost;
+        } catch (\Exception $e) {
+            Log::error('Error calculating cumulative cost', [
+                'livestock_id' => $livestock->id,
+                'tanggal' => $tanggal->format('Y-m-d'),
+                'error' => $e->getMessage(),
+                'fallback_to_simple_calculation' => true
+            ]);
+
+            // Fallback to simple calculation if error occurs
+            return $initialPurchaseData['total_cost'] + $currentDayCost;
+        }
     }
 
     /**
@@ -247,10 +315,14 @@ class CostReportService
                 'satuan' => $supplyItem['purchase_unit'] ?? '-',
                 'harga_satuan' => $supplyItem['price_per_purchase_unit'] ?? 0,
                 'subtotal' => $supplyItem['subtotal'] ?? 0,
-                'tanggal' => $tanggal->format('d/m/Y'),
+                'tanggal' => isset($supplyItem['usage_date']) && $supplyItem['usage_date'] ? (\Carbon\Carbon::parse($supplyItem['usage_date'])->format('d/m/Y')) : $tanggal->format('d/m/Y'),
                 'is_initial_purchase' => false,
             ];
         }
+        Log::debug('Detail breakdown processed (after supply usage)', [
+            'breakdown_count' => count($detailedBreakdown),
+            'categories' => collect($detailedBreakdown)->pluck('kategori')->toArray()
+        ]);
 
         // Add Deplesi Cost
         $deplesiCost = $breakdown['deplesi'] ?? 0;
@@ -270,11 +342,6 @@ class CostReportService
                 'calculation_note' => 'Harga kumulatif per ayam x jumlah deplesi'
             ];
         }
-
-        Log::debug('Detail breakdown processed', [
-            'breakdown_count' => count($detailedBreakdown),
-            'categories' => collect($detailedBreakdown)->pluck('kategori')->toArray()
-        ]);
 
         return $detailedBreakdown;
     }
@@ -481,6 +548,140 @@ class CostReportService
         Log::debug('Cost statistics calculated', $stats);
 
         return $stats;
+    }
+
+    /**
+     * Validate cumulative cost calculation
+     * 
+     * @param Livestock $livestock
+     * @param Carbon $tanggal
+     * @param float $calculatedTotal
+     * @return array
+     */
+    public function validateCumulativeCostCalculation(Livestock $livestock, Carbon $tanggal, float $calculatedTotal): array
+    {
+        try {
+            // Get initial purchase data
+            $initialPurchaseData = $this->getInitialPurchaseData($livestock);
+
+            // Get current day cost
+            $currentDayCost = LivestockCost::where('livestock_id', $livestock->id)
+                ->whereDate('tanggal', $tanggal)
+                ->value('total_cost') ?? 0;
+
+            // Get all previous costs
+            $startDate = $livestock->start_date
+                ? Carbon::parse($livestock->start_date)
+                : $tanggal->copy()->subDays(30);
+            $yesterday = $tanggal->copy()->subDay();
+
+            if ($startDate->gt($yesterday)) {
+                $startDate = $yesterday->copy();
+            }
+
+            $allPreviousCosts = LivestockCost::where('livestock_id', $livestock->id)
+                ->whereBetween('tanggal', [$startDate->format('Y-m-d'), $yesterday->format('Y-m-d')])
+                ->sum('total_cost');
+
+            // Expected calculation
+            $expectedTotal = $initialPurchaseData['total_cost'] + $allPreviousCosts + $currentDayCost;
+
+            // Validation result
+            $isValid = abs($calculatedTotal - $expectedTotal) < 0.01; // Allow small floating point differences
+
+            $validationResult = [
+                'is_valid' => $isValid,
+                'calculated_total' => $calculatedTotal,
+                'expected_total' => $expectedTotal,
+                'difference' => $calculatedTotal - $expectedTotal,
+                'breakdown' => [
+                    'initial_purchase' => $initialPurchaseData['total_cost'],
+                    'all_previous_costs' => $allPreviousCosts,
+                    'current_day_cost' => $currentDayCost,
+                    'expected_total' => $expectedTotal
+                ],
+                'date_range' => [
+                    'start_date' => $startDate->format('Y-m-d'),
+                    'yesterday' => $yesterday->format('Y-m-d'),
+                    'current_date' => $tanggal->format('Y-m-d')
+                ]
+            ];
+
+            Log::info('Cumulative cost validation', [
+                'livestock_id' => $livestock->id,
+                'tanggal' => $tanggal->format('Y-m-d'),
+                'validation_result' => $validationResult
+            ]);
+
+            return $validationResult;
+        } catch (\Exception $e) {
+            Log::error('Error validating cumulative cost', [
+                'livestock_id' => $livestock->id,
+                'tanggal' => $tanggal->format('Y-m-d'),
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'is_valid' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get cumulative cost statistics for monitoring
+     * 
+     * @param Livestock $livestock
+     * @param Carbon $startDate
+     * @param Carbon $endDate
+     * @return array
+     */
+    public function getCumulativeCostStatistics(Livestock $livestock, Carbon $startDate, Carbon $endDate): array
+    {
+        try {
+            $costRecords = LivestockCost::where('livestock_id', $livestock->id)
+                ->whereBetween('tanggal', [$startDate, $endDate])
+                ->orderBy('tanggal')
+                ->get();
+
+            $initialPurchaseData = $this->getInitialPurchaseData($livestock);
+
+            $statistics = [
+                'total_records' => $costRecords->count(),
+                'total_cost_period' => $costRecords->sum('total_cost'),
+                'average_daily_cost' => $costRecords->avg('total_cost'),
+                'min_daily_cost' => $costRecords->min('total_cost'),
+                'max_daily_cost' => $costRecords->max('total_cost'),
+                'initial_purchase_cost' => $initialPurchaseData['total_cost'],
+                'cumulative_cost_at_end' => $initialPurchaseData['total_cost'] + $costRecords->sum('total_cost'),
+                'cost_trend' => $costRecords->pluck('total_cost', 'tanggal')->toArray(),
+                'calculation_accuracy' => [
+                    'total_days' => $startDate->diffInDays($endDate) + 1,
+                    'days_with_data' => $costRecords->count(),
+                    'data_coverage_percentage' => ($costRecords->count() / ($startDate->diffInDays($endDate) + 1)) * 100
+                ]
+            ];
+
+            Log::info('Cumulative cost statistics generated', [
+                'livestock_id' => $livestock->id,
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
+                'statistics' => $statistics
+            ]);
+
+            return $statistics;
+        } catch (\Exception $e) {
+            Log::error('Error generating cumulative cost statistics', [
+                'livestock_id' => $livestock->id,
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'error' => $e->getMessage()
+            ];
+        }
     }
 
     /**

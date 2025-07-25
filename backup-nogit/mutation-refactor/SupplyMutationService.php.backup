@@ -1,0 +1,424 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\SupplyMutation;
+use App\Models\SupplyMutationItem;
+use App\Models\SupplyStock;
+use App\Models\CurrentSupply;
+use App\Models\Farm;
+use App\Models\Coop;
+use App\Models\Livestock;
+use App\Models\Supply;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Exception;
+
+class SupplyMutationService
+{
+    /**
+     * Process supply mutation with flexible destination handling
+     *
+     * @param array $mutationData
+     * @param array $items
+     * @param string|null $mutationId
+     * @param bool $withHistory
+     * @return SupplyMutation
+     */
+    public function processSupplyMutation(array $mutationData, array $items, ?string $mutationId = null, bool $withHistory = false): SupplyMutation
+    {
+        return DB::transaction(function () use ($mutationData, $items, $mutationId, $withHistory) {
+            Log::info('Starting supply mutation process', [
+                'mutationId' => $mutationId,
+                'withHistory' => $withHistory,
+                'destination_type' => $this->getDestinationType($mutationData),
+                'items_count' => count($items)
+            ]);
+
+            $isUpdate = !empty($mutationId);
+
+            // Validate destination configuration
+            $this->validateDestinationConfiguration($mutationData);
+
+            // Find or create mutation
+            $mutation = $isUpdate
+                ? SupplyMutation::findOrFail($mutationId)
+                : new SupplyMutation();
+
+            // Fill mutation data
+            $mutation->fill([
+                'id' => $mutationId ?? Str::uuid(),
+                'company_id' => auth()->user()->company_id,
+                'date' => $mutationData['date'],
+                'from_farm_id' => $mutationData['source_farm_id'],
+                'to_farm_id' => $mutationData['destination_farm_id'],
+                'from_livestock_id' => $mutationData['source_livestock_id'] ?? null,
+                'to_livestock_id' => $mutationData['destination_livestock_id'] ?? null,
+                'from_coop_id' => $mutationData['source_coop_id'] ?? null,
+                'to_coop_id' => $mutationData['destination_coop_id'] ?? null,
+                'status' => $mutationData['status'] ?? 'pending',
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+            ]);
+
+            if (!$isUpdate) {
+                $mutation->save();
+                Log::info('New supply mutation created', ['mutationId' => $mutation->id]);
+            } else {
+                $mutation->update();
+                Log::info('Existing supply mutation updated', ['mutationId' => $mutation->id]);
+
+                // Handle old mutation items based on history preference
+                if ($withHistory) {
+                    // Keep old items for audit trail
+                    Log::info('Keeping old mutation items for audit trail');
+                } else {
+                    // Delete old items and create new ones
+                    $mutation->supplyMutationDetails()->delete();
+                    Log::info('Deleted old mutation items for replacement');
+                }
+            }
+
+            // Process mutation items
+            $this->processMutationItems($mutation, $items, $mutationData);
+
+            // Handle destination based on type
+            $this->handleDestination($mutation, $mutationData);
+
+            Log::info('Supply mutation process completed', [
+                'mutationId' => $mutation->id,
+                'destination_type' => $mutation->destination_type,
+                'items_processed' => $mutation->supplyMutationDetails()->count()
+            ]);
+
+            return $mutation;
+        });
+    }
+
+    /**
+     * Get destination type from mutation data
+     */
+    private function getDestinationType(array $mutationData): string
+    {
+        if (isset($mutationData['destination_coop_id']) && $mutationData['destination_coop_id']) {
+            return 'coop';
+        }
+        if (isset($mutationData['destination_livestock_id']) && $mutationData['destination_livestock_id']) {
+            return 'livestock';
+        }
+        return 'unknown';
+    }
+
+    /**
+     * Validate destination configuration
+     */
+    private function validateDestinationConfiguration(array $mutationData): void
+    {
+        $hasCoopDestination = isset($mutationData['destination_coop_id']) && $mutationData['destination_coop_id'];
+        $hasLivestockDestination = isset($mutationData['destination_livestock_id']) && $mutationData['destination_livestock_id'];
+
+        if ($hasCoopDestination && $hasLivestockDestination) {
+            throw new Exception('Cannot specify both coop and livestock destination simultaneously');
+        }
+
+        if (!$hasCoopDestination && !$hasLivestockDestination) {
+            throw new Exception('Must specify either coop or livestock destination');
+        }
+
+        // Validate destination exists
+        if ($hasCoopDestination) {
+            $coop = Coop::find($mutationData['destination_coop_id']);
+            if (!$coop) {
+                throw new Exception('Destination coop not found');
+            }
+        }
+
+        if ($hasLivestockDestination) {
+            $livestock = Livestock::find($mutationData['destination_livestock_id']);
+            if (!$livestock) {
+                throw new Exception('Destination livestock not found');
+            }
+        }
+    }
+
+    /**
+     * Process mutation items
+     */
+    private function processMutationItems(SupplyMutation $mutation, array $items, array $mutationData): void
+    {
+        foreach ($items as $item) {
+            $supplyId = $item['item_id'];
+            $unitId = $item['unit_id'];
+            $inputQty = $item['quantity'];
+
+            // Get supply and convert to smallest unit
+            $supply = Supply::findOrFail($supplyId);
+            $conversionRate = $supply->conversionUnits()
+                ->where('conversion_unit_id', $unitId)
+                ->value('conversion_value') ?: 1;
+
+            $requiredQty = $inputQty * $conversionRate;
+
+            // Get available stocks using FIFO
+            $stocks = SupplyStock::where('farm_id', $mutationData['source_farm_id'])
+                ->where('supply_id', $supplyId)
+                ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
+                ->orderBy('date')
+                ->orderBy('created_at')
+                ->lockForUpdate()
+                ->get();
+
+            $totalAvailable = $stocks->sum(fn($s) => $s->quantity_in - $s->quantity_used - $s->quantity_mutated);
+
+            if ($totalAvailable < $requiredQty) {
+                throw new Exception("Insufficient stock for supply: {$supply->name}. Required: {$requiredQty}, Available: {$totalAvailable}");
+            }
+
+            // Process FIFO stock allocation
+            $remainingQty = $requiredQty;
+            foreach ($stocks as $stock) {
+                if ($remainingQty <= 0) break;
+
+                $available = $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated;
+                $takeQty = min($available, $remainingQty);
+
+                // Update source stock
+                $stock->quantity_mutated += $takeQty;
+                $stock->save();
+
+                // Create mutation item
+                SupplyMutationItem::create([
+                    'supply_mutation_id' => $mutation->id,
+                    'supply_stock_id' => $stock->id,
+                    'supply_id' => $supplyId,
+                    'quantity' => $takeQty,
+                    'unit_id' => $unitId,
+                    'unit_price' => $stock->amount / $stock->quantity_in,
+                    'total_value' => ($stock->amount / $stock->quantity_in) * $takeQty,
+                    'created_by' => auth()->id(),
+                ]);
+
+                $remainingQty -= $takeQty;
+            }
+
+            // Update CurrentSupply for source
+            $this->updateCurrentSupply($mutationData['source_farm_id'], $supplyId);
+        }
+    }
+
+    /**
+     * Handle destination based on type
+     */
+    private function handleDestination(SupplyMutation $mutation, array $mutationData): void
+    {
+        $destinationType = $this->getDestinationType($mutationData);
+
+        if ($destinationType === 'coop') {
+            $this->handleCoopDestination($mutation, $mutationData);
+        } elseif ($destinationType === 'livestock') {
+            $this->handleLivestockDestination($mutation, $mutationData);
+        }
+    }
+
+    /**
+     * Handle coop destination
+     */
+    private function handleCoopDestination(SupplyMutation $mutation, array $mutationData): void
+    {
+        $coopId = $mutationData['destination_coop_id'];
+        $coop = Coop::findOrFail($coopId);
+        $farmId = $coop->farm_id;
+
+        Log::info('Processing coop destination', [
+            'coop_id' => $coopId,
+            'coop_name' => $coop->name,
+            'farm_id' => $farmId
+        ]);
+
+        // Create destination stocks for each mutation item
+        foreach ($mutation->supplyMutationDetails as $item) {
+            $supplyStock = SupplyStock::find($item->supply_stock_id);
+
+            // Create new stock at destination
+            SupplyStock::create([
+                'id' => Str::uuid(),
+                'farm_id' => $farmId,
+                'coop_id' => $coopId,
+                'supply_id' => $item->supply_id,
+                'supply_purchase_id' => $supplyStock->supply_purchase_id,
+                'date' => $mutation->date,
+                'source_type' => 'mutation',
+                'source_id' => $mutation->id,
+                'quantity_in' => $item->quantity,
+                'quantity_used' => 0,
+                'quantity_mutated' => 0,
+                'amount' => $item->total_value,
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        // Update CurrentSupply for destination
+        $this->updateCurrentSupplyForCoop($coopId, $mutation->supplyMutationDetails);
+
+        Log::info('Coop destination handled successfully', [
+            'coop_id' => $coopId,
+            'items_processed' => $mutation->supplyMutationDetails->count()
+        ]);
+    }
+
+    /**
+     * Handle livestock destination
+     */
+    private function handleLivestockDestination(SupplyMutation $mutation, array $mutationData): void
+    {
+        $livestockId = $mutationData['destination_livestock_id'];
+        $livestock = Livestock::findOrFail($livestockId);
+        $farmId = $livestock->farm_id;
+        $coopId = $livestock->coop_id;
+
+        Log::info('Processing livestock destination', [
+            'livestock_id' => $livestockId,
+            'livestock_name' => $livestock->name,
+            'farm_id' => $farmId,
+            'coop_id' => $coopId
+        ]);
+
+        // Create destination stocks for each mutation item
+        foreach ($mutation->supplyMutationDetails as $item) {
+            $supplyStock = SupplyStock::find($item->supply_stock_id);
+
+            // Create new stock at destination
+            SupplyStock::create([
+                'id' => Str::uuid(),
+                'farm_id' => $farmId,
+                'coop_id' => $coopId,
+                'livestock_id' => $livestockId,
+                'supply_id' => $item->supply_id,
+                'supply_purchase_id' => $supplyStock->supply_purchase_id,
+                'date' => $mutation->date,
+                'source_type' => 'mutation',
+                'source_id' => $mutation->id,
+                'quantity_in' => $item->quantity,
+                'quantity_used' => 0,
+                'quantity_mutated' => 0,
+                'amount' => $item->total_value,
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        // Update CurrentSupply for destination
+        $this->updateCurrentSupplyForLivestock($livestockId, $mutation->supplyMutationDetails);
+
+        Log::info('Livestock destination handled successfully', [
+            'livestock_id' => $livestockId,
+            'items_processed' => $mutation->supplyMutationDetails->count()
+        ]);
+    }
+
+    /**
+     * Update CurrentSupply for farm
+     */
+    private function updateCurrentSupply(string $farmId, string $supplyId): void
+    {
+        $totalQuantity = SupplyStock::where('farm_id', $farmId)
+            ->where('supply_id', $supplyId)
+            ->selectRaw('COALESCE(SUM(quantity_in - quantity_used - quantity_mutated), 0) as total')
+            ->value('total');
+
+        CurrentSupply::updateOrCreate(
+            ['farm_id' => $farmId, 'item_id' => $supplyId, 'type' => 'supply'],
+            [
+                'quantity' => $totalQuantity,
+                'updated_by' => auth()->id(),
+            ]
+        );
+    }
+
+    /**
+     * Update CurrentSupply for coop
+     */
+    private function updateCurrentSupplyForCoop(string $coopId, $mutationItems): void
+    {
+        foreach ($mutationItems as $item) {
+            $totalQuantity = SupplyStock::where('coop_id', $coopId)
+                ->where('supply_id', $item->supply_id)
+                ->selectRaw('COALESCE(SUM(quantity_in - quantity_used - quantity_mutated), 0) as total')
+                ->value('total');
+
+            CurrentSupply::updateOrCreate(
+                ['coop_id' => $coopId, 'item_id' => $item->supply_id, 'type' => 'supply'],
+                [
+                    'quantity' => $totalQuantity,
+                    'updated_by' => auth()->id(),
+                ]
+            );
+        }
+    }
+
+    /**
+     * Update CurrentSupply for livestock
+     */
+    private function updateCurrentSupplyForLivestock(string $livestockId, $mutationItems): void
+    {
+        foreach ($mutationItems as $item) {
+            $totalQuantity = SupplyStock::where('livestock_id', $livestockId)
+                ->where('supply_id', $item->supply_id)
+                ->selectRaw('COALESCE(SUM(quantity_in - quantity_used - quantity_mutated), 0) as total')
+                ->value('total');
+
+            CurrentSupply::updateOrCreate(
+                ['livestock_id' => $livestockId, 'item_id' => $item->supply_id, 'type' => 'supply'],
+                [
+                    'quantity' => $totalQuantity,
+                    'updated_by' => auth()->id(),
+                ]
+            );
+        }
+    }
+
+    /**
+     * Approve supply mutation
+     */
+    public function approveMutation(SupplyMutation $mutation, ?string $notes = null): void
+    {
+        if (!$mutation->canBeApproved()) {
+            throw new Exception('Mutation cannot be approved in current status');
+        }
+
+        $mutation->update([
+            'status' => 'approved',
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
+        ]);
+
+        Log::info('Supply mutation approved', [
+            'mutation_id' => $mutation->id,
+            'approved_by' => auth()->id(),
+            'notes' => $notes
+        ]);
+    }
+
+    /**
+     * Reject supply mutation
+     */
+    public function rejectMutation(SupplyMutation $mutation, string $reason): void
+    {
+        if (!$mutation->canBeRejected()) {
+            throw new Exception('Mutation cannot be rejected in current status');
+        }
+
+        $mutation->update([
+            'status' => 'rejected',
+            'rejected_by' => auth()->id(),
+            'rejected_at' => now(),
+            'rejected_reason' => $reason,
+        ]);
+
+        Log::info('Supply mutation rejected', [
+            'mutation_id' => $mutation->id,
+            'rejected_by' => auth()->id(),
+            'reason' => $reason
+        ]);
+    }
+}

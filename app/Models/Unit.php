@@ -43,4 +43,9 @@ class Unit extends BaseModel
     {
         return $this->hasMany(UnitConversion::class, 'conversion_unit_id', 'id');
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
 }

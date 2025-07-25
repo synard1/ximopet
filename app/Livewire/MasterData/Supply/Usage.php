@@ -25,12 +25,16 @@ use App\Services\Supply\SupplyStockService;
 use App\Services\SupplyUsageService;
 use App\Services\SupplyUsageStockService;
 use App\Jobs\UpdateSupplyUsageStockJob;
+use App\Services\Supply\SupplyNumberGeneratorService;
 // Import helper logging functions
 use function App\Helpers\logDebugIfDebug;
 use function App\Helpers\logInfoIfDebug;
 use function App\Helpers\logErrorIfDebug;
 use function App\Helpers\logWarningIfDebug;
 use App\Helpers\SupplyUsageStatusHelper;
+
+use App\Services\Recording\DTOs\RecordingDTO;
+use App\Services\Recording\RecordingPersistenceService;
 
 class Usage extends Component
 {
@@ -480,30 +484,112 @@ class Usage extends Component
     {
         if (!$this->farm_id) {
             $this->availableSupplies = [];
+            logDebugIfDebug('Usage@loadAvailableSupplies', [
+                'farm_id' => $this->farm_id,
+                'message' => 'No farm_id provided, availableSupplies set to empty array.',
+                'user_id' => Auth::id(),
+            ]);
             return;
         }
         $user = Auth::user();
         $supplyStockService = new SupplyStockService();
         $suppliesWithStock = $supplyStockService->getAvailableSupplyStocks($this->farm_id, $user, $this->usage_date);
-        $this->availableSupplies = $suppliesWithStock->map(function ($supplyStock) {
-            $availableQty = $supplyStock->quantity_in - $supplyStock->quantity_used - $supplyStock->quantity_mutated;
-            return [
-                'id' => $supplyStock->id,
-                'supply_id' => $supplyStock->supply_id,
-                'supply_name' => $supplyStock->supply->name ?? '',
-                'category' => $supplyStock->supply->supplyCategory->name ?? 'General',
-                'available_stock' => $availableQty,
-                'unit' => $supplyStock->supply->smallest_unit_name ?? 'pcs',
-                'units' => $this->getSupplyUnits($supplyStock->supply_id),
-                'batch_number' => $supplyStock->batch_number ?? '',
-                'expiry_date' => $supplyStock->expiry_date ?? '',
-            ];
-        })->toArray();
 
-        logDebugIfDebug('Usage@loadAvailableSupplies', [
+        // Log raw supplies before aggregation
+        logDebugIfDebug('Usage@loadAvailableSupplies: Raw supplies before aggregation', [
             'farm_id' => $this->farm_id,
+            'raw_count' => $suppliesWithStock->count(),
+            'raw_supplies' => $suppliesWithStock->map(function ($stock) {
+                return [
+                    'id' => $stock->id,
+                    'supply_id' => $stock->supply_id,
+                    'supply_name' => $stock->supply->name ?? 'Unknown',
+                    'quantity_in' => $stock->quantity_in,
+                    'quantity_used' => $stock->quantity_used,
+                    'quantity_mutated' => $stock->quantity_mutated,
+                    'available' => $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated,
+                ];
+            })->toArray(),
+        ]);
+
+        // Group supplies by supply_id to aggregate stocks
+        $groupedSupplies = $suppliesWithStock->groupBy('supply_id');
+
+        // Log grouping information
+        logDebugIfDebug('Usage@loadAvailableSupplies: Grouping information', [
+            'farm_id' => $this->farm_id,
+            'unique_supply_count' => $groupedSupplies->count(),
+            'grouping_details' => $groupedSupplies->map(function ($stocks, $supplyId) {
+                return [
+                    'supply_id' => $supplyId,
+                    'supply_name' => $stocks->first()->supply->name ?? 'Unknown',
+                    'stock_count' => $stocks->count(),
+                    'stock_ids' => $stocks->pluck('id')->toArray(),
+                    'total_quantity_in' => $stocks->sum('quantity_in'),
+                    'total_quantity_used' => $stocks->sum('quantity_used'),
+                    'total_quantity_mutated' => $stocks->sum('quantity_mutated'),
+                    'total_available' => $stocks->sum(function ($stock) {
+                        return $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated;
+                    }),
+                ];
+            })->toArray(),
+        ]);
+
+        $this->availableSupplies = $groupedSupplies->map(function ($supplyStocks, $supplyId) {
+            // Get the first supply stock for base data
+            $firstStock = $supplyStocks->first();
+            $supply = $firstStock->supply;
+
+            // Calculate aggregated quantities
+            $totalQuantityIn = $supplyStocks->sum('quantity_in');
+            $totalQuantityUsed = $supplyStocks->sum('quantity_used');
+            $totalQuantityMutated = $supplyStocks->sum('quantity_mutated');
+            $totalAvailableStock = $totalQuantityIn - $totalQuantityUsed - $totalQuantityMutated;
+
+            // Get all unique batch numbers and expiry dates
+            $batchNumbers = $supplyStocks->pluck('batch_number')->filter()->unique()->values()->toArray();
+            $expiryDates = $supplyStocks->pluck('expiry_date')->filter()->unique()->values()->toArray();
+
+            // Create aggregated supply entry
+            $aggregatedSupply = [
+                'id' => $firstStock->id, // Use first stock ID as representative
+                'supply_id' => $supplyId,
+                'supply_name' => $supply->name ?? '',
+                'category' => $supply->supplyCategory->name ?? 'General',
+                'available_stock' => $totalAvailableStock,
+                'unit' => $supply->smallest_unit_name ?? 'pcs',
+                'units' => $this->getSupplyUnits($supplyId),
+                'batch_number' => implode(', ', $batchNumbers), // Combine batch numbers
+                'expiry_date' => implode(', ', array_map(function ($date) {
+                    return $date instanceof \Carbon\Carbon ? $date->format('Y-m-d') : $date;
+                }, $expiryDates)), // Combine expiry dates
+                'quantity_in' => $totalQuantityIn,
+                'quantity_used' => $totalQuantityUsed,
+                'quantity_mutated' => $totalQuantityMutated,
+                // Additional metadata for debugging
+                'stock_count' => $supplyStocks->count(),
+                'stock_ids' => $supplyStocks->pluck('id')->toArray(),
+            ];
+
+            return $aggregatedSupply;
+        })->values()->toArray();
+
+        // Log final aggregated supplies
+        logDebugIfDebug('Usage@loadAvailableSupplies: Final aggregated supplies', [
+            'farm_id' => $this->farm_id,
+            'usage_date' => $this->usage_date,
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'user_roles' => $user->getRoleNames()->toArray(),
             'loaded_count' => count($this->availableSupplies),
             'supply_ids' => array_column($this->availableSupplies, 'id'),
+            'supply_names' => array_column($this->availableSupplies, 'supply_name'),
+            'categories' => array_column($this->availableSupplies, 'category'),
+            'batch_numbers' => array_column($this->availableSupplies, 'batch_number'),
+            'expiry_dates' => array_column($this->availableSupplies, 'expiry_date'),
+            'available_stocks' => array_column($this->availableSupplies, 'available_stock'),
+            'stock_counts' => array_column($this->availableSupplies, 'stock_count'),
+            'aggregated_details' => $this->availableSupplies,
         ]);
     }
 
@@ -513,6 +599,13 @@ class Usage extends Component
             return 0;
         }
 
+        // First check if this is an aggregated supply from availableSupplies
+        $aggregatedSupply = collect($this->availableSupplies)->firstWhere('id', $supplyStockId);
+        if ($aggregatedSupply) {
+            return $aggregatedSupply['available_stock'];
+        }
+
+        // Fallback to direct database query
         $supplyStock = SupplyStock::find($supplyStockId);
 
         if (!$supplyStock) {
@@ -576,19 +669,129 @@ class Usage extends Component
         }
     }
 
+    /**
+     * Get the best available stock ID for a given supply when user selects an aggregated supply
+     * This method will find the stock with the most available quantity
+     */
+    private function getBestAvailableStockId($supplyId, $requiredQuantity = 0)
+    {
+        if (!$supplyId) {
+            return null;
+        }
+
+        // Get all available stocks for this supply
+        $availableStocks = SupplyStock::where('supply_id', $supplyId)
+            ->where('farm_id', $this->farm_id)
+            ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
+            ->orderByRaw('(quantity_in - quantity_used - quantity_mutated) DESC') // Order by available quantity descending
+            ->get();
+
+        if ($availableStocks->isEmpty()) {
+            logWarningIfDebug('getBestAvailableStockId: No available stocks found', [
+                'supply_id' => $supplyId,
+                'farm_id' => $this->farm_id,
+                'required_quantity' => $requiredQuantity,
+            ]);
+            return null;
+        }
+
+        // Log available stocks for debugging
+        logDebugIfDebug('getBestAvailableStockId: Available stocks found', [
+            'supply_id' => $supplyId,
+            'farm_id' => $this->farm_id,
+            'required_quantity' => $requiredQuantity,
+            'available_stocks' => $availableStocks->map(function ($stock) {
+                return [
+                    'id' => $stock->id,
+                    'quantity_in' => $stock->quantity_in,
+                    'quantity_used' => $stock->quantity_used,
+                    'quantity_mutated' => $stock->quantity_mutated,
+                    'available' => $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated,
+                ];
+            })->toArray(),
+        ]);
+
+        // If no specific quantity required, return the stock with most available quantity
+        if ($requiredQuantity <= 0) {
+            $selectedStock = $availableStocks->first();
+            logDebugIfDebug('getBestAvailableStockId: Selected stock (no quantity requirement)', [
+                'supply_id' => $supplyId,
+                'selected_stock_id' => $selectedStock->id,
+                'selected_available' => $selectedStock->quantity_in - $selectedStock->quantity_used - $selectedStock->quantity_mutated,
+            ]);
+            return $selectedStock->id;
+        }
+
+        // Find the best stock that can fulfill the required quantity
+        foreach ($availableStocks as $stock) {
+            $availableQty = $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated;
+            if ($availableQty >= $requiredQuantity) {
+                logDebugIfDebug('getBestAvailableStockId: Selected stock (fulfills requirement)', [
+                    'supply_id' => $supplyId,
+                    'required_quantity' => $requiredQuantity,
+                    'selected_stock_id' => $stock->id,
+                    'selected_available' => $availableQty,
+                ]);
+                return $stock->id;
+            }
+        }
+
+        // If no single stock can fulfill the requirement, return the one with most available quantity
+        $selectedStock = $availableStocks->first();
+        logWarningIfDebug('getBestAvailableStockId: No stock can fulfill requirement, using best available', [
+            'supply_id' => $supplyId,
+            'required_quantity' => $requiredQuantity,
+            'selected_stock_id' => $selectedStock->id,
+            'selected_available' => $selectedStock->quantity_in - $selectedStock->quantity_used - $selectedStock->quantity_mutated,
+        ]);
+        return $selectedStock->id;
+    }
+
     public function updatedItems($value, $key)
     {
         [$index, $field] = explode('.', $key);
 
         if ($field === 'supply_stock_id' && $value) {
-            $supplyStock = SupplyStock::find($value);
-            if ($supplyStock) {
-                $this->items[$index]['supply_id'] = $supplyStock->supply_id;
-                $this->items[$index]['available_stock'] = $this->getAvailableStockFromSupplyStock($value);
-                $this->items[$index]['available_units'] = $this->getSupplyUnits($supplyStock->supply_id);
+            logDebugIfDebug('updatedItems: Supply stock selected', [
+                'index' => $index,
+                'selected_value' => $value,
+                'available_supplies_count' => count($this->availableSupplies),
+            ]);
+
+            // Find the selected supply from availableSupplies to get aggregated data
+            $selectedSupply = collect($this->availableSupplies)->firstWhere('id', $value);
+
+            if ($selectedSupply) {
+                logDebugIfDebug('updatedItems: Found aggregated supply', [
+                    'index' => $index,
+                    'selected_supply' => [
+                        'id' => $selectedSupply['id'],
+                        'supply_id' => $selectedSupply['supply_id'],
+                        'supply_name' => $selectedSupply['supply_name'],
+                        'available_stock' => $selectedSupply['available_stock'],
+                        'stock_count' => $selectedSupply['stock_count'],
+                        'stock_ids' => $selectedSupply['stock_ids'],
+                    ],
+                ]);
+
+                $this->items[$index]['supply_id'] = $selectedSupply['supply_id'];
+                $this->items[$index]['available_stock'] = $selectedSupply['available_stock'];
+                $this->items[$index]['available_units'] = $this->getSupplyUnits($selectedSupply['supply_id']);
                 $this->items[$index]['unit_id'] = ''; // Reset unit selection
-                $this->items[$index]['batch_number'] = $supplyStock->batch_number ?? '';
-                $this->items[$index]['expiry_date'] = $supplyStock->expiry_date ? $supplyStock->expiry_date->format('Y-m-d') : '';
+                $this->items[$index]['batch_number'] = $selectedSupply['batch_number'] ?? '';
+                $this->items[$index]['expiry_date'] = $selectedSupply['expiry_date'] ?? '';
+
+                // Get the best available stock ID for this supply
+                $bestStockId = $this->getBestAvailableStockId($selectedSupply['supply_id']);
+                if ($bestStockId) {
+                    logDebugIfDebug('updatedItems: Updated supply_stock_id with best available stock', [
+                        'index' => $index,
+                        'original_selected_id' => $value,
+                        'best_stock_id' => $bestStockId,
+                        'supply_id' => $selectedSupply['supply_id'],
+                    ]);
+                    $this->items[$index]['supply_stock_id'] = $bestStockId;
+                }
 
                 // Initialize validation for this item
                 $this->initializeItemValidation($index);
@@ -598,6 +801,32 @@ class Usage extends Component
                     // Always recalculate converted_quantity
                     $this->items[$index]['converted_quantity'] = $this->convertToSmallestUnit($this->items[$index]);
                     $this->validateItemStock($index);
+                }
+            } else {
+                logDebugIfDebug('updatedItems: Supply not found in aggregated supplies, using fallback', [
+                    'index' => $index,
+                    'selected_value' => $value,
+                ]);
+
+                // Fallback to original logic if not found in aggregated supplies
+                $supplyStock = SupplyStock::find($value);
+                if ($supplyStock) {
+                    $this->items[$index]['supply_id'] = $supplyStock->supply_id;
+                    $this->items[$index]['available_stock'] = $this->getAvailableStockFromSupplyStock($value);
+                    $this->items[$index]['available_units'] = $this->getSupplyUnits($supplyStock->supply_id);
+                    $this->items[$index]['unit_id'] = ''; // Reset unit selection
+                    $this->items[$index]['batch_number'] = $supplyStock->batch_number ?? '';
+                    $this->items[$index]['expiry_date'] = $supplyStock->expiry_date ? $supplyStock->expiry_date->format('Y-m-d') : '';
+
+                    // Initialize validation for this item
+                    $this->initializeItemValidation($index);
+
+                    // Re-validate if quantity exists
+                    if (!empty($this->items[$index]['quantity_taken'])) {
+                        // Always recalculate converted_quantity
+                        $this->items[$index]['converted_quantity'] = $this->convertToSmallestUnit($this->items[$index]);
+                        $this->validateItemStock($index);
+                    }
                 }
             }
         }
@@ -979,6 +1208,13 @@ class Usage extends Component
             return;
         }
 
+        // // Create a DTO to pass data to the service
+        // $recordingDTO = new RecordingDTO($this->all());
+
+        // $result = $this->recordingPersistenceService->saveRecording($recordingDTO);
+
+        // dd($result);
+
         $this->dispatch('success', 'Supply usage berhasil disimpan.');
         $this->close();
         logDebugIfDebug('Usage@save: Process finished successfully.');
@@ -1061,6 +1297,19 @@ class Usage extends Component
             'updated_by'   => Auth::id(),
         ]);
         logDebugIfDebug('Usage@createUsageWithService: Usage record created.', ['usage_id' => $usage->id]);
+
+        // Penomoran otomatis untuk SupplyUsage
+        if (empty($usage->number) || empty($usage->number_full)) {
+            $numbering = SupplyNumberGeneratorService::generateNumber('supply_usages', $usage->usage_date ?? now(), []);
+            $usage->number = $numbering['number'];
+            $usage->number_full = $numbering['full_number'];
+            $usage->save();
+            logDebugIfDebug('Generated numbering for SupplyUsage', [
+                'usage_id' => $usage->id,
+                'number' => $usage->number,
+                'number_full' => $usage->number_full
+            ]);
+        }
 
         // Create usage details without affecting stock (draft status)
         $this->createUsageDetails($usage);
@@ -1437,7 +1686,7 @@ class Usage extends Component
             $isSuperAdmin = $user && $user->hasRole('SuperAdmin');
             logDebugIfDebug('deleteSupplyUsage: Entry', [
                 'user_id' => $user ? $user->id : null,
-                'user_roles' => $user && method_exists($user, 'getRoleNames') ? $user->getRoleNames() : null,
+                'user_roles' => $user && property_exists($user, 'roles') ? (array) $user->roles : null,
                 'isSuperAdmin' => $isSuperAdmin,
                 'usage_id' => $usage->id,
                 'usage_status' => $usage->status,

@@ -13,15 +13,22 @@ class RecordingItem extends BaseModel
 {
     use HasFactory, SoftDeletes, HasUuids;
 
-    protected $fillable = [
+    /**
+     * This is a detail model that inherits company_id from Recording parent
+     * No need to handle company_id separately
+     */
+    protected $requiresCompanyId = false;
+
+    /**
+     * Additional fillable fields specific to this model
+     */
+    protected $additionalFillable = [
         'id',
         'recording_id',
         'type',
         'item_id',
         'quantity',
         'payload',
-        'created_by',
-        'updated_by',
     ];
 
     protected $casts = [
@@ -31,6 +38,6 @@ class RecordingItem extends BaseModel
 
     public function feed()
     {
-        return $this->belongsTo(Item::class,'item_id');
+        return $this->belongsTo(Item::class, 'item_id');
     }
 }

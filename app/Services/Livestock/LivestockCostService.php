@@ -32,10 +32,21 @@ class LivestockCostService
      * 
      * @param string $livestockId
      * @param string $tanggal
-     * @return \App\Models\LivestockCost
+     * @param bool $async
+     * @return \App\Models\LivestockCost|null
      */
-    public function calculateForDate($livestockId, $tanggal)
+    public function calculateForDate($livestockId, $tanggal, $async = false)
     {
+        // dd($livestockId, $tanggal, $async);
+        // if ($async) {
+        //     Log::info('Dispatching CalculateLivestockCostJob (async)', [
+        //         'livestock_id' => $livestockId,
+        //         'date' => $tanggal
+        //     ]);
+        //     \App\Jobs\CalculateLivestockCostJob::dispatch($livestockId, null, $tanggal);
+        //     return null;
+        // }
+
         $tanggal = Carbon::parse($tanggal)->format('Y-m-d');
 
         Log::info("🔄 Starting livestock cost calculation", [
@@ -43,15 +54,21 @@ class LivestockCostService
             'date' => $tanggal
         ]);
 
-        // Tambahkan pengecekan data sumber
+        // Check data availability
         $hasRecording = \App\Models\Recording::where('livestock_id', $livestockId)->whereDate('tanggal', $tanggal)->exists();
         $hasFeedUsage = \App\Models\FeedUsage::where('livestock_id', $livestockId)->whereDate('usage_date', $tanggal)->exists();
-        $hasSupplyUsage = \App\Models\SupplyUsage::where('livestock_id', $livestockId)->whereDate('usage_date', $tanggal)->exists();
+        $hasSupplyUsage = \App\Models\SupplyUsage::where('livestock_id', $livestockId)
+            ->whereDate('usage_date', $tanggal)
+            ->whereIn('status', [
+                \App\Models\SupplyUsage::STATUS_PENDING,
+                \App\Models\SupplyUsage::STATUS_IN_PROCESS,
+                \App\Models\SupplyUsage::STATUS_COMPLETED,
+                \App\Models\SupplyUsage::STATUS_PARTIALLY_USED
+            ])
+            ->exists();
         $hasDepletion = \App\Models\LivestockDepletion::where('livestock_id', $livestockId)->whereDate('tanggal', $tanggal)->exists();
 
-        if (!$hasRecording && !$hasFeedUsage && !$hasSupplyUsage && !$hasDepletion) {
-            throw new \Exception('Tidak ada data biaya harian untuk tanggal dan batch ini.');
-        }
+        // dd($hasSupplyUsage);
 
         // Get or create recording for this date
         $recording = Recording::where('livestock_id', $livestockId)
@@ -60,6 +77,15 @@ class LivestockCostService
 
         $livestock = Livestock::findOrFail($livestockId);
 
+        // If no recording exists but we have supply usage, create minimal recording
+        if (!$recording && $hasSupplyUsage) {
+            Log::info("📊 No recording found but supply usage exists, creating minimal recording", [
+                'livestock_id' => $livestockId,
+                'date' => $tanggal
+            ]);
+            $recording = $this->createMinimalRecording($livestock, $tanggal);
+        }
+
         // Initialize values from recording or calculate defaults
         if ($recording) {
             $stockAwal = $recording->stock_awal;
@@ -67,38 +93,78 @@ class LivestockCostService
             $deplesiQty = ($recording->payload['mortality'] ?? 0) + ($recording->payload['culling'] ?? 0);
             $salesQty = $recording->payload['sales_quantity'] ?? 0;
         } else {
-            // Calculate for days without explicit recording
+            // Jika tidak ada recording dan tidak ada supply usage, gunakan default values
             $startDate = Carbon::parse($livestock->start_date);
             $recordDate = Carbon::parse($tanggal);
             $age = $startDate->diffInDays($recordDate);
-
-            // Get previous day's stock_akhir or use initial quantity
             $previousDate = $recordDate->copy()->subDay()->format('Y-m-d');
             $previousRecording = Recording::where('livestock_id', $livestockId)
                 ->whereDate('tanggal', $previousDate)
                 ->first();
-
             $stockAwal = $previousRecording ? $previousRecording->stock_akhir : $livestock->initial_quantity;
             $stockAkhir = $stockAwal; // No depletion if no recording
             $deplesiQty = 0;
             $salesQty = 0;
+        }
 
-            // Create minimal recording if needed for cost calculation
-            $recording = Recording::firstOrCreate([
-                'livestock_id' => $livestockId,
-                'tanggal' => $tanggal,
-            ], [
-                'age' => $age,
-                'stock_awal' => $stockAwal,
-                'stock_akhir' => $stockAkhir,
-                'payload' => [
-                    'mortality' => 0,
-                    'culling' => 0,
-                    'sales_quantity' => 0
-                ],
-                'created_by' => auth()->id() ?? 1,
-                'updated_by' => auth()->id() ?? 1,
-            ]);
+        // Cari deplesi langsung dari LivestockDepletion jika recording tidak ada atau deplesiQty = 0
+        if ($deplesiQty == 0) {
+            $depletionRecords = \App\Models\LivestockDepletion::where('livestock_id', $livestockId)
+                ->whereDate('tanggal', $tanggal)
+                ->get();
+            $deplesiQty = $depletionRecords->sum('jumlah');
+            if ($deplesiQty > 0) {
+                Log::info('🔎 Deplesi ditemukan dari LivestockDepletion, quantity:', [
+                    'livestock_id' => $livestockId,
+                    'tanggal' => $tanggal,
+                    'deplesiQty' => $deplesiQty
+                ]);
+            } else {
+                Log::info('🔎 Tidak ada deplesi pada tanggal ini', [
+                    'livestock_id' => $livestockId,
+                    'tanggal' => $tanggal
+                ]);
+            }
+        }
+
+        // Ambil detail batch deplesi untuk breakdown (semua deplesi, batch atau non-batch)
+        $deplesiDetail = [];
+        $depletionRecords = \App\Models\LivestockDepletion::where('livestock_id', $livestockId)
+            ->whereDate('tanggal', $tanggal)
+            ->get();
+        foreach ($depletionRecords as $depletion) {
+            $batchId = $depletion->data['batch_id'] ?? null;
+            $batchName = $depletion->data['batch_name'] ?? null;
+            $ageDays = $depletion->data['batch_age_days'] ?? null;
+            // Jika batch_id masih null, coba ambil dari batch_breakdown atau allocation_result
+            if (!$batchId) {
+                // Cek batch_breakdown (array)
+                if (!empty($depletion->data['batch_breakdown']) && is_array($depletion->data['batch_breakdown'])) {
+                    $firstBatch = $depletion->data['batch_breakdown'][0] ?? null;
+                    if ($firstBatch && isset($firstBatch['batch_id'])) {
+                        $batchId = $firstBatch['batch_id'];
+                        $batchName = $firstBatch['batch_name'] ?? null;
+                        $ageDays = $firstBatch['age_days'] ?? null;
+                    }
+                }
+                // Cek allocation_result.batches (array)
+                if (!$batchId && !empty($depletion->data['allocation_result']['batches']) && is_array($depletion->data['allocation_result']['batches'])) {
+                    $firstBatch = $depletion->data['allocation_result']['batches'][0] ?? null;
+                    if ($firstBatch && isset($firstBatch['batch_id'])) {
+                        $batchId = $firstBatch['batch_id'];
+                        $batchName = $firstBatch['batch_name'] ?? null;
+                        $ageDays = $firstBatch['age_days'] ?? null;
+                    }
+                }
+            }
+            $deplesiDetail[] = [
+                'batch_id' => $batchId,
+                'batch_name' => $batchName,
+                'jumlah' => $depletion->jumlah,
+                'depletion_id' => $depletion->id,
+                'jenis' => $depletion->jenis,
+                'age_days' => $ageDays,
+            ];
         }
 
         // Get initial purchase data - FIXED: use correct field names
@@ -165,42 +231,19 @@ class LivestockCostService
         $dailyAddedCostPerChicken = $stockAkhir > 0 ? round($totalDailyAddedCost / $stockAkhir, 2) : 0;
         $cumulativeCostPerChicken = $stockAkhir > 0 ?
             round($cumulativeData['total_cumulative_added_cost'] / $stockAkhir, 2) : 0;
+
+        // Calculate total cost per chicken (initial + cumulative)
         $totalCostPerChicken = $initialPricePerUnit + $cumulativeCostPerChicken;
 
-        // Calculate individual cost per chicken
+        // Calculate per-chicken costs for each component
+        $feedCostPerChicken = $stockAkhir > 0 ? round($feedCost / $stockAkhir, 2) : 0;
         $ovkCostPerChicken = $stockAkhir > 0 ? round($ovkCost / $stockAkhir, 2) : 0;
         $supplyUsageCostPerChicken = $stockAkhir > 0 ? round($supplyUsageCost / $stockAkhir, 2) : 0;
-        $feedCostPerChicken = $stockAkhir > 0 ? round($feedCost / $stockAkhir, 2) : 0;
 
-        // Prepare summary statistics
+        // Summary statistics for logging
         $summaryStats = [
+            'calculation_date' => $tanggal,
             'livestock_id' => $livestockId,
-            'date' => $tanggal,
-            'initial_price_per_unit' => round($initialPricePerUnit, 2),
-            'initial_quantity' => $initialQuantity,
-            'initial_total_cost' => round($initialTotalCost, 2),
-
-            // Daily costs
-            'daily_feed_cost' => round($feedCost, 2),
-            'daily_ovk_cost' => round($ovkCost, 2),
-            'daily_supply_usage_cost' => round($supplyUsageCost, 2),
-            'daily_deplesi_cost' => round($deplesiCost, 2),
-            'total_daily_added_cost' => round($totalDailyAddedCost, 2),
-            'daily_added_cost_per_chicken' => $dailyAddedCostPerChicken,
-
-            // Cumulative costs
-            'cumulative_feed_cost' => round($cumulativeData['cumulative_feed_cost'], 2),
-            'cumulative_ovk_cost' => round($cumulativeData['cumulative_ovk_cost'], 2),
-            'cumulative_supply_usage_cost' => round($cumulativeData['cumulative_supply_usage_cost'], 2),
-            'cumulative_deplesi_cost' => round($cumulativeData['cumulative_deplesi_cost'], 2),
-            'total_cumulative_added_cost' => round($cumulativeData['total_cumulative_added_cost'], 2),
-            'cumulative_added_cost_per_chicken' => $cumulativeCostPerChicken,
-
-            // Final costs (including initial price)
-            'total_cost_per_chicken' => round($totalCostPerChicken, 2),
-            'total_flock_value' => round($totalCostPerChicken * $stockAkhir, 2),
-
-            // Stock information
             'stock_awal' => $stockAwal,
             'stock_akhir' => $stockAkhir,
             'deplesi_qty' => $deplesiQty,
@@ -213,8 +256,9 @@ class LivestockCostService
 
             // Calculation metadata
             'calculation_method' => 'business_flow_v3.0_with_supply_usage',
-            'version' => '3.0',
+            'version' => '3.1',
             'timestamp' => now()->toIso8601String(),
+            'processed_by' => ($async ?? false) ? 'background_job' : 'direct',
         ];
 
         Log::info("💰 Cost calculation summary", $summaryStats);
@@ -226,7 +270,7 @@ class LivestockCostService
                 'tanggal' => $tanggal,
             ],
             [
-                'recording_id' => $recording->id,
+                'recording_id' => $recording->id ?? null,
                 'total_cost' => $totalDailyAddedCost, // Daily added cost
                 'cost_per_ayam' => $totalCostPerChicken, // FIXED: Total cost per chicken (including initial price)
                 'cost_breakdown' => [
@@ -254,6 +298,7 @@ class LivestockCostService
                     'feed_detail' => $feedDetails,
                     'ovk_detail' => $ovkDetails,
                     'supply_usage_detail' => $supplyUsageDetails, // NEW: Supply usage details
+                    'deplesi_detail' => $deplesiDetail, // Tambahkan detail batch deplesi
 
                     // Summary and metadata
                     'summary' => $summaryStats,
@@ -261,28 +306,164 @@ class LivestockCostService
                         'total_added_cost' => $previousCostData['total_added_cost'],
                         'cumulative_cost_per_chicken' => $cumulativeCostPerChickenPreviousDay,
                     ],
-                    'calculations' => [
-                        'method' => 'business_flow_accurate_with_supply_usage',
-                        'version' => '3.0',
-                        'timestamp' => now()->toIso8601String(),
-                    ],
-                    'initial_purchase_item_details' => [
-                        'found' => true,
-                        'livestock_purchase_item_id' => $initialPurchaseItem->id,
-                        'price_per_unit' => $initialPricePerUnit,
-                        'quantity' => $initialQuantity,
-                        'price_total' => $initialTotalCost,
-                        'created_at' => $initialPurchaseItem->created_at,
-                    ]
-                ]
+                ],
+                'created_by' => Auth::id() ?? \App\Models\User::whereHas('roles', function ($q) {
+                    $q->where('name', 'SuperAdmin');
+                })->first()?->id,
+                'updated_by' => Auth::id() ?? \App\Models\User::whereHas('roles', function ($q) {
+                    $q->where('name', 'SuperAdmin');
+                })->first()?->id,
             ]
         );
 
-        Log::info("✅ Livestock cost calculation completed", [
+        Log::info("✅ Livestock cost calculated and saved", [
             'livestock_cost_id' => $livestockCost->id,
-            'total_cost' => $livestockCost->total_cost,
-            'cost_per_ayam' => $livestockCost->cost_per_ayam,
-            'supply_usage_cost' => $supplyUsageCost
+            'total_cost' => $totalDailyAddedCost,
+            'cost_per_chicken' => $totalCostPerChicken,
+            'has_recording' => !is_null($recording),
+            'has_supply_usage' => $hasSupplyUsage,
+            'recording_id' => $recording->id ?? null
+        ]);
+
+        return $livestockCost;
+    }
+
+    /**
+     * Calculate livestock cost without requiring a recording
+     * This method is used when supply usage exists but no recording is available
+     * 
+     * @param string $livestockId
+     * @param string $tanggal
+     * @return \App\Models\LivestockCost
+     */
+    public function calculateCostWithoutRecording($livestockId, $tanggal)
+    {
+        $tanggal = Carbon::parse($tanggal)->format('Y-m-d');
+
+        Log::info("🔄 Calculating cost without recording", [
+            'livestock_id' => $livestockId,
+            'date' => $tanggal
+        ]);
+
+        $livestock = Livestock::findOrFail($livestockId);
+
+        // Get initial purchase data
+        $initialPurchaseItem = LivestockPurchaseItem::where('livestock_id', $livestockId)
+            ->orderBy('created_at', 'asc')
+            ->first();
+
+        if (!$initialPurchaseItem) {
+            Log::warning("⚠️ No initial purchase item found for livestock", ['livestock_id' => $livestockId]);
+            throw new \Exception("Initial purchase data not found for livestock ID: {$livestockId}");
+        }
+
+        $initialPricePerUnit = floatval($initialPurchaseItem->price_per_unit ?? 0);
+        $initialQuantity = floatval($initialPurchaseItem->quantity ?? 0);
+        $initialTotalCost = floatval($initialPurchaseItem->price_total ?? 0);
+
+        // Calculate supply usage costs only
+        $supplyUsageResult = $this->calculateSupplyUsageCosts($livestockId, $tanggal, $livestock);
+        $supplyUsageCost = $supplyUsageResult['total_cost'];
+        $supplyUsageDetails = $supplyUsageResult['details'];
+
+        // Get previous day's cumulative data
+        $previousCostData = $this->getPreviousDayCostData($livestockId, $tanggal);
+
+        // Calculate stock data from livestock
+        $stockAwal = $livestock->initial_quantity;
+        $stockAkhir = $stockAwal; // No depletion without recording
+        $deplesiQty = 0;
+        $salesQty = 0;
+
+        // Calculate cumulative costs (only supply usage for now)
+        $cumulativeData = $this->calculateCumulativeCosts(
+            $livestockId,
+            $tanggal,
+            0, // feed cost
+            0, // ovk cost
+            $supplyUsageCost,
+            0, // deplesi cost
+            $initialPricePerUnit,
+            $initialQuantity
+        );
+
+        // Calculate per-chicken costs
+        $dailyAddedCostPerChicken = $stockAkhir > 0 ? round($supplyUsageCost / $stockAkhir, 2) : 0;
+        $cumulativeCostPerChicken = $stockAkhir > 0 ?
+            round($cumulativeData['total_cumulative_added_cost'] / $stockAkhir, 2) : 0;
+        $totalCostPerChicken = $initialPricePerUnit + $cumulativeCostPerChicken;
+        $supplyUsageCostPerChicken = $stockAkhir > 0 ? round($supplyUsageCost / $stockAkhir, 2) : 0;
+
+        // Summary statistics
+        $summaryStats = [
+            'calculation_date' => $tanggal,
+            'livestock_id' => $livestockId,
+            'calculation_type' => 'supply_usage_only',
+            'stock_awal' => $stockAwal,
+            'stock_akhir' => $stockAkhir,
+            'supply_usage_cost_per_chicken' => $supplyUsageCostPerChicken,
+            'calculation_method' => 'supply_usage_without_recording',
+            'version' => '3.1',
+            'timestamp' => now()->toIso8601String(),
+        ];
+
+        Log::info("💰 Supply usage cost calculation summary", $summaryStats);
+
+        // Save to LivestockCost without recording_id
+        $livestockCost = LivestockCost::updateOrCreate(
+            [
+                'livestock_id' => $livestockId,
+                'tanggal' => $tanggal,
+            ],
+            [
+                'recording_id' => null, // No recording
+                'total_cost' => $supplyUsageCost, // Only supply usage cost
+                'cost_per_ayam' => $totalCostPerChicken, // Total cost per chicken
+                'cost_breakdown' => [
+                    // Daily costs
+                    'pakan' => 0,
+                    'ovk' => 0,
+                    'supply_usage' => $supplyUsageCost,
+                    'deplesi' => 0,
+                    'daily_total' => $supplyUsageCost,
+
+                    // Per chicken costs
+                    'feed_per_ayam' => 0,
+                    'ovk_per_ayam' => 0,
+                    'supply_usage_per_ayam' => $supplyUsageCostPerChicken,
+                    'daily_added_cost_per_chicken' => $dailyAddedCostPerChicken,
+                    'cumulative_cost_per_chicken' => $totalCostPerChicken,
+
+                    // Stock data
+                    'deplesi_ekor' => $deplesiQty,
+                    'jual_ekor' => $salesQty,
+                    'stock_awal' => $stockAwal,
+                    'stock_akhir' => $stockAkhir,
+
+                    // Detailed breakdowns
+                    'feed_detail' => [],
+                    'ovk_detail' => [],
+                    'supply_usage_detail' => $supplyUsageDetails,
+
+                    // Summary and metadata
+                    'summary' => $summaryStats,
+                    'prev_cost' => [
+                        'total_added_cost' => $previousCostData['total_added_cost'],
+                        'cumulative_cost_per_chicken' => $previousCostData['cumulative_cost_per_chicken'],
+                    ],
+                    'calculation_note' => 'Calculated without recording - supply usage only'
+                ],
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id(),
+            ]
+        );
+
+        Log::info("✅ Supply usage cost calculated and saved without recording", [
+            'livestock_cost_id' => $livestockCost->id,
+            'total_cost' => $supplyUsageCost,
+            'cost_per_chicken' => $totalCostPerChicken,
+            'has_recording' => false,
+            'supply_usage_count' => count($supplyUsageDetails)
         ]);
 
         return $livestockCost;
@@ -297,7 +478,8 @@ class LivestockCostService
             $query->where('livestock_id', $livestockId)
                 ->whereDate('usage_date', $tanggal);
         })->with([
-            'feedStock.feedPurchase.unit',
+            'feedStock.feedPurchase.feedPurchaseItems.unit',
+            'feedStock.feedPurchase.feedPurchaseItems.convertedUnit',
             'feedStock.feed',
             'feedUsage'
         ])->get();
@@ -316,12 +498,25 @@ class LivestockCostService
             $feedName = $feed->name ?? 'Unknown Feed';
             $feedId = $feed->id;
 
+            // Get the specific feed purchase item for this feed
+            $feedPurchaseItem = $purchase->feedPurchaseItems()
+                ->where('feed_id', $feedId)
+                ->first();
+
+            if (!$feedPurchaseItem) {
+                Log::warning("⚠️ Feed purchase item not found", [
+                    'feed_id' => $feedId,
+                    'purchase_id' => $purchase->id
+                ]);
+                continue;
+            }
+
             // Get unit conversion information
             $conversionUnits = collect($feed->payload['conversion_units'] ?? []);
-            $purchaseUnitId = $purchase->unit_id;
-            $convertedUnitId = $purchase->converted_unit;
+            $purchaseUnitId = $feedPurchaseItem->unit_id;
+            $convertedUnitId = $feedPurchaseItem->converted_unit;
 
-            $purchaseUnit = $purchase->unit?->name ?? 'Unknown';
+            $purchaseUnit = $feedPurchaseItem->unit?->name ?? 'Unknown';
             $smallestUnitName = 'Unknown';
             $conversionRate = 1;
 
@@ -346,8 +541,8 @@ class LivestockCostService
             }
 
             // Calculate cost
-            $pricePerSmallestUnit = $purchase->price_per_converted_unit ??
-                ($purchase->price_per_unit / $conversionRate);
+            $pricePerSmallestUnit = $feedPurchaseItem->price_per_converted_unit ??
+                ($feedPurchaseItem->price_per_unit / $conversionRate);
             $qtyInSmallestUnit = $detail->quantity_taken;
             $subtotal = $qtyInSmallestUnit * $pricePerSmallestUnit;
             $qtyInPurchaseUnit = $qtyInSmallestUnit / $conversionRate;
@@ -370,7 +565,7 @@ class LivestockCostService
                     'purchase_unit' => $purchaseUnit,
                     'conversion_rate' => $conversionRate,
                     'price_per_smallest_unit' => $pricePerSmallestUnit,
-                    'price_per_purchase_unit' => $purchase->price_per_unit,
+                    'price_per_purchase_unit' => $feedPurchaseItem->price_per_unit,
                     'subtotal' => $subtotal,
                 ];
             }
@@ -448,15 +643,23 @@ class LivestockCostService
      */
     private function calculateSupplyUsageCosts($livestockId, $tanggal, $livestock)
     {
-        // Get supply usage details for this date and livestock
+        // Get supply usage details for this date and livestock with valid statuses only
         $supplyUsageDetails = SupplyUsageDetail::whereHas('supplyUsage', function ($query) use ($livestockId, $tanggal) {
             $query->where('livestock_id', $livestockId)
-                ->whereDate('usage_date', $tanggal);
+                ->whereDate('usage_date', $tanggal)
+                ->whereIn('status', [
+                    SupplyUsage::STATUS_PENDING,
+                    SupplyUsage::STATUS_IN_PROCESS,
+                    SupplyUsage::STATUS_COMPLETED,
+                    SupplyUsage::STATUS_PARTIALLY_USED
+                ]);
         })->with([
             'supplyStock.supplyPurchase.unit',
             'supply',
             'supplyUsage'
         ])->get();
+
+        // dd($supplyUsageDetails);
 
         $totalSupplyUsageCost = 0;
         $supplyUsageDetails_array = [];
@@ -466,6 +669,8 @@ class LivestockCostService
             'date' => $tanggal,
             'details_count' => $supplyUsageDetails->count()
         ]);
+
+        // dd($supplyUsageDetails->count());
 
         foreach ($supplyUsageDetails as $detail) {
             $supply = $detail->supply;
@@ -528,6 +733,7 @@ class LivestockCostService
             $totalSupplyUsageCost += $subtotal;
 
             Log::info("💊 Supply usage cost calculated", [
+                'triggered_by' => 'LivestockCostService',
                 'supply_name' => $supplyName,
                 'quantity_taken' => $qtyInSmallestUnit,
                 'price_per_unit' => $pricePerSmallestUnit,
@@ -554,6 +760,7 @@ class LivestockCostService
                     'price_per_purchase_unit' => $supplyPurchase->price_per_unit,
                     'subtotal' => $subtotal,
                     'purchase_date' => $supplyStock->date,
+                    'usage_date' => $detail->supplyUsage?->usage_date,
                     'batch_info' => [
                         'batch_id' => $supplyPurchase->supply_purchase_batch_id ?? null,
                         'supplier' => $supplyPurchase->batch->supplier->name ?? 'Unknown',
@@ -742,5 +949,169 @@ class LivestockCostService
         }
 
         return $analysis;
+    }
+
+    public function recalculateCosts(Livestock $livestock, string $date)
+    {
+        DB::transaction(function () use ($livestock, $date) {
+            $date = Carbon::parse($date)->startOfDay();
+
+            // Validasi awal
+            if ($date->lt($livestock->start_date)) {
+                throw new \Exception("Tanggal lebih kecil dari tanggal mulai ternak.");
+            }
+
+            // Hapus histori biaya pada tanggal tersebut
+            LivestockCost::where('livestock_id', $livestock->id)
+                ->whereDate('date', $date)
+                ->delete();
+
+            // Ambil data feed usage detail untuk tanggal & livestock
+            $feedUsageDetails = FeedUsageDetail::with(['feedStock.feedPurchase'])
+                ->where('livestock_id', $livestock->id)
+                ->whereDate('date', $date)
+                ->get();
+
+            // Total biaya pakan
+            $totalFeedCost = $feedUsageDetails->sum(function ($detail) {
+                $price = optional($detail->feedStock->feedPurchase)->price_per_kg ?? 0;
+                return $price * $detail->quantity;
+            });
+
+            // Simpan LivestockCost
+            LivestockCost::create([
+                'livestock_id' => $livestock->id,
+                'date' => $date,
+                'total_cost' => $totalFeedCost,
+                'payload' => [
+                    'feed_cost' => $totalFeedCost,
+                    'detail' => $feedUsageDetails->map(function ($d) {
+                        return [
+                            'feed_id' => $d->feed_id,
+                            'quantity' => $d->quantity,
+                            'unit_cost' => optional($d->feedStock->feedPurchase)->price_per_kg,
+                        ];
+                    }),
+                ],
+                'meta' => [
+                    'version' => 1,
+                    'calculated_at' => now(),
+                ],
+            ]);
+
+            // Optional: log atau event dispatch
+            Log::info('LivestockCost recalculated', [
+                'livestock_id' => $livestock->id,
+                'date' => $date->toDateString(),
+                'cost' => $totalFeedCost,
+            ]);
+        });
+    }
+
+    /**
+     * Tandai cost Livestock sebagai invalid jika ada perubahan data lama Recording
+     */
+    public static function markCostInvalid($livestockId)
+    {
+        $livestock = \App\Models\Livestock::find($livestockId);
+        if ($livestock) {
+            $data = $livestock->data ?? [];
+            if (is_string($data)) {
+                $data = json_decode($data, true) ?: [];
+            }
+            $data['cost_invalid'] = true;
+            $livestock->data = $data;
+            $livestock->save();
+        }
+    }
+
+    /**
+     * Create minimal recording for supply usage when no recording exists
+     * This ensures data integrity while allowing supply usage cost calculation
+     * 
+     * @param Livestock $livestock
+     * @param string $tanggal
+     * @return Recording
+     */
+    private function createMinimalRecording($livestock, $tanggal)
+    {
+        Log::info("📝 Creating minimal recording for supply usage", [
+            'livestock_id' => $livestock->id,
+            'date' => $tanggal
+        ]);
+
+        // Get previous day's recording for stock data
+        $previousDate = Carbon::parse($tanggal)->subDay()->format('Y-m-d');
+        $previousRecording = Recording::where('livestock_id', $livestock->id)
+            ->whereDate('tanggal', $previousDate)
+            ->first();
+
+        // Calculate stock data
+        $stockAwal = $previousRecording ? $previousRecording->stock_akhir : $livestock->initial_quantity;
+        $stockAkhir = $stockAwal; // No depletion for minimal recording
+        $age = Carbon::parse($livestock->start_date)->diffInDays($tanggal);
+
+        // Create minimal recording - only use columns that exist in database
+        $recording = Recording::create([
+            'tanggal' => $tanggal,
+            'livestock_id' => $livestock->id,
+            'age' => $age,
+            'stock_awal' => $stockAwal,
+            'stock_akhir' => $stockAkhir,
+            'total_deplesi' => 0,
+            'total_penjualan' => 0,
+            'berat_semalam' => 0,
+            'berat_hari_ini' => 0,
+            'kenaikan_berat' => 0,
+            'pakan_jenis' => '',
+            'pakan_harian' => 0,
+            'pakan_total' => 0,
+            'payload' => [
+                'mortality' => 0,
+                'culling' => 0,
+                'sales_quantity' => 0,
+                'recording_type' => 'minimal_for_supply_usage',
+                'created_by_cost_service' => true,
+                'created_at' => now()->toIso8601String()
+            ],
+            'data_operational' => [
+                'has_feed_usage' => false,
+                'has_supply_usage' => true,
+                'has_depletion' => false,
+                'minimal_recording' => true
+            ],
+            'data_audit' => [
+                'created_reason' => 'Supply usage exists but no recording available',
+                'created_by_service' => 'LivestockCostService',
+                'created_at' => now()->toIso8601String()
+            ],
+            'data' => [
+                'recording_type' => 'minimal',
+                'purpose' => 'supply_usage_cost_calculation',
+                'auto_generated' => true
+            ],
+            'created_by' => Auth::id() ?? $this->getDefaultUserId(),
+            'updated_by' => Auth::id() ?? $this->getDefaultUserId(),
+        ]);
+
+        Log::info("✅ Minimal recording created", [
+            'recording_id' => $recording->id,
+            'stock_awal' => $stockAwal,
+            'stock_akhir' => $stockAkhir,
+            'age' => $age
+        ]);
+
+        return $recording;
+    }
+
+    /**
+     * Get the default user ID if Auth::id() is null.
+     * This is useful for cases where the user is not logged in or needs a placeholder.
+     * 
+     * @return int|null
+     */
+    private function getDefaultUserId()
+    {
+        return 1; // Replace with your default user ID
     }
 }

@@ -137,3 +137,130 @@
     </form>
     @endif
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    // Listen for warning notifications from Livewire
+    Livewire.on('warning', (message) => {
+        console.warn('Warning notification received:', message);
+        
+        // Show warning notification using SweetAlert or similar
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Peringatan',
+                text: message,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#ffc107'
+            });
+        } else {
+            // Fallback to browser alert
+            alert('Peringatan: ' + message);
+        }
+    });
+
+    // Listen for status rollback events
+    Livewire.on('rollback-status-to-ui', (data) => {
+        console.warn('Status rollback event received:', data);
+        
+        // Find status dropdown/select element for this purchase
+        const statusElement = document.querySelector(`[data-purchase-id="${data.purchase_id}"] .status-select`);
+        if (statusElement) {
+            // Rollback status to previous value
+            statusElement.value = data.old_status;
+            
+            // Trigger change event to update UI
+            const event = new Event('change', { bubbles: true });
+            statusElement.dispatchEvent(event);
+            
+            console.log('Status rolled back to:', data.old_status);
+        }
+        
+        // Show detailed error message
+        if (data.errors && data.errors.length > 0) {
+            const errorMessage = 'Error details:\n' + data.errors.join('\n');
+            console.error(errorMessage);
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Status Tidak Dapat Diubah',
+                    html: `<p>Status tidak dapat diubah ke "Arrived" karena:</p><ul>${data.errors.map(error => `<li>${error}</li>`).join('')}</ul><br><p><small><strong>Saran:</strong> Periksa data yang terkait dan coba lagi. Jika masalah berlanjut, hubungi administrator.</small></p>`,
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#dc3545'
+                });
+            } else {
+                alert('Status Tidak Dapat Diubah:\n' + data.errors.join('\n') + '\n\nSaran: Periksa data yang terkait dan coba lagi.');
+            }
+        }
+    });
+
+    // Listen for validation failure events
+    Livewire.on('status-validation-failed', (data) => {
+        console.warn('Status validation failed:', data);
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Validasi Data Gagal',
+                html: `<p>Status tidak dapat diubah ke "Arrived" karena data tidak valid:</p><ul>${data.errors.map(error => `<li>${error}</li>`).join('')}</ul><br><p><small><strong>Saran:</strong> Periksa kelengkapan data pembelian pakan sebelum mengubah status.</small></p>`,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#ffc107'
+            });
+        } else {
+            alert('Validasi Data Gagal:\n' + data.errors.join('\n') + '\n\nSaran: Periksa kelengkapan data pembelian pakan sebelum mengubah status.');
+        }
+    });
+
+    // Listen for processing failure events
+    Livewire.on('status-processing-failed', (data) => {
+        console.error('Status processing failed:', data);
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Proses Stock Arrival Gagal',
+                html: `<p>Status tidak dapat diubah ke "Arrived" karena:</p><ul>${data.errors.map(error => `<li>${error}</li>`).join('')}</ul><br><p><small><strong>Saran:</strong> Periksa data batch ayam, pakan, dan supplier yang terkait. Jika masalah berlanjut, hubungi administrator.</small></p>`,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert('Proses Stock Arrival Gagal:\n' + data.errors.join('\n') + '\n\nSaran: Periksa data batch ayam, pakan, dan supplier yang terkait.');
+        }
+    });
+
+    // Listen for unexpected error events
+    Livewire.on('status-unexpected-error', (data) => {
+        console.error('Unexpected error during status change:', data);
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Kesalahan Tidak Terduga',
+                text: 'Terjadi kesalahan tidak terduga: ' + data.error,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert('Kesalahan Tidak Terduga:\n' + data.error);
+        }
+    });
+
+    // Listen for success notifications
+    Livewire.on('success', (message) => {
+        console.log('Success notification received:', message);
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil',
+                text: message,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#28a745'
+            });
+        } else {
+            alert('Berhasil: ' + message);
+        }
+    });
+});
+</script>

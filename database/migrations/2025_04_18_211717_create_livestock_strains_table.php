@@ -15,15 +15,18 @@ return new class extends Migration
 
         Schema::create('livestock_strains', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->uuid('company_id');
             $table->string('code')->unique();
             $table->string('name');           // Name of the livestock strain (e.g., "Broiler", "Layer", "Dairy")
             $table->text('description')->nullable(); // Optional: Description of the strain category
+            $table->json('data')->nullable();
             $table->string('status')->default('active')->index();
             $table->uuid('created_by')->nullable()->index();
             $table->uuid('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 
+            $table->foreign('company_id')->references('id')->on('companies');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });

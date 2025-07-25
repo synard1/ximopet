@@ -24,9 +24,10 @@ interface RecordingDataServiceInterface
      *
      * @param string $livestockId The ID of the livestock.
      * @param string $date The selected date.
+     * @param bool $bypassCache Whether to bypass the cache.
      * @return ServiceResult A result object containing the data or an error.
      */
-    public function loadCurrentDateData(string $livestockId, string $date): ServiceResult;
+    public function loadCurrentDateData(string $livestockId, string $date, bool $bypassCache = false): ServiceResult;
 
     /**
      * Load a summary of the previous day's data.

@@ -6,6 +6,8 @@ use App\Models\CurrentSupply;
 use App\Models\Farm;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -20,8 +22,10 @@ use App\Models\Livestock;
 use App\Models\Unit;
 use App\Models\UnitConversion;
 use App\Services\MutationService;
+use App\Services\SupplyMutationConfigService;
 use Exception;
-use Illuminate\Support\Facades\Log;
+use App\Models\Coop;
+use App\Services\Supply\SupplyNumberGeneratorService;
 
 class Mutation extends Component
 {
@@ -45,6 +49,28 @@ class Mutation extends Component
     public $availableStock, $availableUnit;
     public bool $withHistory = false;
 
+    // Enhanced destination handling
+    public $source_coop_id, $destination_coop_id;
+    public $allCoops = [];
+    public $destinationCoop, $sourceCoop;
+    public $destinationCoopDisabled = false;
+    public $destinationLivestockDisabled = false;
+    public $coopDisabled = false;
+    public $livestockDisabled = false;
+    public $errorMessage = '';
+    public $successMessage = '';
+    public $destinationLivestockId;
+    public $destinationLivestock;
+    public $destinationCoopId;
+
+    // Destination type selection
+    public $destinationType = ''; // 'farm', 'coop', 'livestock'
+    public $destinationTypes = [];
+    public $destinationFarms = [];
+    public $destinationLivestocks = [];
+    public $showDestinationSelection = false;
+    public $destinationSelectionComplete = false;
+
     protected $listeners = [
         'showMutationForm' => 'showMutationForm',
         'showCreateForm' => 'showCreateForm',
@@ -52,7 +78,7 @@ class Mutation extends Component
         'editSupplyMutation' => 'editSupplyMutation',
         'addConversion' => 'addConversion',
         'deleteSupplyMutation' => 'deleteSupplyMutation',
-
+        'updateStatusSupplyMutation' => 'updateStatusSupplyMutation',
     ];
 
     // Definisikan aturan validasi
@@ -62,6 +88,10 @@ class Mutation extends Component
         'quantity' => 'required|numeric|min:0.01|lte:availableStock',
         'tanggal' => 'required|date',
         'notes' => 'nullable|string|max:255',
+        // Enhanced validation for flexible destination
+        'destination_coop_id' => 'nullable|uuid',
+        'destination_livestock_id' => 'nullable|uuid',
+        'destinationType' => 'required|in:farm,coop,livestock',
     ];
 
     // Definisikan pesan error kustom (opsional)
@@ -78,22 +108,410 @@ class Mutation extends Component
         'tanggal.required' => 'Tanggal mutasi harus diisi.',
         'tanggal.date' => 'Format tanggal tidak valid.',
         'notes.max' => 'Catatan maksimal 255 karakter.',
+        'destination_coop_id.uuid' => 'Kandang tujuan tidak valid.',
+        'destination_livestock_id.uuid' => 'Ternak tujuan tidak valid.',
+        'destinationType.required' => 'Tipe tujuan harus dipilih.',
+        'destinationType.in' => 'Tipe tujuan tidak valid.',
     ];
 
     public function mount()
     {
         $this->dstFarms = Farm::all();
-        $this->farms = SupplyStock::distinct('farm_id')
-            ->when(auth()->user()->hasRole('Operator'), function ($query) {
+
+        // Fix distinct issue by getting unique farm IDs first, then loading farms
+        $uniqueFarmIds = SupplyStock::select('farm_id')
+            ->when(Auth::user()->hasRole('Operator'), function ($query) {
                 $query->whereHas('farm.farmOperators', function ($q) {
-                    $q->where('user_id', auth()->id());
+                    $q->where('user_id', Auth::id());
                 });
             })
-            ->with('farm:id,name')
-            ->get()
-            ->pluck('farm');
+            ->distinct()
+            ->pluck('farm_id')
+            ->filter()
+            ->toArray();
 
-        // dd($this->farms);
+        $this->farms = Farm::whereIn('id', $uniqueFarmIds)
+            ->when(Auth::user()->hasRole('Operator'), function ($query) {
+                $query->whereHas('farmOperators', function ($q) {
+                    $q->where('user_id', Auth::id());
+                });
+            })
+            ->get();
+
+        // Load coop options for enhanced destination handling
+        $this->loadCoopOptions();
+
+        // Load destination types from config
+        $this->loadDestinationTypes();
+
+        // dd($this->farms->toArray());
+    }
+
+    /**
+     * Load destination types from configuration
+     */
+    public function loadDestinationTypes(): void
+    {
+        $this->destinationTypes = SupplyMutationConfigService::getAvailableDestinationTypes();
+
+        Log::info('✅ Destination types loaded from config', [
+            'available_types' => array_keys($this->destinationTypes),
+            'total_types' => count($this->destinationTypes)
+        ]);
+    }
+
+    /**
+     * Handle source farm change - trigger destination loading
+     */
+    public function updatedSourceFarmId(): void
+    {
+        Log::info('🔄 Source farm changed', [
+            'source_farm_id' => $this->source_farm_id,
+            'show_destination_selection' => !empty($this->source_farm_id)
+        ]);
+
+        if (!empty($this->source_farm_id)) {
+            $this->showDestinationSelection = true;
+            $this->destinationSelectionComplete = false;
+            $this->resetDestinationData();
+            $this->loadAvailableItems();
+        } else {
+            $this->showDestinationSelection = false;
+            $this->destinationSelectionComplete = false;
+            $this->resetDestinationData();
+        }
+    }
+
+    /**
+     * Handle destination type selection
+     */
+    public function updatedDestinationType(): void
+    {
+        Log::info('🔄 Destination type selected', [
+            'destination_type' => $this->destinationType,
+            'source_farm_id' => $this->source_farm_id
+        ]);
+
+        if (!empty($this->destinationType) && !empty($this->source_farm_id)) {
+            $this->loadDestinationData();
+            $this->destinationSelectionComplete = true;
+        } else {
+            $this->resetDestinationData();
+            $this->destinationSelectionComplete = false;
+        }
+    }
+
+    /**
+     * Load destination data based on selected type
+     */
+    public function loadDestinationData(): void
+    {
+        try {
+            switch ($this->destinationType) {
+                case 'farm':
+                    $this->loadDestinationFarms();
+                    break;
+                case 'coop':
+                    $this->loadDestinationCoops();
+                    break;
+                case 'livestock':
+                    $this->loadDestinationLivestocks();
+                    break;
+                default:
+                    Log::warning('❌ Unknown destination type', [
+                        'destination_type' => $this->destinationType
+                    ]);
+                    break;
+            }
+
+            Log::info('✅ Destination data loaded', [
+                'destination_type' => $this->destinationType,
+                'source_farm_id' => $this->source_farm_id
+            ]);
+        } catch (Exception $e) {
+            Log::error('❌ Error loading destination data', [
+                'destination_type' => $this->destinationType,
+                'error' => $e->getMessage()
+            ]);
+
+            $this->errorMessage = 'Gagal memuat data tujuan: ' . $e->getMessage();
+        }
+    }
+
+    /**
+     * Load destination farms (excluding source farm)
+     */
+    public function loadDestinationFarms(): void
+    {
+        $this->destinationFarms = Farm::where('id', '!=', $this->source_farm_id)
+            ->when(Auth::user()->hasRole('Operator'), function ($query) {
+                $query->whereHas('farmOperators', function ($q) {
+                    $q->where('user_id', Auth::id());
+                });
+            })
+            ->orderBy('name')
+            ->get()
+            ->map(function ($farm) {
+                return [
+                    'id' => $farm->id,
+                    'name' => $farm->name,
+                    'location' => $farm->location ?? 'Unknown',
+                    'status' => $farm->status ?? 'active'
+                ];
+            })
+            ->toArray();
+
+        Log::info('✅ Destination farms loaded', [
+            'total_farms' => count($this->destinationFarms),
+            'excluded_source_farm' => $this->source_farm_id
+        ]);
+    }
+
+    /**
+     * Load destination coops (excluding source farm coops)
+     */
+    public function loadDestinationCoops(): void
+    {
+        $this->allCoops = Coop::whereHas('farm', function ($query) {
+            $query->where('id', '!=', $this->source_farm_id);
+        })
+            ->when(Auth::user()->hasRole('Operator'), function ($query) {
+                $query->whereHas('farm.farmOperators', function ($q) {
+                    $q->where('user_id', Auth::id());
+                });
+            })
+            ->whereIn('status', ['active', 'in_use'])
+            ->with(['farm:id,name'])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($coop) {
+                return [
+                    'id' => $coop->id,
+                    'name' => $coop->name,
+                    'farm_name' => $coop->farm->name ?? 'Unknown',
+                    'capacity' => $coop->capacity,
+                    'current_quantity' => $coop->quantity ?? 0,
+                    'status' => $coop->status,
+                ];
+            })
+            ->toArray();
+
+        Log::info('✅ Destination coops loaded', [
+            'total_coops' => count($this->allCoops),
+            'excluded_source_farm' => $this->source_farm_id
+        ]);
+    }
+
+    /**
+     * Load destination livestocks (excluding source farm livestocks)
+     */
+    public function loadDestinationLivestocks(): void
+    {
+        $this->destinationLivestocks = Livestock::whereHas('farm', function ($query) {
+            $query->where('id', '!=', $this->source_farm_id);
+        })
+            ->when(Auth::user()->hasRole('Operator'), function ($query) {
+                $query->whereHas('farm.farmOperators', function ($q) {
+                    $q->where('user_id', Auth::id());
+                });
+            })
+            ->where('status', 'active')
+            ->with(['farm:id,name', 'coop:id,name'])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($livestock) {
+                return [
+                    'id' => $livestock->id,
+                    'name' => $livestock->name,
+                    'farm_name' => $livestock->farm->name ?? 'Unknown',
+                    'coop_name' => $livestock->coop->name ?? 'Unknown',
+                    'current_quantity' => $livestock->currentLivestock->quantity ?? 0,
+                    'status' => $livestock->status,
+                ];
+            })
+            ->toArray();
+
+        Log::info('✅ Destination livestocks loaded', [
+            'total_livestocks' => count($this->destinationLivestocks),
+            'excluded_source_farm' => $this->source_farm_id
+        ]);
+    }
+
+    /**
+     * Reset destination data
+     */
+    public function resetDestinationData(): void
+    {
+        $this->destination_farm_id = null;
+        $this->destination_coop_id = null;
+        $this->destination_livestock_id = null;
+        $this->destinationFarms = [];
+        $this->destinationLivestocks = [];
+        $this->allCoops = [];
+        $this->destinationCoop = null;
+        $this->destinationLivestock = null;
+        $this->destinationCoopDisabled = false;
+        $this->destinationLivestockDisabled = false;
+
+        Log::info('🔄 Destination data reset');
+    }
+
+    /**
+     * Handle destination farm selection
+     */
+    public function updatedDestinationFarmId(): void
+    {
+        if ($this->destination_farm_id) {
+            Log::info('✅ Destination farm selected', [
+                'destination_farm_id' => $this->destination_farm_id,
+                'source_farm_id' => $this->source_farm_id
+            ]);
+
+            // Validate that destination is different from source
+            if ($this->destination_farm_id === $this->source_farm_id) {
+                $this->addError('destination_farm_id', 'Tujuan tidak boleh sama dengan asal.');
+                $this->destination_farm_id = null;
+                return;
+            }
+        }
+    }
+
+    /**
+     * Handle destination coop selection
+     */
+    public function updatedDestinationCoopId(): void
+    {
+        if ($this->destination_coop_id) {
+            try {
+                $this->destinationCoop = Coop::with(['farm', 'livestocks'])
+                    ->findOrFail($this->destination_coop_id);
+
+                Log::info('✅ Destination coop loaded', [
+                    'coop_id' => $this->destination_coop_id,
+                    'coop_name' => $this->destinationCoop->name,
+                    'farm_name' => $this->destinationCoop->farm->name ?? 'Unknown',
+                    'current_livestock_count' => $this->destinationCoop->livestocks->count()
+                ]);
+
+                // Validate that destination farm is different from source
+                if ($this->destinationCoop->farm_id === $this->source_farm_id) {
+                    $this->addError('destination_coop_id', 'Kandang tujuan tidak boleh berada di farm yang sama dengan asal.');
+                    $this->destination_coop_id = null;
+                    $this->destinationCoop = null;
+                    return;
+                }
+
+                // Disable livestock selection when coop is selected
+                $this->destinationLivestockDisabled = true;
+                $this->destination_livestock_id = null;
+                $this->destinationLivestock = null;
+            } catch (Exception $e) {
+                Log::error('❌ Error loading destination coop', [
+                    'coop_id' => $this->destination_coop_id,
+                    'error' => $e->getMessage()
+                ]);
+
+                $this->errorMessage = 'Gagal memuat data kandang tujuan: ' . $e->getMessage();
+            }
+        } else {
+            $this->destinationCoop = null;
+            $this->destinationLivestockDisabled = false;
+        }
+    }
+
+    /**
+     * Handle destination livestock selection
+     */
+    public function updatedDestinationLivestockId(): void
+    {
+        if ($this->destination_livestock_id) {
+            try {
+                $this->destinationLivestock = Livestock::with(['farm', 'coop'])
+                    ->findOrFail($this->destination_livestock_id);
+
+                Log::info('✅ Destination livestock loaded', [
+                    'livestock_id' => $this->destination_livestock_id,
+                    'livestock_name' => $this->destinationLivestock->name
+                ]);
+
+                // Validate that destination farm is different from source
+                if ($this->destinationLivestock->farm_id === $this->source_farm_id) {
+                    $this->addError('destination_livestock_id', 'Ternak tujuan tidak boleh berada di farm yang sama dengan asal.');
+                    $this->destination_livestock_id = null;
+                    $this->destinationLivestock = null;
+                    return;
+                }
+
+                // Disable coop selection when livestock is selected
+                $this->destinationCoopDisabled = true;
+                $this->destination_coop_id = null;
+                $this->destinationCoop = null;
+            } catch (Exception $e) {
+                Log::error('❌ Error loading destination livestock', [
+                    'livestock_id' => $this->destination_livestock_id,
+                    'error' => $e->getMessage()
+                ]);
+
+                $this->errorMessage = 'Gagal memuat data ternak tujuan: ' . $e->getMessage();
+            }
+        } else {
+            $this->destinationLivestock = null;
+            $this->destinationCoopDisabled = false;
+        }
+    }
+
+    /**
+     * Handle source coop change
+     */
+    public function updatedSourceCoopId(): void
+    {
+        if ($this->sourceCoopId) {
+            try {
+                $this->sourceCoop = Coop::with(['farm', 'livestocks'])
+                    ->findOrFail($this->sourceCoopId);
+
+                Log::info('✅ Source coop loaded', [
+                    'coop_id' => $this->sourceCoopId,
+                    'coop_name' => $this->sourceCoop->name,
+                    'farm_name' => $this->sourceCoop->farm->name ?? 'Unknown'
+                ]);
+            } catch (Exception $e) {
+                Log::error('❌ Error loading source coop', [
+                    'coop_id' => $this->sourceCoopId,
+                    'error' => $e->getMessage()
+                ]);
+
+                $this->errorMessage = 'Gagal memuat data kandang sumber: ' . $e->getMessage();
+            }
+        } else {
+            $this->sourceCoop = null;
+        }
+    }
+
+    /**
+     * Validate destination configuration
+     */
+    private function validateDestinationConfiguration(): void
+    {
+        $hasCoopDestination = !empty($this->destination_coop_id);
+        $hasLivestockDestination = !empty($this->destination_livestock_id);
+        $hasFarmDestination = !empty($this->destination_farm_id);
+
+        if ($hasCoopDestination && $hasLivestockDestination) {
+            throw new Exception('Tidak dapat memilih kandang dan ternak tujuan secara bersamaan');
+        }
+
+        if ($hasCoopDestination && $hasFarmDestination) {
+            throw new Exception('Tidak dapat memilih kandang dan farm tujuan secara bersamaan');
+        }
+
+        if ($hasLivestockDestination && $hasFarmDestination) {
+            throw new Exception('Tidak dapat memilih ternak dan farm tujuan secara bersamaan');
+        }
+
+        if (!$hasCoopDestination && !$hasLivestockDestination && !$hasFarmDestination) {
+            throw new Exception('Harus memilih salah satu tujuan (farm, kandang, atau ternak)');
+        }
     }
 
     public function addConversion()
@@ -391,28 +809,29 @@ class Mutation extends Component
     public function save()
     {
         try {
-            foreach ($this->items as $item) {
+            Log::info('🔄 Starting supply mutation save process', [
+                'source_farm_id' => $this->source_farm_id,
+                'destination_farm_id' => $this->destination_farm_id,
+                'items_count' => count($this->items),
+                'edit_mode' => $this->edit_mode
+            ]);
+
+            // Validasi dan pengecekan stok tetap
+            foreach ($this->items as $index => $item) {
                 if (($item['type'] ?? 'supply') !== 'supply') continue;
 
                 $supplyId = $item['item_id'];
-                $feed = Supply::findOrFail($supplyId);
-
-                // Ambil satuan yang digunakan user
+                $feed = \App\Models\Supply::findOrFail($supplyId);
                 $unitId = $item['unit_id'];
                 $inputQty = $item['quantity'];
 
-                // Konversi ke satuan terkecil
                 $conversionRate = $feed->conversionUnits()
                     ->where('conversion_unit_id', $unitId)
                     ->value('conversion_value');
-
-                // Jika tidak ada rate, asumsikan 1 (berarti satuan terkecil)
                 $rate = $conversionRate ?: 1;
-
                 $requiredQty = $inputQty * $rate;
 
-                // Ambil stok feed berdasarkan FIFO
-                $stocks = SupplyStock::where('farm_id', $this->source_farm_id)
+                $stocks = \App\Models\SupplyStock::where('farm_id', $this->source_farm_id)
                     ->where('supply_id', $supplyId)
                     ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
                     ->orderBy('date')
@@ -423,23 +842,73 @@ class Mutation extends Component
                 $totalAvailable = $stocks->sum(fn($s) => $s->quantity_in - $s->quantity_used - $s->quantity_mutated);
 
                 if ($totalAvailable < $requiredQty) {
-                    throw new \Exception("Stok tidak cukup untuk feed: $feed->name. Dibutuhkan: $requiredQty, Tersedia: $totalAvailable");
+                    throw new \Exception("Stok tidak cukup untuk supply: $feed->name. Dibutuhkan: $requiredQty, Tersedia: $totalAvailable");
                 }
+
+                Log::info('✅ Stock validation passed for item', [
+                    'supply_id' => $supplyId,
+                    'supply_name' => $feed->name,
+                    'required_qty' => $requiredQty,
+                    'available_qty' => $totalAvailable
+                ]);
             }
 
-            $mutation = MutationService::supplyMutationWithHistoryControl([
+            // Proses simpan utama via MutationService dengan validasi komprehensif
+            Log::info('🔄 Calling MutationService::createMutation', [
+                'items_count' => count($this->items),
+                'mutationId' => $this->mutationId
+            ]);
+
+            $mutation = \App\Services\MutationService::createMutation([
                 'date' => $this->tanggal,
                 'source_farm_id' => $this->source_farm_id,
                 'destination_farm_id' => $this->destination_farm_id,
                 'notes' => $this->notes,
-            ], $this->items, $this->mutationId, $this->withHistory); // jika mutationId null, akan dianggap create baru
+                // Tambahkan field lain jika perlu (coop/livestock)
+            ], $this->items, 'supply', $this->mutationId, $this->withHistory);
 
-            // $this->transferStock($this->all());
+            // Validasi final - pastikan semua data ter-create
+            if (!$mutation) {
+                throw new \Exception('Master mutation tidak ter-create');
+            }
 
-            $this->dispatch('success', 'Data Mutasi Pakan berhasil ' . ($this->edit_mode ? 'diperbarui' : 'disimpan'));
+            // Penomoran otomatis untuk SupplyMutation
+            $supplyMutation = \App\Models\SupplyMutation::where('mutation_id', $mutation->id)->first();
+            if (!$supplyMutation) {
+                throw new \Exception('SupplyMutation tidak ter-create');
+            }
+            if (empty($supplyMutation->number) || empty($supplyMutation->number_full)) {
+                $numbering = SupplyNumberGeneratorService::generateNumber('supply_mutations', $mutation->date ?? now(), []);
+                $supplyMutation->number = $numbering['number'];
+                $supplyMutation->number_full = $numbering['full_number'];
+                $supplyMutation->save();
+                Log::info('Generated numbering for SupplyMutation', [
+                    'supply_mutation_id' => $supplyMutation->id,
+                    'number' => $supplyMutation->number,
+                    'number_full' => $supplyMutation->number_full
+                ]);
+            }
+
+            // Cek SupplyMutationItems
+            $supplyMutationItems = \App\Models\SupplyMutationItem::where('supply_mutation_id', $supplyMutation->id)->get();
+            if ($supplyMutationItems->count() !== count($this->items)) {
+                throw new \Exception(
+                    "Jumlah SupplyMutationItems tidak sesuai. " .
+                        "Diharapkan: " . count($this->items) .
+                        ", Ter-create: " . $supplyMutationItems->count()
+                );
+            }
+
+            Log::info('✅ All validation passed - mutation created successfully', [
+                'mutationId' => $mutation->id,
+                'supplyMutationId' => $supplyMutation->id,
+                'itemsCreated' => $supplyMutationItems->count()
+            ]);
+
+            $this->dispatch('success', 'Data Mutasi Supply berhasil ' . ($this->edit_mode ? 'diperbarui' : 'disimpan'));
             $this->close();
         } catch (\Exception $e) {
-            DB::rollBack(); // Rollback on any other exception
+            DB::rollBack();
 
             $class = __CLASS__;
             $method = __FUNCTION__;
@@ -447,17 +916,32 @@ class Mutation extends Component
             $file = $e->getFile();
             $message = $e->getMessage();
 
-            // Human-readable error message
-            $errorMessage = 'Terjadi kesalahan saat menyimpan data. Silakan coba lagi.';
+            // Log error detail untuk debugging
+            Log::error("❌ [$class::$method] Supply mutation save failed", [
+                'error' => $message,
+                'line' => $line,
+                'file' => $file,
+                'source_farm_id' => $this->source_farm_id ?? 'null',
+                'destination_farm_id' => $this->destination_farm_id ?? 'null',
+                'items_count' => count($this->items ?? []),
+                'edit_mode' => $this->edit_mode ?? false,
+                'trace' => $e->getTraceAsString()
+            ]);
 
-            // Dispatch user-friendly error
-            $this->dispatch('error', $errorMessage);
+            // Tampilkan pesan error yang informatif ke user
+            $userFriendlyMessage = 'Gagal menyimpan mutasi supply. ';
 
-            // Log detailed error for debugging
-            Log::error("[$class::$method] Error: $message | Line: $line | File: $file");
+            if (str_contains($message, 'Stok tidak cukup')) {
+                $userFriendlyMessage .= 'Stok tidak mencukupi untuk salah satu item.';
+            } elseif (str_contains($message, 'SupplyMutation tidak ter-create')) {
+                $userFriendlyMessage .= 'Terjadi kesalahan pada sistem. Silakan coba lagi.';
+            } elseif (str_contains($message, 'SupplyMutationItems tidak sesuai')) {
+                $userFriendlyMessage .= 'Terjadi kesalahan pada detail item. Silakan coba lagi.';
+            } else {
+                $userFriendlyMessage .= 'Silakan coba lagi atau hubungi administrator.';
+            }
 
-            // Optionally: log stack trace
-            Log::debug("[$class::$method] Stack trace: " . $e->getTraceAsString());
+            $this->dispatch('error', $userFriendlyMessage);
         }
     }
 
@@ -514,7 +998,7 @@ class Mutation extends Component
                 'date' => $tanggal,
                 'from_livestock_id' => $sourceId,
                 'to_livestock_id' => $destinationId,
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
 
             // Proses FIFO pengambilan
@@ -546,7 +1030,7 @@ class Mutation extends Component
                     'quantity_in' => $takeQty,
                     'quantity_used' => 0,
                     'quantity_mutated' => 0,
-                    'created_by' => auth()->id(),
+                    'created_by' => Auth::id(),
                 ]);
 
                 // Detail mutasi
@@ -555,7 +1039,7 @@ class Mutation extends Component
                     'supply_stock_id' => $stock->id,
                     'supply_id' => $supplyId,
                     'quantity' => $takeQty,
-                    'created_by' => auth()->id(),
+                    'created_by' => Auth::id(),
                 ]);
 
                 $requiredQty -= $takeQty;
@@ -595,14 +1079,47 @@ class Mutation extends Component
                 'farm_id' => $livestock->farm_id,
                 'coop_id' => $livestock->coop_id ?? null, // kalau ada
                 'unit_id' => $supply->payload['unit_id'],
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]
         );
     }
 
-    public function updatedSourceFarmId()
+    /**
+     * Load coop options for enhanced destination handling
+     */
+    public function loadCoopOptions(): void
     {
-        $this->loadAvailableItems();
+        // Fix distinct issue by getting unique coop IDs first, then loading coops
+        $uniqueCoopIds = Coop::select('id')
+            ->when(Auth::user()->hasRole('Operator'), function ($query) {
+                $query->whereHas('farm.farmOperators', function ($q) {
+                    $q->where('user_id', Auth::id());
+                });
+            })
+            ->whereIn('status', ['active', 'in_use'])
+            ->pluck('id')
+            ->toArray();
+
+        $coops = Coop::whereIn('id', $uniqueCoopIds)
+            ->with(['farm:id,name'])
+            ->when(Auth::user()->hasRole('Operator'), function ($query) {
+                $query->whereHas('farm.farmOperators', function ($q) {
+                    $q->where('user_id', Auth::id());
+                });
+            })
+            ->whereIn('status', ['active', 'in_use'])
+            ->get();
+
+        $this->allCoops = $coops->map(function ($coop) {
+            return [
+                'id' => $coop->id,
+                'name' => $coop->name,
+                'farm_name' => $coop->farm->name ?? 'Unknown',
+                'capacity' => $coop->capacity,
+                'current_quantity' => $coop->quantity ?? 0,
+                'status' => $coop->status,
+            ];
+        })->toArray();
     }
 
     public function loadAvailableItems()
@@ -665,21 +1182,439 @@ class Mutation extends Component
         }
     }
 
+    /**
+     * Update status for supply mutation from datatable dropdown
+     * 
+     * @param string $mutationId
+     * @param string $newStatus
+     * @param string|null $notes
+     * @return void
+     */
+    public function updateStatusSupplyMutation($mutationId = null, $newStatus = null, $notes = null)
+    {
+        // Handle both positional and named parameters from JavaScript
+        if (is_array($mutationId)) {
+            $params = $mutationId;
+            $mutationId = $params['mutationId'] ?? null;
+            $newStatus = $params['status'] ?? null;
+            $notes = $params['notes'] ?? null;
+        }
+
+        // Validate required parameters
+        if (!$mutationId || !$newStatus) {
+            Log::error('❌ Missing required parameters for status update', [
+                'mutation_id' => $mutationId,
+                'new_status' => $newStatus,
+                'notes' => $notes
+            ]);
+            $this->dispatch('error', 'Parameter yang diperlukan tidak lengkap.');
+            return;
+        }
+
+        DB::beginTransaction();
+        try {
+            Log::info('🔄 Updating supply mutation status (atomic)', [
+                'mutation_id' => $mutationId,
+                'new_status' => $newStatus,
+                'notes' => $notes,
+                'user_id' => Auth::id(),
+                'user_name' => Auth::user()->name ?? 'Unknown'
+            ]);
+
+            $supplyMutation = SupplyMutation::findOrFail($mutationId);
+            $oldStatus = $supplyMutation->status;
+
+            // Early return jika status sudah sama
+            if ($oldStatus === $newStatus) {
+                Log::info('⏩ Status sudah sama, tidak perlu update', [
+                    'mutation_id' => $mutationId,
+                    'status' => $oldStatus
+                ]);
+                $this->dispatch('info', 'Status sudah sesuai, tidak ada perubahan.');
+                DB::rollBack();
+                return;
+            }
+
+            // Validate status transition
+            $this->validateStatusTransition($oldStatus, $newStatus);
+
+            // Check user permissions
+            $user = Auth::user();
+            if (!$user || !$user->can('update supply mutation')) {
+                throw new \Exception('Anda tidak memiliki izin untuk mengubah status mutasi supply.');
+            }
+
+            // Update status
+            $updateData = [
+                'status' => $newStatus,
+                'updated_by' => Auth::id(),
+                'updated_at' => now()
+            ];
+            $supplyMutation->update($updateData);
+
+            // Jika status diubah ke 'in_process', jalankan proses SupplyStock dan CurrentSupply
+            if ($newStatus === 'in_process') {
+                $items = $supplyMutation->supplyMutationDetails->map(function ($item) {
+                    return [
+                        'type' => 'supply',
+                        'item_id' => $item->supply_id,
+                        'unit_id' => $item->unit_id ?? null,
+                        'quantity' => $item->quantity,
+                    ];
+                })->filter(function ($item) {
+                    return !empty($item['item_id']) && $item['quantity'] > 0;
+                })->values();
+
+                if ($items->isEmpty()) {
+                    Log::error('❌ No valid supply items found in supplyMutationDetails for mutation, rolling back status', [
+                        'mutation_id' => $mutationId,
+                        'old_status' => $oldStatus
+                    ]);
+                    // Rollback status
+                    $supplyMutation->status = $oldStatus;
+                    $supplyMutation->updated_by = Auth::id();
+                    $supplyMutation->updated_at = now();
+                    $supplyMutation->save();
+                    DB::rollBack();
+                    $this->addError('mutation', 'Tidak ada item supply yang valid untuk diproses (supplyMutationDetails kosong).');
+                    return;
+                }
+
+                try {
+                    Log::info('🚚 Status updated to in_process, running stock mutation (atomic)', [
+                        'mutation_id' => $mutationId,
+                        'items_count' => $items->count()
+                    ]);
+                    app(\App\Services\MutationService::class)->mutateSupplyItems(
+                        $items->toArray(),
+                        $supplyMutation->from_farm_id ?? null,
+                        $supplyMutation->to_farm_id ?? null,
+                        $supplyMutation->mutation_id,
+                        $supplyMutation->date
+                    );
+                    Log::info('✅ SupplyStock and CurrentSupply updated for mutation (atomic)', [
+                        'mutation_id' => $mutationId
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::error('❌ Failed to process supply stock mutation, rolling back status (atomic)', [
+                        'mutation_id' => $mutationId,
+                        'error' => $e->getMessage()
+                    ]);
+                    // Rollback status
+                    $supplyMutation->status = $oldStatus;
+                    $supplyMutation->updated_by = Auth::id();
+                    $supplyMutation->updated_at = now();
+                    $supplyMutation->save();
+                    DB::rollBack();
+                    $this->addError('mutation', 'Gagal memproses mutasi stok supply: ' . $e->getMessage());
+                    return;
+                }
+            }
+
+            // Log status change
+            Log::info('✅ Supply mutation status updated successfully (atomic)', [
+                'mutation_id' => $mutationId,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'updated_by' => Auth::id(),
+                'notes' => $notes
+            ]);
+
+            DB::commit();
+            $this->dispatch('success', 'Status mutasi supply berhasil diperbarui dari ' . $this->getStatusLabel($oldStatus) . ' ke ' . $this->getStatusLabel($newStatus));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->dispatch('showError', $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Validate status transition
+     * 
+     * @param string $oldStatus
+     * @param string $newStatus
+     * @throws \Exception
+     */
+    private function validateStatusTransition($oldStatus, $newStatus): void
+    {
+        // Only allow transitions: draft -> in_process, in_process -> completed, any -> cancelled
+        $validTransitions = [
+            'draft' => ['in_process', 'cancelled'],
+            'in_process' => ['completed', 'cancelled'],
+            'completed' => ['cancelled'],
+            'cancelled' => [],
+        ];
+
+        if (!isset($validTransitions[$oldStatus])) {
+            throw new \Exception("Status saat ini '$oldStatus' tidak valid.");
+        }
+
+        if (!in_array($newStatus, $validTransitions[$oldStatus])) {
+            throw new \Exception("Tidak dapat mengubah status dari '$oldStatus' ke '$newStatus'.");
+        }
+    }
+
+    /**
+     * Validate bypass approval conditions
+     * 
+     * @throws \Exception
+     */
+    private function validateBypassApproval(): void
+    {
+        $user = Auth::user();
+        if (!$user) {
+            throw new \Exception('User tidak ditemukan.');
+        }
+
+        $config = config('supply_mutation.workflow.bypass_approval');
+
+        if (!$config['enabled']) {
+            throw new \Exception('Bypass approval tidak diaktifkan.');
+        }
+
+        // Check if user has bypass role
+        $hasBypassRole = false;
+        foreach ($config['bypass_roles'] as $role) {
+            if ($user->hasRole($role)) {
+                $hasBypassRole = true;
+                break;
+            }
+        }
+
+        if (!$hasBypassRole) {
+            throw new \Exception('Anda tidak memiliki role yang diizinkan untuk bypass approval.');
+        }
+
+        // Verification is no longer required for bypass approval
+        // Removed verification requirement check
+    }
+
+    /**
+     * Validate verification after completion
+     * 
+     * @throws \Exception
+     */
+    private function validateVerificationAfterCompletion(): void
+    {
+        $user = Auth::user();
+        if (!$user) {
+            throw new \Exception('User tidak ditemukan.');
+        }
+
+        $config = config('supply_mutation.workflow.verification');
+
+        if (!$config['enabled']) {
+            throw new \Exception('Verification tidak diaktifkan.');
+        }
+
+        // Check if verification after completion is allowed
+        if (!$config['allow_verification_after_completion']) {
+            throw new \Exception('Verifikasi setelah completion tidak diizinkan.');
+        }
+
+        // Check if user has verification role
+        $hasVerificationRole = false;
+        foreach ($config['verification_roles'] as $role) {
+            if ($user->hasRole($role)) {
+                $hasVerificationRole = true;
+                break;
+            }
+        }
+
+        if (!$hasVerificationRole) {
+            throw new \Exception('Anda tidak memiliki role yang diizinkan untuk verifikasi.');
+        }
+
+        // Check if verification notes are required
+        if ($config['verification_notes_required'] && empty($this->notes)) {
+            throw new \Exception('Catatan verifikasi wajib diisi.');
+        }
+    }
+
+    /**
+     * Get status label
+     * 
+     * @param string $status
+     * @return string
+     */
+    private function getStatusLabel($status): string
+    {
+        $labels = [
+            'draft' => 'Draft',
+            'in_process' => 'Proses',
+            'completed' => 'Selesai',
+            'cancelled' => 'Dibatalkan',
+        ];
+        return $labels[$status] ?? $status;
+    }
+
+    /**
+     * Check if status change is significant enough for broadcasting
+     * 
+     * @param string $oldStatus
+     * @param string $newStatus
+     * @return bool
+     */
+    private function isSignificantStatusChange($oldStatus, $newStatus): bool
+    {
+        $significantChanges = [
+            'draft' => ['pending', 'verified', 'approved', 'completed'],
+            'pending' => ['approved', 'rejected', 'completed'],
+            'verified' => ['completed', 'cancelled'],
+            'approved' => ['completed', 'cancelled'],
+        ];
+
+        return isset($significantChanges[$oldStatus]) &&
+            in_array($newStatus, $significantChanges[$oldStatus]);
+    }
+
+    /**
+     * Broadcast status change notification
+     * 
+     * @param SupplyMutation $supplyMutation
+     * @param string $oldStatus
+     * @param string $newStatus
+     * @param string|null $notes
+     */
+    private function broadcastStatusChange($supplyMutation, $oldStatus, $newStatus, $notes = null): void
+    {
+        try {
+            $notificationData = [
+                'type' => $this->getNotificationTypeForStatus($newStatus),
+                'title' => 'Supply Mutation Status Updated',
+                'message' => $this->getStatusChangeMessage($supplyMutation, $oldStatus, $newStatus),
+                'mutation_id' => $supplyMutation->id,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'updated_by' => Auth::id(),
+                'updated_by_name' => Auth::user()->name,
+                'requires_refresh' => $this->requiresRefresh($oldStatus, $newStatus),
+                'priority' => $this->getPriority($oldStatus, $newStatus),
+                'show_refresh_button' => true,
+                'timestamp' => now()->toISOString()
+            ];
+
+            // Broadcast to Livewire components
+            $this->dispatch('notify-status-change', $notificationData)->to('supply-mutations');
+
+            Log::info('📡 Supply mutation status change broadcasted', [
+                'mutation_id' => $supplyMutation->id,
+                'notification_data' => $notificationData
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ Failed to broadcast supply mutation status change', [
+                'mutation_id' => $supplyMutation->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get notification type based on status
+     * 
+     * @param string $status
+     * @return string
+     */
+    private function getNotificationTypeForStatus(string $status): string
+    {
+        return match ($status) {
+            'completed' => 'success',
+            'approved' => 'success',
+            'verified' => 'success',
+            'rejected' => 'warning',
+            'cancelled' => 'warning',
+            'pending' => 'info',
+            default => 'info'
+        };
+    }
+
+    /**
+     * Get status change message
+     * 
+     * @param SupplyMutation $supplyMutation
+     * @param string $oldStatus
+     * @param string $newStatus
+     * @return string
+     */
+    private function getStatusChangeMessage($supplyMutation, $oldStatus, $newStatus): string
+    {
+        $oldLabel = $this->getStatusLabel($oldStatus);
+        $newLabel = $this->getStatusLabel($newStatus);
+
+        return sprintf(
+            'Supply Mutation #%s status changed from %s to %s by %s',
+            $supplyMutation->id,
+            $oldLabel,
+            $newLabel,
+            Auth::user()->name
+        );
+    }
+
+    /**
+     * Check if status change requires page refresh
+     * 
+     * @param string $oldStatus
+     * @param string $newStatus
+     * @return bool
+     */
+    private function requiresRefresh(string $oldStatus, string $newStatus): bool
+    {
+        $criticalChanges = [
+            'draft' => ['pending', 'verified', 'approved', 'completed'],
+            'pending' => ['approved', 'rejected', 'completed'],
+            'verified' => ['completed', 'cancelled'],
+            'approved' => ['completed', 'cancelled'],
+        ];
+
+        return isset($criticalChanges[$oldStatus]) &&
+            in_array($newStatus, $criticalChanges[$oldStatus]);
+    }
+
+    /**
+     * Get notification priority
+     * 
+     * @param string $oldStatus
+     * @param string $newStatus
+     * @return string
+     */
+    private function getPriority(string $oldStatus, string $newStatus): string
+    {
+        if ($newStatus === 'completed') return 'high';
+        if ($newStatus === 'approved') return 'high';
+        if ($newStatus === 'verified') return 'high';
+        if ($newStatus === 'rejected') return 'medium';
+        if ($newStatus === 'cancelled') return 'medium';
+        if ($newStatus === 'pending') return 'low';
+        return 'normal';
+    }
+
     private function loadFarms()
     {
-        $this->dstFarms = Farm::when(auth()->user()->hasRole('Operator'), function ($query) {
+        $this->dstFarms = Farm::when(Auth::user()->hasRole('Operator'), function ($query) {
             $query->whereHas('farmOperators', function ($q) {
-                $q->where('user_id', auth()->id());
+                $q->where('user_id', Auth::id());
             });
         })->get();
-        $this->farms = SupplyStock::distinct('farm_id')
-            ->when(auth()->user()->hasRole('Operator'), function ($query) {
+
+        // Fix distinct issue by getting unique farm IDs first, then loading farms
+        $uniqueFarmIds = SupplyStock::select('farm_id')
+            ->when(Auth::user()->hasRole('Operator'), function ($query) {
                 $query->whereHas('farm.farmOperators', function ($q) {
-                    $q->where('user_id', auth()->id());
+                    $q->where('user_id', Auth::id());
                 });
             })
-            ->with('farm:id,name')
-            ->get()
-            ->pluck('farm');
+            ->distinct()
+            ->pluck('farm_id')
+            ->filter()
+            ->toArray();
+
+        $this->farms = Farm::whereIn('id', $uniqueFarmIds)
+            ->when(Auth::user()->hasRole('Operator'), function ($query) {
+                $query->whereHas('farmOperators', function ($q) {
+                    $q->where('user_id', Auth::id());
+                });
+            })
+            ->get();
     }
 }

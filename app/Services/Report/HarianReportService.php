@@ -10,6 +10,8 @@ use App\Models\FeedUsageDetail;
 use App\Models\LivestockSalesItem;
 use App\Models\LivestockDepletion;
 use App\Config\LivestockDepletionConfig;
+use App\Models\SupplyUsageDetail;
+use App\Models\SupplyUsage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -17,10 +19,12 @@ use Illuminate\Support\Facades\Auth;
 class HarianReportService
 {
     protected $depletionReportService;
+    protected $unitConversionService;
 
-    public function __construct(LivestockDepletionReportService $depletionReportService)
+    public function __construct(LivestockDepletionReportService $depletionReportService, $unitConversionService = null)
     {
         $this->depletionReportService = $depletionReportService;
+        $this->unitConversionService = $unitConversionService;
     }
 
     /**
@@ -32,24 +36,33 @@ class HarianReportService
      * @param string $reportType ('detail' or 'simple')
      * @return array
      */
-    public function getHarianReportData(Farm $farm, Carbon $tanggal, string $reportType): array
+    public function getHarianReportData(Farm $farm, Carbon $tanggal, string $reportType, $livestockId = null): array
     {
         Log::info('Generating Harian Report Data', [
             'farm_id' => $farm->id,
             'farm_name' => $farm->name,
             'tanggal' => $tanggal->format('Y-m-d'),
             'report_type' => $reportType,
-            'user_id' => Auth::id()
+            'user_id' => Auth::id(),
+            'filter_livestock_id' => $livestockId
         ]);
 
         // Get all active livestock for the date
         $livestocks = $this->getActiveLivestock($farm, $tanggal);
+        if ($livestockId) {
+            $livestocks = $livestocks->where('id', $livestockId);
+        }
 
         // Optimize feed names query
         $distinctFeedNames = $this->getDistinctFeedNames($farm, $tanggal);
 
         // Get all feed usage details once for efficiency
         $allFeedUsageDetails = $this->getAllFeedUsageDetails($farm, $tanggal);
+
+        // Get all supply usage details once for efficiency
+        $allSupplyUsageDetails = $this->getAllSupplyUsageDetails($farm, $tanggal);
+
+        // dd($allSupplyUsageDetails);
 
         // Check if there are any recordings for this date
         $hasRecordings = $this->hasRecordingsForDate($livestocks, $tanggal);
@@ -67,18 +80,54 @@ class HarianReportService
                 'recordings' => [],
                 'totals' => $this->getEmptyTotals($distinctFeedNames),
                 'distinctFeedNames' => $distinctFeedNames,
-                'reportType' => $reportType
+                'reportType' => $reportType,
+                'supplyUsage' => [
+                    'by_type' => [],
+                    'total_cost' => 0,
+                    'details' => []
+                ]
             ];
         }
 
         // Initialize totals
         $totals = $this->initializeTotals();
+        $supplyUsageTotals = [
+            'by_type' => [],
+            'total_cost' => 0,
+            'details' => []
+        ];
 
         // Process data based on report type
-        $recordings = $this->processRecordings($livestocks, $tanggal, $reportType, $distinctFeedNames, $totals, $allFeedUsageDetails);
+        $recordings = $this->processRecordings($livestocks, $tanggal, $reportType, $distinctFeedNames, $totals, $allFeedUsageDetails, $allSupplyUsageDetails, $supplyUsageTotals);
 
         // Finalize totals and calculations
         $this->finalizeTotals($totals, $distinctFeedNames);
+        $this->finalizeSupplyUsageTotals($supplyUsageTotals);
+
+        // --- AGREGASI SUPPLY USAGE MASSAL (tanpa livestock_id) ---
+        $massalSupplyDetails = $allSupplyUsageDetails
+            ? $allSupplyUsageDetails->filter(function ($detail) {
+                return empty($detail->supplyUsage->livestock_id);
+            })
+            : collect();
+        foreach ($massalSupplyDetails as $detail) {
+            $supplyName = $detail->supply->name ?? 'Unknown';
+            $unitName = $detail->unit->name ?? 'pcs';
+            $quantity = (float) $detail->quantity_taken;
+            $unitCost = $detail->price_per_unit ?? ($detail->supply->price ?? 0);
+            $cost = $quantity * $unitCost;
+            if (!isset($supplyUsageTotals['by_type'][$supplyName])) {
+                $supplyUsageTotals['by_type'][$supplyName] = [
+                    'quantity' => 0,
+                    'cost' => 0,
+                    'unit' => $unitName,
+                    'unit_cost' => $unitCost
+                ];
+            }
+            $supplyUsageTotals['by_type'][$supplyName]['quantity'] += $quantity;
+            $supplyUsageTotals['by_type'][$supplyName]['cost'] += $cost;
+        }
+        $this->finalizeSupplyUsageTotals($supplyUsageTotals);
 
         Log::info('Harian Report Data generated successfully', [
             'farm_id' => $farm->id,
@@ -86,7 +135,8 @@ class HarianReportService
             'total_stock_awal' => $totals['stock_awal'],
             'total_stock_akhir' => $totals['stock_akhir'],
             'total_deplesi' => $totals['total_deplesi'],
-            'deplesi_percentage' => $totals['deplesi_percentage']
+            'deplesi_percentage' => $totals['deplesi_percentage'],
+            'supply_total_cost' => $supplyUsageTotals['total_cost']
         ]);
 
         return [
@@ -95,7 +145,8 @@ class HarianReportService
             'recordings' => $recordings,
             'totals' => $totals,
             'distinctFeedNames' => $distinctFeedNames,
-            'reportType' => $reportType
+            'reportType' => $reportType,
+            'supplyUsage' => $supplyUsageTotals
         ];
     }
 
@@ -167,6 +218,45 @@ class HarianReportService
     }
 
     /**
+     * Get all supply usage details for efficiency
+     */
+    private function getAllSupplyUsageDetails(Farm $farm, Carbon $tanggal)
+    {
+        // 1. SupplyUsageDetail with livestock_id (batch-specific usage)
+        $detailsWithLivestock = SupplyUsageDetail::whereHas('supplyUsage', function ($query) use ($farm, $tanggal) {
+            $query->whereHas('livestock', function ($q) use ($farm) {
+                $q->where('farm_id', $farm->id);
+            })
+                ->whereDate('usage_date', $tanggal)
+                ->whereIn('status', ['pending', 'in_process', 'completed']);
+        })
+            ->with(['supply', 'unit', 'supplyUsage.livestock', 'supplyStock.supplyPurchase'])
+            ->get();
+
+        // 2. SupplyUsageDetail with SupplyUsage that has farm_id (umum/OVK massal, no livestock_id)
+        $detailsWithoutLivestock = SupplyUsageDetail::whereHas('supplyUsage', function ($query) use ($farm, $tanggal) {
+            $query->whereNull('livestock_id')
+                ->where('farm_id', $farm->id)
+                ->whereDate('usage_date', $tanggal)
+                ->whereIn('status', ['pending', 'in_process', 'completed']);
+        })
+            ->with(['supply', 'unit', 'supplyUsage', 'supplyStock.supplyPurchase'])
+            ->get();
+
+        $all = $detailsWithLivestock->merge($detailsWithoutLivestock);
+
+        Log::info('getAllSupplyUsageDetails result', [
+            'with_livestock_count' => $detailsWithLivestock->count(),
+            'without_livestock_count' => $detailsWithoutLivestock->count(),
+            'total' => $all->count(),
+            'farm_id' => $farm->id,
+            'tanggal' => $tanggal->format('Y-m-d')
+        ]);
+
+        return $all;
+    }
+
+    /**
      * Check if there are recordings for the date
      */
     private function hasRecordingsForDate($livestocks, Carbon $tanggal): bool
@@ -216,14 +306,14 @@ class HarianReportService
     /**
      * Process recordings based on report type
      */
-    private function processRecordings($livestocks, Carbon $tanggal, string $reportType, array $distinctFeedNames, array &$totals, $allFeedUsageDetails): array
+    private function processRecordings($livestocks, Carbon $tanggal, string $reportType, array $distinctFeedNames, array &$totals, $allFeedUsageDetails, $allSupplyUsageDetails, array &$supplyUsageTotals): array
     {
         $recordings = [];
 
         if ($reportType === 'detail') {
-            $recordings = $this->processDetailMode($livestocks, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails);
+            $recordings = $this->processDetailMode($livestocks, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails, $allSupplyUsageDetails, $supplyUsageTotals);
         } else {
-            $recordings = $this->processSimpleMode($livestocks, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails);
+            $recordings = $this->processSimpleMode($livestocks, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails, $allSupplyUsageDetails, $supplyUsageTotals);
         }
 
         return $recordings;
@@ -232,7 +322,7 @@ class HarianReportService
     /**
      * Process detail mode - show individual depletion records
      */
-    private function processDetailMode($livestocks, Carbon $tanggal, array $distinctFeedNames, array &$totals, $allFeedUsageDetails): array
+    private function processDetailMode($livestocks, Carbon $tanggal, array $distinctFeedNames, array &$totals, $allFeedUsageDetails, $allSupplyUsageDetails, array &$supplyUsageTotals): array
     {
         $recordings = [];
         $livestocksByCoopNama = $livestocks->groupBy(function ($livestock) {
@@ -301,7 +391,7 @@ class HarianReportService
     /**
      * Process simple mode - aggregate data per coop
      */
-    private function processSimpleMode($livestocks, Carbon $tanggal, array $distinctFeedNames, array &$totals, $allFeedUsageDetails): array
+    private function processSimpleMode($livestocks, Carbon $tanggal, array $distinctFeedNames, array &$totals, $allFeedUsageDetails, $allSupplyUsageDetails, array &$supplyUsageTotals): array
     {
         $recordings = [];
         $livestocksByCoopNama = $livestocks->groupBy(function ($livestock) {
@@ -309,7 +399,7 @@ class HarianReportService
         });
 
         foreach ($livestocksByCoopNama as $coopNama => $coopLivestocks) {
-            $aggregatedData = $this->processCoopAggregation($coopLivestocks, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails);
+            $aggregatedData = $this->processCoopAggregation($coopLivestocks, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails, $allSupplyUsageDetails, $supplyUsageTotals);
             if ($aggregatedData !== null) {
                 $recordings[$coopNama] = $aggregatedData;
             }
@@ -322,7 +412,7 @@ class HarianReportService
      * Process coop aggregation for simple mode
      * Extracted from ReportsController::processCoopAggregation()
      */
-    private function processCoopAggregation($coopLivestocks, Carbon $tanggal, array $distinctFeedNames, array &$totals, $allFeedUsageDetails = null)
+    private function processCoopAggregation($coopLivestocks, Carbon $tanggal, array $distinctFeedNames, array &$totals, $allFeedUsageDetails = null, $allSupplyUsageDetails = null, array &$supplyUsageTotals = null, &$stockCarryOver = [])
     {
         $aggregatedData = [
             'umur' => 0,
@@ -345,13 +435,49 @@ class HarianReportService
         $batchDataCollection = [];
 
         foreach ($coopLivestocks as $livestock) {
-            $batchData = $this->processLivestockData($livestock, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails);
+            // --- REF: Stock Carry Over Logic ---
+            $umur = Carbon::parse($livestock->start_date)->diffInDays($tanggal);
+            if ($umur === 0) {
+                $stockAwal = (int) $livestock->initial_quantity;
+            } else {
+                if (isset($stockCarryOver[$livestock->id])) {
+                    $stockAwal = $stockCarryOver[$livestock->id];
+                } else {
+                    // Cari recording sebelumnya
+                    $recordingPrev = Recording::where('livestock_id', $livestock->id)
+                        ->whereDate('tanggal', '<', $tanggal)
+                        ->orderBy('tanggal', 'desc')
+                        ->first();
+                    if ($recordingPrev && isset($recordingPrev->stock_akhir)) {
+                        $stockAwal = (int) $recordingPrev->stock_akhir;
+                    } else {
+                        $stockAwal = (int) $livestock->initial_quantity;
+                    }
+                }
+            }
+            // Inject stock_awal ke batchData
+            $batchData = $this->processLivestockDataWithStockAwal($livestock, $tanggal, $distinctFeedNames, $totals, $allFeedUsageDetails, $allSupplyUsageDetails, $supplyUsageTotals, $stockAwal);
+            Log::info('Debug batchData', [
+                'livestock_id' => $livestock->id,
+                'batchData' => $batchData
+            ]);
             if ($batchData === null) {
+                Log::warning('Livestock skipped, no recording', ['livestock_id' => $livestock->id]);
                 continue; // Skip livestock without Recording
             }
             $processedCount++;
             $batchDataCollection[] = $batchData;
+            // Simpan stock_akhir untuk carry-over hari berikutnya
+            $stockCarryOver[$livestock->id] = $batchData['stock_akhir'];
+            Log::debug('Stock Carry Over', [
+                'livestock_id' => $livestock->id,
+                'umur' => $umur,
+                'stock_awal' => $stockAwal,
+                'stock_akhir' => $batchData['stock_akhir'],
+                'tanggal' => $tanggal->format('Y-m-d')
+            ]);
         }
+        // dd($batchDataCollection); // Debug semua hasil valid
 
         if (empty($batchDataCollection)) {
             return null; // No data to aggregate for this coop
@@ -412,7 +538,7 @@ class HarianReportService
      * Process individual livestock data
      * Extracted from ReportsController::processLivestockData()
      */
-    private function processLivestockData($livestock, Carbon $tanggal, array $distinctFeedNames, array &$totals, $allFeedUsageDetails = null)
+    private function processLivestockData($livestock, Carbon $tanggal, array $distinctFeedNames, array &$totals, $allFeedUsageDetails = null, $allSupplyUsageDetails = null, array &$supplyUsageTotals = null)
     {
         $recordingData = Recording::where('livestock_id', $livestock->id)
             ->whereDate('tanggal', $tanggal)
@@ -516,6 +642,73 @@ class HarianReportService
             $totals['pakan_harian'][$jenis] = ($totals['pakan_harian'][$jenis] ?? 0) + (float) $jumlah;
         }
 
+        // --- SUPPLY USAGE AGGREGATION ---
+        $supplyUsageDetails = $allSupplyUsageDetails
+            ? $allSupplyUsageDetails->filter(function ($detail) use ($livestock) {
+                return $detail->supplyUsage && $detail->supplyUsage->livestock_id === $livestock->id;
+            })
+            : collect();
+
+        $supplyByType = [];
+        $supplyDetails = [];
+        $totalSupplyCost = 0;
+
+        foreach ($supplyUsageDetails as $detail) {
+            $supplyName = $detail->supply->name ?? 'Unknown';
+            $unitName = $detail->unit->name ?? 'pcs';
+            $quantity = (float) $detail->quantity_taken;
+            $unitCost = $detail->price_per_unit ?? ($detail->supply->price ?? 0);
+            $cost = $quantity * $unitCost;
+
+            if (!isset($supplyByType[$supplyName])) {
+                $supplyByType[$supplyName] = [
+                    'quantity' => 0,
+                    'cost' => 0,
+                    'unit' => $unitName,
+                    'unit_cost' => $unitCost
+                ];
+            }
+            $supplyByType[$supplyName]['quantity'] += $quantity;
+            $supplyByType[$supplyName]['cost'] += $cost;
+            $totalSupplyCost += $cost;
+
+            $supplyDetails[] = [
+                'livestock_id' => $livestock->id,
+                'livestock_name' => $livestock->name,
+                'supply_name' => $supplyName,
+                'quantity' => $quantity,
+                'unit' => $unitName,
+                'unit_cost' => $unitCost,
+                'cost' => $cost,
+                'usage_date' => $detail->supplyUsage->usage_date ?? null,
+                'status' => $detail->supplyUsage->status ?? null
+            ];
+        }
+
+        // Update global supply usage totals (by_type)
+        if ($supplyUsageTotals !== null) {
+            foreach ($supplyByType as $type => $data) {
+                if (!isset($supplyUsageTotals['by_type'][$type])) {
+                    $supplyUsageTotals['by_type'][$type] = [
+                        'quantity' => 0,
+                        'cost' => 0,
+                        'unit' => $data['unit'],
+                        'unit_cost' => $data['unit_cost']
+                    ];
+                }
+                $supplyUsageTotals['by_type'][$type]['quantity'] += $data['quantity'];
+                $supplyUsageTotals['by_type'][$type]['cost'] += $data['cost'];
+            }
+            // Merge details for audit trail
+            $supplyUsageTotals['details'] = array_merge($supplyUsageTotals['details'], $supplyDetails);
+        }
+
+        Log::debug('Processed livestock supply usage', [
+            'livestock_id' => $livestock->id,
+            'supply_by_type' => $supplyByType,
+            'total_supply_cost' => $totalSupplyCost
+        ]);
+
         Log::debug('Processed livestock data', [
             'livestock_id' => $livestock->id,
             'livestock_name' => $livestock->name,
@@ -543,7 +736,273 @@ class HarianReportService
             'kenaikan_berat' => $kenaikan_berat,
             'pakan_harian' => $pakanHarianPerJenis,
             'pakan_total' => $totalPakanUsage,
-            'pakan_jenis' => $distinctFeedNames
+            'pakan_jenis' => $distinctFeedNames,
+            'supply_usage_by_type' => $supplyByType,
+            'supply_total_cost' => $totalSupplyCost
+        ];
+    }
+
+    // Tambahkan versi baru processLivestockData yang menerima stock_awal
+    private function processLivestockDataWithStockAwal($livestock, Carbon $tanggal, array $distinctFeedNames, array &$totals, $allFeedUsageDetails = null, $allSupplyUsageDetails = null, array &$supplyUsageTotals = null, $stockAwalOverride = null)
+    {
+        $recordingData = Recording::where('livestock_id', $livestock->id)
+            ->whereDate('tanggal', $tanggal)
+            ->first();
+
+        if (!$recordingData) {
+            Log::debug('Skipping livestock - no Recording data', [
+                'livestock_id' => $livestock->id,
+                'tanggal' => $tanggal->format('Y-m-d'),
+            ]);
+            return null;
+        }
+
+        $age = Carbon::parse($livestock->start_date)->diffInDays($tanggal);
+        // FIX: Prioritaskan override!
+        if ($stockAwalOverride !== null) {
+            $stockAwal = $stockAwalOverride;
+            $stockAwalSource = 'carry_over';
+        } else if ($age === 0) {
+            $stockAwal = (int) $livestock->initial_quantity;
+            $stockAwalSource = 'initial_quantity';
+        } else {
+            // Cari recording terdekat sebelum tanggal ini
+            $recordingPrev = Recording::where('livestock_id', $livestock->id)
+                ->whereDate('tanggal', '<', $tanggal)
+                ->orderBy('tanggal', 'desc')
+                ->first();
+            if ($recordingPrev && isset($recordingPrev->stock_akhir)) {
+                $stockAwal = (int) $recordingPrev->stock_akhir;
+                $stockAwalSource = 'prev_recording';
+                Log::debug('StockAwal carry-over from previous recording', [
+                    'livestock_id' => $livestock->id,
+                    'tanggal' => $tanggal->format('Y-m-d'),
+                    'stock_awal' => $stockAwal,
+                    'from_tanggal' => $recordingPrev->tanggal,
+                    'stock_akhir_prev' => $recordingPrev->stock_akhir
+                ]);
+            } else {
+                $stockAwal = (int) $livestock->initial_quantity;
+                $stockAwalSource = 'initial_quantity_fallback';
+                Log::debug('StockAwal fallback to initial_quantity', [
+                    'livestock_id' => $livestock->id,
+                    'tanggal' => $tanggal->format('Y-m-d'),
+                    'stock_awal' => $stockAwal
+                ]);
+            }
+        }
+
+        // Get depletion data with type normalization
+        $mortalityQuery = LivestockDepletion::where('livestock_id', $livestock->id)
+            ->whereIn('jenis', [
+                LivestockDepletionConfig::TYPE_MORTALITY,
+                LivestockDepletionConfig::LEGACY_TYPE_MATI
+            ])
+            ->whereDate('tanggal', $tanggal->format('Y-m-d'));
+        $mortality = (int) $mortalityQuery->sum('jumlah');
+
+        $cullingQuery = LivestockDepletion::where('livestock_id', $livestock->id)
+            ->whereIn('jenis', [
+                LivestockDepletionConfig::TYPE_CULLING,
+                LivestockDepletionConfig::LEGACY_TYPE_AFKIR
+            ])
+            ->whereDate('tanggal', $tanggal->format('Y-m-d'));
+        $culling = (int) $cullingQuery->sum('jumlah');
+
+        $totalDepletion = $mortality + $culling;
+
+        // Get sales data
+        $sales = LivestockSalesItem::where('livestock_id', $livestock->id)
+            ->whereHas('livestockSale', function ($query) use ($tanggal) {
+                $query->whereDate('tanggal', $tanggal);
+            })
+            ->first();
+
+        $totalSalesCumulative = (int) LivestockSalesItem::where('livestock_id', $livestock->id)
+            ->whereHas('livestockSale', function ($query) use ($tanggal) {
+                $query->whereDate('tanggal', '<=', $tanggal);
+            })
+            ->sum('quantity');
+
+        // Get feed usage data
+        $feedUsageDetails = $allFeedUsageDetails
+            ? $allFeedUsageDetails->filter(function ($detail) use ($livestock) {
+                return $detail->feedUsage && $detail->feedUsage->livestock_id === $livestock->id;
+            })
+            : collect();
+
+        // Fallback: if no data for livestock, use all feed usage for farm
+        if ($feedUsageDetails->isEmpty() && $allFeedUsageDetails) {
+            $feedUsageDetails = $allFeedUsageDetails;
+        }
+
+        $pakanHarianPerJenis = [];
+        $totalPakanHarian = 0;
+
+        // Process feed usage by type
+        foreach ($distinctFeedNames as $feedName) {
+            $jumlah = $feedUsageDetails->where('feed.name', $feedName)->sum('quantity_taken');
+            $pakanHarianPerJenis[$feedName] = $jumlah;
+            $totalPakanHarian += $jumlah;
+        }
+
+        // Get cumulative feed usage
+        $totalPakanUsage = (float) FeedUsageDetail::whereHas('feedUsage', function ($query) use ($livestock, $tanggal) {
+            $query->where('livestock_id', $livestock->id)
+                ->whereDate('usage_date', '<=', $tanggal);
+        })->sum('quantity_taken');
+
+        // Get weight data
+        $berat_semalam = (float) ($recordingData->berat_semalam ?? 0);
+        $berat_hari_ini = (float) ($recordingData->berat_hari_ini ?? 0);
+        $kenaikan_berat = (float) ($recordingData->kenaikan_berat ?? 0);
+
+        // Perhitungan stock akhir HARUS konsisten: stock_awal - deplesi - penjualan cumulative
+        $stockAkhir = $stockAwal - $totalDepletion - $totalSalesCumulative;
+
+        // Logging detail untuk debugging
+        Log::info('Livestock Stock Calculation', [
+            'livestock_id' => $livestock->id,
+            'livestock_name' => $livestock->name,
+            'tanggal' => $tanggal->format('Y-m-d'),
+            'umur' => $age,
+            'stock_awal' => $stockAwal,
+            'stock_awal_source' => $stockAwalSource ?? 'unknown',
+            'deplesi' => $totalDepletion,
+            'penjualan_cumulative' => $totalSalesCumulative,
+            'stock_akhir' => $stockAkhir
+        ]);
+
+        // Update totals
+        $totals['stock_awal'] += $stockAwal;
+        $totals['mati'] += $mortality;
+        $totals['afkir'] += $culling;
+        $totals['total_deplesi'] += $totalDepletion;
+        $totals['jual_ekor'] += (int) ($sales->quantity ?? 0);
+        $totals['jual_kg'] += (float) ($sales->total_berat ?? 0);
+        $totals['stock_akhir'] += $stockAkhir;
+        $totals['berat_semalam'] += $berat_semalam;
+        $totals['berat_hari_ini'] += $berat_hari_ini;
+        $totals['kenaikan_berat'] += $kenaikan_berat;
+        $totals['pakan_total'] += $totalPakanUsage;
+        $totals['tangkap_ekor'] += (int) ($sales->quantity ?? 0);
+        $totals['tangkap_kg'] += (float) ($sales->total_berat ?? 0);
+
+        foreach ($pakanHarianPerJenis as $jenis => $jumlah) {
+            $totals['pakan_harian'][$jenis] = ($totals['pakan_harian'][$jenis] ?? 0) + (float) $jumlah;
+        }
+
+        // --- SUPPLY USAGE AGGREGATION ---
+        $supplyUsageDetails = $allSupplyUsageDetails
+            ? $allSupplyUsageDetails->filter(function ($detail) use ($livestock) {
+                return $detail->supplyUsage && $detail->supplyUsage->livestock_id === $livestock->id;
+            })
+            : collect();
+
+        $supplyByType = [];
+        $supplyDetails = [];
+        $totalSupplyCost = 0;
+
+        foreach ($supplyUsageDetails as $detail) {
+            $supplyName = $detail->supply->name ?? 'Unknown';
+            $unitName = $detail->unit->name ?? 'pcs';
+            $quantity = (float) $detail->quantity_taken;
+
+            // Fix: Get price from SupplyPurchase properly
+            $unitCost = 0;
+            if ($detail->price_per_unit) {
+                $unitCost = $detail->price_per_unit;
+            } elseif ($detail->supply->price) {
+                $unitCost = $detail->supply->price;
+            } elseif ($detail->supplyStock && $detail->supplyStock->supplyPurchase) {
+                // Use price_per_converted_unit if available, otherwise price_per_unit
+                $unitCost = $detail->supplyStock->supplyPurchase->price_per_converted_unit ??
+                    $detail->supplyStock->supplyPurchase->price_per_unit ?? 0;
+            }
+
+            $cost = $quantity * $unitCost;
+
+            if (!isset($supplyByType[$supplyName])) {
+                $supplyByType[$supplyName] = [
+                    'quantity' => 0,
+                    'cost' => 0,
+                    'unit' => $unitName,
+                    'unit_cost' => $unitCost
+                ];
+            }
+            $supplyByType[$supplyName]['quantity'] += $quantity;
+            $supplyByType[$supplyName]['cost'] += $cost;
+            $totalSupplyCost += $cost;
+
+            $supplyDetails[] = [
+                'livestock_id' => $livestock->id,
+                'livestock_name' => $livestock->name,
+                'supply_name' => $supplyName,
+                'quantity' => $quantity,
+                'unit' => $unitName,
+                'unit_cost' => $unitCost,
+                'cost' => $cost,
+                'usage_date' => $detail->supplyUsage->usage_date ?? null,
+                'status' => $detail->supplyUsage->status ?? null
+            ];
+        }
+
+        // Update global supply usage totals (by_type)
+        if ($supplyUsageTotals !== null) {
+            foreach ($supplyByType as $type => $data) {
+                if (!isset($supplyUsageTotals['by_type'][$type])) {
+                    $supplyUsageTotals['by_type'][$type] = [
+                        'quantity' => 0,
+                        'cost' => 0,
+                        'unit' => $data['unit'],
+                        'unit_cost' => $data['unit_cost']
+                    ];
+                }
+                $supplyUsageTotals['by_type'][$type]['quantity'] += $data['quantity'];
+                $supplyUsageTotals['by_type'][$type]['cost'] += $data['cost'];
+            }
+            // Merge details for audit trail
+            $supplyUsageTotals['details'] = array_merge($supplyUsageTotals['details'], $supplyDetails);
+        }
+
+        Log::debug('Processed livestock supply usage', [
+            'livestock_id' => $livestock->id,
+            'supply_by_type' => $supplyByType,
+            'total_supply_cost' => $totalSupplyCost
+        ]);
+
+        Log::debug('Processed livestock data', [
+            'livestock_id' => $livestock->id,
+            'livestock_name' => $livestock->name,
+            'stock_awal' => $stockAwal,
+            'mortality' => $mortality,
+            'culling' => $culling,
+            'total_depletion' => $totalDepletion,
+            'feed_usage_per_jenis' => $pakanHarianPerJenis
+        ]);
+
+        return [
+            'livestock_id' => $livestock->id,
+            'livestock_name' => $livestock->name,
+            'umur' => $age,
+            'stock_awal' => $stockAwal,
+            'mati' => $mortality,
+            'afkir' => $culling,
+            'total_deplesi' => $totalDepletion,
+            'deplesi_percentage' => $stockAwal > 0 ? round(($totalDepletion / $stockAwal) * 100, 2) : 0,
+            'jual_ekor' => (int) ($sales->quantity ?? 0),
+            'jual_kg' => (float) ($sales->total_berat ?? 0),
+            'stock_akhir' => $stockAkhir,
+            'berat_semalam' => $berat_semalam,
+            'berat_hari_ini' => $berat_hari_ini,
+            'kenaikan_berat' => $kenaikan_berat,
+            'pakan_harian' => $pakanHarianPerJenis,
+            'pakan_total' => $totalPakanUsage,
+            'pakan_jenis' => $distinctFeedNames,
+            'supply_usage_by_type' => $supplyByType,
+            'supply_total_cost' => $totalSupplyCost,
+            'date' => $tanggal->format('Y-m-d'),
+            'stock_awal_source' => $stockAwalSource ?? 'unknown',
         ];
     }
 
@@ -585,13 +1044,27 @@ class HarianReportService
     }
 
     /**
+     * Finalize supply usage totals
+     */
+    private function finalizeSupplyUsageTotals(array &$supplyUsageTotals): void
+    {
+        // Ensure all types are present and calculate grand total
+        $supplyUsageTotals['total_cost'] = 0;
+        foreach ($supplyUsageTotals['by_type'] as $type => &$data) {
+            $data['cost'] = round($data['cost'], 2);
+            $supplyUsageTotals['total_cost'] += $data['cost'];
+        }
+        $supplyUsageTotals['total_cost'] = round($supplyUsageTotals['total_cost'], 2);
+    }
+
+    /**
      * Export harian report in requested format
      * 
      * @param \Illuminate\Http\Request $request
      * @param string $format
      * @return \Illuminate\Http\Response
      */
-    public function exportHarianReport($request, $format = 'html')
+    public function exportHarianReport($request, $format = 'html', $livestockId = null)
     {
         try {
             // Validate input
@@ -613,11 +1086,14 @@ class HarianReportService
                 'tanggal' => $tanggal->format('Y-m-d'),
                 'report_type' => $reportType,
                 'export_format' => $exportFormat,
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
+                'filter_livestock_id' => $livestockId
             ]);
 
             // Get report data
-            $exportData = $this->getHarianReportData($farm, $tanggal, $reportType);
+            $exportData = $this->getHarianReportData($farm, $tanggal, $reportType, $livestockId);
+
+            // dd($exportData);
 
             // Validate if there are recordings
             if (empty($exportData['recordings'])) {
@@ -670,7 +1146,8 @@ class HarianReportService
             'distinctFeedNames' => $data['distinctFeedNames'],
             'reportType' => $reportType,
             'diketahui' => '',
-            'dibuat' => ''
+            'dibuat' => '',
+            'supplyUsage' => $data['supplyUsage'] ?? []
         ]);
     }
 

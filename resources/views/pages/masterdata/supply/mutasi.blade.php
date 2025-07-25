@@ -36,14 +36,24 @@
 
         <!--begin::Card body-->
         <div class="card-body py-4">
-            <div id="datatable-container">
-                <!--begin::Table-->
-                <div class="table-responsive">
-                    {{ $dataTable->table() }}
+            <div x-data="{ errorMessage: null }" x-init="
+                window.addEventListener('showError', e => {
+                    errorMessage = e.detail;
+                    setTimeout(() => errorMessage = null, 8000);
+                });
+            ">
+                <template x-if="errorMessage">
+                    <div class="alert alert-danger" x-text="errorMessage"></div>
+                </template>
+                <div id="datatable-container">
+                    <!--begin::Table-->
+                    <div class="table-responsive">
+                        {{ $dataTable->table() }}
+                    </div>
+                    <!--end::Table-->
                 </div>
-                <!--end::Table-->
+                <livewire:master-data.supply.mutation />
             </div>
-            <livewire:master-data.supply.mutation />
         </div>
         <!--end::Card body-->
 

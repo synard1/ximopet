@@ -14,14 +14,17 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Collection;
+use App\Services\Recording\Contracts\RecordingSaleServiceInterface;
 
 class PerformanceReportService
 {
     protected $calculationService;
+    protected $recordingSaleService;
 
-    public function __construct(ReportCalculationService $calculationService)
+    public function __construct(ReportCalculationService $calculationService, RecordingSaleServiceInterface $recordingSaleService)
     {
         $this->calculationService = $calculationService;
+        $this->recordingSaleService = $recordingSaleService;
     }
 
     /**
@@ -46,6 +49,9 @@ class PerformanceReportService
             ->with(['coop', 'farm'])
             ->get();
 
+        $startDate = Carbon::parse('2025-07-21');
+        $endDate = Carbon::parse('2025-07-22');
+
         $report = [];
         $overallTotals = $this->initializeOverallTotals();
         $allFeedNamesAcrossReport = collect();
@@ -68,15 +74,6 @@ class PerformanceReportService
 
         $uniqueFeedNames = $allFeedNamesAcrossReport->unique()->sort()->values();
 
-        Log::info('Enhanced Performance Report generated successfully', [
-            'livestock_count' => count($report),
-            'overall_fcr' => $overallTotals['overall_fcr'],
-            'overall_survival_rate' => $overallTotals['overall_survival_rate'],
-            'overall_ip' => $overallTotals['overall_ip'],
-            'total_supply_cost' => $overallTotals['total_supply_cost'],
-            'supply_cost_per_head' => $overallTotals['supply_cost_per_head']
-        ]);
-
         // Collect supply names from this livestock's daily records
         $allSupplyNamesAcrossReport = collect();
         foreach ($report as $livestockData) {
@@ -84,6 +81,16 @@ class PerformanceReportService
             $allSupplyNamesAcrossReport = $allSupplyNamesAcrossReport->merge($suppliesForThisLivestock);
         }
         $uniqueSupplyNames = $allSupplyNamesAcrossReport->unique()->sort()->values();
+
+        Log::info('Enhanced Performance Report generated successfully', [
+            'livestock_count' => count($report),
+            'overall_fcr' => $overallTotals['overall_fcr'],
+            'overall_survival_rate' => $overallTotals['overall_survival_rate'],
+            'overall_ip' => $overallTotals['overall_ip'],
+            'total_supply_cost' => $overallTotals['total_supply_cost'],
+            'supply_cost_per_head' => $overallTotals['supply_cost_per_head'],
+            'unique_supply_names' => $uniqueSupplyNames->toArray()
+        ]);
 
         return [
             'report' => $report,
@@ -117,10 +124,19 @@ class PerformanceReportService
             $dailyCulling = (clone $dailyDepletionQuery)->whereIn('jenis', [LivestockDepletionConfig::TYPE_CULLING, LivestockDepletionConfig::LEGACY_TYPE_AFKIR])->sum('jumlah');
             $totalDailyDepletion = $dailyMortality + $dailyCulling;
 
-            // Daily Sales
-            $dailySales = LivestockSalesItem::where('livestock_id', $livestock->id)->whereHas('livestockSale', fn($q) => $q->whereDate('tanggal', $currentDate))->first();
-            $dailySalesQty = $dailySales->quantity ?? 0;
-            $dailySalesWeight = $dailySales->weight ?? 0;
+            // Daily Sales (from RecordingSaleService)
+            $salesResult = $this->recordingSaleService->listByLivestockAndDate($livestock->id, $currentDate->format('Y-m-d'), ['status' => 'draft']);
+            if (!$salesResult->isSuccess()) {
+                Log::warning('[PerformanceReportService] Failed to fetch sales from RecordingSaleService', [
+                    'livestock_id' => $livestock->id,
+                    'date' => $currentDate->format('Y-m-d'),
+                    'error' => $salesResult->getMessage(),
+                ]);
+            }
+            $sales = collect($salesResult->isSuccess() ? $salesResult->getData() : []);
+            $dailySalesQty = $sales->sum('quantity');
+            $dailySalesWeight = $sales->sum('weight');
+            $dailySalesAvg = $dailySalesQty > 0 ? round($dailySalesWeight / $dailySalesQty, 2) * 1000 : 0;
 
             // Daily Feed
             $feedUsageData = $this->getFeedUsageData($livestock, $currentDate, $currentDate); // For a single day
@@ -153,7 +169,7 @@ class PerformanceReportService
                 'deplesi_percentage' => $initialQuantity > 0 ? round(($totalDailyDepletion / $stockAwalHari) * 100, 2) : 0,
                 'jual_ekor' => $dailySalesQty,
                 'jual_kg' => $dailySalesWeight,
-                'jual_rata' => $dailySalesQty > 0 ? round($dailySalesWeight / $dailySalesQty, 2) * 1000 : 0,
+                'jual_rata' => $dailySalesAvg,
                 'stock_akhir' => $stockAkhirHari,
                 'feed_consumption_by_type' => $feedUsageData['by_type'],
                 'feed_total' => $feedUsageData['total_consumption'],
@@ -211,7 +227,7 @@ class PerformanceReportService
     }
 
     /**
-     * Get supply usage data with detailed cost calculation
+     * Get supply usage data with detailed cost calculation (robust, support null livestock_id in DB)
      */
     private function getSupplyUsageData(Livestock $livestock, Carbon $startDate, Carbon $endDate): array
     {
@@ -221,16 +237,37 @@ class PerformanceReportService
             'end' => $endDate->format('Y-m-d')
         ]);
 
+        // $startDate = Carbon::parse('2025-05-03');
+        // $endDate = Carbon::parse('2025-05-03');
+
         $supplyUsageDetails = SupplyUsageDetail::whereHas('supplyUsage', function ($query) use ($livestock, $startDate, $endDate) {
-            $query->where('livestock_id', $livestock->id)
-                ->whereDate('usage_date', '>=', $startDate->format('Y-m-d'))
+            $query->whereDate('usage_date', '>=', $startDate->format('Y-m-d'))
                 ->whereDate('usage_date', '<=', $endDate->format('Y-m-d'))
-                ->whereIn('status', ['pending', 'in_process', 'completed']);
+                ->whereIn('status', ['pending', 'in_process', 'completed'])
+                ->where(function ($q) use ($livestock) {
+                    // Ambil semua SupplyUsage yang:
+                    // 1. livestock_id == $livestock->id (jika ada)
+                    // 2. ATAU livestock_id IS NULL DAN farm_id & coop_id sama dengan Livestock
+                    $q->where(function ($sub) use ($livestock) {
+                        $sub->whereNotNull('livestock_id')
+                            ->where('livestock_id', $livestock->id);
+                    })
+                        ->orWhere(function ($sub) use ($livestock) {
+                            $sub->whereNull('livestock_id');
+                            if ($livestock->farm_id) {
+                                $sub->where('farm_id', $livestock->farm_id);
+                            }
+                            if ($livestock->coop_id) {
+                                $sub->where('coop_id', $livestock->coop_id);
+                            }
+                        });
+                });
         })
             ->with(['supply', 'unit', 'supplyUsage'])
             ->get();
 
         Log::debug('getSupplyUsageData: Found', ['count' => $supplyUsageDetails->count()]);
+        // dd($supplyUsageDetails);
 
         $byType = [];
         $totalCost = 0;
@@ -763,7 +800,8 @@ class PerformanceReportService
             'start_date' => $reportData['start_date'],
             'end_date' => $reportData['end_date'],
             'livestock_count' => $reportData['livestock_count'],
-            'allFeedNames' => $reportData['all_feed_names']
+            'allFeedNames' => $reportData['all_feed_names'],
+            'allSupplyNames' => $reportData['all_supply_names']
         ]);
     }
 

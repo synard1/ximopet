@@ -23,14 +23,30 @@ class FeedStock extends BaseModel
         'quantity_in',
         'quantity_used',
         'quantity_mutated',
+        'quantity_reserved',
+        'quantity_available',
+        'data',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
         'date' => 'date',
-
+        'data' => 'array',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($model) {
+            $model->quantity_available =
+                ($model->quantity_in ?? 0)
+                - ($model->quantity_used ?? 0)
+                - ($model->quantity_mutated ?? 0)
+                - ($model->quantity_reserved ?? 0);
+        });
+    }
 
     // FeedStock.php
     public function feed()
@@ -46,6 +62,11 @@ class FeedStock extends BaseModel
     public function feedPurchase()
     {
         return $this->belongsTo(FeedPurchase::class, 'feed_purchase_id', 'id');
+    }
+
+    public function feedPurchaseItem()
+    {
+        return $this->belongsTo(FeedPurchaseItem::class, 'source_id', 'id');
     }
 
     public function feedUsageDetails()

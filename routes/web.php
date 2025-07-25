@@ -493,4 +493,7 @@ Route::prefix('test')->group(function () {
 
     Route::get('/debug-supply-usage/{livestockId?}', [\App\Http\Controllers\TestController::class, 'debugSupplyUsage'])
         ->name('test.debug.supply.usage');
+        
+    Route::get('/debug-feed-usage/{livestockId?}', [\App\Http\Controllers\FeedController::class, 'debugFeedCardByLivestock'])
+        ->name('test.debug.feed.usage');
 });

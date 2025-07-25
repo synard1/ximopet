@@ -73,8 +73,10 @@ Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
 
     // Feed Routes
     Route::prefix('feed')->group(function () {
+        Route::post('/usages/akumulasi', [\App\Http\Controllers\FeedController::class, 'getFeedCardByLivestockAkumulasi']);
         Route::get('/purchase/details/{id}', [FeedController::class, 'getFeedPurchaseBatchDetail']);
         Route::post('/usages/details', [FeedController::class, 'getFeedCardByLivestock']);
+        Route::post('/usage-data', [FeedController::class, 'getFeedUsageData']);
         Route::post('/mutation/details/{id}', [MutationController::class, 'getMutationDetails']);
         Route::post('/reports/purchase', [FeedController::class, 'exportPembelian']);
         Route::post('/purchase/edit', [FeedController::class, 'stockEdit']);
@@ -83,12 +85,14 @@ Route::middleware('auth:sanctum')->prefix('v2')->group(function () {
     // Supply Routes
     Route::prefix('supply')->group(function () {
         Route::get('/purchase/details/{id}', [SupplyController::class, 'getSupplyPurchaseBatchDetail']);
-        Route::post('/usages/details', [SupplyController::class, 'getSupplyByFarm']);
+        Route::post('/usages/details', [App\Http\Controllers\MasterData\SupplyController::class, 'getSupplyByFarm']);
         Route::post('/reports/purchase', [FeedController::class, 'exportPembelian']);
         Route::post('/mutation/details/{id}', [MutationController::class, 'getMutationDetails']);
         Route::post('/purchase/edit', [SupplyController::class, 'stockEdit']);
         Route::post('/transfer', [StockController::class, 'transferStock'])->name('transfer');
     });
+
+    // Route::post('/api/v2/feed/usages/akumulasi', [\App\Http\Controllers\FeedController::class, 'getFeedCardByLivestockAkumulasi']);
 
     Route::prefix('data/farms')->middleware(['auth:sanctum'])->group(function () {
         Route::post('/kandangs', [App\Http\Controllers\Api\V2\FarmController::class, 'getKandangs']);

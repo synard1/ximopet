@@ -5,6 +5,8 @@ namespace App\Http\Controllers\MasterData;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 use App\Models\SupplyPurchase;
 use App\Models\SupplyPurchaseBatch;
@@ -12,6 +14,7 @@ use App\Models\SupplyStock;
 use App\DataTables\SupplyDataTable;
 use App\DataTables\SupplyMutationDataTable;
 use App\DataTables\SupplyUsageDataTable;
+use App\Models\SupplyMutation;
 
 class SupplyController extends Controller
 {
@@ -175,5 +178,182 @@ class SupplyController extends Controller
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 400);
         }
+    }
+
+    public function getSupplyByFarm(Request $request)
+    {
+        $validated = $request->validate([
+            'farm_id' => 'required|uuid',
+            'supply_id' => 'required|uuid',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+        ]);
+
+        $farmId = $validated['farm_id'];
+        $supplyId = $validated['supply_id'];
+        $startDate = $validated['start_date'] ? Carbon::parse($validated['start_date']) : null;
+        $endDate = $validated['end_date'] ? Carbon::parse($validated['end_date']) : null;
+
+        try {
+            $stocks = SupplyStock::with([
+                'supply',
+                'supplyPurchase.batch',
+                'supplyUsageDetails.supplyUsage.supply',
+                'mutationDetails.mutation.toFarm',
+                'incomingMutation.mutation.fromFarm',
+            ])
+                ->where('farm_id', $farmId)
+                ->where('supply_id', $supplyId)
+                ->get();
+
+            $result = [];
+
+            // Proses transaksi pembelian awal
+            $purchaseStocks = $stocks->whereNotNull('supply_purchase_id')->groupBy('supply_purchase_id');
+            foreach ($purchaseStocks as $purchaseId => $items) {
+                $first = $items->first();
+                $histories = [];
+                $purchaseDate = optional($first->supplyPurchase->batch)->date;
+
+                if ($purchaseDate && (!$startDate || $purchaseDate >= $startDate) && (!$endDate || $purchaseDate <= $endDate)) {
+                    $histories[] = [
+                        'tanggal' => $purchaseDate->format('Y-m-d'),
+                        'keterangan' => 'Pembelian',
+                        'masuk' => $items->sum('quantity_in'), // Aggregate quantity for the purchase
+                        'keluar' => 0,
+                    ];
+
+                    $runningStock = $items->sum('quantity_in'); // Initial stock after purchase
+                    $histories = $this->processUsageAndMutation($items, $histories, $startDate, $endDate, $runningStock);
+
+                    usort($histories, fn($a, $b) => strcmp($a['tanggal'], $b['tanggal']));
+                    $runningStock = 0;
+                    foreach ($histories as &$entry) {
+                        $entry['stok_awal'] = $runningStock;
+                        $runningStock += ($entry['masuk'] ?? 0) - ($entry['keluar'] ?? 0);
+                        $entry['stok_akhir'] = $runningStock;
+                    }
+
+                    $result[] = [
+                        'supply_purchase_info' => [
+                            'supply_name' => $first->supply->name ?? '-',
+                            'no_batch' => optional($first->supplyPurchase->batch)->invoice_number ?? '-',
+                            'tanggal' => $purchaseDate->format('Y-m-d'),
+                            'harga' => $first->supplyPurchase->price_per_unit ?? 0,
+                            'tipe' => 'Pembelian',
+                        ],
+                        'histories' => $histories,
+                    ];
+                }
+            }
+
+            // Proses transaksi mutasi masuk
+            $mutationInStocks = $stocks->whereNotNull('source_id')->groupBy('source_id');
+            foreach ($mutationInStocks as $mutationId => $items) {
+                $first = $items->first();
+                $mutation = SupplyMutation::find($mutationId);
+                $histories = [];
+
+                if ($mutation && (!$startDate || $mutation->date >= $startDate) && (!$endDate || $mutation->date <= $endDate)) {
+                    $histories[] = [
+                        'tanggal' => $mutation->date->format('Y-m-d'),
+                        'keterangan' => 'Mutasi dari ' . ($mutation->fromFarm->name ?? '-'),
+                        'masuk' => $items->sum('quantity_in'), // Aggregate quantity for the mutation
+                        'keluar' => 0,
+                    ];
+
+                    $runningStock = $items->sum('quantity_in'); // Initial stock after mutation
+                    $histories = $this->processUsageAndMutation($items, $histories, $startDate, $endDate, $runningStock);
+
+                    usort($histories, fn($a, $b) => strcmp($a['tanggal'], $b['tanggal']));
+                    $runningStock = 0;
+                    foreach ($histories as &$entry) {
+                        $entry['stok_awal'] = $runningStock;
+                        $runningStock += ($entry['masuk'] ?? 0) - ($entry['keluar'] ?? 0);
+                        $entry['stok_akhir'] = $runningStock;
+                    }
+
+                    $result[] = [
+                        'supply_purchase_info' => [
+                            'supply_name' => $first->supply->name ?? '-',
+                            'no_batch' => '-',
+                            'tanggal' => $mutation->date->format('Y-m-d'),
+                            'harga' => 0,
+                            'tipe' => 'Mutasi Masuk',
+                        ],
+                        'histories' => $histories,
+                    ];
+                }
+            }
+
+            // Proses transaksi mutasi masuk berdasarkan incomingMutation (jika source_id tidak ada)
+            $mutationInByRelationStocks = $stocks->whereNull('source_id')->whereNotNull('incomingMutation')->groupBy('incomingMutation.supply_mutation_id');
+            foreach ($mutationInByRelationStocks as $mutationId => $items) {
+                $first = $items->first();
+                $mutation = $first->incomingMutation->mutation;
+                $histories = [];
+
+                if ($mutation && (!$startDate || $mutation->date >= $startDate) && (!$endDate || $mutation->date <= $endDate)) {
+                    $histories[] = [
+                        'tanggal' => $mutation->date->format('Y-m-d'),
+                        'keterangan' => 'Mutasi dari ' . ($mutation->fromFarm->name ?? '-'),
+                        'masuk' => $items->sum('quantity_in'), // Aggregate quantity for the mutation
+                        'keluar' => 0,
+                    ];
+
+                    $runningStock = $items->sum('quantity_in'); // Initial stock after mutation
+                    $histories = $this->processUsageAndMutation($items, $histories, $startDate, $endDate, $runningStock);
+
+                    usort($histories, fn($a, $b) => strcmp($a['tanggal'], $b['tanggal']));
+                    $runningStock = 0;
+                    foreach ($histories as &$entry) {
+                        $entry['stok_awal'] = $runningStock;
+                        $runningStock += ($entry['masuk'] ?? 0) - ($entry['keluar'] ?? 0);
+                        $entry['stok_akhir'] = $runningStock;
+                    }
+
+                    $result[] = [
+                        'supply_purchase_info' => [
+                            'supply_name' => $first->supply->name ?? '-',
+                            'no_batch' => '-',
+                            'tanggal' => $mutation->date->format('Y-m-d'),
+                            'harga' => 0,
+                            'tipe' => 'Mutasi Masuk (Relasi)',
+                        ],
+                        'histories' => $histories,
+                    ];
+                }
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $result,
+            ]);
+        } catch (\Exception $e) {
+            // DB::rollBack(); // Rollback on any other exception
+            $line = $e->getLine();
+            $file = $e->getFile();
+            $message = $e->getMessage();
+
+            // Human-readable error message
+            $errorMessage = 'Terjadi kesalahan saat menyimpan data. Silakan coba lagi.';
+
+            // Log detailed error for debugging
+            Log::error(" Error: $message | Line: $line | File: $file");
+
+            // Optionally: log stack trace
+            Log::debug("Stack trace: " . $e->getTraceAsString());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+        // } catch (\Exception $e) {
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => $e->getMessage(),
+        //     ], 500);
+        // }
     }
 }

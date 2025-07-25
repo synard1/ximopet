@@ -28,30 +28,19 @@ class Recording extends BaseModel
         'pakan_harian',
         'pakan_total',
         'payload',
-        'initial_stock',
-        'final_stock',
-        'weight',
-        'mortality',
-        'culling',
-        'sales_quantity',
-        'sales_price',
-        'total_sales',
+        'data_operational',
+        'data_audit',
+        'data',
     ];
 
     protected $casts = [
         'tanggal' => 'date',
-        // 'berat_semalam' => 'decimal:2',
-        // 'berat_hari_ini' => 'decimal:2',
-        // 'kenaikan_berat' => 'decimal:2',
         'pakan_harian' => 'decimal:2',
         'pakan_total' => 'decimal:2',
         'payload' => 'array',
-        'weight' => 'decimal:2',
-        'mortality' => 'integer',
-        'culling' => 'integer',
-        'sales_quantity' => 'integer',
-        'sales_price' => 'decimal:2',
-        'total_sales' => 'decimal:2',
+        'data_operational' => 'array',
+        'data_audit' => 'array',
+        'data' => 'array',
     ];
 
     public function details()

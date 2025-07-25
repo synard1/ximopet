@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class SupplyUsageDetail extends BaseModel
 {
@@ -88,5 +89,17 @@ class SupplyUsageDetail extends BaseModel
     public function setTotalPriceAttribute($value)
     {
         $this->attributes['total_price'] = ($value === '' || $value === null) ? null : $value;
+    }
+
+    /**
+     * Get total supply usage cost for a livestock and date
+     */
+    public static function getTotalSupplyUsageCost($livestockId, $tanggal)
+    {
+        return self::whereHas('supplyUsage', function ($q) use ($livestockId, $tanggal) {
+            $q->where('livestock_id', $livestockId)
+                ->whereDate('usage_date', $tanggal)
+                ->whereIn('status', ['completed', 'in_process']);
+        })->sum(DB::raw('quantity_taken * (price_per_unit + 0)'));
     }
 }

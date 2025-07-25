@@ -29,6 +29,8 @@ use App\Config\LivestockDepletionConfig;
 use App\Services\FeedUsageService;
 use App\Services\Livestock\LivestockCostService;
 use App\Services\Recording\RecordingService;
+use App\Services\Livestock\LivestockMutationService;
+use App\Config\CompanyConfig;
 
 // Import logging helper functions
 use function App\Helpers\logInfoIfDebug;
@@ -36,21 +38,28 @@ use function App\Helpers\logDebugIfDebug;
 use function App\Helpers\logWarningIfDebug;
 use function App\Helpers\logErrorIfDebug;
 
+use App\Services\Recording\RecordingFeedInsightBuilder;
+use App\Services\Recording\Contracts\RecordingSaleServiceInterface;
+
+
 
 class RecordingPersistenceService implements RecordingPersistenceServiceInterface
 {
     private FeedUsageService $feedUsageService;
     private LivestockCostService $livestockCostService;
     private RecordingService $recordingService;
+    private RecordingSaleServiceInterface $recordingSaleService;
 
     public function __construct(
         FeedUsageService $feedUsageService,
         LivestockCostService $livestockCostService,
-        RecordingService $recordingService
+        RecordingService $recordingService,
+        RecordingSaleServiceInterface $recordingSaleService
     ) {
         $this->feedUsageService = $feedUsageService;
         $this->livestockCostService = $livestockCostService;
         $this->recordingService = $recordingService;
+        $this->recordingSaleService = $recordingSaleService;
     }
 
     public function saveRecording(RecordingDTO $recordingDTO): ServiceResult
@@ -134,6 +143,10 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 'weight_gain' => $weight_gain
             ]);
 
+            // Build validation_status section for payload
+            $validationStatus = $recordingDTO->validationStatus;
+            $validatedData = $recordingDTO->validatedData;
+
             $detailedPayload = $this->buildStructuredPayload(
                 $ternak,
                 $age,
@@ -152,6 +165,7 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 (int)$recordingDTO->mortality,
                 (int)$recordingDTO->culling,
                 (int)$recordingDTO->salesQuantity,
+                (float)($recordingDTO->salesWeight ?? 0),
                 (float)($recordingDTO->salesPrice ?? 0),
                 0,
                 (float)($recordingDTO->totalSales ?? 0),
@@ -159,7 +173,17 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 $recordingDTO->isManualFeedUsageEnabled,
                 $recordingDTO->recordingMethod,
                 $recordingDTO->livestockConfig,
-                $date
+                $date,
+                $recordingDTO->withHistoryFeedUsage,
+                $recordingDTO->withHistoryFeedUsageDetail,
+                $recordingDTO->withHistorySupplyUsage,
+                $recordingDTO->withHistorySupplyUsageDetail,
+                $recordingDTO->withHistoryDepletion,
+                $recordingDTO->withHistoryDepletionDetail,
+                $recordingDTO->withHistoryMutation,
+                $recordingDTO->withHistoryMutationDetail,
+                $validationStatus,
+                $validatedData
             );
 
             logDebugIfDebug('Structured payload built', [
@@ -176,16 +200,16 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 'berat_hari_ini' => $recordingDTO->weightToday,
                 'berat_semalam' => $weight_yesterday,
                 'kenaikan_berat' => $weight_gain,
-                'pakan_jenis' => is_array($usages) ? implode(', ', array_column($usages, 'feed_name')) : '',
-                'pakan_harian' => is_array($usages) ? array_sum(array_column($usages, 'quantity')) : 0,
+                // 'pakan_jenis' => is_array($usages) ? implode(', ', array_column($usages, 'feed_name')) : '',
+                // 'pakan_harian' => is_array($usages) ? array_sum(array_column($usages, 'quantity')) : 0,
                 'feed_id' => is_array($usages) ? implode(', ', array_column($usages, 'feed_id')) : '',
                 'payload' => $detailedPayload,
             ];
 
             logDebugIfDebug('Recording input prepared', [
                 'recording_input_keys' => array_keys($recordingInput),
-                'pakan_harian' => $recordingInput['pakan_harian'],
-                'pakan_jenis' => $recordingInput['pakan_jenis']
+                // 'pakan_harian' => $recordingInput['pakan_harian'],
+                // 'pakan_jenis' => $recordingInput['pakan_jenis']
             ]);
 
             $recording = $this->saveOrUpdateRecording($recordingInput);
@@ -204,7 +228,7 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                     'usages_count' => count($usages),
                     'feedUsageId' => $recordingDTO->feedUsageId
                 ]);
-                $this->saveFeedUsageWithTracking($usages, $recording->id, $date, $livestockId, $recordingDTO->feedUsageId);
+                $this->saveFeedUsageWithTracking($usages, $recording->id, $date, $livestockId, $recordingDTO->feedUsageId, $recordingDTO->withHistoryFeedUsageDetail);
             } else {
                 logDebugIfDebug('No feed usage to save', ['usages_empty' => empty($usages)]);
             }
@@ -226,6 +250,8 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 LivestockDepletionConfig::TYPE_CULLING => $recordingDTO->culling
             ];
 
+            $batchAllocationErrors = [];
+
             foreach ($depletionsToProcess as $type => $qty) {
                 if ($qty > 0) {
                     logDebugIfDebug('Saving depletion', [
@@ -233,18 +259,67 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                         'quantity' => $qty,
                         'recording_id' => $recording->id
                     ]);
-                    $this->storeDeplesiWithDetails($type, (int) $qty, $recording->id, $date, $livestockId);
+
+                    try {
+                        $this->storeDeplesiWithDetails($type, (int) $qty, $recording->id, $date, $livestockId);
+                    } catch (Exception $e) {
+                        $batchAllocationErrors[] = [
+                            'type' => $type,
+                            'quantity' => $qty,
+                            'error' => $e->getMessage()
+                        ];
+
+                        logErrorIfDebug('❌ Batch allocation failed for depletion', [
+                            'type' => $type,
+                            'quantity' => $qty,
+                            'error' => $e->getMessage(),
+                            'livestock_id' => $livestockId,
+                            'date' => $date
+                        ]);
+                    }
                 }
             }
 
+            // If there are batch allocation errors, rollback and return error
+            if (!empty($batchAllocationErrors)) {
+                DB::rollBack();
+
+                $errorMessages = array_map(function ($error) {
+                    $typeLabel = $error['type'] === 'mortality' ? 'kematian' : 'afkir';
+                    return "Gagal memproses {$typeLabel} ({$error['quantity']} ekor): {$error['error']}";
+                }, $batchAllocationErrors);
+
+                $combinedErrorMessage = implode("\n", $errorMessages);
+
+                logErrorIfDebug('❌ Recording save failed due to batch allocation errors', [
+                    'livestock_id' => $livestockId,
+                    'date' => $date,
+                    'errors' => $batchAllocationErrors,
+                    'combined_message' => $combinedErrorMessage
+                ]);
+
+                return new ServiceResult(false, $combinedErrorMessage, [
+                    'batch_allocation_errors' => $batchAllocationErrors,
+                    'livestock_id' => $livestockId,
+                    'date' => $date
+                ]);
+            }
+
             // Calculate livestock cost
-            logDebugIfDebug('Calculating livestock cost', [
+            // logDebugIfDebug('Calculating livestock cost', [
+            //     'livestock_id' => $livestockId,
+            //     'date' => $date
+            // ]);
+            // $this->livestockCostService->calculateForDate($livestockId, $date);
+
+            DB::commit();
+
+            // Dispatch background job for livestock cost calculation
+            Log::info('Dispatching CalculateLivestockCostJob after saveRecording', [
                 'livestock_id' => $livestockId,
                 'date' => $date
             ]);
-            $this->livestockCostService->calculateForDate($livestockId, $date);
-
-            DB::commit();
+            \App\Jobs\CalculateLivestockCostJob::dispatch($livestockId, null, $date);
 
             // Clear cache after successful save
             logDebugIfDebug('Clearing cache after successful save', [
@@ -270,6 +345,54 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 'mortality' => $recordingDTO->mortality,
                 'culling' => $recordingDTO->culling
             ]);
+
+            // --- SALES DRAFT INTEGRATION ---
+            if ((int)$recordingDTO->salesQuantity > 0 || (float)$recordingDTO->salesWeight > 0) {
+                $saleDraftData = [
+                    'company_id' => $ternak->livestock->farm->company_id ?? null,
+                    'livestock_id' => $livestockId,
+                    'recording_id' => $recording->id,
+                    'date' => $date,
+                    'quantity' => $recordingDTO->salesQuantity,
+                    'weight' => $recordingDTO->salesWeight,
+                    'price' => $recordingDTO->salesPrice ?? null,
+                    'status' => 'draft',
+                    'created_by' => Auth::id(),
+                    'updated_by' => Auth::id(),
+                    'metadata' => [
+                        'source' => 'RecordingPersistenceService',
+                        'note' => 'Auto-saved from recording input',
+                    ],
+                ];
+                $existingDraftArr = $this->recordingSaleService->listByLivestockAndDate($livestockId, $date, ['status' => 'draft']);
+                $existingDraftData = $existingDraftArr->getData();
+                if ($existingDraftArr->isSuccess() && is_array($existingDraftData) && count($existingDraftData) > 0) {
+                    $draft = $existingDraftData[0];
+                    $result = $this->recordingSaleService->update($draft['id'], $saleDraftData);
+                } else {
+                    $result = $this->recordingSaleService->create($saleDraftData);
+                }
+                if (!$result->isSuccess()) {
+                    DB::rollBack();
+                    logErrorIfDebug('❌ Failed to save sales draft in RecordingSaleService', [
+                        'error' => $result->getMessage(),
+                        'data' => $saleDraftData
+                    ]);
+                    return ServiceResult::error('Gagal menyimpan sales draft: ' . $result->getMessage());
+                }
+                $salesDraftDataObj = $result->getData();
+                $salesDraftId = null;
+                if (is_object($salesDraftDataObj) && isset($salesDraftDataObj->id)) {
+                    $salesDraftId = $salesDraftDataObj->id;
+                } elseif (is_array($salesDraftDataObj) && isset($salesDraftDataObj['id'])) {
+                    $salesDraftId = $salesDraftDataObj['id'];
+                }
+                logInfoIfDebug('✅ Sales draft saved/updated in RecordingSaleService', [
+                    'livestock_id' => $livestockId,
+                    'date' => $date,
+                    'sales_draft_id' => $salesDraftId
+                ]);
+            }
 
             return ServiceResult::success('Data berhasil disimpan (Modular).', [
                 'recording_id' => $recording->id,
@@ -303,6 +426,7 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 $feed = Feed::with('unit')->find($itemId);
                 $unitInfo = $this->getDetailedUnitInfo($feed, $qty);
                 $stockInfo = $this->getStockDetails($itemId, $livestockId);
+                // dd($stockInfo);
                 return [
                     'feed_id' => $itemId,
                     'quantity' => (float) $qty,
@@ -320,7 +444,7 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                     'stock_origins' => $stockInfo['stock_origins'],
                     'stock_purchase_dates' => $stockInfo['stock_purchase_dates'],
                     'stock_prices' => $stockInfo['stock_prices'],
-                    'category' => $feed ? ($feed->category->name ?? 'Uncategorized') : 'Unknown',
+                    // 'category' => $feed ? ($feed->category->name ?? 'Uncategorized') : 'Unknown',
                     'timestamp' => now()->toIso8601String(),
                 ];
             })
@@ -355,7 +479,7 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                     'stock_origins' => $stockInfo['stock_origins'],
                     'stock_purchase_dates' => $stockInfo['stock_purchase_dates'],
                     'stock_prices' => $stockInfo['stock_prices'],
-                    'category' => $supply->supplyCategory->name ?? 'Uncategorized',
+                    // 'category' => $supply->supplyCategory->name ?? 'Uncategorized',
                     'timestamp' => now()->toIso8601String(),
                 ];
             })
@@ -364,7 +488,7 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
             ->toArray();
     }
 
-    private function saveFeedUsageWithTracking(array $newUsages, string $recordingId, string $date, string $livestockId, ?string $feedUsageId): void
+    private function saveFeedUsageWithTracking(array $newUsages, string $recordingId, string $date, string $livestockId, ?string $feedUsageId, bool $withHistoryFeedUsageDetail = false): void
     {
         logDebugIfDebug('🔄 saveFeedUsageWithTracking called', [
             'recording_id' => $recordingId,
@@ -372,7 +496,8 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
             'livestock_id' => $livestockId,
             'feedUsageId' => $feedUsageId,
             'newUsages_count' => count($newUsages),
-            'total_quantity' => array_sum(array_column($newUsages, 'quantity'))
+            'total_quantity' => array_sum(array_column($newUsages, 'quantity')),
+            'withHistoryFeedUsageDetail' => $withHistoryFeedUsageDetail
         ]);
 
         if ($feedUsageId) {
@@ -387,7 +512,7 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 logDebugIfDebug('🔄 Feed usage has changed, updating', [
                     'usage_id' => $usage->id
                 ]);
-                $this->updateFeedUsageWithTracking($newUsages, $feedUsageId, $recordingId);
+                $this->updateFeedUsageWithTracking($newUsages, $feedUsageId, $recordingId, $withHistoryFeedUsageDetail);
             } else {
                 logDebugIfDebug('✅ Feed usage unchanged, skipping update', [
                     'usage_id' => $usage->id
@@ -416,32 +541,82 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 'date' => $usage->usage_date
             ]);
 
+            // dd($newUsages, $usage);
+
             $this->feedUsageService->processWithMetadata($usage, $newUsages);
         }
     }
 
-    private function updateFeedUsageWithTracking(array $newUsages, string $feedUsageId, string $recordingId): void
+    private function updateFeedUsageWithTracking(array $newUsages, string $feedUsageId, string $recordingId, bool $withHistoryFeedUsageDetail = false): void
     {
         $usage = FeedUsage::findOrFail($feedUsageId);
-        $oldDetails = $usage->details;
-        foreach ($oldDetails as $detail) {
-            $stock = FeedStock::find($detail->feed_stock_id);
-            if ($stock) {
-                $stock->quantity_used = max(0, $stock->quantity_used - $detail->quantity_taken);
-                $stock->save();
+        if ($withHistoryFeedUsageDetail) {
+            $oldDetails = $usage->details;
+            foreach ($oldDetails as $detail) {
+                $stock = FeedStock::find($detail->feed_stock_id);
+                if ($stock) {
+                    $stock->quantity_used = max(0, $stock->quantity_used - $detail->quantity_taken);
+                    $stock->save();
+                }
+                $detail->delete();
             }
-            $detail->delete();
+            logInfoIfDebug("[FeedUsageDetail] Deleted and recreated all details for usage ID {$usage->id} (withHistoryFeedUsageDetail=true)");
+            $usage->update([
+                'recording_id' => $recordingId,
+                'total_quantity' => array_sum(array_column($newUsages, 'quantity')),
+                'metadata' => array_merge($usage->metadata ?? [], ['updated_at' => now()->toIso8601String(), 'updated_by' => Auth::id()]),
+                'updated_by' => Auth::id(),
+            ]);
+            $this->feedUsageService->processWithMetadata($usage, $newUsages);
+        } else {
+            // Update existing details in-place (no delete/recreate)
+            logInfoIfDebug("[FeedUsageDetail] Updating details in-place for usage ID {$usage->id} (withHistoryFeedUsageDetail=false)");
+            // Map new usages by feed_id for easy lookup
+            $newUsagesByFeedId = collect($newUsages)->keyBy('feed_id');
+            foreach ($usage->details as $detail) {
+                $feedId = $detail->feed_id;
+                if ($newUsagesByFeedId->has($feedId)) {
+                    $newQty = $newUsagesByFeedId[$feedId]['quantity'];
+                    // Update quantity_taken if changed
+                    if ($detail->quantity_taken != $newQty) {
+                        // Adjust stock
+                        $stock = FeedStock::find($detail->feed_stock_id);
+                        if ($stock) {
+                            $stock->quantity_used = max(0, $stock->quantity_used - $detail->quantity_taken + $newQty);
+                            $stock->save();
+                        }
+                        $detail->quantity_taken = $newQty;
+                        $detail->updated_by = Auth::id();
+                        $detail->save();
+                    }
+                }
+            }
+            // Add new details for any new feed_id not present before
+            $existingFeedIds = $usage->details->pluck('feed_id')->all();
+            foreach ($newUsages as $row) {
+                if (!in_array($row['feed_id'], $existingFeedIds)) {
+                    // Find a stock to use (simplified: pick first available)
+                    $stock = FeedStock::where('livestock_id', $usage->livestock_id)->where('feed_id', $row['feed_id'])->first();
+                    if ($stock) {
+                        FeedUsageDetail::create([
+                            'feed_usage_id' => $usage->id,
+                            'feed_stock_id' => $stock->id,
+                            'feed_id' => $row['feed_id'],
+                            'quantity_taken' => $row['quantity'],
+                            'created_by' => Auth::id(),
+                            'updated_by' => Auth::id(),
+                        ]);
+                    }
+                }
+            }
+            $usage->update([
+                'recording_id' => $recordingId,
+                'total_quantity' => array_sum(array_column($newUsages, 'quantity')),
+                'metadata' => array_merge($usage->metadata ?? [], ['updated_at' => now()->toIso8601String(), 'updated_by' => Auth::id()]),
+                'updated_by' => Auth::id(),
+            ]);
         }
-
-        $usage->update([
-            'recording_id' => $recordingId,
-            'total_quantity' => array_sum(array_column($newUsages, 'quantity')),
-            'metadata' => array_merge($usage->metadata ?? [], ['updated_at' => now()->toIso8601String(), 'updated_by' => Auth::id()]),
-            'updated_by' => Auth::id(),
-        ]);
-
-        $this->feedUsageService->processWithMetadata($usage, $newUsages);
-        Log::info("✅ Feed usage update complete for usage ID {$usage->id}");
+        logInfoIfDebug("✅ Feed usage update complete for usage ID {$usage->id}");
     }
 
     private function hasUsageChanged(FeedUsage $usage, array $newUsages): bool
@@ -462,6 +637,24 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
     {
         if ($supplyUsageId) {
             $usage = SupplyUsage::findOrFail($supplyUsageId);
+
+            // Check if usage has valid status for processing
+            $validStatuses = [
+                SupplyUsage::STATUS_PENDING,
+                SupplyUsage::STATUS_IN_PROCESS,
+                SupplyUsage::STATUS_COMPLETED,
+                SupplyUsage::STATUS_PARTIALLY_USED
+            ];
+
+            if (!in_array($usage->status, $validStatuses)) {
+                logInfoIfDebug("⏭️ Skipping supply usage processing - invalid status", [
+                    'usage_id' => $usage->id,
+                    'status' => $usage->status,
+                    'valid_statuses' => $validStatuses
+                ]);
+                return;
+            }
+
             if ($this->hasSupplyUsageChanged($usage, $supplyUsages)) {
                 $this->updateSupplyUsageWithTracking($supplyUsages, $supplyUsageId, $recordingId);
             }
@@ -475,6 +668,7 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 'usage_date' => $date,
                 'livestock_id' => $livestockId,
                 'total_quantity' => array_sum(array_column($supplyUsages, 'quantity')),
+                'status' => SupplyUsage::STATUS_DRAFT, // Default to draft status
                 'created_by' => Auth::id(),
             ]);
         }
@@ -505,7 +699,7 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
         foreach ($newUsages as $usageData) {
             $this->processSupplyUsageDetail($usage, $usageData, $usage->livestock_id);
         }
-        Log::info("✅ Supply usage update complete for usage ID {$usage->id}");
+        logInfoIfDebug("✅ Supply usage update complete for usage ID {$usage->id}");
     }
 
     private function hasSupplyUsageChanged(SupplyUsage $usage, array $newSupplyUsages): bool
@@ -563,7 +757,23 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
 
         $normalizedType = LivestockDepletionConfig::normalize($jenis);
         $livestock = Livestock::find($livestockId);
-        $age = $livestock ? Carbon::parse($date)->diffInDays(Carbon::parse($livestock->start_date)) : null;
+
+        // Fix age calculation: calculate livestock age relative to depletion date
+        $age = null;
+        if ($livestock && $livestock->start_date) {
+            $livestockStartDate = Carbon::parse($livestock->start_date);
+            $depletionDate = Carbon::parse($date);
+            // Calculate age: how old is the livestock on depletion date
+            $age = $livestockStartDate->diffInDays($depletionDate, false);
+
+            logDebugIfDebug('Livestock age calculation', [
+                'livestock_id' => $livestockId,
+                'livestock_start_date' => $livestockStartDate->format('Y-m-d'),
+                'depletion_date' => $depletionDate->format('Y-m-d'),
+                'calculated_age_days' => $age,
+                'age_calculation' => 'depletion_date - livestock_start_date'
+            ]);
+        }
 
         $oldJumlah = LivestockDepletion::where('livestock_id', $livestockId)
             ->where('tanggal', $date)->where('jenis', $normalizedType)->sum('jumlah');
@@ -577,22 +787,210 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
             'age_days' => $age
         ]);
 
+        // Get company config for depletion method
+        $companyConfig = $this->getCompanyConfig();
+        $depletionMethod = $this->getDepletionMethod($companyConfig, $normalizedType);
+
+        logDebugIfDebug('Depletion method configuration', [
+            'company_config_available' => !empty($companyConfig),
+            'depletion_method' => $depletionMethod,
+            'normalized_type' => $normalizedType
+        ]);
+
+        // Initialize batch breakdown data
+        $batchBreakdown = [];
+        $batchAllocationResult = null;
+
+        // Process batch allocation if FIFO method is enabled
+        if ($depletionMethod === 'fifo' && $delta != 0) {
+            logDebugIfDebug('🔄 Processing FIFO batch allocation', [
+                'livestock_id' => $livestockId,
+                'delta' => $delta,
+                'date' => $date,
+                'operation' => $delta > 0 ? 'increment' : 'decrement'
+            ]);
+
+            try {
+                // For negative delta (decrement), we need to handle differently
+                if ($delta < 0) {
+                    // Handle decrement case - we need to find and update existing batch allocations
+                    $batchBreakdown = $this->handleDecrementDepletion($livestockId, $date, abs($delta), $normalizedType);
+                    // Create allocation result for decrement case
+                    $batchAllocationResult = [
+                        'batches' => $batchBreakdown,
+                        'success' => !empty($batchBreakdown),
+                        'allocation_date' => $date,
+                        'allocation_method' => $depletionMethod,
+                        'allocated_quantity' => array_sum(array_column($batchBreakdown, 'quantity')),
+                        'remaining_quantity' => 0,
+                        'requested_quantity' => $delta
+                    ];
+                } else {
+                    // Handle increment case - normal allocation
+                    $batchAllocationResult = $this->allocateDepletionToBatches($livestockId, $date, $delta, $normalizedType);
+                    $batchBreakdown = $batchAllocationResult['batches'] ?? [];
+                }
+
+                // Validate batch allocation result
+                if (empty($batchBreakdown)) {
+                    $errorMessage = $this->generateBatchAllocationError($livestockId, $delta, $normalizedType);
+                    logErrorIfDebug('❌ Batch allocation validation failed', [
+                        'livestock_id' => $livestockId,
+                        'delta' => $delta,
+                        'depletion_type' => $normalizedType,
+                        'error_message' => $errorMessage
+                    ]);
+
+                    // Don't throw exception, let the process continue with empty batch breakdown
+                    // Error details will be added in the data/metadata preparation
+                    logWarningIfDebug('⚠️ Continuing with empty batch breakdown', [
+                        'livestock_id' => $livestockId,
+                        'delta' => $delta,
+                        'depletion_type' => $normalizedType
+                    ]);
+                }
+
+                logInfoIfDebug('✅ FIFO batch allocation completed', [
+                    'batches_count' => count($batchBreakdown),
+                    'total_allocated' => array_sum(array_column($batchBreakdown, 'quantity')),
+                    'batch_details' => $batchBreakdown,
+                    'operation' => $delta > 0 ? 'increment' : 'decrement'
+                ]);
+
+                // Update batch quantities in database
+                $this->updateBatchDepletionQuantities($batchBreakdown);
+            } catch (Exception $e) {
+                logErrorIfDebug('❌ FIFO batch allocation failed', [
+                    'error' => $e->getMessage(),
+                    'livestock_id' => $livestockId,
+                    'delta' => $delta
+                ]);
+
+                // Don't re-throw exception, let the process continue with empty batch breakdown
+                // Error details will be added in the data/metadata preparation
+                $batchBreakdown = [];
+                $batchAllocationResult = [
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'batches' => []
+                ];
+
+                logWarningIfDebug('⚠️ Continuing with empty batch breakdown after exception', [
+                    'livestock_id' => $livestockId,
+                    'delta' => $delta,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        } else {
+            logDebugIfDebug('⏭️ Skipping batch allocation', [
+                'reason' => $depletionMethod !== 'fifo' ? 'method_not_fifo' : 'no_delta',
+                'depletion_method' => $depletionMethod,
+                'delta' => $delta
+            ]);
+        }
+
+        // Prepare metadata with batch information
+        $metadata = [
+            'livestock_name' => $livestock->name ?? 'Unknown',
+            'age_days' => $age,
+            'updated_at' => now()->toIso8601String(),
+            'updated_by' => Auth::id(),
+            'depletion_method' => $depletionMethod,
+            'delta_calculation' => ['old_value' => $oldJumlah, 'new_value' => $jumlah, 'delta' => $delta],
+            'depletion_config' => ['original_type' => $jenis, 'normalized_type' => $normalizedType],
+            'batch_allocation' => [
+                'method' => $depletionMethod,
+                'batches_count' => count($batchBreakdown),
+                'total_allocated' => array_sum(array_column($batchBreakdown, 'quantity')),
+                'batches' => $batchBreakdown,
+                'allocation_success' => !empty($batchBreakdown)
+            ]
+        ];
+
+        // Prepare data field with detailed batch breakdown
+        $data = [
+            'delta_info' => ['old_value' => $oldJumlah, 'new_value' => $jumlah, 'delta' => $delta],
+            'batch_breakdown' => $batchBreakdown,
+            'allocation_result' => $batchAllocationResult
+        ];
+
+        // Ensure allocation_result has consistent structure for successful cases
+        if (!empty($batchBreakdown) && $depletionMethod === 'fifo' && $delta != 0) {
+            // Ensure allocation_result is an array
+            if (!is_array($data['allocation_result'])) {
+                $data['allocation_result'] = [];
+            }
+
+            // If allocation_result doesn't have complete structure, enhance it
+            if (!isset($data['allocation_result']['allocation_date'])) {
+                $data['allocation_result'] = array_merge($data['allocation_result'], [
+                    'allocation_date' => $date,
+                    'allocation_method' => $depletionMethod,
+                    'allocated_quantity' => array_sum(array_column($batchBreakdown, 'quantity')),
+                    'remaining_quantity' => 0,
+                    'requested_quantity' => $delta
+                ]);
+            }
+        }
+
+        // If batch allocation failed, add detailed error information
+        if (empty($batchBreakdown) && $depletionMethod === 'fifo' && $delta != 0) {
+            // Get available batches for error reporting
+            $availableBatches = $livestock->batches()->where('status', 'active')->get();
+            $totalAvailable = $availableBatches->sum('quantity_available');
+
+            // Determine error message
+            $errorMessage = 'No available batches found';
+            if (isset($batchAllocationResult['error'])) {
+                $errorMessage = $batchAllocationResult['error'];
+            }
+
+            $data['allocation_result'] = [
+                'success' => false,
+                'error' => $errorMessage,
+                'error_details' => [
+                    'requested_quantity' => $delta,
+                    'available_batches_count' => $availableBatches->count(),
+                    'total_available_quantity' => $totalAvailable,
+                    'available_batches' => $availableBatches->map(function ($batch) {
+                        return [
+                            'batch_id' => $batch->id,
+                            'batch_name' => $batch->name,
+                            'quantity_available' => $batch->quantity_available,
+                            'initial_quantity' => $batch->initial_quantity,
+                            'start_date' => $batch->start_date
+                        ];
+                    })->toArray()
+                ],
+                'batches' => [],
+                'allocation_date' => $date,
+                'allocation_method' => $depletionMethod,
+                'allocated_quantity' => 0,
+                'remaining_quantity' => $delta,
+                'requested_quantity' => $delta
+            ];
+
+            $metadata['batch_allocation']['error'] = $errorMessage;
+            $metadata['batch_allocation']['error_details'] = [
+                'requested_quantity' => $delta,
+                'available_batches_count' => $availableBatches->count(),
+                'total_available_quantity' => $totalAvailable
+            ];
+        }
+
+        // Ensure allocation_result is always an array for consistency
+        if (!is_array($data['allocation_result'])) {
+            $data['allocation_result'] = [];
+        }
+
         $deplesi = LivestockDepletion::updateOrCreate(
             ['livestock_id' => $livestockId, 'tanggal' => $date, 'jenis' => $normalizedType],
             [
                 'jumlah' => $jumlah,
                 'recording_id' => $recordingId,
-                'method' => 'traditional',
-                'metadata' => [
-                    'livestock_name' => $livestock->name ?? 'Unknown',
-                    'age_days' => $age,
-                    'updated_at' => now()->toIso8601String(),
-                    'updated_by' => Auth::id(),
-                    'depletion_method' => 'traditional',
-                    'delta_calculation' => ['old_value' => $oldJumlah, 'new_value' => $jumlah, 'delta' => $delta],
-                    'depletion_config' => ['original_type' => $jenis, 'normalized_type' => $normalizedType]
-                ],
-                'data' => ['delta_info' => ['old_value' => $oldJumlah, 'new_value' => $jumlah, 'delta' => $delta]],
+                'method' => $depletionMethod,
+                'metadata' => $metadata,
+                'data' => $data,
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id()
             ]
@@ -602,12 +1000,432 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
             'depletion_id' => $deplesi->id,
             'jenis' => $deplesi->jenis,
             'jumlah' => $deplesi->jumlah,
+            'method' => $deplesi->method,
             'recording_id' => $deplesi->recording_id,
             'was_created' => $deplesi->wasRecentlyCreated,
-            'was_updated' => !$deplesi->wasRecentlyCreated
+            'was_updated' => !$deplesi->wasRecentlyCreated,
+            'batches_allocated' => count($batchBreakdown)
         ]);
 
         return $deplesi;
+    }
+
+    /**
+     * Get company configuration for depletion settings
+     */
+    private function getCompanyConfig(): array
+    {
+        try {
+            $user = Auth::user();
+            if (!$user || !$user->company) {
+                logWarningIfDebug('⚠️ No user or company found, using default config', [
+                    'user_id' => $user?->id ?? 'null',
+                    'company_id' => $user?->company_id ?? 'null'
+                ]);
+                return [];
+            }
+
+            $config = $user->company->config ?? [];
+            logDebugIfDebug('Company config loaded', [
+                'company_id' => $user->company_id,
+                'config_keys' => array_keys($config),
+                'has_livestock_config' => isset($config['livestock']),
+                'has_purchasing_config' => isset($config['purchasing'])
+            ]);
+
+            return $config;
+        } catch (Exception $e) {
+            logErrorIfDebug('❌ Error loading company config', [
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Determine depletion method based on company configuration
+     */
+    private function getDepletionMethod(array $companyConfig, string $depletionType): string
+    {
+        // Check purchasing config first (livestock purchase batch settings)
+        $purchasingConfig = $companyConfig['purchasing'] ?? [];
+        $livestockPurchaseConfig = $purchasingConfig['livestock_purchase'] ?? [];
+        $batchSettings = $livestockPurchaseConfig['batch_settings'] ?? [];
+        $multipleBatchesConfig = $batchSettings['allow_multiple_batches'] ?? [];
+
+        if (isset($multipleBatchesConfig['depletion_method'])) {
+            $method = $multipleBatchesConfig['depletion_method'];
+            logDebugIfDebug('Depletion method from purchasing config', [
+                'method' => $method,
+                'config_path' => 'purchasing.livestock_purchase.batch_settings.allow_multiple_batches.depletion_method'
+            ]);
+            return $method;
+        }
+
+        // Check livestock config as fallback
+        $livestockConfig = $companyConfig['livestock'] ?? [];
+        $depletionTrackingConfig = $livestockConfig['depletion_tracking'] ?? [];
+        $typesConfig = $depletionTrackingConfig['types'] ?? [];
+        $typeConfig = $typesConfig[$depletionType] ?? [];
+
+        if (isset($typeConfig['batch_attribution'])) {
+            $method = $typeConfig['batch_attribution'] === 'auto' ? 'fifo' : 'manual';
+            logDebugIfDebug('Depletion method from livestock config', [
+                'method' => $method,
+                'batch_attribution' => $typeConfig['batch_attribution'],
+                'config_path' => "livestock.depletion_tracking.types.{$depletionType}.batch_attribution"
+            ]);
+            return $method;
+        }
+
+        // Default to traditional if no config found
+        logWarningIfDebug('⚠️ No depletion method config found, using traditional', [
+            'company_config_keys' => array_keys($companyConfig),
+            'depletion_type' => $depletionType
+        ]);
+        return 'traditional';
+    }
+
+    /**
+     * Allocate depletion to batches using FIFO method
+     */
+    private function allocateDepletionToBatches(string $livestockId, string $date, int $quantity, string $depletionType): array
+    {
+        logDebugIfDebug('🔄 allocateDepletionToBatches called', [
+            'livestock_id' => $livestockId,
+            'date' => $date,
+            'quantity' => $quantity,
+            'depletion_type' => $depletionType
+        ]);
+
+        try {
+            // Get livestock with batches
+            $livestock = Livestock::with(['batches' => function ($query) {
+                $query->where('status', 'active')
+                    ->where('quantity_available', '>', 0) // Using quantity_available instead of raw calculation
+                    ->orderBy('start_date', 'asc')
+                    ->orderBy('id', 'asc');
+            }])->find($livestockId);
+
+            if (!$livestock) {
+                throw new Exception("Livestock not found: {$livestockId}");
+            }
+
+            $availableBatches = $livestock->batches;
+            logDebugIfDebug('Available batches found', [
+                'batches_count' => $availableBatches->count(),
+                'total_available' => $availableBatches->sum(function ($batch) {
+                    return $batch->getQuantityAvailable();
+                })
+            ]);
+
+            if ($availableBatches->isEmpty()) {
+                logWarningIfDebug('⚠️ No available batches found for depletion allocation', [
+                    'livestock_id' => $livestockId,
+                    'quantity' => $quantity
+                ]);
+                return [
+                    'success' => false,
+                    'error' => 'No available batches found',
+                    'batches' => []
+                ];
+            }
+
+            $remainingQuantity = $quantity;
+            $allocatedBatches = [];
+            $mutationDate = Carbon::parse($date);
+
+            foreach ($availableBatches as $batch) {
+                if ($remainingQuantity <= 0) break;
+
+                $availableInBatch = $batch->getQuantityAvailable();
+
+                if ($availableInBatch <= 0) continue;
+
+                $quantityToAllocate = min($remainingQuantity, $availableInBatch);
+
+                // Fix age calculation: calculate how old the batch is relative to mutation date
+                $batchAge = 0;
+                if ($batch->start_date) {
+                    $batchStartDate = Carbon::parse($batch->start_date);
+                    // Calculate age: how many days old is the batch on mutation date
+                    $batchAge = $batchStartDate->diffInDays($mutationDate, false);
+
+                    logDebugIfDebug('Age calculation details', [
+                        'batch_id' => $batch->id,
+                        'batch_start_date' => $batchStartDate->format('Y-m-d'),
+                        'mutation_date' => $mutationDate->format('Y-m-d'),
+                        'calculated_age_days' => $batchAge,
+                        'age_calculation' => 'mutation_date - batch_start_date'
+                    ]);
+                }
+
+                $allocatedBatches[] = [
+                    'batch_id' => $batch->id,
+                    'batch_name' => $batch->name,
+                    'start_date' => $batch->start_date,
+                    'age_days' => $batchAge,
+                    'initial_quantity' => $batch->initial_quantity,
+                    'current_available' => $availableInBatch,
+                    'quantity' => $quantityToAllocate,
+                    'remaining_after_allocation' => $availableInBatch - $quantityToAllocate
+                ];
+
+                $remainingQuantity -= $quantityToAllocate;
+
+                logDebugIfDebug('Batch allocated', [
+                    'batch_id' => $batch->id,
+                    'batch_name' => $batch->name,
+                    'quantity_allocated' => $quantityToAllocate,
+                    'remaining_quantity' => $remainingQuantity,
+                    'batch_age_days' => $batchAge
+                ]);
+            }
+
+            if ($remainingQuantity > 0) {
+                logWarningIfDebug('⚠️ Not enough batch capacity for full depletion', [
+                    'requested_quantity' => $quantity,
+                    'allocated_quantity' => $quantity - $remainingQuantity,
+                    'remaining_quantity' => $remainingQuantity,
+                    'batches_used' => count($allocatedBatches)
+                ]);
+            }
+
+            $result = [
+                'success' => true,
+                'requested_quantity' => $quantity,
+                'allocated_quantity' => $quantity - $remainingQuantity,
+                'remaining_quantity' => $remainingQuantity,
+                'batches' => $allocatedBatches,
+                'allocation_method' => 'fifo',
+                'allocation_date' => $date
+            ];
+
+            logInfoIfDebug('✅ Batch allocation completed', [
+                'total_allocated' => $result['allocated_quantity'],
+                'batches_used' => count($allocatedBatches),
+                'allocation_method' => 'fifo',
+                'age_range' => [
+                    'min_age' => min(array_column($allocatedBatches, 'age_days')),
+                    'max_age' => max(array_column($allocatedBatches, 'age_days'))
+                ]
+            ]);
+
+            return $result;
+        } catch (Exception $e) {
+            logErrorIfDebug('❌ Error in allocateDepletionToBatches', [
+                'error' => $e->getMessage(),
+                'livestock_id' => $livestockId,
+                'quantity' => $quantity
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Generate detailed error message for batch allocation failures
+     */
+    private function generateBatchAllocationError(string $livestockId, int $delta, string $depletionType): string
+    {
+        $livestock = Livestock::with(['batches' => function ($query) {
+            $query->where('status', 'active');
+        }])->find($livestockId);
+
+        if (!$livestock) {
+            return "Livestock tidak ditemukan untuk alokasi batch.";
+        }
+
+        $totalBatches = $livestock->batches->count();
+        $availableBatches = $livestock->batches->where('quantity_available', '>', 0)->count();
+        $totalAvailable = $livestock->getTotalAvailableQuantity();
+        $operation = $delta > 0 ? 'menambah' : 'mengurangi';
+        $depletionTypeLabel = $depletionType === 'mortality' ? 'kematian' : ($depletionType === 'culling' ? 'afkir' : $depletionType);
+
+        if ($totalBatches === 0) {
+            return "Tidak ada batch aktif untuk ternak '{$livestock->name}'. Silakan periksa data batch atau hubungi administrator.";
+        }
+
+        if ($availableBatches === 0) {
+            return "Semua batch untuk ternak '{$livestock->name}' sudah habis (quantity_available = 0). Tidak dapat {$operation} {$depletionTypeLabel} sebanyak " . abs($delta) . " ekor.";
+        }
+
+        if ($delta > 0 && $totalAvailable < $delta) {
+            return "Stok tersedia ({$totalAvailable} ekor) tidak cukup untuk {$operation} {$depletionTypeLabel} sebanyak {$delta} ekor. Silakan periksa data batch atau kurangi jumlah {$depletionTypeLabel}.";
+        }
+
+        return "Gagal mengalokasi {$depletionTypeLabel} ke batch. Total batch: {$totalBatches}, Batch tersedia: {$availableBatches}, Stok tersedia: {$totalAvailable}, Jumlah yang diminta: " . abs($delta) . " ekor.";
+    }
+
+    /**
+     * Handle decrement depletion (when delta is negative)
+     * This method handles the case when depletion quantity is reduced
+     */
+    private function handleDecrementDepletion(string $livestockId, string $date, int $decrementAmount, string $depletionType): array
+    {
+        logDebugIfDebug('🔄 handleDecrementDepletion called', [
+            'livestock_id' => $livestockId,
+            'date' => $date,
+            'decrement_amount' => $decrementAmount,
+            'depletion_type' => $depletionType
+        ]);
+
+        try {
+            // Get livestock with batches
+            $livestock = Livestock::with(['batches' => function ($query) {
+                $query->where('status', 'active')
+                    ->where('quantity_depletion', '>', 0) // Only batches with existing depletion
+                    ->orderBy('start_date', 'desc') // Reverse FIFO for decrement (newest first)
+                    ->orderBy('id', 'desc');
+            }])->find($livestockId);
+
+            if (!$livestock) {
+                throw new Exception("Livestock not found: {$livestockId}");
+            }
+
+            $batchesWithDepletion = $livestock->batches;
+            logDebugIfDebug('Batches with existing depletion found', [
+                'batches_count' => $batchesWithDepletion->count(),
+                'total_existing_depletion' => $batchesWithDepletion->sum('quantity_depletion')
+            ]);
+
+            if ($batchesWithDepletion->isEmpty()) {
+                logWarningIfDebug('⚠️ No batches with existing depletion found for decrement', [
+                    'livestock_id' => $livestockId,
+                    'decrement_amount' => $decrementAmount
+                ]);
+                return [];
+            }
+
+            $remainingDecrement = $decrementAmount;
+            $decrementBreakdown = [];
+
+            foreach ($batchesWithDepletion as $batch) {
+                if ($remainingDecrement <= 0) break;
+
+                $currentDepletion = $batch->quantity_depletion;
+                if ($currentDepletion <= 0) continue;
+
+                $quantityToDecrement = min($remainingDecrement, $currentDepletion);
+
+                // Fix: calculate age_days manually (replace getAgeDays)
+                $age_days = null;
+                if ($batch->start_date) {
+                    $age_days = Carbon::parse($date)->diffInDays(Carbon::parse($batch->start_date));
+                }
+                $decrementBreakdown[] = [
+                    'age_days' => $age_days,
+                    'batch_id' => $batch->id,
+                    'batch_name' => $batch->name,
+                    'start_date' => $batch->start_date,
+                    'initial_quantity' => $batch->initial_quantity,
+                    'current_available' => $batch->getQuantityAvailable(),
+                    'current_depletion' => $currentDepletion,
+                    'quantity' => -$quantityToDecrement, // Negative for decrement
+                    'remaining_after_decrement' => $currentDepletion - $quantityToDecrement,
+                    'remaining_after_allocation' => $batch->getQuantityAvailable() // For consistency with create
+                ];
+
+                $remainingDecrement -= $quantityToDecrement;
+
+                logDebugIfDebug('Batch decrement calculated', [
+                    'batch_id' => $batch->id,
+                    'batch_name' => $batch->name,
+                    'current_depletion' => $currentDepletion,
+                    'quantity_to_decrement' => $quantityToDecrement,
+                    'remaining_decrement' => $remainingDecrement
+                ]);
+            }
+
+            if ($remainingDecrement > 0) {
+                logWarningIfDebug('⚠️ Not enough existing depletion to decrement', [
+                    'requested_decrement' => $decrementAmount,
+                    'actual_decrement' => $decrementAmount - $remainingDecrement,
+                    'remaining_decrement' => $remainingDecrement,
+                    'batches_used' => count($decrementBreakdown)
+                ]);
+            }
+
+            logInfoIfDebug('✅ Decrement breakdown completed', [
+                'total_decrement' => $decrementAmount - $remainingDecrement,
+                'batches_affected' => count($decrementBreakdown),
+                'decrement_method' => 'reverse_fifo'
+            ]);
+
+            return $decrementBreakdown;
+        } catch (Exception $e) {
+            logErrorIfDebug('❌ Error in handleDecrementDepletion', [
+                'error' => $e->getMessage(),
+                'livestock_id' => $livestockId,
+                'decrement_amount' => $decrementAmount
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Update batch depletion quantities in database
+     */
+    private function updateBatchDepletionQuantities(array $batchBreakdown): void
+    {
+        if (empty($batchBreakdown)) {
+            logDebugIfDebug('⏭️ No batch breakdown to update', []);
+            return;
+        }
+
+        logDebugIfDebug('🔄 Updating batch depletion quantities', [
+            'batches_count' => count($batchBreakdown)
+        ]);
+
+        try {
+            foreach ($batchBreakdown as $batchData) {
+                $batchId = $batchData['batch_id'];
+                $quantityToAdd = $batchData['quantity'];
+
+                $batch = \App\Models\LivestockBatch::find($batchId);
+                if (!$batch) {
+                    logWarningIfDebug('⚠️ Batch not found for update', [
+                        'batch_id' => $batchId,
+                        'quantity_to_add' => $quantityToAdd
+                    ]);
+                    continue;
+                }
+
+                $oldQuantityDepletion = $batch->quantity_depletion;
+                $batch->quantity_depletion += $quantityToAdd;
+
+                // Auto-calculate quantity_available will be handled by model observer
+                $batch->save();
+
+                // Force recalculate to ensure accuracy
+                $batch->recalculateQuantityAvailable();
+
+                $operation = $quantityToAdd > 0 ? 'increment' : 'decrement';
+                $operationAmount = abs($quantityToAdd);
+
+                logDebugIfDebug('Batch depletion quantity updated', [
+                    'batch_id' => $batchId,
+                    'batch_name' => $batch->name,
+                    'old_quantity_depletion' => $oldQuantityDepletion,
+                    'new_quantity_depletion' => $batch->quantity_depletion,
+                    'quantity_change' => $quantityToAdd,
+                    'operation' => $operation,
+                    'operation_amount' => $operationAmount,
+                    'quantity_available' => $batch->getQuantityAvailable(),
+                    'availability_percentage' => $batch->getAvailabilityPercentage(),
+                    'availability_status' => $batch->getAvailabilityStatus()
+                ]);
+            }
+
+            logInfoIfDebug('✅ All batch depletion quantities updated', [
+                'batches_updated' => count($batchBreakdown)
+            ]);
+        } catch (Exception $e) {
+            logErrorIfDebug('❌ Error updating batch depletion quantities', [
+                'error' => $e->getMessage(),
+                'batches_count' => count($batchBreakdown)
+            ]);
+            throw $e;
+        }
     }
 
     public function getDetailedOutflowHistory($livestockId, $date): array
@@ -665,6 +1483,29 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
         return ['liveability' => round($liveability, 2), 'fcr' => round($fcr, 3), 'ip' => round($ip, 2)];
     }
 
+    /**
+     * Compare only business data (feed, supply, depletion, sales) between new and previous payloads.
+     * Ignore changes in recorded_at, recorded_by, and ignore duplicate history entries with same value.
+     */
+    protected function isBusinessDataChanged(array $fullPayload, array $previousPayload): bool
+    {
+        // Compare main business sections
+        $fields = [
+            'consumption.feed.items',
+            'consumption.supply.items',
+            'production.depletion',
+            'production.sales',
+        ];
+        foreach ($fields as $field) {
+            $new = data_get($fullPayload, $field);
+            $old = data_get($previousPayload, $field);
+            if ($new !== $old) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public function saveOrUpdateRecording($data): Recording
     {
         logDebugIfDebug('🔄 saveOrUpdateRecording called', [
@@ -691,6 +1532,20 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
             ->where('tanggal', $data['tanggal'])
             ->first();
 
+        $previousPayload = $existingRecording ? ($existingRecording->payload ?? []) : [];
+
+        // 1. CEK PERUBAHAN DATA BISNIS SEBELUM UPDATE HISTORY
+        if ($existingRecording && $previousPayload) {
+            if (!$this->isBusinessDataChanged($fullPayload, $previousPayload)) {
+                logInfoIfDebug('⏭️ No business data changes detected, skipping update.');
+                return $existingRecording;
+            }
+        }
+
+        // 2. Hanya update history jika memang ada perubahan data bisnis
+        $fullPayload['history'] = $this->buildHistory($fullPayload, $previousPayload);
+
+        // ...lanjutkan proses simpan seperti biasa
         if ($existingRecording) {
             logDebugIfDebug('📝 Updating existing recording', [
                 'recording_id' => $existingRecording->id,
@@ -706,10 +1561,23 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
             ]);
         }
 
+        // Persiapkan JSON untuk masing-masing bagian
+        $dataOperasional = $this->generateOperasionalJson($fullPayload, $previousPayload);
+        $dataAudit = $this->generateAuditJson($fullPayload);
+        $dataGabungan = [
+            'operational' => $dataOperasional,
+            'audit' => $dataAudit,
+        ];
+
         $recording = Recording::updateOrCreate(
             ['livestock_id' => $data['livestock_id'], 'tanggal' => $data['tanggal']],
-            array_merge($data, ['payload' => $fullPayload, 'created_by' => Auth::id(), 'updated_by' => Auth::id()])
+            array_merge($data, ['payload' => $fullPayload, 'created_by' => Auth::id(), 'updated_by' => Auth::id(), 'data_operational' => $dataOperasional, 'data_audit' => $dataAudit, 'data' => $dataGabungan])
         );
+
+        // Tandai cost Livestock sebagai invalid hanya jika update existing recording
+        if (!$recording->wasRecentlyCreated) {
+            \App\Services\Livestock\LivestockCostService::markCostInvalid($data['livestock_id']);
+        }
 
         logInfoIfDebug('✅ Recording saved/updated successfully', [
             'recording_id' => $recording->id,
@@ -749,8 +1617,20 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
         bool $isManualFeedUsageEnabled = false,
         $recordingMethod = 'total',
         $livestockConfig = [],
-        $date = null
+        $date = null,
+        $validationStatus = [],
+        $validatedData = []
     ): array {
+        logInfoIfDebug('🔄 MODULAR_PATH: RecordingPersistenceService::buildStructuredPayload called.', [
+            'livestockId' => $ternak->livestock->id,
+            'date' => $date,
+            'weight_today' => $weightToday,
+            'mortality' => $mortality,
+            'culling' => $culling,
+            'itemQuantities_count' => count($usages),
+            'supplyQuantities_count' => count($supplyUsages)
+        ]);
+
         $totalFeedUsage = array_sum(array_column($usages, 'quantity'));
         $feedCost = array_sum(array_map(function ($usage) {
             $qty = $usage['quantity'] ?? 0;
@@ -763,7 +1643,25 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
             $price = $usage['stock_prices']['average_price'] ?? 0;
             return $qty * $price;
         }, $supplyUsages));
-        return [
+
+        // Only use cumulative_feed_consumption in consumption.feed, never in history.feed
+        $cumulativeFeedConsumption = $feedHistory['cumulative_feed_consumption'] ?? 0;
+        unset($feedHistory['cumulative_feed_consumption']);
+        $cumulativeSupplyConsumption = 0; // Not used in history
+        logDebugIfDebug('StructuredPayload: cumulative_feed_consumption only in consumption.feed', [
+            'cumulative_feed_consumption' => $cumulativeFeedConsumption
+        ]);
+
+        // Helper: convert empty array to empty object for history keys
+        $normalizeHistory = function ($arr) {
+            if (is_array($arr) && empty($arr)) {
+                logDebugIfDebug('history.* normalized from [] to {}');
+                return (object)[];
+            }
+            return $arr;
+        };
+
+        $payload = [
             'schema' => [
                 'version' => '3.0',
                 'schema_date' => '2025-01-23',
@@ -834,7 +1732,8 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                     'total_cost' => $feedCost,
                     'items' => $usages,
                     'types_count' => count($usages),
-                    'cost_per_kg' => $totalFeedUsage > 0 ? $feedCost / $totalFeedUsage : 0
+                    'cost_per_kg' => $totalFeedUsage > 0 ? $feedCost / $totalFeedUsage : 0,
+                    'cumulative_feed_consumption' => $cumulativeFeedConsumption
                 ],
                 'supply' => [
                     'total_quantity' => $totalSupplyUsage,
@@ -892,6 +1791,45 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 ]
             ]
         ];
+        // Normalize all empty arrays in history to objects recursively
+        $payload['history'] = $this->normalizeEmptyArraysToObjects($payload['history']);
+        // Inject validation_status if provided
+        if (!empty($validationStatus)) {
+            $payload['validation_status'] = $validationStatus;
+        }
+        // Inject validated_data if provided
+        if (!empty($validatedData)) {
+            $payload['validated_data'] = $validatedData;
+            logDebugIfDebug('Injected validated_data into payload', [
+                'validated_data_keys' => array_keys($validatedData)
+            ]);
+        }
+        return $payload;
+    }
+
+    // Pastikan generateOperasionalJson tidak pernah inject cumulative_feed_consumption ke feed/history dan array kosong jadi object
+    protected function generateOperasionalJson(array $payload, array $previousPayload): array
+    {
+        // Always update history to the latest robust version before generating operational data
+        $payload['history'] = $this->buildHistory($payload, $previousPayload);
+
+        $feedHistory = $payload['history']['feed'] ?? [];
+        $feedHistoryArr = (array)$feedHistory;
+        if (isset($feedHistoryArr['cumulative_feed_consumption'])) {
+            unset($feedHistoryArr['cumulative_feed_consumption']);
+            logWarningIfDebug('generateOperasionalJson: cumulative_feed_consumption dihapus dari history.feed');
+        }
+        // Normalize recursively
+        $feedHistoryArr = $this->normalizeEmptyArraysToObjects($feedHistoryArr);
+        return [
+            'production' => $payload['production'] ?? [],
+            'consumption' => $payload['consumption'] ?? [],
+            'recording' => $payload['recording'] ?? [],
+            'history' => $payload['history'] ?? [],
+            // 'feed' => $feedHistoryArr,
+            'performance' => $payload['performance'] ?? [],
+            'environment' => $payload['environment'] ?? [],
+        ];
     }
 
     public function getDetailedUnitInfo($feed, $quantity): array
@@ -907,8 +1845,8 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
             'converted_quantity' => $quantity,
         ];
         if (!$feed) return $result;
-        if (isset($feed->payload['conversion_units']) && is_array($feed->payload['conversion_units'])) {
-            $conversionUnits = collect($feed->payload['conversion_units']);
+        if (isset($feed->data['conversion_units']) && is_array($feed->data['conversion_units'])) {
+            $conversionUnits = collect($feed->data['conversion_units']);
             $smallestUnit = $conversionUnits->firstWhere('is_smallest', true);
             if ($smallestUnit) {
                 $result['smallest_unit_id'] = $smallestUnit['unit_id'];
@@ -958,19 +1896,86 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 'average_price' => 0,
             ],
         ];
-        $stocks = FeedStock::where('feed_id', $feedId)->where('livestock_id', $livestockId)
-            ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')->get();
-        if ($stocks->isEmpty()) return $result;
+
+        // Get stocks with available quantity > 0
+        $stocks = FeedStock::where('feed_id', $feedId)
+            ->where('livestock_id', $livestockId)
+            ->whereRaw('(quantity_in - quantity_used - quantity_mutated - COALESCE(quantity_reserved, 0)) > 0')
+            ->with([
+                'feedPurchase.supplier',
+                'feedPurchase.expedition',
+                'feedPurchase.feedPurchaseItems.unit',
+                'feedPurchase.feedPurchaseItems.convertedUnit'
+            ])
+            ->get();
+
+        if ($stocks->isEmpty()) {
+            logDebugIfDebug('📊 No available stocks found', [
+                'feed_id' => $feedId,
+                'livestock_id' => $livestockId
+            ]);
+            return $result;
+        }
 
         $prices = [];
         $origins = [];
         $purchaseDates = [];
+        $availableStocks = [];
+
         foreach ($stocks as $stock) {
-            if ($stock->feedPurchase) {
-                $prices[] = $stock->feedPurchase->price_per_converted_unit ?? ($stock->feedPurchase->price_per_unit ?? 0);
+            // dd($stock->feedPurchase);
+            $availableQuantity = $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated - ($stock->quantity_reserved ?? 0);
+
+            if ($availableQuantity > 0) {
+                $stockData = [
+                    'id' => $stock->id,
+                    'quantity_available' => $availableQuantity,
+                    'quantity_in' => $stock->quantity_in,
+                    'quantity_used' => $stock->quantity_used,
+                    'quantity_mutated' => $stock->quantity_mutated,
+                    'quantity_reserved' => $stock->quantity_reserved ?? 0,
+                    'purchase_date' => $stock->feedPurchase->date ?? 'Unknown',
+                    'created_at' => $stock->created_at,
+                    'updated_at' => $stock->updated_at,
+                ];
+
+                // Add purchase information if available
+                if ($stock->feedPurchase) {
+                    $stockData['purchase_id'] = $stock->feedPurchase->id;
+                    $stockData['purchase_date'] = $stock->feedPurchase->date;
+                    $stockData['invoice_number'] = $stock->feedPurchase->invoice_number;
+                    $stockData['do_number'] = $stock->feedPurchase->do_number;
+                    $stockData['supplier_name'] = optional($stock->feedPurchase->supplier)->name ?? 'Unknown';
+                    $stockData['expedition_name'] = optional($stock->feedPurchase->expedition)->name ?? null;
+
+                    // Get price information from FeedPurchaseItem if available
+                    $feedPurchaseItem = $stock->feedPurchase->feedPurchaseItems()
+                        ->where('feed_id', $feedId)
+                        ->first();
+
+                    if ($feedPurchaseItem) {
+                        $stockData['price_per_unit'] = $feedPurchaseItem->price_per_unit;
+                        $stockData['price_per_converted_unit'] = $feedPurchaseItem->price_per_converted_unit;
+                        $stockData['unit_name'] = optional($feedPurchaseItem->unit)->name ?? 'Unknown';
+                        $stockData['converted_unit_name'] = optional($feedPurchaseItem->convertedUnit)->name ?? 'Unknown';
+                        $stockData['purchase_date'] = optional($feedPurchaseItem->feedPurchase)->date ?? 'Unknown';
+
+                        $prices[] = $feedPurchaseItem->price_per_converted_unit ?? ($feedPurchaseItem->price_per_unit ?? 0);
+                    }
+
+                    $purchaseDates[] = $stock->feedPurchase->date;
+                    $origins[] = optional($stock->feedPurchase->supplier)->name ?? 'Unknown';
+                }
+
+                $availableStocks[] = $stockData;
             }
-            // Dummy logic for origins and purchaseDates (implement as needed)
         }
+
+        // Update result with collected data
+        $result['available_stocks'] = $availableStocks;
+        $result['stock_origins'] = array_unique($origins);
+        $result['stock_purchase_dates'] = array_unique($purchaseDates);
+
         if (!empty($prices)) {
             $result['stock_prices'] = [
                 'min_price' => min($prices),
@@ -978,9 +1983,24 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 'average_price' => array_sum($prices) / count($prices),
             ];
         }
-        // Dummy: assign empty for now
-        $result['stock_origins'] = $origins;
-        $result['stock_purchase_dates'] = $purchaseDates;
+
+        logDebugIfDebug('📊 Stock details collected', [
+            'feed_id' => $feedId,
+            'livestock_id' => $livestockId,
+            'available_stocks_count' => count($availableStocks),
+            'total_available_quantity' => array_sum(array_column($availableStocks, 'quantity_available')),
+            'stock_breakdown' => array_map(function ($stock) {
+                return [
+                    'id' => $stock['id'],
+                    'quantity_available' => $stock['quantity_available'],
+                    'quantity_in' => $stock['quantity_in'],
+                    'quantity_used' => $stock['quantity_used'],
+                    'quantity_mutated' => $stock['quantity_mutated'],
+                    'quantity_reserved' => $stock['quantity_reserved'],
+                ];
+            }, $availableStocks)
+        ]);
+
         return $result;
     }
 
@@ -1048,22 +2068,71 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 'average_price' => 0,
             ],
         ];
-        $livestock = Livestock::find($livestockId);
-        if (!$livestock) return $result;
 
-        $stocks = SupplyStock::where('supply_id', $supplyId)->where('farm_id', $livestock->farm_id)
-            ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')->get();
-        if ($stocks->isEmpty()) return $result;
+        $livestock = Livestock::find($livestockId);
+        if (!$livestock) {
+            logDebugIfDebug('📊 Livestock not found for supply stock details', [
+                'supply_id' => $supplyId,
+                'livestock_id' => $livestockId
+            ]);
+            return $result;
+        }
+
+        $stocks = SupplyStock::where('supply_id', $supplyId)
+            ->where('farm_id', $livestock->farm_id)
+            ->whereRaw('(quantity_in - quantity_used - quantity_mutated) > 0')
+            ->with(['supplyPurchase'])
+            ->get();
+
+        if ($stocks->isEmpty()) {
+            logDebugIfDebug('📊 No available supply stocks found', [
+                'supply_id' => $supplyId,
+                'farm_id' => $livestock->farm_id
+            ]);
+            return $result;
+        }
 
         $prices = [];
         $origins = [];
         $purchaseDates = [];
+        $availableStocks = [];
+
         foreach ($stocks as $stock) {
-            if ($stock->supplyPurchase) {
-                $prices[] = $stock->supplyPurchase->price_per_converted_unit ?? ($stock->supplyPurchase->price_per_unit ?? 0);
+            $availableQuantity = $stock->quantity_in - $stock->quantity_used - $stock->quantity_mutated;
+
+            if ($availableQuantity > 0) {
+                $stockData = [
+                    'id' => $stock->id,
+                    'quantity_available' => $availableQuantity,
+                    'quantity_in' => $stock->quantity_in,
+                    'quantity_used' => $stock->quantity_used,
+                    'quantity_mutated' => $stock->quantity_mutated,
+                    'created_at' => $stock->created_at,
+                    'updated_at' => $stock->updated_at,
+                ];
+
+                // Add purchase information if available
+                if ($stock->supplyPurchase) {
+                    $stockData['purchase_id'] = $stock->supplyPurchase->id;
+                    $stockData['purchase_date'] = $stock->supplyPurchase->purchase_date;
+                    $stockData['price_per_unit'] = $stock->supplyPurchase->price_per_unit;
+                    $stockData['price_per_converted_unit'] = $stock->supplyPurchase->price_per_converted_unit;
+                    $stockData['supplier_name'] = $stock->supplyPurchase->supplier_name;
+
+                    $prices[] = $stock->supplyPurchase->price_per_converted_unit ?? ($stock->supplyPurchase->price_per_unit ?? 0);
+                    $purchaseDates[] = $stock->supplyPurchase->purchase_date;
+                    $origins[] = $stock->supplyPurchase->supplier_name ?? 'Unknown';
+                }
+
+                $availableStocks[] = $stockData;
             }
-            // Dummy logic for origins and purchaseDates (implement as needed)
         }
+
+        // Update result with collected data
+        $result['available_stocks'] = $availableStocks;
+        $result['stock_origins'] = array_unique($origins);
+        $result['stock_purchase_dates'] = array_unique($purchaseDates);
+
         if (!empty($prices)) {
             $result['stock_prices'] = [
                 'min_price' => min($prices),
@@ -1071,9 +2140,23 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 'average_price' => array_sum($prices) / count($prices),
             ];
         }
-        // Dummy: assign empty for now
-        $result['stock_origins'] = $origins;
-        $result['stock_purchase_dates'] = $purchaseDates;
+
+        logDebugIfDebug('📊 Supply stock details collected', [
+            'supply_id' => $supplyId,
+            'livestock_id' => $livestockId,
+            'available_stocks_count' => count($availableStocks),
+            'total_available_quantity' => array_sum(array_column($availableStocks, 'quantity_available')),
+            'stock_breakdown' => array_map(function ($stock) {
+                return [
+                    'id' => $stock['id'],
+                    'quantity_available' => $stock['quantity_available'],
+                    'quantity_in' => $stock['quantity_in'],
+                    'quantity_used' => $stock['quantity_used'],
+                    'quantity_mutated' => $stock['quantity_mutated'],
+                ];
+            }, $availableStocks)
+        ]);
+
         return $result;
     }
 
@@ -1181,5 +2264,243 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
             'livestock_id' => $livestockId,
             'date' => $date
         ]);
+    }
+
+    protected function generateAuditJson(array $payload): array
+    {
+        return [
+            'validation' => $payload['validation'] ?? [],
+            'config' => $payload['config'] ?? [],
+        ];
+    }
+
+    // Helper: recursively convert all empty arrays to empty objects in a given array
+    private function normalizeEmptyArraysToObjects($data)
+    {
+        if (is_array($data)) {
+            if (empty($data)) {
+                logDebugIfDebug('normalizeEmptyArraysToObjects: normalized [] to {}');
+                return (object)[];
+            }
+            foreach ($data as $k => $v) {
+                $data[$k] = $this->normalizeEmptyArraysToObjects($v);
+            }
+        }
+        return $data;
+    }
+
+    /**
+     * Build history of last 5 changes for feed, supply, depletion, and sales from payloads.
+     * Robust: use (date, quantity) as change comparator for feed and depletion. Only add if unique or value changed for the same date.
+     * Date is always stored as datetime for robustness.
+     */
+    protected function buildHistory(array $newPayload, array $previousPayload = []): array
+    {
+        $userId = data_get($newPayload, 'recorded_by.id');
+        $feedItems = data_get($newPayload, 'consumption.feed.items', []);
+        $prevFeed = $previousPayload['history']['feed_changes'] ?? [];
+        $supplyItems = data_get($newPayload, 'consumption.supply.items', []);
+        $prevSupply = $previousPayload['history']['supply_changes'] ?? [];
+        $prevSales = $previousPayload['history']['sales_changes'] ?? [];
+
+        // --- FEED HISTORY ---
+        // Use only date (Y-m-d) and quantity as key, but keep all unique changes for a date (append-only, non-destructive)
+        $feedHistory = $prevFeed;
+        foreach ($feedItems as $item) {
+            $dateRaw = $item['timestamp'] ?? $item['date'] ?? data_get($newPayload, 'recording.date');
+            $dateKey = substr($dateRaw, 0, 10);
+            $quantity = is_numeric($item['quantity']) ? (string)$item['quantity'] : $item['quantity'];
+            $newEntry = [
+                'id' => $item['feed_id'] ?? null,
+                'date' => $dateRaw,
+                'total_quantity' => $quantity,
+                'created_by' => $userId,
+                'notes' => $item['notes'] ?? '',
+                // Add feed_stock_id and unit_id if available
+                'feed_stock_id' => $item['feed_stock_id'] ?? (isset($item['available_stocks'][0]['id']) ? $item['available_stocks'][0]['id'] : null),
+                'unit_id' => $item['unit_id'] ?? null,
+            ];
+            // Only add if not already present (date+quantity)
+            $exists = false;
+            foreach ($feedHistory as $entry) {
+                if (substr($entry['date'], 0, 10) === $dateKey && (string)$entry['total_quantity'] === $quantity) {
+                    $exists = true;
+                    break;
+                }
+            }
+            if (!$exists) {
+                $feedHistory[] = $newEntry;
+            }
+        }
+        usort($feedHistory, function ($a, $b) {
+            return strtotime($b['date']) <=> strtotime($a['date']);
+        });
+        $feedChanges = array_slice($feedHistory, 0, 5);
+
+        // --- SUPPLY HISTORY ---
+        $supplyHistory = $prevSupply;
+        foreach ($supplyItems as $item) {
+            $dateRaw = $item['timestamp'] ?? $item['date'] ?? data_get($newPayload, 'recording.date');
+            $dateKey = substr($dateRaw, 0, 10);
+            $quantity = is_numeric($item['quantity']) ? (string)$item['quantity'] : $item['quantity'];
+            $id = $item['id'] ?? null;
+            $newEntry = [
+                'id' => $id,
+                'date' => $dateRaw,
+                'total_quantity' => $quantity,
+                'created_by' => $userId,
+                'notes' => $item['notes'] ?? '',
+            ];
+            $exists = false;
+            foreach ($supplyHistory as $entry) {
+                if (substr($entry['date'], 0, 10) === $dateKey && (string)$entry['total_quantity'] === $quantity && $entry['id'] == $id) {
+                    $exists = true;
+                    break;
+                }
+            }
+            if (!$exists) {
+                $supplyHistory[] = $newEntry;
+            }
+        }
+        usort($supplyHistory, function ($a, $b) {
+            return strtotime($b['date']) <=> strtotime($a['date']);
+        });
+        $supplyChanges = array_slice($supplyHistory, 0, 5);
+
+        // --- DEPLETION HISTORY ---
+        $depletionItems = [];
+        foreach (['mortality', 'culling'] as $type) {
+            $jumlah = data_get($newPayload, "production.depletion.$type", 0);
+            if ($jumlah > 0) {
+                $dateRaw = data_get($newPayload, 'recording.timestamp') ?? data_get($newPayload, 'recording.date');
+                $dateKey = substr($dateRaw, 0, 10);
+                // Try to get batch id for this depletion type (for future multi-batch support)
+                $batchId = data_get($newPayload, "production.depletion.{$type}_batch_id", null);
+                $depletionItems[] = [
+                    'jenis' => $type,
+                    'jumlah' => $jumlah,
+                    'date' => $dateRaw,
+                    'date_key' => $dateKey,
+                    'livestock_batch_id' => $batchId,
+                ];
+            }
+        }
+        $prevDepletion = $previousPayload['history']['depletion_changes'] ?? [];
+        $depletionHistory = $prevDepletion;
+        foreach ($depletionItems as $item) {
+            $dateKey = $item['date_key'];
+            $jumlah = is_numeric($item['jumlah']) ? (string)$item['jumlah'] : $item['jumlah'];
+            $jenis = $item['jenis'];
+            $dateRaw = $item['date'];
+            $newEntry = [
+                'id' => $jenis . '-' . $dateRaw,
+                'date' => $dateRaw,
+                'jenis' => $jenis,
+                'jumlah' => $jumlah,
+                'created_by' => $userId,
+                'livestock_batch_id' => $item['livestock_batch_id'] ?? null,
+            ];
+            $exists = false;
+            foreach ($depletionHistory as $entry) {
+                if (substr($entry['date'], 0, 10) === $dateKey && (string)$entry['jumlah'] === $jumlah && $entry['jenis'] === $jenis) {
+                    $exists = true;
+                    break;
+                }
+            }
+            if (!$exists) {
+                $depletionHistory[] = $newEntry;
+            }
+        }
+        usort($depletionHistory, function ($a, $b) {
+            return strtotime($b['date']) <=> strtotime($a['date']);
+        });
+        $depletionChanges = array_slice($depletionHistory, 0, 5);
+
+        // --- SALES HISTORY ---
+        $salesItems = [];
+        $salesQuantity = data_get($newPayload, 'production.sales.quantity', 0);
+        if ($salesQuantity > 0) {
+            $dateRaw = data_get($newPayload, 'recording.timestamp') ?? data_get($newPayload, 'recording.date');
+            $dateKey = substr($dateRaw, 0, 10);
+            $id = data_get($newPayload, 'production.sales.id') ?? null;
+            $customer = data_get($newPayload, 'production.sales.customer_name') ?? 'Unknown';
+            $salesWeight = data_get($newPayload, 'production.sales.weight', 0);
+            $salesItems[] = [
+                'id' => $id,
+                'date' => $dateRaw,
+                'date_key' => $dateKey,
+                'quantity' => (string)$salesQuantity,
+                'weight' => (string)$salesWeight,
+                'customer_name' => $customer,
+                'created_by' => $userId,
+            ];
+        }
+        $prevSales = $previousPayload['history']['sales_changes'] ?? [];
+        $salesHistory = $prevSales;
+        foreach ($salesItems as $item) {
+            $dateKey = $item['date_key'];
+            $quantity = $item['quantity'];
+            $id = $item['id'];
+            $customer = $item['customer_name'];
+            $dateRaw = $item['date'];
+            $weight = $item['weight'];
+            $newEntry = [
+                'id' => $id,
+                'date' => $dateRaw,
+                'quantity' => $quantity,
+                'weight' => $weight,
+                'customer_name' => $customer,
+                'created_by' => $userId,
+            ];
+            $exists = false;
+            foreach ($salesHistory as $entry) {
+                if (substr($entry['date'], 0, 10) === $dateKey && (string)$entry['quantity'] === $quantity && $entry['id'] === $id && $entry['customer_name'] === $customer) {
+                    $exists = true;
+                    break;
+                }
+            }
+            if (!$exists) {
+                $salesHistory[] = $newEntry;
+            }
+        }
+        usort($salesHistory, function ($a, $b) {
+            return strtotime($b['date']) <=> strtotime($a['date']);
+        });
+        $salesChanges = array_slice($salesHistory, 0, 5);
+
+        $prevWeight = $previousPayload['history']['weight_changes'] ?? [];
+        $weightHistory = $prevWeight;
+        $weightToday = data_get($newPayload, 'production.weight.today', null);
+        $dateRaw = data_get($newPayload, 'recording.timestamp') ?? data_get($newPayload, 'recording.date');
+        $dateKey = substr($dateRaw, 0, 10);
+        if ($weightToday !== null) {
+            $newEntry = [
+                'date' => $dateRaw,
+                'weight_today' => (string)$weightToday,
+                'created_by' => $userId,
+            ];
+            $exists = false;
+            foreach ($weightHistory as $entry) {
+                if (substr($entry['date'], 0, 10) === $dateKey && (string)$entry['weight_today'] === (string)$weightToday) {
+                    $exists = true;
+                    break;
+                }
+            }
+            if (!$exists) {
+                $weightHistory[] = $newEntry;
+            }
+        }
+        usort($weightHistory, function ($a, $b) {
+            return strtotime($b['date']) <=> strtotime($a['date']);
+        });
+        $weightChanges = array_slice($weightHistory, 0, 5);
+
+        return [
+            'feed_changes' => $feedChanges,
+            'supply_changes' => $supplyChanges,
+            'depletion_changes' => $depletionChanges,
+            'sales_changes' => $salesChanges,
+            'weight_changes' => $weightChanges,
+        ];
     }
 }

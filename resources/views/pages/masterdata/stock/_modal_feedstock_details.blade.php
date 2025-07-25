@@ -5,16 +5,18 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h1 class="modal-title fs-4">Detail Histori Stok Pakan</h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup" onclick="closeDetails()"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"
+                    onclick="closeDetails()"></button>
             </div>
             <div class="d-flex justify-content-between mb-3">
                 <h5 class="fw-bold">Riwayat Stok per Batch</h5>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-success btn-sm" onclick="exportAllTablesToExcel()">Export Semua Excel</button>
+                    <button class="btn btn-outline-success btn-sm" onclick="exportAllTablesToExcel()">Export Semua
+                        Excel</button>
                     <button class="btn btn-outline-dark btn-sm" onclick="printAllTables()">Print Semua</button>
                 </div>
             </div>
-            
+
             <div class="modal-body">
                 <div class="row mb-4">
                     <div class="col-md-6">
@@ -25,19 +27,24 @@
                         </div>
                     </div>
                 </div>
+                <div class="mb-3 d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm" id="showAkumulasiBtn">Akumulasi Historikal</button>
+                    <button class="btn btn-outline-secondary btn-sm" id="showGroupedBtn">Grouped per Batch</button>
+                </div>
                 <div id="feedstockDetailsContainer" class="accordion" style="max-height: 70vh; overflow-y: auto;">
-                    <!-- Data FeedStock Grouped by Batch akan dimuat di sini via JS -->
+                    <!-- Data FeedStock Akumulasi Historikal atau Grouped by Batch akan dimuat di sini via JS -->
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeDetails()">Tutup</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                    onclick="closeDetails()">Tutup</button>
             </div>
         </div>
     </div>
 </div>
 @push('scripts')
-    <script>
-        $(document).ready(function() {
+<script>
+    $(document).ready(function() {
             $('#kt_modal_feedstock_details').on('hidden.bs.modal', function () {
                 $('#feedstockDetailsContainer').empty();
                 destroyDetailsTable();
@@ -214,5 +221,5 @@
         }
 
 
-    </script>
+</script>
 @endpush

@@ -54,6 +54,10 @@ class FifoLivestockMutationConfigurable extends Component
     public $validationRules = [];
     public $workflowSettings = [];
     public $fifoSettings = [];
+    public $livestockDisabled = false;
+    public $coopDisabled = false;
+    public $destinationLivestockDisabled = false;
+    public $destinationCoopDisabled = false;
 
     // Livestock data
     public $sourceLivestock;
@@ -844,6 +848,30 @@ class FifoLivestockMutationConfigurable extends Component
             'mutation_date' => $this->mutationDate,
             'source_livestock_id' => $this->sourceLivestockId
         ]);
+
+        // Validasi mutual exclusive: hanya salah satu tujuan yang bisa dipilih
+        if ($property === 'destinationCoopId') {
+            $this->livestockDisabled = true;
+            $this->dispatch('success', 'Kandang Tujuan dipilih');
+            if ($value) {
+                $this->destinationLivestockId = null;
+                $this->destinationLivestock = null;
+            }
+            // Sinkronkan UI: disable select Ternak Tujuan jika Kandang Tujuan dipilih
+            $this->destinationCoopDisabled = false;
+            $this->destinationLivestockDisabled = (bool) $value;
+        }
+        if ($property === 'destinationLivestockId') {
+            $this->livestockDisabled = true;
+            $this->dispatch('success', 'Ternak Tujuan dipilih');
+            if ($value) {
+                $this->destinationCoopId = null;
+                $this->destinationCoop = null;
+            }
+            // Sinkronkan UI: disable select Kandang Tujuan jika Ternak Tujuan dipilih
+            $this->destinationLivestockDisabled = false;
+            $this->destinationCoopDisabled = (bool) $value;
+        }
 
         // Handle mutation date changes
         if ($property === 'mutationDate') {

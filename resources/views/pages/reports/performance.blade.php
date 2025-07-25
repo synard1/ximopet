@@ -358,8 +358,8 @@
                     <td class="p-2">{{ number_format($daily['total_deplesi']) }}</td>
                     <td class="p-2">{{ number_format($daily['deplesi_percentage'], 2) }}%</td>
                     <td class="p-2">{{ number_format($daily['jual_ekor']) }}</td>
-                    <td class="p-2">{{ number_format($daily['jual_kg'], 1) }}</td>
-                    <td class="p-2">{{ number_format($daily['jual_rata']) }}</td>
+                    <td class="p-2">{{ number_format($daily['jual_kg'], 2) }}</td>
+                    <td class="p-2">{{ number_format($daily['jual_rata'], 2) }}</td>
                     <td class="p-2">{{ number_format($daily['stock_akhir']) }}</td>
 
                     {{-- Dynamic Feed Usage --}}
@@ -442,7 +442,7 @@
                 <div>
                     <strong>IP Rata-rata:</strong> {{ number_format($avgIP) }}<br>
                     <strong>Total Konsumsi Pakan:</strong> {{ number_format($totalFeedConsumption, 1) }} kg<br>
-                    <strong>Total Penggunaan OVK:</strong> {{ number_format($totalOVKUsage, 2) }} kg
+                    {{-- <strong>Total Penggunaan OVK:</strong> {{ number_format($totalOVKUsage, 2) }} kg --}}
                 </div>
             </div>
         </div>

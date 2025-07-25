@@ -242,6 +242,7 @@ class Mutation extends Component
                 $qty = (int)($this->items[$index]['quantity'] ?? 0);
                 $beratRata2 = $weightData['berat_rata2'] ?? 0;
                 $this->items[$index]['weight'] = $qty * $beratRata2;
+                $this->items[$index]['weight'] = round($this->items[$index]['weight'], 2);
                 $this->total_weight_estimation = $this->items[$index]['weight'];
             }
         }
@@ -249,6 +250,13 @@ class Mutation extends Component
         if (str_ends_with($key, 'livestock_id')) {
             $index = explode('.', $key)[0];
             $this->handleItemSelected($index);
+        }
+        // Jika key adalah weight atau quantity, lakukan pembulatan
+        if (str_contains($key, '.weight') || str_contains($key, '.quantity')) {
+            [$index, $field] = explode('.', $key);
+            if (isset($this->items[$index]['weight'])) {
+                $this->items[$index]['weight'] = round(floatval($this->items[$index]['weight']), 2);
+            }
         }
     }
 

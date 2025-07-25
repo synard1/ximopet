@@ -91,9 +91,35 @@
             <!-- Destination -->
             @if($direction === 'out')
             <div class="col-md-6">
-                <label class="form-label">Ternak Tujuan (Opsional)</label>
+                <label class="form-label">Kandang Tujuan (Opsional, pilih salah satu)</label>
+                @php
+                $coopDisabled = $destinationCoopDisabled ?? false;
+                $livestockDisabled = $destinationLivestockDisabled ?? false;
+                @endphp
+                <select class="form-select @error('destinationCoopId') is-invalid @enderror"
+                    wire:model.live="destinationCoopId" @if($coopDisabled) disabled @endif>
+                    <option value="">Pilih Kandang Tujuan</option>
+                    @foreach($coopOptions as $coop)
+                    <option value="{{ $coop['id'] }}">
+                        {{ $coop['display_name'] }}
+                    </option>
+                    @endforeach
+                </select>
+                @if($coopDisabled)
+                <div class="alert alert-info mt-2 py-1 px-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Kandang Tujuan dinonaktifkan karena Ternak Tujuan sudah dipilih.
+                </div>
+                @endif
+                @error('destinationCoopId')
+                <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Ternak Tujuan (Opsional, pilih salah satu)</label>
                 <select class="form-select @error('destinationLivestockId') is-invalid @enderror"
-                    wire:model="destinationLivestockId">
+                    wire:model.live="destinationLivestockId" @if($livestockDisabled) disabled @endif>
                     <option value="">Pilih Ternak Tujuan</option>
                     @foreach($livestockOptions as $livestock)
                     @if($livestock['id'] !== $sourceLivestockId)
@@ -103,23 +129,13 @@
                     @endif
                     @endforeach
                 </select>
+                @if($livestockDisabled)
+                <div class="alert alert-info mt-2 py-1 px-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Ternak Tujuan dinonaktifkan karena Kandang Tujuan sudah dipilih.
+                </div>
+                @endif
                 @error('destinationLivestockId')
-                <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Kandang Tujuan</label>
-                <select class="form-select @error('destinationCoopId') is-invalid @enderror"
-                    wire:model="destinationCoopId">
-                    <option value="">Pilih Kandang Tujuan</option>
-                    @foreach($coopOptions as $coop)
-                    <option value="{{ $coop['id'] }}">
-                        {{ $coop['display_name'] }}
-                    </option>
-                    @endforeach
-                </select>
-                @error('destinationCoopId')
                 <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>

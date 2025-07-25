@@ -197,7 +197,8 @@ class SupplyUsageDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('DT_RowIndex')->title('#')->searchable(false)->orderable(false),
+            // Column::make('DT_RowIndex')->title('#')->searchable(false)->orderable(false),
+            Column::make('number_full')->title('Nomor')->searchable(true),
             Column::make('usage_date')->title('Tanggal Penggunaan')->searchable(false),
             Column::make('farm_id')->title('Asal'),
             Column::make('coop_id')->title('Tujuan'),

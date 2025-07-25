@@ -44,6 +44,8 @@ class SupplyPurchaseBatch extends BaseModel
         'data',
         'notes',
         'status',
+        'number',
+        'number_full',
         'created_by',
         'updated_by',
     ];

@@ -631,63 +631,214 @@ class FeedController extends Controller
     //     }
     // }
 
-    public function getFeedCardByLivestock(Request $request)
-    {
-        $validated = $request->validate([
-            'livestock_id' => 'required|uuid',
-            'feed_id' => 'required|uuid',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date',
-        ]);
+    // public function getFeedCardByLivestock(Request $request)
+    // {
+    //     $validated = $request->validate([
+    //         'livestock_id' => 'required|uuid',
+    //         'feed_id' => 'required|uuid',
+    //         'start_date' => 'nullable|date',
+    //         'end_date' => 'nullable|date',
+    //     ]);
 
-        $livestockId = $validated['livestock_id'];
-        $feedId = $validated['feed_id'];
-        $startDate = $validated['start_date'] ? Carbon::parse($validated['start_date']) : null;
-        $endDate = $validated['end_date'] ? Carbon::parse($validated['end_date']) : null;
+    //     $livestockId = $validated['livestock_id'];
+    //     $feedId = $validated['feed_id'];
+    //     $startDate = $validated['start_date'] ? Carbon::parse($validated['start_date']) : null;
+    //     $endDate = $validated['end_date'] ? Carbon::parse($validated['end_date']) : null;
 
-        try {
-            $stocks = FeedStock::with([
-                'feed',
-                'feedPurchase.batch',
-                'feedUsageDetails.feedUsage.livestock',
-                'mutationDetails.mutation.toLivestock',
-                'incomingMutation.mutation.fromLivestock',
-            ])
-                ->where('livestock_id', $livestockId)
-                ->where('feed_id', $feedId)
-                ->get();
+    //     try {
+    //         // 1. Query all FeedStock for livestock_id & feed_id
+    //         $stocks = \App\Models\FeedStock::with([
+    //             'feed',
+    //             'feedPurchaseItem.feedPurchase',
+    //             'feedUsageDetails.feedUsage.livestock',
+    //             'mutationDetails.mutation.toLivestock',
+    //             'incomingMutation.mutation.fromLivestock',
+    //         ])
+    //             ->where('livestock_id', $livestockId)
+    //             ->where('feed_id', $feedId)
+    //             ->get();
 
-            $result = [];
+    //         // 2. Group by feed_purchase_item_id (or 'no_purchase')
+    //         $grouped = $stocks->groupBy(function ($stock) {
+    //             return $stock->feed_purchase_item_id ?? 'no_purchase';
+    //         });
 
-            // Group stocks by type (purchase or mutation)
-            foreach ($stocks as $stock) {
-                if ($stock->source_id) {
-                    // Check if this is a mutation by looking up the source_id in Mutation model
-                    $mutation = \App\Models\Mutation::where('id', $stock->source_id)->first();
-                    if ($mutation) {
-                        // This is a mutation
-                        $result[] = $this->buildMutationInHistory([$stock], $startDate, $endDate);
-                    } else {
-                        // If source_id exists but not found in Mutation, treat as purchase
-                        $result[] = $this->buildFeedPurchaseHistory([$stock], $startDate, $endDate);
-                    }
-                } else {
-                    // No source_id, treat as purchase
-                    $result[] = $this->buildFeedPurchaseHistory([$stock], $startDate, $endDate);
-                }
-            }
+    //         $result = [];
+    //         foreach ($grouped as $purchaseItemId => $stockGroup) {
+    //             $histories = [];
+    //             $purchase = $purchaseItemId !== 'no_purchase'
+    //                 ? \App\Models\FeedPurchaseItem::with('feed', 'unit', 'feedPurchase')->find($purchaseItemId)
+    //                 : null;
+    //             $purchaseDate = $purchase && $purchase->feedPurchase ? $purchase->feedPurchase->date : null;
 
-            return response()->json([
-                'status' => 'success',
-                'data' => array_filter($result),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $e->getMessage(),
-            ], 500);
-        }
-    }
+    //             // Calculate saldo awal (stock before start_date) if no purchase in range
+    //             $saldoAwal = 0;
+    //             if ($startDate) {
+    //                 // Sum all purchases before start_date
+    //                 $allStocks = $stockGroup;
+    //                 $allPurchase = 0;
+    //                 $allUsage = 0;
+    //                 $allMutation = 0;
+    //                 foreach ($allStocks as $stock) {
+    //                     // Pembelian (masuk)
+    //                     if ($purchase && $purchase->feedPurchase && $purchase->feedPurchase->date < $startDate) {
+    //                         $allPurchase += floatval($purchase->converted_quantity);
+    //                     }
+    //                     // Usage sebelum start_date
+    //                     foreach ($stock->feedUsageDetails as $usageDetail) {
+    //                         $usageDate = $usageDetail->feedUsage->usage_date;
+    //                         if ($usageDate && $usageDate < $startDate) {
+    //                             $allUsage += floatval($usageDetail->quantity_taken);
+    //                         }
+    //                     }
+    //                     // Mutasi keluar sebelum start_date
+    //                     foreach ($stock->mutationDetails as $mutation) {
+    //                         $mutationDate = $mutation->mutation->date;
+    //                         if ($mutationDate && $mutationDate < $startDate) {
+    //                             $allMutation += floatval($mutation->quantity);
+    //                         }
+    //                     }
+    //                 }
+    //                 $saldoAwal = $allPurchase - $allUsage - $allMutation;
+    //             }
+
+    //             // 3. If there is a purchase in range, add purchase row
+    //             if ($purchase && $purchase->feedPurchase && (!$startDate || $purchaseDate >= $startDate) && (!$endDate || $purchaseDate <= $endDate)) {
+    //                 $histories[] = [
+    //                     'tanggal' => $purchaseDate->format('Y-m-d'),
+    //                     'keterangan' => 'Pembelian',
+    //                     'masuk' => floatval($purchase->converted_quantity),
+    //                     'keluar' => 0,
+    //                     'stok_awal' => 0,
+    //                     'stok_akhir' => floatval($purchase->converted_quantity),
+    //                 ];
+    //             }
+    //             // 4. Always add usage/mutation rows in range
+    //             foreach ($stockGroup as $stock) {
+    //                 // Usage
+    //                 foreach ($stock->feedUsageDetails as $usageDetail) {
+    //                     $usageDate = $usageDetail->feedUsage->usage_date;
+    //                     if ($usageDate && (!$startDate || $usageDate >= $startDate) && (!$endDate || $usageDate <= $endDate)) {
+    //                         $histories[] = [
+    //                             'tanggal' => $usageDate->format('Y-m-d'),
+    //                             'keterangan' => 'Pemakaian Ternak ' . ($usageDetail->feedUsage->livestock->name ?? '-'),
+    //                             'masuk' => 0,
+    //                             'keluar' => $usageDetail->quantity_taken,
+    //                         ];
+    //                     }
+    //                 }
+    //                 // Mutasi keluar
+    //                 foreach ($stock->mutationDetails as $mutation) {
+    //                     $mutationDate = $mutation->mutation->date;
+    //                     if ($mutationDate && (!$startDate || $mutationDate >= $startDate) && (!$endDate || $mutationDate <= $endDate)) {
+    //                         $histories[] = [
+    //                             'tanggal' => $mutationDate->format('Y-m-d'),
+    //                             'keterangan' => 'Mutasi ke ' . ($mutation->mutation->toLivestock->name ?? '-'),
+    //                             'masuk' => 0,
+    //                             'keluar' => $mutation->quantity,
+    //                         ];
+    //                     }
+    //                 }
+    //             }
+    //             // 5. Sort and calculate stok_awal/stok_akhir
+    //             usort($histories, fn($a, $b) => strcmp($a['tanggal'], $b['tanggal']));
+    //             foreach ($histories as $i => &$entry) {
+    //                 if ($i === 0) {
+    //                     $entry['stok_awal'] = ($purchase && $purchase->feedPurchase && (!$startDate || $purchaseDate >= $startDate)) ? 0 : $saldoAwal;
+    //                     $entry['stok_akhir'] = $entry['stok_awal'] + ($entry['masuk'] ?? 0) - ($entry['keluar'] ?? 0);
+    //                 } else {
+    //                     $entry['stok_awal'] = $histories[$i - 1]['stok_akhir'];
+    //                     $entry['stok_akhir'] = $entry['stok_awal'] + ($entry['masuk'] ?? 0) - ($entry['keluar'] ?? 0);
+    //                 }
+    //             }
+    //             // 6. Build info
+    //             $result[] = [
+    //                 'feed_purchase_info' => [
+    //                     'feed_name' => $purchase ? ($purchase->feed->name ?? '-') : ($stockGroup->first()->feed->name ?? '-'),
+    //                     'no_batch' => '-',
+    //                     'tanggal' => $purchase && $purchase->feedPurchase ? $purchase->feedPurchase->date->format('Y-m-d') : null,
+    //                     'harga' => $purchase ? $purchase->price_per_unit : 0,
+    //                     'tipe' => $purchase ? 'Pembelian' : 'Tanpa Pembelian',
+    //                 ],
+    //                 'histories' => $histories,
+    //             ];
+    //         }
+
+    //         return response()->json([
+    //             'status' => 'success',
+    //             'data' => $result,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         Log::error('[FeedController@getFeedCardByLivestock] Error: ' . $e->getMessage(), [
+    //             'livestock_id' => $livestockId,
+    //             'feed_id' => $feedId,
+    //             'trace' => $e->getTraceAsString(),
+    //         ]);
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
+    // public function getFeedCardByLivestock(Request $request)
+    // {
+    //     $validated = $request->validate([
+    //         'livestock_id' => 'required|uuid',
+    //         'feed_id' => 'required|uuid',
+    //         'start_date' => 'nullable|date',
+    //         'end_date' => 'nullable|date',
+    //     ]);
+
+    //     $livestockId = $validated['livestock_id'];
+    //     $feedId = $validated['feed_id'];
+    //     $startDate = $validated['start_date'] ? Carbon::parse($validated['start_date']) : null;
+    //     $endDate = $validated['end_date'] ? Carbon::parse($validated['end_date']) : null;
+
+    //     try {
+    //         $stocks = FeedStock::with([
+    //             'feed',
+    //             'feedPurchase.batch',
+    //             'feedUsageDetails.feedUsage.livestock',
+    //             'mutationDetails.mutation.toLivestock',
+    //             'incomingMutation.mutation.fromLivestock',
+    //         ])
+    //             ->where('livestock_id', $livestockId)
+    //             ->where('feed_id', $feedId)
+    //             ->get();
+
+    //         $result = [];
+
+
+    //         // Group stocks by type (purchase or mutation)
+    //         foreach ($stocks as $stock) {
+    //             if ($stock->source_id) {
+    //                 // Check if this is a mutation by looking up the source_id in Mutation model
+    //                 $mutation = \App\Models\Mutation::where('id', $stock->source_id)->first();
+    //                 if ($mutation) {
+    //                     // This is a mutation
+    //                     $result[] = $this->buildMutationInHistory([$stock], $startDate, $endDate);
+    //                 } else {
+    //                     // If source_id exists but not found in Mutation, treat as purchase
+    //                     $result[] = $this->buildFeedPurchaseHistory([$stock], $startDate, $endDate);
+    //                 }
+    //             } else {
+    //                 // No source_id, treat as purchase
+    //                 $result[] = $this->buildFeedPurchaseHistory([$stock], $startDate, $endDate);
+    //             }
+    //         }
+
+    //         return response()->json([
+    //             'status' => 'success',
+    //             'data' => array_filter($result),
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
 
     private function buildFeedPurchaseHistory($items, $startDate, $endDate)
     {
@@ -696,7 +847,9 @@ class FeedController extends Controller
             return null;
         }
 
-        $purchaseDate = optional($first->feedPurchase->batch)->date;
+        // Use FeedPurchase directly for date/invoice
+        $purchaseDate = optional($first->feedPurchase)->date;
+        $invoiceNumber = $first->feedPurchase->invoice_number ?? '-';
 
         $purchaseDateOnly = $purchaseDate ? $purchaseDate->format('Y-m-d') : null;
         $startDateOnly = $startDate ? $startDate->format('Y-m-d') : null;
@@ -719,95 +872,53 @@ class FeedController extends Controller
 
         $runningStock = collect($items)->sum('quantity_in');
         $histories = $this->processUsageAndMutation($items, $histories, $startDate, $endDate, $runningStock);
-        return $this->formatResult($first, $histories, $purchaseDate, $first->feedPurchase->price_per_unit ?? 0, 'Pembelian', optional($first->feedPurchase->batch)->invoice_number ?? '-');
+        // Use FeedPurchaseItem for price/unit, FeedPurchase for invoice/date
+        return $this->formatResult(
+            $first,
+            $histories,
+            $purchaseDate,
+            $first->price_per_unit ?? 0,
+            'Pembelian',
+            $invoiceNumber
+        );
     }
 
-    private function buildMutationInHistory($items, $startDate, $endDate)
+    /**
+     * Build history for a FeedPurchaseItem (new structure)
+     */
+    protected function buildFeedPurchaseItemHistory($item, $startDate, $endDate)
     {
-        $first = collect($items)->first();
-        if (!$first) {
-            return null;
-        }
-
-        $mutation = Mutation::find($first->source_id);
-        if (!$mutation) {
-            return null;
-        }
-
-        $mutationDateOnly = $mutation->date ? $mutation->date->format('Y-m-d') : null;
+        $unit = $item->unit;
+        $purchase = $item->feedPurchase;
+        // Use the 'date' column from feed_purchases as the purchase date
+        $purchaseDate = $purchase ? $purchase->date : null;
+        $purchaseDateOnly = $purchaseDate ? $purchaseDate->format('Y-m-d') : null;
         $startDateOnly = $startDate ? $startDate->format('Y-m-d') : null;
         $endDateOnly = $endDate ? $endDate->format('Y-m-d') : null;
-
-        if (
-            !$mutationDateOnly ||
-            ($startDateOnly && $mutationDateOnly < $startDateOnly) ||
-            ($endDateOnly && $mutationDateOnly > $endDateOnly)
-        ) {
-            return null;
+        $histories = [];
+        // Always include the purchase event if within filter range (using 'date' column)
+        if ($purchaseDate && (!$startDate || $purchaseDate >= $startDate) && (!$endDate || $purchaseDate <= $endDate)) {
+            $histories[] = [
+                'tanggal' => $purchaseDate->format('Y-m-d'),
+                'keterangan' => 'Pembelian',
+                'masuk' => floatval($item->converted_quantity),
+                'keluar' => 0,
+                'stok_awal' => 0,
+                'stok_akhir' => floatval($item->converted_quantity),
+            ];
         }
-
-        $histories = [[
-            'tanggal' => $mutationDateOnly,
-            'keterangan' => 'Mutasi dari ' . ($mutation->fromLivestock->name ?? '-'),
-            'masuk' => collect($items)->sum('quantity_in'),
-            'keluar' => 0,
-        ]];
-
-        $runningStock = collect($items)->sum('quantity_in');
-        $histories = $this->processUsageAndMutation($items, $histories, $startDate, $endDate, $runningStock);
-        return $this->formatResult($first, $histories, $mutation->date, 0, 'Mutasi Masuk', '-');
+        $runningStock = floatval($item->converted_quantity);
+        $histories = $this->processFeedPurchaseItemUsageAndMutation($item, $histories, $startDate, $endDate, $runningStock);
+        return $this->formatFeedPurchaseItemResult($item, $histories, $purchaseDate, $item->price_per_unit ?? 0, 'Pembelian', '-');
     }
 
-    private function buildMutationInRelationHistory($items, $startDate, $endDate)
+    /**
+     * Process usage and mutation for a FeedPurchaseItem
+     */
+    private function processFeedPurchaseItemUsageAndMutation($item, array $histories, ?Carbon $startDate, ?Carbon $endDate, &$runningStock): array
     {
-        $first = collect($items)->first();
-        if (!$first) {
-            return null;
-        }
-
-        $mutation = $first->incomingMutation->mutation;
-        if (!$mutation || ($startDate && $mutation->date < $startDate) || ($endDate && $mutation->date > $endDate)) {
-            return null;
-        }
-
-        $histories = [[
-            'tanggal' => $mutation->date->format('Y-m-d'),
-            'keterangan' => 'Mutasi dari ' . ($mutation->fromLivestock->name ?? '-'),
-            'masuk' => collect($items)->sum('quantity_in'),
-            'keluar' => 0,
-        ]];
-
-        $runningStock = collect($items)->sum('quantity_in');
-        $histories = $this->processUsageAndMutation($items, $histories, $startDate, $endDate, $runningStock);
-        return $this->formatResult($first, $histories, $mutation->date, 0, 'Mutasi Masuk (Relasi)', '-');
-    }
-
-    private function formatResult($first, $histories, $tanggal, $harga, $tipe, $noBatch)
-    {
-        usort($histories, fn($a, $b) => strcmp($a['tanggal'], $b['tanggal']));
-        $runningStock = 0;
-        foreach ($histories as &$entry) {
-            $entry['stok_awal'] = $runningStock;
-            $runningStock += ($entry['masuk'] ?? 0) - ($entry['keluar'] ?? 0);
-            $entry['stok_akhir'] = $runningStock;
-        }
-
-        return [
-            'feed_purchase_info' => [
-                'feed_name' => $first->feed->name ?? '-',
-                'no_batch' => $noBatch,
-                'tanggal' => $tanggal->format('Y-m-d'),
-                'harga' => $harga,
-                'tipe' => $tipe,
-            ],
-            'histories' => $histories,
-        ];
-    }
-
-    protected function processUsageAndMutation($items, array $histories, ?Carbon $startDate, ?Carbon $endDate, &$runningStock): array
-    {
-        foreach ($items as $stock) {
-            // Pemakaian
+        foreach ($item->feedStocks as $stock) {
+            // Pemakaian (usage)
             foreach ($stock->feedUsageDetails as $usageDetail) {
                 $usageDate = $usageDetail->feedUsage->usage_date;
                 if ($usageDate && (!$startDate || $usageDate >= $startDate) && (!$endDate || $usageDate <= $endDate)) {
@@ -819,7 +930,7 @@ class FeedController extends Controller
                     ];
                 }
             }
-            // Mutasi keluar
+            // Mutasi keluar (mutation)
             foreach ($stock->mutationDetails as $mutation) {
                 $mutationDate = $mutation->mutation->date;
                 if ($mutationDate && (!$startDate || $mutationDate >= $startDate) && (!$endDate || $mutationDate <= $endDate)) {
@@ -833,6 +944,31 @@ class FeedController extends Controller
             }
         }
         return $histories;
+    }
+
+    /**
+     * Format result for FeedPurchaseItem history
+     */
+    private function formatFeedPurchaseItemResult($item, $histories, $tanggal, $harga, $tipe, $noBatch)
+    {
+        usort($histories, fn($a, $b) => strcmp($a['tanggal'], $b['tanggal']));
+        $runningStock = 0;
+        foreach ($histories as &$entry) {
+            $entry['stok_awal'] = $runningStock;
+            $runningStock += ($entry['masuk'] ?? 0) - ($entry['keluar'] ?? 0);
+            $entry['stok_akhir'] = $runningStock;
+        }
+
+        return [
+            'feed_purchase_info' => [
+                'feed_name' => $item->feed->name ?? '-',
+                'no_batch' => $noBatch,
+                'tanggal' => $tanggal ? $tanggal->format('Y-m-d') : null,
+                'harga' => $harga,
+                'tipe' => $tipe,
+            ],
+            'histories' => $histories,
+        ];
     }
 
     public function getFeedByFarm(Request $request)
@@ -874,6 +1010,7 @@ class FeedController extends Controller
                 $first = $items->first();
 
                 $histories = [];
+                // All purchase date logic now uses the 'date' column from feed_purchases
                 $purchaseDate = optional($first->feedPurchase->batch)->date;
 
                 // dd($purchaseDate);
@@ -1069,5 +1206,583 @@ class FeedController extends Controller
         })->toArray();
 
         return view('pages.reports.feed.index_feed_purchase', compact(['farms', 'kandangs', 'livestock']));
+    }
+
+    /**
+     * Get simplified feed usage data for modal display
+     * Shows only usage transactions without stock calculations
+     */
+    public function getFeedUsageData(Request $request)
+    {
+        $validated = $request->validate([
+            'livestock_id' => 'required|uuid',
+            'feed_id' => 'required|uuid',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+        ]);
+
+        $livestockId = $validated['livestock_id'];
+        $feedId = $validated['feed_id'];
+        $startDate = $validated['start_date'] ? Carbon::parse($validated['start_date']) : null;
+        $endDate = $validated['end_date'] ? Carbon::parse($validated['end_date']) : null;
+
+        try {
+            // Log the input parameters for debugging
+            Log::info('[FeedController@getFeedUsageData] Input parameters', [
+                'livestock_id' => $livestockId,
+                'feed_id' => $feedId,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+            ]);
+
+            // Get feed usage details for the specified livestock and feed
+            $usageDetails = FeedUsageDetail::with([
+                'feedUsage.livestock',
+                'feed',
+                'feedStock.feedPurchase.supplier',
+                'feedStock.feedPurchase.expedition',
+                'feedStock.feedPurchase.feedPurchaseItems.unit',
+                'feedStock.feedPurchase.feedPurchaseItems.convertedUnit'
+            ])
+                ->whereHas('feedUsage', function ($query) use ($livestockId, $startDate, $endDate) {
+                    $query->where('livestock_id', $livestockId)
+                        ->when($startDate, function ($q) use ($startDate) {
+                            return $q->where('usage_date', '>=', $startDate);
+                        })
+                        ->when($endDate, function ($q) use ($endDate) {
+                            return $q->where('usage_date', '<=', $endDate);
+                        });
+                })
+                ->where('feed_id', $feedId)
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            // Log the query results for debugging
+            Log::info('[FeedController@getFeedUsageData] Query results', [
+                'usage_details_count' => $usageDetails->count(),
+                'usage_details' => $usageDetails->toArray(),
+            ]);
+
+            $usageData = [];
+            foreach ($usageDetails as $detail) {
+                // Skip if required relationships are missing
+                if (!$detail->feedUsage || !$detail->feedUsage->livestock) {
+                    Log::warning('[FeedController@getFeedUsageData] Skipping detail due to missing relationships', [
+                        'detail_id' => $detail->id,
+                        'feed_usage_id' => $detail->feed_usage_id,
+                    ]);
+                    continue;
+                }
+
+                // Initialize fallback values
+                $unit = '-';
+                $batchInfo = '-';
+                $hargaSatuan = 0;
+
+                // Try to get feed purchase information if available
+                if ($detail->feedStock && $detail->feedStock->feedPurchase) {
+                    $feedPurchaseItem = $detail->feedStock->feedPurchase->feedPurchaseItems()
+                        ->where('feed_id', $detail->feed_id)
+                        ->first();
+
+                    if ($feedPurchaseItem) {
+                        $unit = optional($feedPurchaseItem->unit)->name ?? '-';
+                        $batchInfo = $detail->feedStock->feedPurchase->invoice_number ?? '-';
+                        $hargaSatuan = optional($feedPurchaseItem)->price_per_unit ?? 0;
+                    } else {
+                        Log::warning('[FeedController@getFeedUsageData] Missing feed purchase item', [
+                            'detail_id' => $detail->id,
+                            'feed_stock_id' => $detail->feed_stock_id,
+                            'feed_purchase_id' => $detail->feedStock->feedPurchase->id,
+                            'feed_id' => $detail->feed_id,
+                        ]);
+                    }
+                } else {
+                    Log::warning('[FeedController@getFeedUsageData] Missing feedStock or feedPurchase', [
+                        'detail_id' => $detail->id,
+                        'feed_stock_id' => $detail->feed_stock_id,
+                        'feed_stock_exists' => $detail->feedStock ? 'yes' : 'no',
+                        'feed_purchase_exists' => $detail->feedStock && $detail->feedStock->feedPurchase ? 'yes' : 'no',
+                    ]);
+                }
+
+                // Prepare usage data with fallback values
+                $usageData[] = [
+                    'tanggal' => $detail->feedUsage->usage_date->format('Y-m-d'),
+                    'keterangan' => 'Pemakaian Ternak ' . ($detail->feedUsage->livestock->name ?? '-'),
+                    'jumlah' => floatval($detail->quantity_taken),
+                    'unit' => $unit,
+                    'batch_info' => $batchInfo,
+                    'harga_satuan' => $hargaSatuan,
+                    'total_harga' => ($detail->quantity_taken * $hargaSatuan),
+                ];
+            }
+
+            // Get feed information
+            $feed = \App\Models\Feed::find($feedId);
+            $livestock = Livestock::find($livestockId);
+
+            // Validate that feed and livestock exist
+            if (!$feed) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Feed tidak ditemukan',
+                ], 404);
+            }
+
+            if (!$livestock) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Ternak tidak ditemukan',
+                ], 404);
+            }
+
+            $result = [
+                'feed_info' => [
+                    'feed_name' => $feed->name ?? '-',
+                    'livestock_name' => $livestock->name ?? '-',
+                    'livestock_code' => $livestock->code ?? '-',
+                ],
+                'usage_data' => $usageData,
+                'summary' => [
+                    'total_usage' => collect($usageData)->sum('jumlah'),
+                    'total_cost' => collect($usageData)->sum('total_harga'),
+                    'usage_count' => count($usageData),
+                ]
+            ];
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $result,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('[FeedController@getFeedUsageData] Error: ' . $e->getMessage(), [
+                'livestock_id' => $livestockId,
+                'feed_id' => $feedId,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat mengambil data penggunaan pakan: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function debugFeedCardByLivestock(Request $request)
+    {
+        $livestockId = $request->get('livestock_id');
+        $feedId = $request->get('feed_id');
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+
+        $livestockId = $livestockId ?? '9f64bfb5-6f25-48c5-9cb4-cc54f820ee4b';
+        $startDate = $startDate ?? '2025-05-01';
+        $endDate = $endDate ?? '2025-07-07';
+        $date = $request->get('date', '2025-07-07');
+
+        $stocks = \App\Models\FeedStock::with([
+            'feed',
+            'feedPurchase',
+            'feedPurchaseItem',
+            'feedUsageDetails.feedUsage.livestock',
+            'mutationDetails.mutation.toLivestock',
+            'incomingMutation.mutation.fromLivestock',
+        ])
+            ->where('livestock_id', $livestockId)
+            ->when($feedId, function ($q) use ($feedId) {
+                return $q->where('feed_id', $feedId);
+            })
+            ->get();
+
+        $grouped = $stocks->groupBy(function ($stock) {
+            if ($stock->feedPurchaseItem) {
+                return 'FPI:' . $stock->feedPurchaseItem->id;
+            } elseif ($stock->feedPurchase) {
+                return 'FP:' . $stock->feedPurchase->id;
+            } else {
+                return 'NO_PURCHASE';
+            }
+        });
+
+        echo "<div style='background:#1a1a1a;color:#00ff00;padding:20px;border-radius:8px;max-width:95vw;overflow:auto;font-family:monospace;font-size:12px;margin:20px;'>";
+        echo "<h2 style='color:#ffff00;'>🔍 DEBUG MODE - FeedStock Data Dump</h2>";
+        echo "<h3 style='color:#00ffff;'>📦 Stock Overview</h3>";
+        echo "<pre>";
+        echo "Total Stocks: " . $stocks->count() . "\n";
+        echo "Grouped: " . $grouped->count() . " (by FeedPurchase/FeedPurchaseItem)\n";
+        echo "</pre>";
+
+        // --- HISTORIKAL AKUMULASI ---
+        // Kumpulkan semua event dari seluruh stock
+        $allEvents = [];
+        foreach ($stocks as $stock) {
+            // Stock Masuk
+            $stockInDate = null;
+            if ($stock->feedPurchaseItem && $stock->feedPurchaseItem->feedPurchase && $stock->feedPurchaseItem->feedPurchase->date) {
+                $stockInDate = $stock->feedPurchaseItem->feedPurchase->date->format('Y-m-d');
+            } elseif ($stock->feedPurchase && $stock->feedPurchase->date) {
+                $stockInDate = $stock->feedPurchase->date->format('Y-m-d');
+            } else {
+                $stockInDate = $stock->created_at ? $stock->created_at->format('Y-m-d') : '-';
+            }
+            $allEvents[] = [
+                'tanggal' => $stockInDate,
+                'keterangan' => 'Stock Masuk',
+                'masuk' => $stock->quantity_in,
+                'keluar' => 0,
+                'stock_id' => $stock->id,
+                'purchase_info' => $stock->feedPurchaseItem ? 'FPI:' . $stock->feedPurchaseItem->id : ($stock->feedPurchase ? 'FP:' . $stock->feedPurchase->id : '-')
+            ];
+            // Usages
+            $usages = $stock->feedUsageDetails->sortBy(function ($u) {
+                return $u->feedUsage->usage_date ?? $u->created_at;
+            });
+            foreach ($usages as $usage) {
+                $usageDate = $usage->feedUsage->usage_date ?? $usage->created_at;
+                $qty = floatval($usage->quantity_taken);
+                $allEvents[] = [
+                    'tanggal' => $usageDate ? (is_string($usageDate) ? $usageDate : $usageDate->format('Y-m-d')) : '-',
+                    'keterangan' => 'Pemakaian Ternak ' . ($usage->feedUsage->livestock->name ?? '-'),
+                    'masuk' => 0,
+                    'keluar' => $qty,
+                    'stock_id' => $stock->id,
+                    'purchase_info' => $stock->feedPurchaseItem ? 'FPI:' . $stock->feedPurchaseItem->id : ($stock->feedPurchase ? 'FP:' . $stock->feedPurchase->id : '-')
+                ];
+            }
+            // Mutations
+            $mutations = $stock->mutationDetails->sortBy(function ($m) {
+                return $m->mutation->date ?? $m->created_at;
+            });
+            foreach ($mutations as $mutation) {
+                $mutationDate = $mutation->mutation->date ?? $mutation->created_at;
+                $qty = floatval($mutation->quantity);
+                $allEvents[] = [
+                    'tanggal' => $mutationDate ? (is_string($mutationDate) ? $mutationDate : $mutationDate->format('Y-m-d')) : '-',
+                    'keterangan' => 'Mutasi ke ' . ($mutation->mutation->toLivestock->name ?? '-'),
+                    'masuk' => 0,
+                    'keluar' => $qty,
+                    'stock_id' => $stock->id,
+                    'purchase_info' => $stock->feedPurchaseItem ? 'FPI:' . $stock->feedPurchaseItem->id : ($stock->feedPurchase ? 'FP:' . $stock->feedPurchase->id : '-')
+                ];
+            }
+        }
+        // Urutkan semua event berdasarkan tanggal
+        usort($allEvents, function ($a, $b) {
+            return strcmp($a['tanggal'], $b['tanggal']);
+        });
+        // Hitung saldo berjalan akumulasi
+        $saldo = 0;
+        foreach ($allEvents as $i => &$event) {
+            if ($i === 0) {
+                $event['stock_awal'] = 0;
+            } else {
+                $event['stock_awal'] = $saldo;
+            }
+            $saldo = $event['stock_awal'] + ($event['masuk'] ?? 0) - ($event['keluar'] ?? 0);
+            $event['sisa'] = $saldo;
+        }
+        unset($event);
+        // Filter by start_date and end_date if provided
+        $filteredEvents = $allEvents;
+        if ($startDate || $endDate) {
+            $filteredEvents = array_filter($allEvents, function ($row) use ($startDate, $endDate) {
+                $rowDate = $row['tanggal'];
+                if (!$rowDate || $rowDate === '-') return false;
+                if ($startDate && $rowDate < $startDate) return false;
+                if ($endDate && $rowDate > $endDate) return false;
+                return true;
+            });
+        }
+        // Output tabel akumulasi
+        echo "<h3 style='color:#ff00ff;'>📊 Akumulasi Historikal (All Stocks Combined)</h3>";
+        echo "<table border='1' cellpadding='4' cellspacing='0' style='margin:10px 0 20px 0;background:#222;color:#fff;'>";
+        echo "<tr style='background:#333;color:#ffff00;'><th>Tanggal</th><th>Keterangan</th><th>Stock Awal</th><th>Masuk</th><th>Keluar</th><th>Sisa</th><th>Stock ID</th><th>Purchase</th><th>Supplier</th></tr>";
+        foreach ($filteredEvents as $row) {
+            // Ambil supplier name jika Stock Masuk, selain itu '-'
+            $supplierName = '-';
+            if ($row['keterangan'] === 'Stock Masuk') {
+                $stock = $stocks->firstWhere('id', $row['stock_id']);
+                if ($stock) {
+                    if ($stock->feedPurchaseItem && $stock->feedPurchaseItem->feedPurchase && $stock->feedPurchaseItem->feedPurchase->supplier) {
+                        $supplierName = $stock->feedPurchaseItem->feedPurchase->supplier->name ?? '-';
+                    } elseif ($stock->feedPurchase && $stock->feedPurchase->supplier) {
+                        $supplierName = $stock->feedPurchase->supplier->name ?? '-';
+                    }
+                }
+            }
+            echo "<tr>";
+            echo "<td>" . htmlspecialchars($row['tanggal']) . "</td>";
+            echo "<td>" . htmlspecialchars($row['keterangan']) . "</td>";
+            echo "<td style='text-align:right;'>" . number_format($row['stock_awal'], 2) . "</td>";
+            echo "<td style='text-align:right;'>" . number_format($row['masuk'], 2) . "</td>";
+            echo "<td style='text-align:right;'>" . number_format($row['keluar'], 2) . "</td>";
+            echo "<td style='text-align:right;font-weight:bold;color:#00ff00;'>" . number_format($row['sisa'], 2) . "</td>";
+            echo "<td style='color:#00ffff;'>" . htmlspecialchars($row['stock_id']) . "</td>";
+            echo "<td style='color:#ffcc00;'>" . htmlspecialchars($row['purchase_info']) . "</td>";
+            echo "<td style='color:#00ffcc;'>" . htmlspecialchars($supplierName) . "</td>";
+            echo "</tr>";
+        }
+        echo "</table>";
+        // --- END HISTORIKAL ---
+
+        // --- VERSI PER GROUP (EXISTING) ---
+        foreach ($grouped as $groupKey => $stockGroup) {
+            echo "<h3 style='color:#00ffff;'>Group: {$groupKey}</h3>";
+            $first = $stockGroup->first();
+            if ($first->feedPurchaseItem) {
+                $fpi = $first->feedPurchaseItem;
+                $fp = $fpi->feedPurchase;
+                echo "<pre>FeedPurchaseItem: {$fpi->id}\n";
+                echo "  Feed: " . ($fpi->feed->name ?? '-') . "\n";
+                echo "  Qty: {$fpi->quantity}\n";
+                echo "  Price/unit: {$fpi->price_per_unit}\n";
+                echo "  Unit: " . ($fpi->unit->name ?? '-') . "\n";
+                echo "  Purchase: " . ($fp->invoice_number ?? '-') . " (" . ($fp->date ? $fp->date->format('Y-m-d') : '-') . ")\n";
+                echo "  Supplier: " . ($fp->supplier->name ?? '-') . "\n";
+                echo "</pre>";
+            } elseif ($first->feedPurchase) {
+                $fp = $first->feedPurchase;
+                echo "<pre>FeedPurchase: {$fp->id}\n";
+                echo "  Invoice: " . ($fp->invoice_number ?? '-') . "\n";
+                echo "  Date: " . ($fp->date ? $fp->date->format('Y-m-d') : '-') . "\n";
+                echo "  Supplier: " . ($fp->supplier->name ?? '-') . "\n";
+                echo "</pre>";
+            } else {
+                echo "<pre>No Purchase Info\n</pre>";
+            }
+            foreach ($stockGroup as $stock) {
+                echo "<pre>Stock ID: {$stock->id}\n  Qty In: {$stock->quantity_in}\n  Qty Used: {$stock->quantity_used}\n  Qty Mutated: {$stock->quantity_mutated}\n  Qty Reserved: {$stock->quantity_reserved}\n";
+                // Build historical table
+                $historyRows = [];
+                $running = floatval($stock->quantity_in);
+                // Determine stock-in date
+                $stockInDate = null;
+                if ($stock->feedPurchaseItem && $stock->feedPurchaseItem->feedPurchase && $stock->feedPurchaseItem->feedPurchase->date) {
+                    $stockInDate = $stock->feedPurchaseItem->feedPurchase->date->format('Y-m-d');
+                } elseif ($stock->feedPurchase && $stock->feedPurchase->date) {
+                    $stockInDate = $stock->feedPurchase->date->format('Y-m-d');
+                } else {
+                    $stockInDate = $stock->created_at ? $stock->created_at->format('Y-m-d') : '-';
+                }
+                $historyRows[] = [
+                    'tanggal' => $stockInDate,
+                    'keterangan' => 'Stock Masuk',
+                    'masuk' => $stock->quantity_in,
+                    'keluar' => 0,
+                    'sisa' => $running,
+                ];
+                // Usages
+                $usages = $stock->feedUsageDetails->sortBy(function ($u) {
+                    return $u->feedUsage->usage_date ?? $u->created_at;
+                });
+                foreach ($usages as $usage) {
+                    $usageDate = $usage->feedUsage->usage_date ?? $usage->created_at;
+                    $qty = floatval($usage->quantity_taken);
+                    $running -= $qty;
+                    $historyRows[] = [
+                        'tanggal' => $usageDate ? (is_string($usageDate) ? $usageDate : $usageDate->format('Y-m-d')) : '-',
+                        'keterangan' => 'Pemakaian Ternak ' . ($usage->feedUsage->livestock->name ?? '-'),
+                        'masuk' => 0,
+                        'keluar' => $qty,
+                        'sisa' => $running,
+                    ];
+                }
+                // Mutations
+                $mutations = $stock->mutationDetails->sortBy(function ($m) {
+                    return $m->mutation->date ?? $m->created_at;
+                });
+                foreach ($mutations as $mutation) {
+                    $mutationDate = $mutation->mutation->date ?? $mutation->created_at;
+                    $qty = floatval($mutation->quantity);
+                    $running -= $qty;
+                    $historyRows[] = [
+                        'tanggal' => $mutationDate ? (is_string($mutationDate) ? $mutationDate : $mutationDate->format('Y-m-d')) : '-',
+                        'keterangan' => 'Mutasi ke ' . ($mutation->mutation->toLivestock->name ?? '-'),
+                        'masuk' => 0,
+                        'keluar' => $qty,
+                        'sisa' => $running,
+                    ];
+                }
+                // Sort by tanggal
+                usort($historyRows, function ($a, $b) {
+                    return strcmp($a['tanggal'], $b['tanggal']);
+                });
+                // Tambahkan kolom stock_awal
+                for ($i = 0; $i < count($historyRows); $i++) {
+                    if ($i === 0) {
+                        $historyRows[$i]['stock_awal'] = 0;
+                    } else {
+                        $historyRows[$i]['stock_awal'] = $historyRows[$i - 1]['sisa'];
+                    }
+                }
+                // Filter by start_date and end_date if provided
+                $filteredRows = $historyRows;
+                if ($startDate || $endDate) {
+                    $filteredRows = array_filter($historyRows, function ($row) use ($startDate, $endDate) {
+                        $rowDate = $row['tanggal'];
+                        if (!$rowDate || $rowDate === '-') return false;
+                        if ($startDate && $rowDate < $startDate) return false;
+                        if ($endDate && $rowDate > $endDate) return false;
+                        return true;
+                    });
+                }
+                // Output table
+                echo "<table border='1' cellpadding='4' cellspacing='0' style='margin:10px 0 20px 0;background:#222;color:#fff;'>";
+                echo "<tr style='background:#333;color:#ffff00;'><th>Tanggal</th><th>Keterangan</th><th>Stock Awal</th><th>Masuk</th><th>Keluar</th><th>Sisa</th></tr>";
+                foreach ($filteredRows as $row) {
+                    echo "<tr>";
+                    echo "<td>" . htmlspecialchars($row['tanggal']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['keterangan']) . "</td>";
+                    echo "<td style='text-align:right;'>" . number_format($row['stock_awal'], 2) . "</td>";
+                    echo "<td style='text-align:right;'>" . number_format($row['masuk'], 2) . "</td>";
+                    echo "<td style='text-align:right;'>" . number_format($row['keluar'], 2) . "</td>";
+                    echo "<td style='text-align:right;font-weight:bold;color:#00ff00;'>" . number_format($row['sisa'], 2) . "</td>";
+                    echo "</tr>";
+                }
+                echo "</table>";
+                echo "</pre>";
+            }
+        }
+        echo "</div>";
+        exit;
+    }
+
+    /**
+     * Production endpoint: Akumulasi Historikal (All Stocks Combined)
+     * POST: /api/v2/feed/usages/akumulasi
+     * Params: livestock_id, feed_id, start_date, end_date (optional)
+     */
+    public function getFeedCardByLivestockAkumulasi(Request $request)
+    {
+        $validated = $request->validate([
+            'livestock_id' => 'required|uuid',
+            'feed_id' => 'required|uuid',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+        ]);
+
+        $livestockId = $validated['livestock_id'];
+        $feedId = $validated['feed_id'];
+        $startDate = $validated['start_date'] ?? null;
+        $endDate = $validated['end_date'] ?? null;
+
+        try {
+            $stocks = \App\Models\FeedStock::with([
+                'feed',
+                'feedPurchase',
+                'feedPurchaseItem',
+                'feedPurchaseItem.feedPurchase.supplier',
+                'feedPurchase.supplier',
+                'feedUsageDetails.feedUsage.livestock',
+                'mutationDetails.mutation.toLivestock',
+                'incomingMutation.mutation.fromLivestock',
+            ])
+                ->where('livestock_id', $livestockId)
+                ->where('feed_id', $feedId)
+                ->get();
+
+            $allEvents = [];
+            foreach ($stocks as $stock) {
+                // Stock Masuk
+                $stockInDate = null;
+                if ($stock->feedPurchaseItem && $stock->feedPurchaseItem->feedPurchase && $stock->feedPurchaseItem->feedPurchase->date) {
+                    $stockInDate = $stock->feedPurchaseItem->feedPurchase->date->format('Y-m-d');
+                } elseif ($stock->feedPurchase && $stock->feedPurchase->date) {
+                    $stockInDate = $stock->feedPurchase->date->format('Y-m-d');
+                } else {
+                    $stockInDate = $stock->created_at ? $stock->created_at->format('Y-m-d') : '-';
+                }
+                $supplierName = '-';
+                if ($stock->feedPurchaseItem && $stock->feedPurchaseItem->feedPurchase && $stock->feedPurchaseItem->feedPurchase->supplier) {
+                    $supplierName = $stock->feedPurchaseItem->feedPurchase->supplier->name ?? '-';
+                } elseif ($stock->feedPurchase && $stock->feedPurchase->supplier) {
+                    $supplierName = $stock->feedPurchase->supplier->name ?? '-';
+                }
+                $allEvents[] = [
+                    'tanggal' => $stockInDate,
+                    'keterangan' => 'Stock Masuk',
+                    'masuk' => $stock->quantity_in,
+                    'keluar' => 0,
+                    'stock_id' => $stock->id,
+                    'purchase_info' => $stock->feedPurchaseItem ? 'FPI:' . $stock->feedPurchaseItem->id : ($stock->feedPurchase ? 'FP:' . $stock->feedPurchase->id : '-'),
+                    'supplier' => $supplierName,
+                ];
+                // Usages
+                $usages = $stock->feedUsageDetails->sortBy(function ($u) {
+                    return $u->feedUsage->usage_date ?? $u->created_at;
+                });
+                foreach ($usages as $usage) {
+                    $usageDate = $usage->feedUsage->usage_date ?? $usage->created_at;
+                    $qty = floatval($usage->quantity_taken);
+                    $allEvents[] = [
+                        'tanggal' => $usageDate ? (is_string($usageDate) ? $usageDate : $usageDate->format('Y-m-d')) : '-',
+                        'keterangan' => 'Pemakaian Ternak ' . ($usage->feedUsage->livestock->name ?? '-'),
+                        'masuk' => 0,
+                        'keluar' => $qty,
+                        'stock_id' => $stock->id,
+                        'purchase_info' => $stock->feedPurchaseItem ? 'FPI:' . $stock->feedPurchaseItem->id : ($stock->feedPurchase ? 'FP:' . $stock->feedPurchase->id : '-'),
+                        'supplier' => '-',
+                    ];
+                }
+                // Mutations
+                $mutations = $stock->mutationDetails->sortBy(function ($m) {
+                    return $m->mutation->date ?? $m->created_at;
+                });
+                foreach ($mutations as $mutation) {
+                    $mutationDate = $mutation->mutation->date ?? $mutation->created_at;
+                    $qty = floatval($mutation->quantity);
+                    $allEvents[] = [
+                        'tanggal' => $mutationDate ? (is_string($mutationDate) ? $mutationDate : $mutationDate->format('Y-m-d')) : '-',
+                        'keterangan' => 'Mutasi ke ' . ($mutation->mutation->toLivestock->name ?? '-'),
+                        'masuk' => 0,
+                        'keluar' => $qty,
+                        'stock_id' => $stock->id,
+                        'purchase_info' => $stock->feedPurchaseItem ? 'FPI:' . $stock->feedPurchaseItem->id : ($stock->feedPurchase ? 'FP:' . $stock->feedPurchase->id : '-'),
+                        'supplier' => '-',
+                    ];
+                }
+            }
+            // Urutkan semua event berdasarkan tanggal
+            usort($allEvents, function ($a, $b) {
+                return strcmp($a['tanggal'], $b['tanggal']);
+            });
+            // Hitung saldo berjalan akumulasi
+            $saldo = 0;
+            foreach ($allEvents as $i => &$event) {
+                if ($i === 0) {
+                    $event['stock_awal'] = 0;
+                } else {
+                    $event['stock_awal'] = $saldo;
+                }
+                $saldo = $event['stock_awal'] + ($event['masuk'] ?? 0) - ($event['keluar'] ?? 0);
+                $event['sisa'] = $saldo;
+            }
+            unset($event);
+            // Filter by start_date and end_date if provided
+            if ($startDate || $endDate) {
+                $allEvents = array_filter($allEvents, function ($row) use ($startDate, $endDate) {
+                    $rowDate = $row['tanggal'];
+                    if (!$rowDate || $rowDate === '-') return false;
+                    if ($startDate && $rowDate < $startDate) return false;
+                    if ($endDate && $rowDate > $endDate) return false;
+                    return true;
+                });
+            }
+            return response()->json([
+                'status' => 'success',
+                'data' => array_values($allEvents),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('[FeedController@getFeedCardByLivestockAkumulasi] Error: ' . $e->getMessage(), [
+                'livestock_id' => $livestockId,
+                'feed_id' => $feedId,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

@@ -4,7 +4,6 @@ namespace App\DataTables;
 
 // use App\Models\FeedPurchaseBeli as FeedPurchase;
 use App\Models\FeedPurchase;
-use App\Models\FeedPurchaseBatch;
 use App\Models\Item;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\EloquentDataTable;
@@ -33,31 +32,33 @@ class FeedPurchaseDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn() // Add this line to include row numbers
-            ->editColumn('date', function (FeedPurchaseBatch $transaction) {
+            ->editColumn('date', function (FeedPurchase $transaction) {
                 return $transaction->date->format('d-m-Y');
             })
-            ->editColumn('supplier_id', function (FeedPurchaseBatch $transaction) {
+            ->editColumn('supplier_id', function (FeedPurchase $transaction) {
                 return $transaction->supplier->name;
             })
-            ->editColumn('farm_id', function (FeedPurchaseBatch $transaction) {
-                $firstPurchase = $transaction->feedPurchases->first();
+            ->editColumn('farm_id', function (FeedPurchase $transaction) {
+                // $firstPurchase = $transaction->feedPurchaseItems->first();
                 // dd($firstPurchase?->livestok);
-                return $firstPurchase?->livestock?->farm?->name ?? '-';
+                // return $firstPurchase?->livestock?->farm?->name ?? '-';
+                return $transaction->farm?->name ?? '-';
                 // return $transaction->feedPurchases->livestok ?? '';
             })
-            ->editColumn('coop_id', function (FeedPurchaseBatch $transaction) {
-                $firstPurchase = $transaction->feedPurchases->first();
-                return $firstPurchase?->livestock?->coop?->name ?? '-';
+            ->editColumn('coop_id', function (FeedPurchase $transaction) {
+                // $firstPurchase = $transaction->feedPurchaseItems->first();
+                // return $firstPurchase?->livestock?->coop?->name ?? '-';
+                return $transaction->coop?->name ?? '-';
             })
-            ->editColumn('total', function (FeedPurchaseBatch $transaction) {
-                $total = $transaction->feedPurchases->sum(function ($purchase) {
+            ->editColumn('total', function (FeedPurchase $transaction) {
+                $total = $transaction->feedPurchaseItems->sum(function ($purchase) {
                     return $purchase->quantity * $purchase->price_per_unit;
                 });
 
                 return $this->formatRupiah($total);
             })
-            ->editColumn('status', function (FeedPurchaseBatch $transaction) {
-                $statuses = FeedPurchaseBatch::STATUS_LABELS;
+            ->editColumn('status', function (FeedPurchase $transaction) {
+                $statuses = FeedPurchase::STATUS_LABELS;
                 $currentStatus = $transaction->status;
 
                 // Check if user only has read permission
@@ -159,7 +160,7 @@ class FeedPurchaseDataTable extends DataTable
             // ->editColumn('status', function (FeedPurchaseBatch $transaction) {
             //     return $transaction->getStatusLabel();
             // })
-            ->addColumn('action', function (FeedPurchaseBatch $transaction) {
+            ->addColumn('action', function (FeedPurchase $transaction) {
                 return view('pages.transaction.feed-purchases._actions', compact('transaction'));
             })
 
@@ -171,12 +172,12 @@ class FeedPurchaseDataTable extends DataTable
     /**
      * Get the query source of dataTable.
      */
-    public function query(FeedPurchaseBatch $model): QueryBuilder
+    public function query(FeedPurchase $model): QueryBuilder
     {
         $query = $model->newQuery();
 
         if (auth()->user()->hasRole('Operator')) {
-            $query->whereHas('feedPurchases.livestock.farm.farmOperators', function ($q) {
+            $query->whereHas('farm.farmOperators', function ($q) {
                 $q->where('user_id', auth()->id());
             });
         }
@@ -531,10 +532,11 @@ class FeedPurchaseDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex', 'No.')
-                ->title('No.')
-                ->addClass('text-center')
-                ->width(50),
+            // Column::computed('DT_RowIndex', 'No.')
+            //     ->title('No.')
+            //     ->addClass('text-center')
+            //     ->width(50),
+            Column::make('number_full')->title('Nomor')->searchable(true),
             Column::make('date')->title('Tanggal Pembelian')->searchable(true),
             // Column::make('no_sj')->title('No. SJ')->searchable(false),
             Column::make('invoice_number')->title('Invoice')->searchable(true),

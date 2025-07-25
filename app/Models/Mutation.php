@@ -38,6 +38,20 @@ class Mutation extends BaseModel
         return $this->hasMany(MutationItem::class, 'mutation_id', 'id');
     }
 
+    public function supplyMutation()
+    {
+        return $this->hasOne(SupplyMutation::class, 'mutation_id', 'id');
+    }
+
+    /**
+     * Relasi: 1 mutation = banyak supply mutation items
+     */
+    public function supplyMutationItems()
+    {
+        return $this->hasMany(\App\Models\SupplyMutationItem::class, 'mutation_id');
+    }
+
+
     public function fromLivestock()
     {
         return $this->belongsTo(Livestock::class, 'from_livestock_id');

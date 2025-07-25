@@ -11,7 +11,16 @@ class TransaksiDetail extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $fillable = [
+    /**
+     * This is a detail model that inherits company_id from Transaksi parent
+     * No need to handle company_id separately
+     */
+    protected $requiresCompanyId = false;
+
+    /**
+     * Additional fillable fields specific to this model
+     */
+    protected $additionalFillable = [
         'id',
         'transaksi_id',
         'parent_id',
@@ -31,8 +40,6 @@ class TransaksiDetail extends BaseModel
         'konversi',
         'status',
         'user_id',
-        'created_by',
-        'updated_by',
     ];
 
     protected $casts = [
@@ -41,16 +48,16 @@ class TransaksiDetail extends BaseModel
 
     public function items()
     {
-        return $this->belongsTo(Item::class, 'item_id','id');
+        return $this->belongsTo(Item::class, 'item_id', 'id');
     }
 
     public function stokHistory()
     {
-        return $this->hasOne(StokHistory::class);
+        return $this->hasOne(\App\Models\StockHistory::class);
     }
 
     public function transaksi()
     {
-        return $this->belongsTo(Transaksi::class, 'transaksi_id','id');
+        return $this->belongsTo(Transaksi::class, 'transaksi_id', 'id');
     }
 }

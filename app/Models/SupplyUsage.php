@@ -165,6 +165,8 @@ class SupplyUsage extends BaseModel
         'total_quantity',
         'notes',
         'status',
+        'number',
+        'number_full',
         'created_by',
         'updated_by',
     ];

@@ -3,22 +3,25 @@
     <form wire:submit.prevent="save">
 
         <div class="row g-3">
-
             <x-input.group col="6" label="Tanggal">
-
                 {{-- <input type="date" wire:model="date" class="form-control"> --}}
+                <input wire:model="date" id="date" class="form-control form-control-solid" placeholder="Tanggal" x-data
+                    x-init="flatpickr($el, {
+                            enableTime: true,
+                            dateFormat: 'Y-m-d',
+                            defaultDate: '{{ $date }}', // Set initial date from Livewire
+                        })">
+                <x-input.error for="date" />
+            </x-input.group>
+            {{-- <x-input.group col="6" label="Tanggal">
                 <input wire:model="date" id="date" class="form-control form-control-solid" placeholder="Tanggal"
                     @if($edit_mode==true) readonly disabled @endif x-data x-init="flatpickr($el, {
                             enableTime: true,
                             dateFormat: 'Y-m-d',
                             defaultDate: '{{ $date }}', // Set initial date from Livewire
                         })">
-
-
                 <x-input.error for="date" />
-
-
-            </x-input.group>
+            </x-input.group> --}}
 
 
 

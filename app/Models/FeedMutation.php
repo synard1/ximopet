@@ -17,6 +17,8 @@ class FeedMutation extends BaseModel
         'date',
         'from_livestock_id',
         'to_livestock_id',
+        'number',
+        'number_full',
         'created_by',
         'updated_by',
     ];
@@ -27,12 +29,12 @@ class FeedMutation extends BaseModel
 
     public function fromLivestock()
     {
-        return $this->belongsTo(Livestock::class,'from_livestock_id');
+        return $this->belongsTo(Livestock::class, 'from_livestock_id');
     }
 
     public function toLivestock()
     {
-        return $this->belongsTo(Livestock::class,'to_livestock_id');
+        return $this->belongsTo(Livestock::class, 'to_livestock_id');
     }
 
     public function feedMutationDetails()

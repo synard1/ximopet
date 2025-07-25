@@ -28,6 +28,8 @@ return new class extends Migration {
             $table->json('data')->nullable();
             $table->string('status')->index();
             $table->text('notes')->nullable(); //keterangan
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('created_by')->index();
             $table->uuid('updated_by')->nullable()->index();
 
@@ -59,6 +61,7 @@ return new class extends Migration {
             $table->integer('quantity_depletion')->default(0);
             $table->integer('quantity_sales')->default(0);
             $table->integer('quantity_mutated')->default(0);
+            $table->integer('quantity_available')->default(0);
             $table->decimal('initial_weight', 10, 2);
             $table->decimal('weight', 10, 2);
             $table->string('weight_type');
@@ -67,6 +70,8 @@ return new class extends Migration {
             $table->json('data')->nullable();
             $table->string('status')->index();
             $table->text('notes')->nullable();
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('created_by')->index();
             $table->uuid('updated_by')->nullable()->index();
             $table->timestamps();
@@ -90,6 +95,10 @@ return new class extends Migration {
             $table->foreignUuid('expedition_id')->nullable()->constrained('partners')->default(null);
             $table->decimal('expedition_fee', 15, 2)->nullable();
             $table->json('data')->nullable();
+            $table->string('status')->index();
+            $table->text('notes')->nullable();
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -245,6 +254,9 @@ return new class extends Migration {
             $table->string('pakan_harian')->nullable();
             $table->string('pakan_total')->nullable();
             $table->json('payload')->nullable(); // JSON/array type column to save data
+            $table->json('data_operational')->nullable();
+            $table->json('data_audit')->nullable();
+            $table->json('data')->nullable();
 
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
@@ -264,6 +276,8 @@ return new class extends Migration {
             $table->string('jenis'); // Mati / Afkir
             $table->integer('jumlah');
             $table->json('data')->nullable();
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('created_by')->index();
             $table->uuid('updated_by')->nullable()->index();
             $table->timestamps();
@@ -282,6 +296,7 @@ return new class extends Migration {
             $table->decimal('total_cost', 14, 2)->default(0);
             $table->decimal('cost_per_ayam', 10, 2)->default(0);
             $table->json('cost_breakdown')->nullable();
+            $table->json('data')->nullable(); // <-- Tambahkan baris ini
             $table->uuid('created_by')->index();
             $table->uuid('updated_by')->nullable()->index();
             $table->timestamps();

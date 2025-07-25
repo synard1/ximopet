@@ -44,6 +44,9 @@ class LivestockPurchase extends BaseModel
         'expedition_fee',
         'data',
         'status',
+        'notes',
+        'number',
+        'number_full',
         'created_by',
         'updated_by',
     ];

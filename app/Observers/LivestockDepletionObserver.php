@@ -41,15 +41,49 @@ class LivestockDepletionObserver
     /**
      * Handle the LivestockDepletion "deleted" event.
      */
-    public function deleted(LivestockDepletion $livestockDepletion): void
+    public function deleted($livestockDepletion)
     {
+        // Logika dari deleted(LivestockDepletion $livestockDepletion): void
         Log::info('📊 LivestockDepletion deleted, updating quantities', [
             'livestock_id' => $livestockDepletion->livestock_id,
             'jenis' => $livestockDepletion->jenis,
             'jumlah' => $livestockDepletion->jumlah,
         ]);
-
         $this->updateLivestockQuantities($livestockDepletion->livestock_id);
+
+        // Logika dari deleted($depletion)
+        // if ($livestockDepletion->livestock_id && $livestockDepletion->tanggal) {
+        //     app(\App\Services\Livestock\LivestockCostService::class)->calculateForDate($livestockDepletion->livestock_id, $livestockDepletion->tanggal);
+        //     $futureCosts = \App\Models\LivestockCost::where('livestock_id', $livestockDepletion->livestock_id)
+        //         ->where('tanggal', '>', $livestockDepletion->tanggal)
+        //         ->get();
+        //     foreach ($futureCosts as $cost) {
+        //         $cost->markInvalidCalculation('Diupdate karena ada perubahan pada hari sebelumnya', $cost->toArray());
+        //     }
+        // }
+    }
+
+    public function saved($depletion)
+    {
+        if ($depletion->livestock_id && $depletion->tanggal) {
+            $cost = \App\Models\LivestockCost::where('livestock_id', $depletion->livestock_id)
+                ->whereDate('tanggal', $depletion->tanggal)
+                ->first();
+            // app(\App\Services\Livestock\LivestockCostService::class)->calculateForDate($depletion->livestock_id, $depletion->tanggal);
+            // Tambahkan notes & history untuk hari yang diubah
+            if ($cost) {
+                $cost->markInvalidCalculation('Depletion diubah pada hari ini', $cost->toArray());
+            }
+            $futureCosts = \App\Models\LivestockCost::where('livestock_id', $depletion->livestock_id)
+                ->where('tanggal', '>', $depletion->tanggal)
+                ->get();
+            // dd($futureCosts);
+            foreach ($futureCosts as $cost) {
+
+                // dd($cost->toArray());
+                $cost->markInvalidCalculation('Diupdate karena ada perubahan pada hari sebelumnya', $cost->toArray());
+            }
+        }
     }
 
     /**

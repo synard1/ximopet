@@ -104,7 +104,7 @@ class Records extends Component
 
     // Configuration properties
     private bool $useModularServices = true;
-    private bool $enableLegacyFallback = true;
+    private bool $enableLegacyFallback = false;
     private bool $enablePerformanceMonitoring = false;
     public $livestockConfig = [];
     public $isManualDepletionEnabled = false;
@@ -118,10 +118,61 @@ class Records extends Component
     public $skipConfigMultipleBatch = true;
     public $skipConfigSingleBatch = false;
 
+    // History
+    public $withHistoryFeedUsage = false;
+    public $withHistoryFeedUsageDetail = false;
+    public $withHistorySupplyUsage = false;
+    public $withHistorySupplyUsageDetail = false;
+    public $withHistoryDepletion = false;
+    public $withHistoryDepletionDetail = false;
+    public $withHistoryMutation = false;
+    public $withHistoryMutationDetail = false;
+
+    // Validation sections
+    public $validationSections = [];
+
+    public $isReloadingHistory = false;
+
+    // Validation/locking status for each section
+    public $validationStatus = [
+        'sales' => [
+            'is_validated' => false,
+            'validated_by' => null,
+            'validated_at' => null,
+            'locked' => false,
+            'locked_by' => null,
+            'locked_at' => null,
+        ],
+        'depletion' => [
+            'is_validated' => false,
+            'validated_by' => null,
+            'validated_at' => null,
+            'locked' => false,
+            'locked_by' => null,
+            'locked_at' => null,
+        ],
+        'feed_usage' => [
+            'is_validated' => false,
+            'validated_by' => null,
+            'validated_at' => null,
+            'locked' => false,
+            'locked_by' => null,
+            'locked_at' => null,
+        ],
+        'supply_usage' => [
+            'is_validated' => false,
+            'validated_by' => null,
+            'validated_at' => null,
+            'locked' => false,
+            'locked_by' => null,
+            'locked_at' => null,
+        ],
+    ];
 
     protected $listeners = [
         'setRecords' => 'setRecords',
-        'refreshData' => 'refreshData'
+        'refreshData' => 'refreshData',
+        'reloadHistoryData' => 'reloadHistoryData',
     ];
 
     protected $rules = [
@@ -792,7 +843,7 @@ class Records extends Component
 
 
     // Add this method to handle date changes
-    public function updatedDate($value)
+    public function updatedDate($value, $bypassCache = true)
     {
         if (!$this->livestockId || !$value) {
             return;
@@ -802,18 +853,39 @@ class Records extends Component
 
         // --- MODULAR PATH ---
         if ($this->useModularServices) {
-            logInfoIfDebug('🔄 updatedDate: Using MODULAR services path.');
+            logInfoIfDebug('🔄 updatedDate: Using MODULAR services path.', ['bypassCache' => $bypassCache]);
             try {
                 if (!$this->recordingDataService) $this->initializeModularServices();
 
                 // Load yesterday's data first to get weight_yesterday
-                $yesterdayDate = Carbon::parse($value)->subDay()->format('Y-m-d');
+                $yesterdayDate = \Carbon\Carbon::parse($value)->subDay()->format('Y-m-d');
                 $this->loadYesterdayData($yesterdayDate);
 
-                $serviceResult = $this->recordingDataService->loadCurrentDateData($this->livestockId, $value);
+                // Cek apakah ada request bypass cache (misal dari tombol reload atau query param)
+                // Fix: Make sure $bypassCache is always boolean, and log its value for debugging
+                $bypass = (bool) $bypassCache;
+                if (request()->has('bypassCache')) {
+                    $requestBypass = request()->get('bypassCache');
+                    // Accept '1', 'true', true as true
+                    $bypass = filter_var($requestBypass, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                    if ($bypass === null) {
+                        // fallback: treat non-empty as true
+                        $bypass = !empty($requestBypass);
+                    }
+                }
 
-                if ($serviceResult->isSuccess()) {
-                    logInfoIfDebug('✅ updatedDate: Modular data loaded successfully.');
+                logDebugIfDebug('updatedDate: bypassCache resolved', [
+                    'input_bypassCache' => $bypassCache,
+                    'request_bypassCache' => request()->get('bypassCache'),
+                    'final_bypass' => $bypass,
+                ]);
+
+                // Remove dd($bypassCache); // This was causing interruption and confusion
+
+                $serviceResult = $this->recordingDataService->loadCurrentDateData($this->livestockId, $value, $bypass);
+
+                if ($serviceResult && method_exists($serviceResult, 'isSuccess') && $serviceResult->isSuccess()) {
+                    logInfoIfDebug('✅ updatedDate: Modular data loaded successfully.', ['bypassCache' => $bypass]);
                     $data = $serviceResult->getData();
                     logDebugIfDebug('Modular data received in updatedDate', ['data' => $data]);
 
@@ -832,9 +904,10 @@ class Records extends Component
                         $this->weight_today = $data['weight_today'] ?? null;
                         $this->mortality = $data['mortality'] ?? 0;
                         $this->culling = $data['culling'] ?? 0;
-                        $this->sales_quantity = $data['sales_quantity'] ?? null;
-                        $this->sales_price = $data['sales_price'] ?? null;
-                        $this->total_sales = $data['total_sales'] ?? null;
+                        $this->sales_quantity = $data['sales_quantity'] ?? 0;
+                        $this->sales_weight = $data['sales_weight'] ?? 0;
+                        $this->sales_price = $data['sales_price'] ?? 0;
+                        $this->total_sales = $data['total_sales'] ?? 0;
                         $this->isEditing = $data['recording_exists'] ?? false;
 
                         logInfoIfDebug('✅ updatedDate: Modular data populated successfully, skipping fallback.');
@@ -845,16 +918,17 @@ class Records extends Component
                         ]);
                     }
                 } else {
+                    $msg = $serviceResult && method_exists($serviceResult, 'getMessage') ? $serviceResult->getMessage() : 'Unknown error or null serviceResult';
                     logWarningIfDebug('⚠️ updatedDate: Modular service failed for current date, executing fallback.', [
-                        'message' => $serviceResult->getMessage()
+                        'message' => $msg
                     ]);
                 }
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 logErrorIfDebug('❌ updatedDate: CRITICAL error in modular path.', ['error' => $e->getMessage()]);
             }
 
             // Only execute fallback if we haven't returned successfully above
-            if ($this->enableLegacyFallback) {
+            if (isset($this->enableLegacyFallback) && $this->enableLegacyFallback) {
                 logWarningIfDebug('⚠️ updatedDate: Modular path failed, executing fallback.');
                 $this->updatedDateFallback($value);
             } else {
@@ -912,10 +986,10 @@ class Records extends Component
         $this->weight_today     = $data['weight_today'];
         $this->weight_gain      = $data['weight_gain'];
 
-        $this->sales_quantity = $data['sales_quantity'];
-        $this->sales_weight   = $data['sales_weight'];
-        $this->sales_price    = $data['sales_price'];
-        $this->total_sales    = $data['total_sales'];
+        $this->sales_quantity = $data['sales_quantity'] ?? 0;
+        $this->sales_weight   = $data['sales_weight'] ?? 0;
+        $this->sales_price    = $data['sales_price'] ?? 0;
+        $this->total_sales    = $data['total_sales'] ?? 0;
 
         // Misc flags & info
         $this->isEditing     = $data['isEditing'];
@@ -1145,8 +1219,8 @@ class Records extends Component
                 'total_deplesi' => $totalDeplesi,
                 'deplesi_percentage' => $stockAwal > 0 ? round(($totalDeplesi / $stockAwal) * 100, 2) : 0,
                 'stock_akhir' => $stockAwal - $totalDeplesi,
-                'pakan_jenis' => $pakanUsageDetails->pluck('feedStock.feed.name')->first() ?? '-',
-                'pakan_harian' => $pakanHarian,
+                // 'pakan_jenis' => $pakanUsageDetails->pluck('feedStock.feed.name')->first() ?? '-',
+                // 'pakan_harian' => $pakanHarian,
                 'pakan_total' => $totalPakanUsage,
             ];
 
@@ -1198,6 +1272,7 @@ class Records extends Component
 
     public function save()
     {
+        // dd($this->all());
         // --- MODULAR PATH ---
         if ($this->useModularServices) {
             logInfoIfDebug('🔄 save: Using MODULAR services path.');
@@ -1205,7 +1280,11 @@ class Records extends Component
                 if (!$this->recordingPersistenceService) $this->initializeModularServices();
 
                 // Create a DTO to pass data to the service
-                $recordingDTO = new RecordingDTO($this->all());
+                $data = $this->all();
+                $data['validationStatus'] = $this->validationStatus;
+                $recordingDTO = new RecordingDTO($data);
+
+                // dd($recordingDTO);
 
                 $result = $this->recordingPersistenceService->saveRecording($recordingDTO);
 
@@ -1215,18 +1294,15 @@ class Records extends Component
                         'livestock_id' => $this->livestockId
                     ]);
 
-                    // Clear recording cache
+                    // Clear recording cache (tag-aware)
                     $performanceService = app(\App\Services\Recording\RecordingPerformanceService::class);
                     $performanceService->clearRecordingCache($this->livestockId);
 
-                    // Clear application cache
-                    \Illuminate\Support\Facades\Cache::flush();
-
                     // Force reload all data
                     $this->resetForm();
-                    $this->loadStockData(); // Refresh feed stock after save
-                    $this->loadRecordingData(); // Force reload recording data
-                    $this->loadYesterdayData(Carbon::parse($this->date)->subDay()); // Reload yesterday data
+                    // $this->loadStockData(); // Refresh feed stock after save
+                    // $this->loadRecordingData(); // Force reload recording data
+                    // $this->loadYesterdayData(Carbon::parse($this->date)->subDay()); // Reload yesterday data
 
                     logInfoIfDebug('✅ Data reloaded after save', [
                         'livestock_id' => $this->livestockId,
@@ -1234,10 +1310,17 @@ class Records extends Component
                     ]);
 
                     $this->dispatch('success', $result->getMessage());
+                    $this->dispatch('history-reload-requested');
                     $this->dispatch('data-saved'); // To refresh table data if needed
                     $this->dispatch('refreshData'); // Force refresh all data
                 } else {
-                    $this->dispatch('error', $result->getMessage());
+                    // Check if it's a batch allocation error
+                    $data = $result->getData();
+                    if (isset($data['batch_allocation_errors'])) {
+                        $this->handleBatchAllocationError($result->getMessage(), $data['batch_allocation_errors']);
+                    } else {
+                        $this->dispatch('error', $result->getMessage());
+                    }
                 }
                 return;
             } catch (Exception $e) {
@@ -1326,7 +1409,7 @@ class Records extends Component
 
     /**
      * Update current livestock quantity with historical tracking
-     * This method now follows the consistent formula and updates Livestock quantity_depletion
+     * This method now uses quantity_available from batches for real-time stock tracking
      * 
      * @return void
      */
@@ -1349,84 +1432,53 @@ class Records extends Component
         }
 
         DB::transaction(function () use ($livestock, $currentLivestock) {
-            // Calculate total depletion from LivestockDepletion records
-            $totalDeplesi = LivestockDepletion::where('livestock_id', $this->livestockId)->sum('jumlah');
+            // Get total available quantity from batches (real-time calculation)
+            $totalAvailableFromBatches = $livestock->getTotalAvailableQuantity();
 
-            // Get all sales records (if LivestockSalesItem exists)
-            $totalSales = 0;
-            if (class_exists('App\Models\LivestockSalesItem')) {
-                $totalSales = \App\Models\LivestockSalesItem::where('livestock_id', $this->livestockId)->sum('quantity');
-            }
-
-            // Update quantity_depletion in Livestock table first
-            $oldLivestockQuantityDepletion = $livestock->quantity_depletion ?? 0;
-            $livestock->update([
-                'quantity_depletion' => $totalDeplesi,
-                'quantity_sales' => $totalSales,
-                'updated_by' => Auth::id()
-            ]);
-
-            // Calculate real-time quantity using consistent formula
-            // Formula: initial_quantity - quantity_depletion - quantity_sales - quantity_mutated
-            $calculatedQuantity = $livestock->initial_quantity
-                - $totalDeplesi
-                - $totalSales
-                - ($livestock->quantity_mutated ?? 0);
-
-            // Ensure quantity doesn't go negative
-            $calculatedQuantity = max(0, $calculatedQuantity);
+            // Get quantity breakdown for detailed tracking
+            $quantityBreakdown = $livestock->getOverallQuantityBreakdown();
 
             // Store the old quantity for history
             $oldQuantity = $currentLivestock->quantity;
 
             // Update CurrentLivestock with comprehensive metadata
             $currentLivestock->update([
-                'quantity' => $calculatedQuantity,
+                'quantity' => $totalAvailableFromBatches,
                 'metadata' => array_merge($currentLivestock->metadata ?? [], [
                     'last_updated' => now()->toIso8601String(),
                     'updated_by' => Auth::id(),
                     'updated_by_name' => Auth::user()->name ?? 'Unknown User',
                     'previous_quantity' => $oldQuantity,
-                    'quantity_change' => $calculatedQuantity - $oldQuantity,
-                    'calculation_source' => 'livewire_records_consistent_formula',
-                    'formula_breakdown' => [
-                        'initial_quantity' => $livestock->initial_quantity,
-                        'quantity_depletion' => $totalDeplesi,
-                        'quantity_sales' => $totalSales,
-                        'quantity_mutated' => $livestock->quantity_mutated ?? 0,
-                        'calculated_quantity' => $calculatedQuantity
+                    'quantity_change' => $totalAvailableFromBatches - $oldQuantity,
+                    'calculation_source' => 'livewire_records_batch_quantity_available',
+                    'quantity_breakdown' => $quantityBreakdown,
+                    'batch_details' => [
+                        'total_batches' => $quantityBreakdown['batches_count'],
+                        'active_batches' => $quantityBreakdown['active_batches_count'],
+                        'availability_status' => $quantityBreakdown['overall_availability_status'],
+                        'availability_percentage' => $quantityBreakdown['overall_availability_percentage']
                     ],
-                    'percentages' => [
-                        'depletion_percentage' => $livestock->initial_quantity > 0
-                            ? round(($totalDeplesi / $livestock->initial_quantity) * 100, 2)
-                            : 0,
-                        'sales_percentage' => $livestock->initial_quantity > 0
-                            ? round(($totalSales / $livestock->initial_quantity) * 100, 2)
-                            : 0,
-                        'remaining_percentage' => $livestock->initial_quantity > 0
-                            ? round(($calculatedQuantity / $livestock->initial_quantity) * 100, 2)
-                            : 0
+                    'formula_breakdown' => [
+                        'total_initial_quantity' => $quantityBreakdown['total_initial_quantity'],
+                        'total_quantity_depletion' => $quantityBreakdown['total_quantity_depletion'],
+                        'total_quantity_sales' => $quantityBreakdown['total_quantity_sales'],
+                        'total_quantity_mutated' => $quantityBreakdown['total_quantity_mutated'],
+                        'total_quantity_available' => $quantityBreakdown['total_quantity_available']
                     ]
                 ]),
                 'updated_by' => Auth::id()
             ]);
 
-            logInfoIfDebug("📊 Updated livestock quantities (consistent formula)", [
+            logInfoIfDebug("📊 Updated livestock quantities (batch quantity_available)", [
                 'livestock_id' => $this->livestockId,
                 'livestock_name' => $livestock->name,
-                'old_livestock_quantity_depletion' => $oldLivestockQuantityDepletion,
-                'new_livestock_quantity_depletion' => $totalDeplesi,
                 'old_current_quantity' => $oldQuantity,
-                'new_current_quantity' => $calculatedQuantity,
-                'quantity_change' => $calculatedQuantity - $oldQuantity,
-                'formula' => sprintf(
-                    '%d - %d - %d - %d = %d',
-                    $livestock->initial_quantity,
-                    $totalDeplesi,
-                    $totalSales,
-                    $livestock->quantity_mutated ?? 0,
-                    $calculatedQuantity
-                )
+                'new_current_quantity' => $totalAvailableFromBatches,
+                'quantity_change' => $totalAvailableFromBatches - $oldQuantity,
+                'availability_status' => $quantityBreakdown['overall_availability_status'],
+                'availability_percentage' => $quantityBreakdown['overall_availability_percentage'],
+                'active_batches' => $quantityBreakdown['active_batches_count'],
+                'total_batches' => $quantityBreakdown['batches_count']
             ]);
         });
     }
@@ -1492,8 +1544,8 @@ class Records extends Component
                 'berat_hari_ini' => $data['berat_hari_ini'],
                 'berat_semalam' => $data['berat_semalam'],
                 'kenaikan_berat' => $data['kenaikan_berat'],
-                'pakan_jenis' => $data['pakan_jenis'],
-                'pakan_harian' => $data['pakan_harian'],
+                // 'pakan_jenis' => $data['pakan_jenis'],
+                // 'pakan_harian' => $data['pakan_harian'],
                 'payload' => $fullPayload,
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
@@ -1516,6 +1568,50 @@ class Records extends Component
         ]);
 
         return $recording;
+    }
+
+    /**
+     * Handle batch allocation errors and show appropriate warnings to user
+     */
+    private function handleBatchAllocationError(string $errorMessage, array $batchAllocationErrors): void
+    {
+        logErrorIfDebug('❌ Batch allocation error detected', [
+            'livestock_id' => $this->livestockId,
+            'error_message' => $errorMessage,
+            'batch_allocation_errors' => $batchAllocationErrors
+        ]);
+
+        // Create detailed warning message for user
+        $warningTitle = "Peringatan: Batch Allocation Gagal";
+        $warningMessage = "Data recording berhasil disimpan, namun ada masalah dengan alokasi batch:\n\n";
+
+        foreach ($batchAllocationErrors as $error) {
+            $typeLabel = $error['type'] === 'mortality' ? 'Kematian' : 'Afkir';
+            $warningMessage .= "• {$typeLabel} ({$error['quantity']} ekor): {$error['error']}\n";
+        }
+
+        $warningMessage .= "\nSaran:\n";
+        $warningMessage .= "• Periksa data batch ayam\n";
+        $warningMessage .= "• Pastikan quantity_available batch tidak 0\n";
+        $warningMessage .= "• Hubungi administrator jika masalah berlanjut";
+
+        // Log the warning for debugging
+        logWarningIfDebug('⚠️ Batch allocation warning shown to user', [
+            'livestock_id' => $this->livestockId,
+            'warning_title' => $warningTitle,
+            'warning_message' => $warningMessage,
+            'batch_allocation_errors' => $batchAllocationErrors
+        ]);
+
+        // Show warning to user
+        $this->dispatch('warning', [
+            'title' => $warningTitle,
+            'message' => $warningMessage,
+            'type' => 'batch_allocation_error'
+        ]);
+
+        // Also show success message for the saved data
+        $this->dispatch('success', 'Data recording berhasil disimpan, namun ada peringatan batch allocation.');
     }
 
     /**
@@ -1547,5 +1643,12 @@ class Records extends Component
         $this->initializeSupplyItems();
 
         logInfoIfDebug('📝 Form reset after successful save.');
+    }
+
+    public function reloadHistoryData()
+    {
+        $this->isReloadingHistory = true;
+        $this->updatedDate($this->date);
+        $this->isReloadingHistory = false;
     }
 }

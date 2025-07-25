@@ -23,6 +23,8 @@ class SupplyPurchase extends BaseModel
         'converted_quantity',
         'price_per_unit',
         'price_per_converted_unit',
+        'number',
+        'number_full',
         'created_by',
         'updated_by',
     ];

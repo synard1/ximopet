@@ -164,7 +164,7 @@ class DataController extends Controller
                     $farmId = $request->input('farm_id');
                     $data = $this->getFarmStorage($farmId);
                 } else {
-                    // $data = $this->getActiveFarms();
+                    $data = $this->getActiveFarms();
                 }
             } elseif ($type === 'ternaks') {
                 $data = $this->getActiveTernaks();
@@ -256,9 +256,9 @@ class DataController extends Controller
 
         // Get active coops with active livestock groups
         $coops = Coop::with(['livestock' => function ($query) {
-                $query->select('id', 'coop_id', 'start_date')
-                    ->where('status', 'Aktif');
-            }])
+            $query->select('id', 'coop_id', 'start_date')
+                ->where('status', 'Aktif');
+        }])
             ->where('farm_id', $farmId)
             ->where('status', 'Digunakan')
             ->get(['id', 'nama']) // Fix: use 'nama' instead of 'name'

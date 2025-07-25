@@ -36,7 +36,7 @@ use App\Models\{
     LivestockCost,
     AlertLog,
     FeedPurchase,
-    FeedPurchaseBatch,
+    FeedPurchaseItem,
     SupplyPurchase,
     SupplyPurchaseBatch,
     LivestockPurchase,
@@ -44,6 +44,7 @@ use App\Models\{
     LivestockPurchaseStatusHistory,
     FeedStatusHistory,
     SupplyStatusHistory,
+    FeedTransactionHistory,
     Coop
 };
 use Illuminate\Support\Facades\DB;
@@ -88,6 +89,10 @@ class TransactionClearService
 
             // Step 6: Clear current data (CurrentFeed, CurrentLivestock, CurrentSupply)
             $this->clearCurrentData();
+
+            // Step 6.5: Clear feed transaction histories (to handle foreign key constraints)
+            $clearedHistoryData = $this->clearFeedTransactionHistories();
+            $result['cleared_data'] = array_merge($result['cleared_data'], $clearedHistoryData);
 
             // Step 7: Clear livestock data (including soft-deleted)
             $clearedLivestockData = $this->clearLivestockData();
@@ -244,6 +249,23 @@ class TransactionClearService
     }
 
     /**
+     * Clear feed transaction histories (to handle foreign key constraints)
+     */
+    private function clearFeedTransactionHistories(): array
+    {
+        $cleared = [];
+
+        // Clear feed transaction histories (include soft-deleted)
+        $historyCount = FeedTransactionHistory::withTrashed()->count();
+        FeedTransactionHistory::withTrashed()->forceDelete();
+        $cleared['feed_transaction_histories'] = $historyCount;
+
+        Log::info('📜 Feed transaction histories cleared (including soft-deleted)', $cleared);
+
+        return $cleared;
+    }
+
+    /**
      * Clear status history data
      */
     private function clearStatusHistoryData(): void
@@ -337,6 +359,7 @@ class TransactionClearService
 
     /**
      * Reset current stock data to initial purchase state
+     * Updated to use new FeedPurchase and FeedPurchaseItem structure
      */
     private function resetCurrentStockData(): void
     {
@@ -348,8 +371,10 @@ class TransactionClearService
         $currentFeeds = CurrentFeed::with(['livestock', 'feed'])->get();
 
         foreach ($currentFeeds as $currentFeed) {
-            // Get total purchased feed for this livestock and feed type
-            $totalPurchased = FeedPurchase::where('livestock_id', $currentFeed->livestock_id)
+            // Get total purchased feed for this livestock and feed type from FeedPurchaseItem
+            $totalPurchased = FeedPurchaseItem::whereHas('feedPurchase', function ($query) use ($currentFeed) {
+                $query->where('livestock_id', $currentFeed->livestock_id);
+            })
                 ->where('feed_id', $currentFeed->feed_id)
                 ->sum('converted_quantity');
 
@@ -377,6 +402,7 @@ class TransactionClearService
 
     /**
      * Ensure purchase data integrity by checking and fixing orphaned records
+     * Updated to use new FeedPurchase and FeedPurchaseItem structure
      * NOTE: LivestockPurchase and LivestockPurchaseItem should NEVER be deleted
      */
     private function ensurePurchaseDataIntegrity(): array
@@ -385,31 +411,31 @@ class TransactionClearService
 
         Log::info('🔍 Checking purchase data integrity...');
 
-        // Check FeedPurchaseBatch and FeedPurchase relationships
-        $orphanedFeedPurchases = FeedPurchase::whereNotExists(function ($query) {
+        // Check FeedPurchase and FeedPurchaseItem relationships (NEW STRUCTURE)
+        $orphanedFeedPurchaseItems = FeedPurchaseItem::whereNotExists(function ($query) {
             $query->select(DB::raw(1))
-                ->from('feed_purchase_batches')
-                ->whereColumn('feed_purchase_batches.id', 'feed_purchases.feed_purchase_batch_id');
+                ->from('feed_purchases')
+                ->whereColumn('feed_purchases.id', 'feed_purchase_items.feed_purchase_id');
         })->withTrashed()->count();
 
-        if ($orphanedFeedPurchases > 0) {
-            // Delete orphaned feed purchases
-            FeedPurchase::whereNotExists(function ($query) {
+        if ($orphanedFeedPurchaseItems > 0) {
+            // Delete orphaned feed purchase items
+            FeedPurchaseItem::whereNotExists(function ($query) {
                 $query->select(DB::raw(1))
-                    ->from('feed_purchase_batches')
-                    ->whereColumn('feed_purchase_batches.id', 'feed_purchases.feed_purchase_batch_id');
+                    ->from('feed_purchases')
+                    ->whereColumn('feed_purchases.id', 'feed_purchase_items.feed_purchase_id');
             })->withTrashed()->forceDelete();
 
-            $fixes['orphaned_feed_purchases'] = $orphanedFeedPurchases;
-            Log::warning("🗑️ Deleted {$orphanedFeedPurchases} orphaned feed purchases");
+            $fixes['orphaned_feed_purchase_items'] = $orphanedFeedPurchaseItems;
+            Log::warning("🗑️ Deleted {$orphanedFeedPurchaseItems} orphaned feed purchase items");
         }
 
-        // Check for FeedPurchaseBatch without any FeedPurchase (but preserve them)
-        $emptyFeedBatches = FeedPurchaseBatch::whereDoesntHave('feedPurchases')->withTrashed()->count();
-        if ($emptyFeedBatches > 0) {
-            // Don't delete empty batches, just log them for reference
-            $fixes['empty_feed_batches'] = $emptyFeedBatches;
-            Log::info("📝 Found {$emptyFeedBatches} empty feed purchase batches (preserved)");
+        // Check for FeedPurchase without any FeedPurchaseItem (but preserve them)
+        $emptyFeedPurchases = FeedPurchase::whereDoesntHave('feedPurchaseItems')->withTrashed()->count();
+        if ($emptyFeedPurchases > 0) {
+            // Don't delete empty purchases, just log them for reference
+            $fixes['empty_feed_purchases'] = $emptyFeedPurchases;
+            Log::info("📝 Found {$emptyFeedPurchases} empty feed purchases (preserved)");
         }
 
         // Check SupplyPurchaseBatch and SupplyPurchase relationships
@@ -485,7 +511,7 @@ class TransactionClearService
         $livestockPurchaseCount = LivestockPurchase::withTrashed()->count();
         $livestockPurchaseItemCount = LivestockPurchaseItem::withTrashed()->count();
         $feedPurchaseCount = FeedPurchase::withTrashed()->count();
-        $feedPurchaseBatchCount = FeedPurchaseBatch::withTrashed()->count();
+        $feedPurchaseItemCount = FeedPurchaseItem::withTrashed()->count();
         $supplyPurchaseCount = SupplyPurchase::withTrashed()->count();
         $supplyPurchaseBatchCount = SupplyPurchaseBatch::withTrashed()->count();
 
@@ -493,7 +519,7 @@ class TransactionClearService
             'livestock_purchases' => $livestockPurchaseCount,
             'livestock_purchase_items' => $livestockPurchaseItemCount,
             'feed_purchases' => $feedPurchaseCount,
-            'feed_purchase_batches' => $feedPurchaseBatchCount,
+            'feed_purchase_items' => $feedPurchaseItemCount,
             'supply_purchases' => $supplyPurchaseCount,
             'supply_purchase_batches' => $supplyPurchaseBatchCount,
         ]);
@@ -509,6 +535,7 @@ class TransactionClearService
 
     /**
      * Change all purchase statuses to draft
+     * Updated to use new FeedPurchase structure
      */
     private function changePurchaseStatusesToDraft(): array
     {
@@ -519,10 +546,10 @@ class TransactionClearService
         LivestockPurchase::where('status', '!=', 'draft')->update(['status' => 'draft']);
         $changed['livestock_purchases'] = $livestockPurchaseCount;
 
-        // Change feed purchase batches to draft
-        $feedPurchaseBatchCount = FeedPurchaseBatch::where('status', '!=', 'draft')->count();
-        FeedPurchaseBatch::where('status', '!=', 'draft')->update(['status' => 'draft']);
-        $changed['feed_purchase_batches'] = $feedPurchaseBatchCount;
+        // Change feed purchases to draft (NEW STRUCTURE - FeedPurchase is the header)
+        $feedPurchaseCount = FeedPurchase::where('status', '!=', 'draft')->count();
+        FeedPurchase::where('status', '!=', 'draft')->update(['status' => 'draft']);
+        $changed['feed_purchases'] = $feedPurchaseCount;
 
         // Change supply purchase batches to draft
         $supplyPurchaseBatchCount = SupplyPurchaseBatch::where('status', '!=', 'draft')->count();
@@ -536,6 +563,7 @@ class TransactionClearService
 
     /**
      * Get summary of what will be cleared (for preview)
+     * Updated to use new FeedPurchase and FeedPurchaseItem structure
      */
     public function getPreviewSummary(): array
     {
@@ -564,6 +592,9 @@ class TransactionClearService
                 'period_analytics' => PeriodAnalytics::withTrashed()->count(),
                 'analytics_alerts' => AnalyticsAlert::withTrashed()->count(),
             ],
+            'transaction_histories' => [
+                'feed_transaction_histories' => FeedTransactionHistory::withTrashed()->count(),
+            ],
             'status_history_data' => [
                 'livestock_purchase_status_history' => LivestockPurchaseStatusHistory::withTrashed()->count(),
                 'feed_status_history' => FeedStatusHistory::withTrashed()->count(),
@@ -582,20 +613,21 @@ class TransactionClearService
             'purchase_data_preserved' => [
                 'livestock_purchases' => DB::table('livestock_purchases')->count(),
                 'feed_purchases' => DB::table('feed_purchases')->count(),
+                'feed_purchase_items' => DB::table('feed_purchase_items')->count(),
                 'supply_purchases' => DB::table('supply_purchases')->count(),
             ],
             'purchase_status_to_change' => [
                 'livestock_purchases_non_draft' => LivestockPurchase::where('status', '!=', 'draft')->count(),
-                'feed_purchase_batches_non_draft' => FeedPurchaseBatch::where('status', '!=', 'draft')->count(),
+                'feed_purchases_non_draft' => FeedPurchase::where('status', '!=', 'draft')->count(),
                 'supply_purchase_batches_non_draft' => SupplyPurchaseBatch::where('status', '!=', 'draft')->count(),
             ],
             'integrity_issues_detected' => [
-                'orphaned_feed_purchases' => FeedPurchase::whereNotExists(function ($query) {
+                'orphaned_feed_purchase_items' => FeedPurchaseItem::whereNotExists(function ($query) {
                     $query->select(DB::raw(1))
-                        ->from('feed_purchase_batches')
-                        ->whereColumn('feed_purchase_batches.id', 'feed_purchases.feed_purchase_batch_id');
+                        ->from('feed_purchases')
+                        ->whereColumn('feed_purchases.id', 'feed_purchase_items.feed_purchase_id');
                 })->withTrashed()->count(),
-                'empty_feed_batches' => FeedPurchaseBatch::whereDoesntHave('feedPurchases')->withTrashed()->count(),
+                'empty_feed_purchases' => FeedPurchase::whereDoesntHave('feedPurchaseItems')->withTrashed()->count(),
                 'orphaned_supply_purchases' => SupplyPurchase::whereNotExists(function ($query) {
                     $query->select(DB::raw(1))
                         ->from('supply_purchase_batches')

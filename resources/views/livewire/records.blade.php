@@ -2,6 +2,20 @@
     @if($showForm)
     <h2 class="text-2xl font-bold mb-8 text-gray-800">📋 Manajemen Recording Ayam</h2>
 
+    <!-- Loading indicator for async history reload -->
+    <div wire:loading wire:target="reloadHistoryData" class="my-4 text-blue-600 flex items-center">
+        <svg class="animate-spin h-5 w-5 mr-2 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+        Memuat data history...
+    </div>
+    <button type="button" wire:click="reloadHistoryData" wire:loading.attr="disabled"
+        class="btn btn-outline-primary btn-sm mb-4">
+        <i class="fas fa-sync-alt mr-1"></i> Reload Data History
+    </button>
+
     <!-- Yesterday Information Panel -->
     @if($yesterdayData && $yesterdayData['has_data'])
     <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -193,6 +207,22 @@
                     </div>
                 </div>
 
+                <!-- Sales Input Fields -->
+                <div class="row mt-2">
+                    <div class="col-6">
+                        <label class="form-label text-sm">💰 Jumlah Terjual (Ekor)</label>
+                        <input type="number" wire:model.live="sales_quantity" class="form-control form-control-sm"
+                            min="0" placeholder="0" value="{{ $sales_quantity ?? 0 }}">
+                        <x-input.error for="sales_quantity" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-sm">⚖️ Berat Terjual (Kg)</label>
+                        <input type="number" wire:model.live="sales_weight" class="form-control form-control-sm" min="0"
+                            placeholder="0" value="{{ $sales_weight ?? 0 }}">
+                        <x-input.error for="sales_weight" />
+                    </div>
+                </div>
+
 
                 <!-- disable for clean UI -->
                 {{--
@@ -243,7 +273,7 @@
                 <!-- disable for clean UI -->
             </x-input.group>
 
-            <x-input.group col="6" label="Jumlah Terjual (Ekor)">
+            {{-- <x-input.group col="6" label="Jumlah Terjual (Ekor)">
                 <input type="number" wire:model.live="sales_quantity" class="form-control"
                     placeholder="Jumlah ayam terjual">
                 <x-input.error for="sales_quantity" />
@@ -253,7 +283,7 @@
                 <input type="number" wire:model.live="sales_weight" class="form-control"
                     placeholder="Berat ayam terjual">
                 <x-input.error for="sales_weight" />
-            </x-input.group>
+            </x-input.group> --}}
         </div>
 
         <!-- Container untuk Penggunaan Item - Side by Side -->
@@ -467,6 +497,30 @@
                 window.location.reload();
             }, 1500);
         });
+
+        // Listen for warning events (batch allocation errors)
+        Livewire.on('warning', (data) => {
+            console.log('⚠️ Warning received:', data);
+            
+            // Show warning modal/alert
+            if (data.title && data.message) {
+                // Use SweetAlert2 if available, otherwise use browser alert
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: data.title,
+                        html: data.message.replace(/\n/g, '<br>'),
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#f59e0b',
+                        customClass: {
+                            popup: 'swal2-warning-popup'
+                        }
+                    });
+                } else {
+                    alert(`${data.title}\n\n${data.message}`);
+                }
+            }
+        });
     
         const validateInput = (input) => {
             const stock = parseFloat(input.dataset.stock);
@@ -593,6 +647,21 @@
 
         .text-red-600 {
             color: #dc2626;
+        }
+
+        /* Warning popup styles */
+        .swal2-warning-popup {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .swal2-warning-popup .swal2-title {
+            color: #92400e;
+        }
+
+        .swal2-warning-popup .swal2-html-container {
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.5;
         }
     </style>
     @endpush

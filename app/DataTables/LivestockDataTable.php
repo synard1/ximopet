@@ -184,23 +184,27 @@ class LivestockDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex', 'No.')
-                ->title('No.')
-                ->addClass('text-center')
-                ->width(50),
-            Column::make('name'),
-            Column::make('start_date'),
-            Column::make('initial_quantity'),
+            // Column::computed('DT_RowIndex', 'No.')
+            //     ->title('No.')
+            // ->addClass('text-center')
+            // ->width(50),
+            Column::make('number_full')->title('Nomor'),
+            Column::make('name')->title('Nama'),
+            Column::make('start_date')->title('Tanggal Masuk'),
+            Column::make('initial_quantity')->title('Populasi Awal'),
             Column::computed('quantity')
-                ->title('Current Quantity')
+                ->title('Stok Akhir')
                 ->orderable(true)
                 ->orderDataType('custom-quantity'),
             Column::computed('umur'),
             Column::computed('jumlah_mati')
-                ->title(trans('content.ternak', [], 'id') . ' Mati')
-                ->orderable(true)
-                ->orderDataType('custom-jumlah-mati'),
-            Column::computed('jumlah_afkir')->title(trans('content.ternak', [], 'id') . ' Afkir'),
+                ->title('Deplesi')
+                ->orderable(true),
+            // Column::computed('jumlah_mati')
+            //     ->title(trans('content.ternak', [], 'id') . ' Mati')
+            //     ->orderable(true)
+            //     ->orderDataType('custom-jumlah-mati'),
+            // Column::computed('jumlah_afkir')->title(trans('content.ternak', [], 'id') . ' Afkir'),
             // Column::computed('jumlah_terjual')->title(trans('content.ternak',[],'id').' Terjual'),
             // Column::computed('stok_akhir')->title('Sisa '.trans('content.ternak',[],'id')),
             Column::make('status'),

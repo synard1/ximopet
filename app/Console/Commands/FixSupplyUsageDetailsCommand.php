@@ -11,7 +11,7 @@ use App\Services\Recording\UnitConversionService;
 
 class FixSupplyUsageDetailsCommand extends Command
 {
-    protected $signature = 'fix:supply-usage-details {--dry-run}';
+    protected $signature = '1fix:supply-usage-details {--dry-run}';
     protected $description = 'Perbaiki converted_unit_id pada SupplyUsageDetail agar selalu satuan terkecil';
 
     public function handle()

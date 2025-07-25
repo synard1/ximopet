@@ -67,6 +67,22 @@ class FifoLivestockMutation extends Component
     public $restrictionDetails = [];
     public $restrictionAction = null;
 
+    // Tambahkan property untuk kontrol disabled
+    public bool $disableDestinationCoop = false;
+    public bool $disableDestinationLivestock = false;
+    public bool $livestockDisabled = false;
+    public bool $coopDisabled = false;
+
+    // Tambahkan computed property untuk UI
+    public function getDestinationCoopDisabledProperty()
+    {
+        return !empty($this->destinationLivestockId);
+    }
+    public function getDestinationLivestockDisabledProperty()
+    {
+        return !empty($this->destinationCoopId);
+    }
+
     protected $listeners = [
         'show-fifo-mutation' => 'openModal',
         'show-fifo-simple-modal' => 'openModal',
@@ -75,17 +91,29 @@ class FifoLivestockMutation extends Component
         'refreshFifoMutationData' => 'refreshData'
     ];
 
-    // Validation rules
-    protected $rules = [
-        'mutationDate' => 'required|date',
-        'sourceLivestockId' => 'required|string',
-        'quantity' => 'required|integer|min:1',
-        'type' => 'required|string',
-        'direction' => 'required|in:in,out',
-        'reason' => 'nullable|string|max:500',
-        'destinationLivestockId' => 'nullable|string',
-        'destinationCoopId' => 'nullable|string',
-    ];
+    // Override rules untuk validasi tujuan
+    protected function rules()
+    {
+        return [
+            'mutationDate' => 'required|date',
+            'sourceLivestockId' => 'required|string',
+            'quantity' => 'required|integer|min:1',
+            'type' => 'required|string',
+            'direction' => 'required|in:in,out',
+            'reason' => 'nullable|string|max:500',
+            // Validasi: hanya salah satu tujuan yang boleh diisi
+            'destinationLivestockId' => ['nullable', 'string', function ($attribute, $value, $fail) {
+                if ($value && $this->destinationCoopId) {
+                    $fail('Hanya boleh memilih salah satu: Ternak Tujuan atau Kandang Tujuan.');
+                }
+            }],
+            'destinationCoopId' => ['nullable', 'string', function ($attribute, $value, $fail) {
+                if ($value && $this->destinationLivestockId) {
+                    $fail('Hanya boleh memilih salah satu: Ternak Tujuan atau Kandang Tujuan.');
+                }
+            }],
+        ];
+    }
 
     protected $messages = [
         'mutationDate.required' => 'Tanggal mutasi harus diisi',
@@ -284,6 +312,9 @@ class FifoLivestockMutation extends Component
             'quantity' => 'required|integer|min:1'
         ]);
 
+        // Selalu load data terbaru sebelum preview
+        $this->loadSourceLivestock();
+
         try {
             $service = new LivestockMutationService();
 
@@ -297,6 +328,13 @@ class FifoLivestockMutation extends Component
                 'destination_livestock_id' => $this->destinationLivestockId,
                 'destination_coop_id' => $this->destinationCoopId,
             ];
+
+            // Logging untuk debugging
+            Log::info('🔍 Data sebelum preview FIFO', [
+                'mutationData' => $mutationData,
+                'availableBatches' => $this->availableBatches,
+                'totalAvailableQuantity' => $this->totalAvailableQuantity,
+            ]);
 
             $this->fifoPreview = $service->previewFifoBatchMutation($mutationData);
             $this->isPreviewMode = true;
@@ -551,27 +589,50 @@ class FifoLivestockMutation extends Component
     public function updatedSourceLivestockId($value)
     {
         if ($value) {
-            // Reset related data first
             $this->quantity = 0;
             $this->fifoPreview = null;
             $this->availableBatches = collect();
             $this->totalAvailableQuantity = 0;
             $this->sourceLivestock = null;
+            $this->isPreviewMode = false;
+            $this->showPreviewModal = false;
 
-            // Check for existing mutations when both date and livestock are set
+            $this->loadSourceLivestock();
+
             if ($this->mutationDate) {
                 $this->checkForExistingMutations();
             }
         } else {
-            // Clear data when no livestock selected
             $this->availableBatches = collect();
             $this->totalAvailableQuantity = 0;
             $this->sourceLivestock = null;
             $this->quantity = 0;
             $this->fifoPreview = null;
+            $this->isPreviewMode = false;
+            $this->showPreviewModal = false;
             $this->resetEditMode();
         }
     }
+
+    // /**
+    //  * Updated destination livestock selection
+    //  */
+    // public function updatedDestinationLivestockId($value)
+    // {
+    //     if ($value) {
+    //         $this->destinationCoopId = null;
+    //         $this->destinationCoop = null;
+    //         $this->destinationLivestock = $this->getDestinationLivestockById($value);
+    //     }
+    // }
+
+    // public function updatedDestinationCoopId($value)
+    // {
+    //     if ($value) {
+    //         $this->destinationLivestockId = null;
+    //         $this->destinationLivestock = null;
+    //     }
+    // }
 
     /**
      * Updated mutation date selection
@@ -584,6 +645,14 @@ class FifoLivestockMutation extends Component
             'source_livestock_id' => $this->sourceLivestockId
         ]);
 
+        // Reset preview dan batch saat tanggal berubah
+        $this->fifoPreview = null;
+        $this->isPreviewMode = false;
+        $this->showPreviewModal = false;
+        $this->availableBatches = collect();
+        $this->totalAvailableQuantity = 0;
+        $this->sourceLivestock = null;
+
         if ($value && $this->sourceLivestockId) {
             $this->checkForExistingMutations();
         } else {
@@ -593,6 +662,8 @@ class FifoLivestockMutation extends Component
 
     /**
      * Universal Livewire updated handler - fallback for specific methods
+     * Sekaligus enforce validasi agar hanya salah satu tujuan yang bisa dipilih,
+     * dan sinkron dengan UI di fifo-create-mode.blade.php (disable select lawan)
      */
     public function updated($property, $value)
     {
@@ -602,6 +673,30 @@ class FifoLivestockMutation extends Component
             'mutation_date' => $this->mutationDate,
             'source_livestock_id' => $this->sourceLivestockId
         ]);
+
+        $this->dispatch('success', 'Kandang Tujuan dipilih');
+
+        // Validasi mutual exclusive: hanya salah satu tujuan yang bisa dipilih
+        if ($property === 'destinationCoopId') {
+            $this->dispatch('success', 'Kandang Tujuan dipilih');
+            $this->livestockDisabled = true;
+            if ($value) {
+                $this->destinationLivestockId = null;
+                $this->destinationLivestock = null;
+            }
+            // Sinkronkan UI: disable select Ternak Tujuan jika Kandang Tujuan dipilih
+            $this->destinationCoopDisabled = false;
+            $this->destinationLivestockDisabled = (bool) $value;
+        }
+        if ($property === 'destinationLivestockId') {
+            if ($value) {
+                $this->destinationCoopId = null;
+                $this->destinationCoop = null;
+            }
+            // Sinkronkan UI: disable select Kandang Tujuan jika Ternak Tujuan dipilih
+            $this->destinationLivestockDisabled = false;
+            $this->destinationCoopDisabled = (bool) $value;
+        }
 
         // Handle mutation date changes
         if ($property === 'mutationDate') {
@@ -1101,5 +1196,13 @@ class FifoLivestockMutation extends Component
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Helper to get destination livestock by ID
+     */
+    private function getDestinationLivestockById($id)
+    {
+        return Livestock::find($id);
     }
 }

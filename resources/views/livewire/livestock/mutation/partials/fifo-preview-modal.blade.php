@@ -71,8 +71,27 @@
                 </div>
                 @endif
 
+                {{-- Info batch/tersedia di bawah input kuantitas --}}
+                <div class="mb-2">
+                    <span class="text-muted">
+                        Total tersedia di semua batch sumber: {{ number_format($totalAvailableQuantity) }} ekor
+                    </span>
+                    @if(isset($destinationLivestock) && $destinationLivestock)
+                    <span class="text-muted ms-3">
+                        Tersedia di tujuan: {{ number_format($destinationLivestock->currentLivestock->quantity ?? 0) }}
+                        ekor
+                    </span>
+                    @endif
+                </div>
+
                 <!-- Batch Details -->
                 <h6 class="mb-3">Detail Batch FIFO</h6>
+                <div class="mb-2">
+                    <small class="text-muted">
+                        Tabel hanya menampilkan batch yang dipakai FIFO untuk memenuhi permintaan mutasi. Kolom
+                        "Tersedia" = jumlah tersedia di batch tersebut.
+                    </small>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered">
                         <thead class="table-light">

@@ -33,6 +33,8 @@ return new class extends Migration
             $table->json('data')->nullable();
             $table->text('description')->nullable();
             $table->string('status')->default('active')->index();
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -54,7 +56,8 @@ return new class extends Migration
             $table->json('data')->nullable(); // simpan kebutuhan data mendatang
             $table->text('notes')->nullable();
             $table->string('status')->default('draft')->index();
-
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -76,6 +79,8 @@ return new class extends Migration
             $table->decimal('converted_quantity', 12, 2);
             $table->decimal('price_per_unit', 12, 2);
             $table->decimal('price_per_converted_unit', 12, 2);
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -92,13 +97,18 @@ return new class extends Migration
             $table->foreignUuid('farm_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignUuid('coop_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignUuid('supply_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('supply_purchase_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('supply_purchase_id')->nullable()->constrained()->onDelete('cascade');
             $table->date('date');
             $table->string('source_type');
             $table->uuid('source_id');
             $table->decimal('quantity_in', 12, 2)->default(0);
             $table->decimal('quantity_used', 12, 2)->default(0);
             $table->decimal('quantity_mutated', 12, 2)->default(0);
+            $table->decimal('quantity_reserved', 12, 2)->default(0); // stok yang sedang di-hold/reserved
+            $table->decimal('quantity_available', 12, 2)->default(0); // stok akhir siap pakai
+            $table->json('metadata')->nullable(); // breakdown transaksi, histori, dsb
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -119,6 +129,8 @@ return new class extends Migration
             $table->decimal('total_quantity', 12, 2)->default(0);
             $table->text('notes')->nullable();
             $table->string('status')->index();
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -156,26 +168,53 @@ return new class extends Migration
 
         Schema::create('supply_mutations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('from_farm_id');
-            $table->uuid('to_farm_id');
+            $table->foreignUuid('company_id')->nullable()->constrained('companies')->onDelete('cascade');
+            $table->foreignUuid('mutation_id')->constrained('mutations')->onDelete('cascade');
+            $table->foreignUuid('from_farm_id')->constrained('farms')->onDelete('cascade')->onUpdate('restrict');
+            $table->foreignUuid('to_farm_id')->constrained('farms')->onDelete('cascade')->onUpdate('restrict');
+            $table->foreignUuid('from_coop_id')->nullable()->constrained('coops')->onDelete('cascade')->onUpdate('restrict');
+            $table->foreignUuid('to_coop_id')->nullable()->constrained('coops')->onDelete('cascade')->onUpdate('restrict');
+            $table->foreignUuid('from_livestock_id')->nullable()->constrained('livestocks')->onDelete('cascade')->onUpdate('restrict');
+            $table->foreignUuid('to_livestock_id')->nullable()->constrained('livestocks')->onDelete('cascade')->onUpdate('restrict');
             $table->dateTime('date');
+            $table->string('status')->nullable();
+            $table->uuid('approved_by')->nullable();
+            $table->dateTime('approved_at')->nullable();
             $table->uuid('created_by')->nullable();
+            $table->uuid('rejected_by')->nullable();
+            $table->dateTime('rejected_at')->nullable();
+            $table->text('rejection_reason')->nullable();
+            $table->boolean('verified')->default(false);
+            $table->dateTime('verified_at')->nullable();
+            $table->uuid('verified_by')->nullable();
+            $table->json('data')->nullable();
+            $table->json('metadata')->nullable();
+            $table->text('notes')->nullable();
+            $table->unsignedBigInteger('number')->nullable()->index();
+            $table->string('number_full', 50)->nullable()->index();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('approved_by')->references('id')->on('users')->restrictOnDelete()->restrictOnUpdate();
+            $table->foreign('rejected_by')->references('id')->on('users')->restrictOnDelete()->restrictOnUpdate();
+            $table->foreign('verified_by')->references('id')->on('users')->restrictOnDelete()->restrictOnUpdate();
         });
 
 
         Schema::create('supply_mutation_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('supply_mutation_id');
-            $table->uuid('supply_stock_id');
+            $table->foreignUuid('company_id')->nullable()->constrained('companies')->onDelete('cascade');
+            $table->foreignUuid('supply_mutation_id')->constrained('supply_mutations')->onDelete('cascade');
+            $table->foreignUuid('supply_stock_id')->constrained('supply_stocks')->onDelete('cascade');
+            $table->foreignUuid('supply_id')->constrained('supplies')->onDelete('cascade');
             $table->decimal('quantity', 12, 2);
-            $table->foreign('supply_mutation_id')->references('id')->on('supply_mutations')->cascadeOnDelete();
-            $table->foreign('supply_stock_id')->references('id')->on('supply_stocks')->cascadeOnDelete();
+            $table->decimal('converted_quantity', 12, 2);
+            $table->foreignUuid('unit_id')->constrained('units')->restrictOnDelete()->restrictOnUpdate();
+            $table->foreignUuid('converted_unit_id')->constrained('units')->restrictOnDelete()->restrictOnUpdate();
+            $table->dateTime('expiry_date')->nullable();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();

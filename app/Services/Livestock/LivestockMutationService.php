@@ -2340,7 +2340,7 @@ class LivestockMutationService
      * @param int $requestedQuantity
      * @return array
      */
-    private function getFifoBatchSelection(Livestock $livestock, int $requestedQuantity): array
+    private function getFifoBatchSelection(Livestock $livestock, int $requestedQuantity, $mutationDate = null): array
     {
         // Get available batches ordered by start_date (oldest first - FIFO)
         $availableBatches = $livestock->batches()
@@ -2369,7 +2369,9 @@ class LivestockMutationService
                 'batch_id' => $batch->id,
                 'batch_name' => $batch->name,
                 'start_date' => $batch->start_date,
-                'age_days' => $batch->start_date ? now()->diffInDays($batch->start_date) : null,
+                'age_days' => $batch->start_date && $mutationDate
+                    ? \Carbon\Carbon::parse($batch->start_date)->diffInDays(\Carbon\Carbon::parse($mutationDate), false)
+                    : null,
                 'available_quantity' => $availableQuantity,
                 'quantity_to_mutate' => $quantityToMutate,
                 'remaining_after_mutation' => $availableQuantity - $quantityToMutate
@@ -2460,7 +2462,7 @@ class LivestockMutationService
         }
 
         $sourceLivestock = Livestock::findOrFail($mutationData['source_livestock_id']);
-        $fifoBatches = $this->getFifoBatchSelection($sourceLivestock, $mutationData['quantity']);
+        $fifoBatches = $this->getFifoBatchSelection($sourceLivestock, $mutationData['quantity'], $mutationData['date'] ?? null);
 
         $preview = [
             'method' => 'fifo',

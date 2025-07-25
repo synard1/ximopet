@@ -19,6 +19,16 @@
                         </select>
                     </div>
                     <div class="col-md-4">
+                        <label for="livestock" class="form-label">Livestock (Batch)</label>
+                        <select class="form-select" id="livestock" name="livestock">
+                            <option value="">Semua Livestock</option>
+                            @foreach($livestock as $item)
+                            <option value="{{ $item['id'] }}" data-farm="{{ $item['farm_id'] }}">{{ $item['name'] }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label for="tanggal" class="form-label required">Tanggal</label>
                         <input type="date" class="form-control" id="tanggal" name="tanggal" value="{{ date('Y-m-d') }}"
                             required>
@@ -133,7 +143,7 @@
             </div>
 
             <!-- Report Statistics Summary -->
-            <div class="row mt-4" id="reportStats" style="display: none;">
+            {{-- <div class="row mt-4" id="reportStats" style="display: none;">
                 <div class="col-md-3">
                     <div class="card bg-primary text-white">
                         <div class="card-body text-center">
@@ -166,7 +176,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> --}}
 
             <div id="report-content">
                 <!-- Report content will be loaded here -->
@@ -182,6 +192,24 @@
                 placeholder: 'Pilih Farm',
                 allowClear: true
             });
+            $('#livestock').select2({
+                placeholder: 'Semua Livestock',
+                allowClear: true
+            });
+
+            // Filter livestock by farm
+            $('#farm').on('change', function() {
+                var selectedFarm = $(this).val();
+                $('#livestock option').each(function() {
+                    var farmId = $(this).data('farm');
+                    if (!selectedFarm || !farmId || farmId == selectedFarm) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+                $('#livestock').val('').trigger('change');
+            });
 
             // Handle form submission
             $('#filter-form').on('submit', function(e) {
@@ -192,6 +220,7 @@
             // Handle reset button
             $('#resetButton').on('click', function() {
                 $('#farm').val('').trigger('change');
+                $('#livestock').val('').trigger('change');
                 $('#tanggal').val('{{ date('Y-m-d') }}');
                 $('#report_type').val('simple');
                 $('#report-content').empty();
@@ -243,11 +272,12 @@
                     data: {
                         farm: farm,
                         tanggal: tanggal,
-                        report_type: reportType
+                        report_type: reportType,
+                        livestock: $('#livestock').val()
                     },
                     success: function(response) {
                         $('#report-content').html(response);
-                        $('#reportStats').show();
+                        // $('#reportStats').show();
                         updateReportStats();
                     },
                     error: function(xhr) {
