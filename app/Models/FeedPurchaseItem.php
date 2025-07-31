@@ -147,11 +147,6 @@ class FeedPurchaseItem extends BaseModel
         return $this->belongsTo(FeedPurchase::class, 'feed_purchase_id');
     }
 
-    public function livestock()
-    {
-        return $this->belongsTo(Livestock::class, 'livestock_id', 'id');
-    }
-
     public function feedItem()
     {
         return $this->belongsTo(Feed::class, 'feed_id');
@@ -160,11 +155,6 @@ class FeedPurchaseItem extends BaseModel
     public function feed()
     {
         return $this->belongsTo(Feed::class, 'feed_id');
-    }
-
-    public function batch()
-    {
-        return $this->belongsTo(FeedPurchaseBatch::class, 'feed_purchase_batch_id');
     }
 
     public function unit()
@@ -204,16 +194,21 @@ class FeedPurchaseItem extends BaseModel
     {
         parent::boot();
 
-        static::deleting(function ($feedPurchase) {
-            // Update CurrentFeed quantity when FeedPurchase is deleted
-            $currentFeed = CurrentFeed::where('livestock_id', $feedPurchase->livestock_id)
-                ->where('feed_id', $feedPurchase->feed_id)
-                ->first();
+        static::deleting(function ($feedPurchaseItem) {
+            // Get livestock_id from parent FeedPurchase
+            $livestockId = $feedPurchaseItem->feedPurchase->livestock_id ?? null;
 
-            if ($currentFeed) {
-                // Decrease the quantity based on the deleted feed purchase
-                $currentFeed->quantity -= $feedPurchase->converted_quantity;
-                $currentFeed->save();
+            if ($livestockId) {
+                // Update CurrentFeed quantity when FeedPurchaseItem is deleted
+                $currentFeed = CurrentFeed::where('livestock_id', $livestockId)
+                    ->where('feed_id', $feedPurchaseItem->feed_id)
+                    ->first();
+
+                if ($currentFeed) {
+                    // Decrease the quantity based on the deleted feed purchase item
+                    $currentFeed->quantity -= $feedPurchaseItem->converted_quantity;
+                    $currentFeed->save();
+                }
             }
         });
     }

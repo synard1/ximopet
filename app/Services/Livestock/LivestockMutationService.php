@@ -1332,6 +1332,27 @@ class LivestockMutationService
                     'created_by' => auth()->id(),
                     'updated_by' => auth()->id(),
                 ]);
+                // --- Injected: Generate number and number_full if missing ---
+                if (empty($livestock->number) || empty($livestock->number_full)) {
+                    try {
+                        $numbering = \App\Services\Livestock\LivestockNumberGeneratorService::generateNumber('livestocks', $tanggal, []);
+                        $livestock->number = $numbering['number'];
+                        $livestock->number_full = $numbering['full_number'];
+                        $livestock->save();
+                        Log::info('Generated automatic numbering for Livestock (mutation)', [
+                            'livestock_id' => $livestock->id,
+                            'number' => $livestock->number,
+                            'number_full' => $livestock->number_full,
+                            'date' => $tanggal
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to generate automatic numbering for Livestock (mutation)', [
+                            'livestock_id' => $livestock->id,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Continue without numbering - not critical
+                    }
+                }
 
                 Log::info('✅ Created new Livestock', [
                     'livestock_id' => $livestock->id,

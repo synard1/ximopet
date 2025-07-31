@@ -188,6 +188,11 @@ class Livestock extends BaseModel
         return $this->hasMany(LivestockDepletion::class, 'livestock_id', 'id');
     }
 
+    public function livestockSales()
+    {
+        return $this->hasMany(LivestockSales::class, 'livestock_id', 'id');
+    }
+
     public function salesItems()
     {
         return $this->hasMany(LivestockSalesItem::class, 'livestock_id', 'id');
@@ -293,7 +298,7 @@ class Livestock extends BaseModel
     {
         return $this->batches()
             ->where('status', 'active')
-            ->sum('populasi_awal');
+            ->sum('initial_quantity');
     }
 
     // Helper method to get total current weight

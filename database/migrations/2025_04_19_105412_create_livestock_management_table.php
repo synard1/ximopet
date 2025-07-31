@@ -207,32 +207,49 @@ return new class extends Migration {
         // Livestock Sales
         Schema::create('livestock_sales', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->date('tanggal')->index();
+            $table->uuid('company_id')->index();
+            $table->uuid('livestock_id')->index();
+            $table->date('date')->index();
             $table->string('customer_name')->nullable();
             $table->foreignUuid('customer_id')->nullable()->constrained('partners')->onDelete('cascade');
+            $table->string('status')->index();
+            $table->text('notes')->nullable();
+            $table->json('data')->nullable();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
+            $table->foreign('livestock_id')->references('id')->on('livestocks')->onDelete('cascade');
+            $table->foreign('customer_id')->references('id')->on('partners')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
 
         Schema::create('livestock_sales_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->uuid('company_id')->index();
             $table->foreignUuid('livestock_sales_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
-            $table->date('tanggal');
+            $table->uuid('livestock_batch_id')->nullable()->constrained()->onDelete('cascade');
+            $table->date('date')->index();
             $table->integer('quantity');
             $table->decimal('weight', 10, 2)->nullable();
-            $table->decimal('berat_total', 10, 2)->nullable();
-            $table->decimal('harga_satuan', 12, 2);
+            $table->foreignUuid('unit_id')->nullable()->constrained()->onDelete('cascade');
+            $table->decimal('total_weight', 10, 2)->nullable();
+            $table->decimal('price', 12, 2);
+            $table->decimal('total_price', 12, 2);
+            $table->json('data')->nullable();
             $table->uuid('created_by')->index();
             $table->uuid('updated_by')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
 
+            $table->foreign('livestock_sales_id')->references('id')->on('livestock_sales')->onDelete('cascade');
+            $table->foreign('livestock_id')->references('id')->on('livestocks')->onDelete('cascade');
+            $table->foreign('livestock_batch_id')->references('id')->on('livestock_batches')->onDelete('set null');
+            $table->foreign('unit_id')->references('id')->on('units')->onDelete('set null');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
