@@ -45,4 +45,12 @@ interface RecordingDataServiceInterface
      * @return ServiceResult A result object containing the table data or an error.
      */
     public function loadRecordingDataForTable(string $livestockId): ServiceResult;
+
+    /**
+     * Get the livestock summary.
+     *
+     * @param string $livestockId The ID of the livestock.
+     * @return array The livestock summary.
+     */
+    public function getLivestockSummary(string $livestockId): array;
 }

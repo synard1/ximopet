@@ -22,6 +22,7 @@ return new class extends Migration
             $table->decimal('weight', 15, 2)->default(0);
             $table->float('price', 15, 2)->default(0);
             $table->string('status', 50)->nullable();
+            $table->json('data')->nullable();
             $table->json('metadata')->nullable();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
