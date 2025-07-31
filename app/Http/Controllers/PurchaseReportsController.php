@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Farm;
 use App\Models\LivestockPurchase;
-use App\Models\FeedPurchaseBatch;
+use App\Models\FeedPurchase;
+use App\Models\FeedPurchaseItem;
 use App\Models\SupplyPurchaseBatch;
 use App\Models\Partner;
 use App\Models\Expedition;
@@ -16,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Support\Facades\Auth;
 
 class PurchaseReportsController extends Controller
 {
@@ -24,10 +26,11 @@ class PurchaseReportsController extends Controller
      */
     public function indexPembelianLivestock()
     {
-        $farms = Farm::where('company_id', auth()->user()->company_id)->get();
-        $partners = Partner::where('type', 'Supplier')->where('company_id', auth()->user()->company_id)->get();
-        $expeditions = Expedition::where('company_id', auth()->user()->company_id)->get();
-        $livestocks = Livestock::with(['farm', 'coop'])->where('company_id', auth()->user()->company_id)->get()->map(function ($l) {
+        $user = Auth::user();
+        $farms = Farm::where('company_id', $user->company_id)->get();
+        $partners = Partner::where('type', 'Supplier')->where('company_id', $user->company_id)->get();
+        $expeditions = Expedition::where('company_id', $user->company_id)->get();
+        $livestocks = Livestock::with(['farm', 'coop'])->where('company_id', $user->company_id)->get()->map(function ($l) {
             return [
                 'id' => $l->id,
                 'farm_id' => $l->farm_id,
@@ -39,7 +42,7 @@ class PurchaseReportsController extends Controller
         })->values()->all();
 
         Log::info('Livestock Purchase Report Index accessed', [
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'farms_count' => $farms->count(),
             'partners_count' => $partners->count()
         ]);
@@ -52,11 +55,12 @@ class PurchaseReportsController extends Controller
      */
     public function indexPembelianPakan()
     {
-        $farms = Farm::where('company_id', auth()->user()->company_id)->get();
-        $partners = Partner::where('type', 'Supplier')->where('company_id', auth()->user()->company_id)->get();
-        $expeditions = Expedition::where('company_id', auth()->user()->company_id)->get();
-        $feeds = Feed::where('company_id', auth()->user()->company_id)->get();
-        $livestocks = Livestock::with(['farm', 'coop'])->where('company_id', auth()->user()->company_id)->get()->map(function ($l) {
+        $user = Auth::user();
+        $farms = Farm::where('company_id', $user->company_id)->get();
+        $partners = Partner::where('type', 'Supplier')->where('company_id', $user->company_id)->get();
+        $expeditions = Expedition::where('company_id', $user->company_id)->get();
+        $feeds = Feed::where('company_id', $user->company_id)->get();
+        $livestocks = Livestock::with(['farm', 'coop'])->where('company_id', $user->company_id)->get()->map(function ($l) {
             return [
                 'id' => $l->id,
                 'farm_id' => $l->farm_id,
@@ -68,7 +72,7 @@ class PurchaseReportsController extends Controller
         })->values()->all();
 
         Log::info('Feed Purchase Report Index accessed', [
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'farms_count' => $farms->count(),
             'feeds_count' => $feeds->count()
         ]);
@@ -81,11 +85,12 @@ class PurchaseReportsController extends Controller
      */
     public function indexPembelianSupply()
     {
-        $farms = Farm::where('company_id', auth()->user()->company_id)->get();
-        $partners = Partner::where('type', 'Supplier')->where('company_id', auth()->user()->company_id)->get();
-        $expeditions = Expedition::where('company_id', auth()->user()->company_id)->get();
-        $supplies = Supply::where('company_id', auth()->user()->company_id)->get();
-        $livestocks = Livestock::with(['farm', 'coop'])->where('company_id', auth()->user()->company_id)->get()->map(function ($l) {
+        $user = Auth::user();
+        $farms = Farm::where('company_id', $user->company_id)->get();
+        $partners = Partner::where('type', 'Supplier')->where('company_id', $user->company_id)->get();
+        $expeditions = Expedition::where('company_id', $user->company_id)->get();
+        $supplies = Supply::where('company_id', $user->company_id)->get();
+        $livestocks = Livestock::with(['farm', 'coop'])->where('company_id', $user->company_id)->get()->map(function ($l) {
             return [
                 'id' => $l->id,
                 'farm_id' => $l->farm_id,
@@ -97,7 +102,7 @@ class PurchaseReportsController extends Controller
         })->values()->all();
 
         Log::info('Supply Purchase Report Index accessed', [
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'farms_count' => $farms->count(),
             'supplies_count' => $supplies->count()
         ]);
@@ -110,6 +115,7 @@ class PurchaseReportsController extends Controller
      */
     public function exportPembelianLivestock(Request $request)
     {
+        $user = Auth::user();
         // Validasi input
         $request->validate([
             'start_date' => 'required|date',
@@ -126,7 +132,7 @@ class PurchaseReportsController extends Controller
         $exportFormat = $request->export_format ?? 'html';
 
         Log::info('Export Livestock Purchase Report', [
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'start_date' => $startDate->format('Y-m-d'),
             'end_date' => $endDate->format('Y-m-d'),
             'export_format' => $exportFormat,
@@ -224,6 +230,7 @@ class PurchaseReportsController extends Controller
      */
     public function exportPembelianPakan(Request $request)
     {
+        $user = Auth::user();
         // Validasi input
         $request->validate([
             'start_date' => 'required|date',
@@ -232,7 +239,7 @@ class PurchaseReportsController extends Controller
             'livestock_id' => 'nullable|exists:livestocks,id',
             'supplier_id' => 'nullable|exists:partners,id',
             'feed_id' => 'nullable|exists:feeds,id',
-            'status' => 'nullable|in:draft,confirmed,arrived,completed',
+            'status' => 'nullable|in:draft,pending,confirmed,in_transit,arrived,cancelled,completed',
             'export_format' => 'nullable|in:html,excel,pdf,csv'
         ]);
 
@@ -241,21 +248,21 @@ class PurchaseReportsController extends Controller
         $exportFormat = $request->export_format ?? 'html';
 
         Log::info('Export Feed Purchase Report', [
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'start_date' => $startDate->format('Y-m-d'),
             'end_date' => $endDate->format('Y-m-d'),
             'export_format' => $exportFormat,
             'filters' => $request->only(['farm_id', 'livestock_id', 'supplier_id', 'feed_id', 'status'])
         ]);
 
-        // Ambil data pembelian pakan
-        $batchesQuery = FeedPurchaseBatch::with([
+        // Ambil data pembelian pakan menggunakan struktur baru
+        $purchasesQuery = FeedPurchase::with([
             'supplier',
             'expedition',
-            'feedPurchases.livestock.farm',
-            'feedPurchases.livestock.coop',
-            'feedPurchases.feed',
-            'feedPurchases.unit'
+            'livestock.farm',
+            'livestock.coop',
+            'feedPurchaseItems.feed',
+            'feedPurchaseItems.unit'
         ])
             ->whereBetween('date', [$startDate, $endDate])
             ->when($request->supplier_id, function ($query) use ($request) {
@@ -264,27 +271,23 @@ class PurchaseReportsController extends Controller
             ->when($request->status, function ($query) use ($request) {
                 return $query->where('status', $request->status);
             })
-            ->when($request->farm_id || $request->livestock_id || $request->feed_id, function ($query) use ($request) {
-                return $query->whereHas('feedPurchases', function ($q) use ($request) {
-                    if ($request->farm_id) {
-                        $q->whereHas('livestock', function ($subQ) use ($request) {
-                            $subQ->where('farm_id', $request->farm_id);
-                        });
-                    }
-                    if ($request->livestock_id) {
-                        $q->where('livestock_id', $request->livestock_id);
-                    }
-                    if ($request->feed_id) {
-                        $q->where('feed_id', $request->feed_id);
-                    }
+            ->when($request->farm_id, function ($query) use ($request) {
+                return $query->where('farm_id', $request->farm_id);
+            })
+            ->when($request->livestock_id, function ($query) use ($request) {
+                return $query->where('livestock_id', $request->livestock_id);
+            })
+            ->when($request->feed_id, function ($query) use ($request) {
+                return $query->whereHas('feedPurchaseItems', function ($q) use ($request) {
+                    $q->where('feed_id', $request->feed_id);
                 });
             })
             ->orderBy('date', 'asc')
             ->orderBy('invoice_number', 'asc');
 
-        $batches = $batchesQuery->get();
+        $purchases = $purchasesQuery->get();
 
-        if ($batches->isEmpty()) {
+        if ($purchases->isEmpty()) {
             Log::warning('No Feed Purchase data found for export', [
                 'start_date' => $startDate->format('Y-m-d'),
                 'end_date' => $endDate->format('Y-m-d'),
@@ -297,32 +300,30 @@ class PurchaseReportsController extends Controller
             ], 404);
         }
 
-        // Hitung summary data
+        // Hitung summary data berdasarkan struktur baru
         $summary = [
             'period' => $startDate->format('d-M-Y') . ' s.d. ' . $endDate->format('d-M-Y'),
-            'total_batches' => $batches->count(),
-            'total_purchases' => $batches->sum(function ($batch) {
-                return $batch->feedPurchases->count();
+            'total_purchases' => $purchases->count(),
+            'total_items' => $purchases->sum(function ($purchase) {
+                return $purchase->feedPurchaseItems->count();
             }),
-            'total_suppliers' => $batches->unique('supplier_id')->count(),
-            'total_farms' => $batches->flatMap(function ($batch) {
-                return $batch->feedPurchases->pluck('livestock.farm_id');
-            })->unique()->count(),
-            'total_value' => $batches->sum(function ($batch) {
-                return $batch->feedPurchases->sum(function ($purchase) {
-                    return $purchase->quantity * $purchase->price_per_unit;
-                }) + $batch->expedition_fee;
+            'total_suppliers' => $purchases->unique('supplier_id')->count(),
+            'total_farms' => $purchases->unique('farm_id')->count(),
+            'total_value' => $purchases->sum(function ($purchase) {
+                return $purchase->feedPurchaseItems->sum(function ($item) {
+                    return $item->quantity * $item->price_per_unit;
+                }) + $purchase->expedition_fee;
             }),
-            'total_quantity' => $batches->sum(function ($batch) {
-                return $batch->feedPurchases->sum('converted_quantity');
+            'total_quantity' => $purchases->sum(function ($purchase) {
+                return $purchase->feedPurchaseItems->sum('converted_quantity');
             }),
-            'by_status' => $batches->groupBy('status')->map->count(),
-            'by_supplier' => $batches->groupBy('supplier.name')->map->count(),
-            'by_feed' => $batches->flatMap->feedPurchases->groupBy('feed.name')->map->count()
+            'by_status' => $purchases->groupBy('status')->map->count(),
+            'by_supplier' => $purchases->groupBy('supplier.name')->map->count(),
+            'by_feed' => $purchases->flatMap->feedPurchaseItems->groupBy('feed.name')->map->count()
         ];
 
         $exportData = [
-            'batches' => $batches,
+            'purchases' => $purchases,
             'summary' => $summary,
             'filters' => [
                 'start_date' => $startDate,
@@ -353,6 +354,7 @@ class PurchaseReportsController extends Controller
      */
     public function exportPembelianSupply(Request $request)
     {
+        $user = Auth::user();
         // Validasi input
         $request->validate([
             'start_date' => 'required|date',
@@ -379,7 +381,7 @@ class PurchaseReportsController extends Controller
         $tahun = $request->tahun;
 
         Log::info('Export Supply Purchase Report', [
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'start_date' => $startDate->format('Y-m-d'),
             'end_date' => $endDate->format('Y-m-d'),
             'export_format' => $exportFormat,
@@ -603,7 +605,23 @@ class PurchaseReportsController extends Controller
     // Helper methods for Feed Purchase Export
     private function exportFeedPurchaseToHtml($data)
     {
-        return view('pages.reports.pembelian-pakan', $data);
+        // Transform data structure to match view expectations
+        $transformedData = [
+            'batches' => $data['purchases'], // Keep 'batches' key for view compatibility
+            'summary' => [
+                'period' => $data['summary']['period'], // Add period key
+                'total_batches' => $data['summary']['total_purchases'], // Map total_purchases to total_batches
+                'total_purchases' => $data['summary']['total_items'], // Map total_items to total_purchases
+                'total_quantity' => $data['summary']['total_quantity'],
+                'total_value' => $data['summary']['total_value'],
+                'by_status' => $data['summary']['by_status'],
+                'by_supplier' => $data['summary']['by_supplier'],
+                'by_feed' => $data['summary']['by_feed']
+            ],
+            'filters' => $data['filters']
+        ];
+
+        return view('pages.reports.pembelian-pakan', $transformedData);
     }
 
     private function exportFeedPurchaseToExcel($data)

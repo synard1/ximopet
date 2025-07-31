@@ -153,10 +153,10 @@
                                                 {{ ucfirst($batch->status ?? 'draft') }}
                                             </span>
                                         </td>
-                                        <td class="text-center">{{ $batch->feedPurchases->count() }}</td>
+                                        <td class="text-center">{{ $batch->feedPurchaseItems->count() }}</td>
                                         <td class="text-end">
-                                            Rp {{ number_format($batch->feedPurchases->sum(function($purchase) {
-                                            return $purchase->quantity * $purchase->price_per_unit;
+                                            Rp {{ number_format($batch->feedPurchaseItems->sum(function($item) {
+                                            return $item->quantity * $item->price_per_unit;
                                             }) + ($batch->expedition_fee ?? 0), 0, ',', '.') }}
                                         </td>
                                     </tr>

@@ -114,8 +114,16 @@ class ReportsController extends Controller
     public function indexPenjualan()
     {
         try {
-            $data = $this->indexOptimizationService->prepareCommonIndexData('ternak');
-            return view('pages.reports.index_report_penjualan', $data);
+            $data = $this->indexService->prepareSalesReportData();
+            // $farms = $data['farms'];
+            // $coops = $data['coops'];
+            // $livestockForView = $data['livestockForView'];
+            // dd($farms->id);
+            return view('pages.reports.index_report_penjualan', [
+                'farms' => $data['farms'],
+                'coops' => $data['coops'],
+                'livestockForView' => $data['livestockForView']
+            ]);
         } catch (\Exception $e) {
             Log::error('Error in indexPenjualan: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Terjadi kesalahan saat memuat data: ' . $e->getMessage());
@@ -276,6 +284,9 @@ class ReportsController extends Controller
 
     public function exportPenjualan(Request $request)
     {
+        // dd($request->all());
+        $format = $request->export_format ?? 'html';
+        return $this->salesReportService->exportSalesReport($request, $format);
         try {
             $format = $request->export_format ?? 'html';
             return $this->salesReportService->exportSalesReport($request, $format);
