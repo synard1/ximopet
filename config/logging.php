@@ -123,6 +123,13 @@ return [
             'path' => storage_path('logs/recording.log'),
             'level' => env('LOG_RECORDING_LEVEL', 'debug'),
         ],
+
+        'bgjob' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/bgjob.log'),
+            'level' => env('LOG_BGJOB_LEVEL', 'debug'),
+            'days' => 30,
+        ],
     ],
 
 ];

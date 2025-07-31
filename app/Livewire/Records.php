@@ -79,6 +79,9 @@ class Records extends Component
     public $yesterday_supply_usage;
     public $yesterday_stock_end;
     public $yesterday_data = null;
+    public $yesterday_sales_quantity = 0;
+    public $yesterday_sales_weight = 0;
+    public $yesterday_sales_status = 'draft';
 
     public $initial_stock;
     public $final_stock;
@@ -132,6 +135,8 @@ class Records extends Component
     public $validationSections = [];
 
     public $isReloadingHistory = false;
+
+    public $livestockSummary = [];
 
     // Validation/locking status for each section
     public $validationStatus = [
@@ -312,12 +317,18 @@ class Records extends Component
             $this->legacyRecordingService = app(LegacyRecordingService::class);
         }
 
+        // Ensure recordingDataService is initialized before use
+        if (!$this->recordingDataService) {
+            $this->recordingDataService = app(RecordingDataServiceInterface::class);
+        }
+
         $this->loadStockData();
         $this->initializeItemQuantities();
         $this->loadAvailableSupplies();
         $this->initializeSupplyItems();
         $this->checkCurrentLivestockStock();
         $this->recordings = $this->legacyRecordingService->loadRecordingDataForTable($this->livestockId);
+        $this->livestockSummary = $this->recordingDataService->getLivestockSummary($this->livestockId);
     }
 
     public function setRecords($livestockId)
@@ -478,7 +489,7 @@ class Records extends Component
 
         // Refresh current data if date is set
         if ($this->date) {
-            $this->updatedDate($this->date);
+            $this->updatedDate($this->date, true);
         }
 
         // Dispatch success message
@@ -573,12 +584,46 @@ class Records extends Component
 
     public function render()
     {
+        // Prepare yesterday data for view with proper structure
+        $yesterdayData = null;
+        if ($this->yesterday_data && is_array($this->yesterday_data)) {
+            $yesterdayData = $this->yesterday_data;
+            $yesterdayData['has_data'] = true;
+            $yesterdayData['formatted_date'] = $this->yesterday_data['date'] ?? now()->subDay()->format('Y-m-d');
+
+            // Safe date parsing with fallback
+            try {
+                $yesterdayData['day_name'] = \Carbon\Carbon::parse($yesterdayData['formatted_date'])->isoFormat('dddd');
+            } catch (\Exception $e) {
+                $yesterdayData['day_name'] = 'Unknown';
+                logErrorIfDebug('❌ Error parsing yesterday date', [
+                    'date' => $yesterdayData['formatted_date'],
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            $yesterdayData['summary'] = $this->generateYesterdaySummary();
+
+            // Ensure all required keys exist with fallback values
+            $yesterdayData['has_data'] = $yesterdayData['has_data'] ?? true;
+            $yesterdayData['formatted_date'] = $yesterdayData['formatted_date'] ?? now()->subDay()->format('Y-m-d');
+            $yesterdayData['day_name'] = $yesterdayData['day_name'] ?? 'Unknown';
+            $yesterdayData['summary'] = $yesterdayData['summary'] ?? 'Tidak ada data';
+
+            logDebugIfDebug('📋 Yesterday data prepared for view', [
+                'has_data' => $yesterdayData['has_data'],
+                'formatted_date' => $yesterdayData['formatted_date'],
+                'day_name' => $yesterdayData['day_name'],
+                'summary' => $yesterdayData['summary']
+            ]);
+        }
+
         return view('livewire.records', [
             'recordings' => $this->recordings,
             'items' => $this->items,
             'supplyQuantities' => $this->supplyQuantities,
             'availableSupplies' => $this->availableSupplies,
-            'yesterdayData' => $this->yesterday_data
+            'yesterdayData' => $yesterdayData
         ]);
     }
 
@@ -864,23 +909,31 @@ class Records extends Component
                 // Cek apakah ada request bypass cache (misal dari tombol reload atau query param)
                 // Fix: Make sure $bypassCache is always boolean, and log its value for debugging
                 $bypass = (bool) $bypassCache;
+
+                // If bypassCache is null (from Livewire auto-call), default to true
+                if ($bypassCache === null) {
+                    $bypass = true;
+                }
+
                 if (request()->has('bypassCache')) {
                     $requestBypass = request()->get('bypassCache');
-                    // Accept '1', 'true', true as true
-                    $bypass = filter_var($requestBypass, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-                    if ($bypass === null) {
-                        // fallback: treat non-empty as true
-                        $bypass = !empty($requestBypass);
+                    // Robust boolean parsing
+                    if (is_string($requestBypass)) {
+                        $normalized = strtolower($requestBypass);
+                        $bypass = in_array($normalized, ['1', 'true', 'yes', 'on'], true);
+                    } else {
+                        $bypass = (bool) $requestBypass;
                     }
                 }
 
                 logDebugIfDebug('updatedDate: bypassCache resolved', [
                     'input_bypassCache' => $bypassCache,
+                    'input_bypassCache_type' => gettype($bypassCache),
                     'request_bypassCache' => request()->get('bypassCache'),
                     'final_bypass' => $bypass,
+                    'type_request_bypassCache' => gettype(request()->get('bypassCache')),
+                    'is_livewire_auto_call' => $bypassCache === null,
                 ]);
-
-                // Remove dd($bypassCache); // This was causing interruption and confusion
 
                 $serviceResult = $this->recordingDataService->loadCurrentDateData($this->livestockId, $value, $bypass);
 
@@ -901,7 +954,10 @@ class Records extends Component
                         $this->supplyQuantities = $data['supplyQuantities'] ?? [];
                         $this->feedUsageId = $data['feedUsageId'] ?? null;
                         $this->supplyUsageId = $data['supplyUsageId'] ?? null;
-                        $this->weight_today = $data['weight_today'] ?? null;
+
+                        // Enhanced weight_today extraction with fallback logic
+                        $this->weight_today = $this->extractWeightToday($data);
+
                         $this->mortality = $data['mortality'] ?? 0;
                         $this->culling = $data['culling'] ?? 0;
                         $this->sales_quantity = $data['sales_quantity'] ?? 0;
@@ -983,7 +1039,7 @@ class Records extends Component
 
         // Weight & sales
         $this->weight_yesterday = $data['weight_yesterday'];
-        $this->weight_today     = $data['weight_today'];
+        $this->weight_today     = $this->extractWeightToday($data);
         $this->weight_gain      = $data['weight_gain'];
 
         $this->sales_quantity = $data['sales_quantity'] ?? 0;
@@ -1022,11 +1078,14 @@ class Records extends Component
                     $data = $result->getData();
 
                     // Validate that we have the essential data
-                    $hasEssentialData = isset($data['weight']) &&
-                        isset($data['mortality']) &&
-                        isset($data['culling']) &&
-                        isset($data['feed_usage']) &&
-                        isset($data['supply_usage']);
+                    $hasEssentialData = isset($data['weight']) ||
+                        isset($data['mortality']) ||
+                        isset($data['culling']) ||
+                        isset($data['feed_usage']) ||
+                        isset($data['supply_usage']) ||
+                        isset($data['sales']);
+
+                    // dd($hasEssentialData);
 
                     if ($hasEssentialData) {
                         // Fully populate yesterday's data from the service result, mirroring the fallback logic
@@ -1038,6 +1097,11 @@ class Records extends Component
                         $this->yesterday_feed_usage = $data['feed_usage']['total_quantity'] ?? 0;
                         $this->yesterday_supply_usage = $data['supply_usage']['total_quantity'] ?? 0;
 
+                        // Add sales data
+                        $this->yesterday_sales_quantity = $data['sales']['quantity'] ?? 0;
+                        $this->yesterday_sales_weight = $data['sales']['weight'] ?? 0;
+                        $this->yesterday_sales_status = $data['sales']['status'] ?? 'draft';
+
                         // Also populate the main weight_yesterday property used for calculations
                         $this->weight_yesterday = $data['weight'] ?? null;
 
@@ -1045,7 +1109,7 @@ class Records extends Component
                         return; // Exit successfully without fallback
                     } else {
                         logWarningIfDebug('⚠️ loadYesterdayData: Modular service returned incomplete data, executing fallback.', [
-                            'missing_keys' => array_diff(['weight', 'mortality', 'culling', 'feed_usage', 'supply_usage'], array_keys($data))
+                            'missing_keys' => array_diff(['weight', 'mortality', 'culling', 'feed_usage', 'supply_usage', 'sales'], array_keys($data))
                         ]);
                     }
                 } else {
@@ -1085,6 +1149,11 @@ class Records extends Component
             $this->yesterday_culling = $data['culling'];
             $this->yesterday_feed_usage = $data['feed_usage'];
             $this->yesterday_supply_usage = $data['supply_usage'];
+
+            // Add sales data from legacy service if available
+            $this->yesterday_sales_quantity = $data['sales']['quantity'] ?? 0;
+            $this->yesterday_sales_weight = $data['sales']['weight'] ?? 0;
+            $this->yesterday_sales_status = $data['sales']['status'] ?? 'draft';
         } else {
             $this->resetYesterdayData();
         }
@@ -1100,23 +1169,32 @@ class Records extends Component
         $summary = [];
 
         if ($this->yesterday_weight > 0) {
-            $summary[] = "Berat: " . number_format($this->yesterday_weight, 0) . "gr";
+            $summary[] = "Berat: " . number_format((float) $this->yesterday_weight, 0) . "gr";
         }
 
         if ($this->yesterday_mortality > 0) {
-            $summary[] = "Mati: " . $this->yesterday_mortality . " ekor";
+            $summary[] = "Mati: " . (int) $this->yesterday_mortality . " ekor";
         }
 
         if ($this->yesterday_culling > 0) {
-            $summary[] = "Afkir: " . $this->yesterday_culling . " ekor";
+            $summary[] = "Afkir: " . (int) $this->yesterday_culling . " ekor";
         }
 
-        if ($this->yesterday_feed_usage['total_quantity'] > 0) {
-            $summary[] = "Pakan: " . number_format($this->yesterday_feed_usage['total_quantity'], 1) . "kg";
+        if (is_array($this->yesterday_feed_usage) && ($this->yesterday_feed_usage['total_quantity'] ?? 0) > 0) {
+            $summary[] = "Pakan: " . number_format((float) $this->yesterday_feed_usage['total_quantity'], 1) . "kg";
         }
 
-        if ($this->yesterday_supply_usage['total_quantity'] > 0) {
-            $summary[] = "OVK: " . $this->yesterday_supply_usage['types_count'] . " jenis";
+        if (is_array($this->yesterday_supply_usage) && ($this->yesterday_supply_usage['total_quantity'] ?? 0) > 0) {
+            $summary[] = "OVK: " . (int) $this->yesterday_supply_usage['types_count'] . " jenis";
+        }
+
+        // Add sales data to summary
+        if (isset($this->yesterday_sales_quantity) && $this->yesterday_sales_quantity > 0) {
+            $summary[] = "Jual: " . (int) $this->yesterday_sales_quantity . " ekor";
+        }
+
+        if (isset($this->yesterday_sales_weight) && $this->yesterday_sales_weight > 0) {
+            $summary[] = "Berat Jual: " . number_format((float) $this->yesterday_sales_weight, 0) . "gr";
         }
 
         return empty($summary) ? "Tidak ada data" : implode(", ", $summary);
@@ -1143,6 +1221,9 @@ class Records extends Component
             'by_type' => [],
             'types_count' => 0
         ];
+        $this->yesterday_sales_quantity = 0;
+        $this->yesterday_sales_weight = 0;
+        $this->yesterday_sales_status = 'draft';
         $this->yesterday_data = null;
     }
 
@@ -1645,10 +1726,84 @@ class Records extends Component
         logInfoIfDebug('📝 Form reset after successful save.');
     }
 
+    /**
+     * Extract weight_today with comprehensive fallback logic
+     * Handles multiple data sources based on existing conditions
+     */
+    private function extractWeightToday(array $data)
+    {
+        // Primary source: direct weight_today field
+        $weightToday = $data['weight_today'] ?? null;
+
+        if (!is_null($weightToday)) {
+            logDebugIfDebug('Weight today extracted from primary source', [
+                'source' => 'weight_today_field',
+                'value' => $weightToday
+            ]);
+            return $weightToday;
+        }
+
+        // Fallback 1: From payload production weight structure
+        if (isset($data['payload']['production']['weight']['today'])) {
+            $weightToday = $data['payload']['production']['weight']['today'];
+            logDebugIfDebug('Weight today extracted from payload production', [
+                'source' => 'payload.production.weight.today',
+                'value' => $weightToday
+            ]);
+            return $weightToday;
+        }
+
+        // Fallback 2: From payload history weight changes (latest entry)
+        if (isset($data['payload']['history']['weight_changes']) && is_array($data['payload']['history']['weight_changes'])) {
+            $weightChanges = $data['payload']['history']['weight_changes'];
+            if (!empty($weightChanges)) {
+                $latestWeightChange = end($weightChanges);
+                if (isset($latestWeightChange['weight_today'])) {
+                    $weightToday = $latestWeightChange['weight_today'];
+                    logDebugIfDebug('Weight today extracted from payload history', [
+                        'source' => 'payload.history.weight_changes.latest',
+                        'value' => $weightToday,
+                        'total_changes' => count($weightChanges)
+                    ]);
+                    return $weightToday;
+                }
+            }
+        }
+
+        // Fallback 3: From legacy payload structure (if exists)
+        if (isset($data['payload']['weight']['today'])) {
+            $weightToday = $data['payload']['weight']['today'];
+            logDebugIfDebug('Weight today extracted from legacy payload', [
+                'source' => 'payload.weight.today',
+                'value' => $weightToday
+            ]);
+            return $weightToday;
+        }
+
+        // Fallback 4: From berat_hari_ini field (if available in data)
+        if (isset($data['berat_hari_ini'])) {
+            $weightToday = $data['berat_hari_ini'];
+            logDebugIfDebug('Weight today extracted from berat_hari_ini', [
+                'source' => 'berat_hari_ini',
+                'value' => $weightToday
+            ]);
+            return $weightToday;
+        }
+
+        // Default: return null if no weight data found
+        logDebugIfDebug('Weight today not found in any source', [
+            'available_keys' => array_keys($data),
+            'has_payload' => isset($data['payload']),
+            'payload_keys' => isset($data['payload']) ? array_keys($data['payload']) : []
+        ]);
+
+        return null;
+    }
+
     public function reloadHistoryData()
     {
         $this->isReloadingHistory = true;
-        $this->updatedDate($this->date);
+        $this->updatedDate($this->date, true);
         $this->isReloadingHistory = false;
     }
 }

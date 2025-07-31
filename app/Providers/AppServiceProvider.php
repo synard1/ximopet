@@ -30,14 +30,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Bind the modular recording services to their contracts.
-        // This allows us to easily swap implementations in the future.
-        $this->app->bind(RecordingDataServiceInterface::class, RecordingDataService::class);
-        $this->app->bind(RecordingPersistenceServiceInterface::class, RecordingPersistenceService::class);
-        $this->app->bind(
-            \App\Services\Recording\Contracts\RecordingSaleServiceInterface::class,
-            \App\Services\Recording\RecordingSaleService::class
-        );
+        // Register modular recording services
+        $this->app->bind(\App\Services\Recording\Contracts\RecordingDataServiceInterface::class, \App\Services\Recording\RecordingDataService::class);
+        $this->app->bind(\App\Services\Recording\Contracts\RecordingPersistenceServiceInterface::class, \App\Services\Recording\RecordingPersistenceService::class);
+        $this->app->bind(\App\Services\Recording\Contracts\RecordingSaleServiceInterface::class, \App\Services\Recording\RecordingSaleService::class);
+
+        // Register VirtualQuantityCalculationService (simplified)
+        $this->app->singleton(\App\Services\Recording\VirtualQuantityCalculationService::class);
     }
 
     /**

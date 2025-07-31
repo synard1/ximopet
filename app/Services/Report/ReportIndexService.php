@@ -88,6 +88,28 @@ class ReportIndexService
      *
      * @return array
      */
+    public function prepareSalesReportData(): array
+    {
+        $livestock = $this->dataAccessService->getLivestock();
+        $farms = $this->dataAccessService->getFarmsByLivestock($livestock->pluck('farm_id')->toArray());
+        $coops = $this->dataAccessService->getCoopsByLivestock($livestock->pluck('coop_id')->toArray());
+
+        $livestockForView = $this->dataAccessService->transformLivestockForView($livestock);
+
+        $this->dataAccessService->logDataAccess('sales_index', [
+            'livestock_count' => $livestock->count(),
+            'farms_count' => $farms->count(),
+            'coops_count' => $coops->count()
+        ]);
+
+        return compact('farms', 'coops', 'livestockForView');
+    }
+
+    /**
+     * Prepare data for Penjualan report index
+     *
+     * @return array
+     */
     public function preparePenjualanReportData(): array
     {
         $kelompokTernak = $this->dataAccessService->getTernak();

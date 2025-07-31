@@ -29,10 +29,28 @@ class RoleModal extends Component
         'name' => 'required|string',
     ];
 
+    protected function rules()
+    {
+        $rules = [
+            'name' => 'required|string',
+        ];
+
+        // Add custom validation for role name uniqueness within company scope
+        if ($this->role && $this->role->exists) {
+            $rules['name'] .= '|unique:roles,name,' . $this->role->id . ',id,company_id,' . ($this->role->company_id ?? 'NULL') . ',guard_name,' . ($this->role->guard_name ?? 'web');
+        } else {
+            $companyId = Auth::user()->company_id;
+            $rules['name'] .= '|unique:roles,name,NULL,id,company_id,' . ($companyId ?? 'NULL') . ',guard_name,web';
+        }
+
+        return $rules;
+    }
+
     protected $listeners = [
         'modal.show.role_name' => 'mountRole',
         'submitRole' => 'submit',
-        'delete_role' => 'delete'
+        'delete_role' => 'delete',
+        'resetForm' => 'resetForm'
     ];
 
     public function boot(RoleBackupService $roleBackupService)
@@ -162,19 +180,51 @@ class RoleModal extends Component
 
     public function submit()
     {
-        $this->validate();
+        $this->validate($this->rules());
 
         // dd($this->all());
 
         try {
             DB::beginTransaction();
 
-            $this->role->name = $this->name;
-            // Ensure company_id is set for non-global roles
-            if (is_null($this->role->company_id)) {
-                $this->role->company_id = Auth::user()->company_id;
+            // Log the current state for debugging
+            Log::info('Starting role update', [
+                'role_id' => $this->role->id ?? 'new',
+                'role_name' => $this->name,
+                'current_company_id' => $this->role->company_id,
+                'user_company_id' => Auth::user()->company_id,
+                'is_new_role' => $this->role->exists ? false : true
+            ]);
+
+            // Check if this is a new role or existing role
+            if (!$this->role->exists) {
+                // This is a new role - set company_id for non-global roles
+                if (is_null($this->role->company_id)) {
+                    $this->role->company_id = Auth::user()->company_id;
+                }
+            } else {
+                // This is an existing role - only update name, don't change company_id
+                // Check if name is being changed and if it would cause a duplicate
+                if ($this->role->name !== $this->name) {
+                    $existingRole = Role::where('name', $this->name)
+                        ->where('company_id', $this->role->company_id)
+                        ->where('guard_name', $this->role->guard_name)
+                        ->where('id', '!=', $this->role->id)
+                        ->first();
+
+                    if ($existingRole) {
+                        throw new \Exception("A role with the name '{$this->name}' already exists for this company.");
+                    }
+                }
             }
+
+            $this->role->name = $this->name;
+
             if ($this->role->isDirty()) {
+                Log::info('Saving role changes', [
+                    'role_id' => $this->role->id,
+                    'dirty_attributes' => $this->role->getDirty()
+                ]);
                 $this->role->save();
             }
 
@@ -218,11 +268,16 @@ class RoleModal extends Component
             }
 
             $this->dispatch('success', 'Role updated successfully!');
+
+            // Reset form for next use
+            $this->resetForm();
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to update role', [
                 'role_id' => $this->role->id ?? null,
-                'error' => $e->getMessage()
+                'role_name' => $this->name,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             $this->dispatch('error', 'Failed to update role: ' . $e->getMessage());
         }
@@ -299,6 +354,16 @@ class RoleModal extends Component
 
     public function hydrate()
     {
+        $this->resetErrorBag();
+        $this->resetValidation();
+    }
+
+    public function resetForm()
+    {
+        $this->name = '';
+        $this->checked_permissions = [];
+        $this->check_all = false;
+        $this->role = new Role;
         $this->resetErrorBag();
         $this->resetValidation();
     }
