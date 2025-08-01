@@ -13,7 +13,6 @@ return new class extends Migration
      */
     protected $tables = [
         'recordings',
-        'ovk_records',
         'feed_usages',
         'supply_usages',
         'livestock_mutations',

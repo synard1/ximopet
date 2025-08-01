@@ -35,7 +35,6 @@ use App\Models\TransaksiJual;
 use Illuminate\Http\Request;
 
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\OVKRecordController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\UserManagement\RoleController;
 use App\Http\Controllers\MasterData\PartnerController;
@@ -493,7 +492,7 @@ Route::prefix('test')->group(function () {
 
     Route::get('/debug-supply-usage/{livestockId?}', [\App\Http\Controllers\TestController::class, 'debugSupplyUsage'])
         ->name('test.debug.supply.usage');
-        
+
     Route::get('/debug-feed-usage/{livestockId?}', [\App\Http\Controllers\FeedController::class, 'debugFeedCardByLivestock'])
         ->name('test.debug.feed.usage');
 });

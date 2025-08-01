@@ -73,11 +73,6 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td>Record OVK</td>
-                                            <td class="text-end fw-bold">{{
-                                                number_format($preview['transaction_records']['ovk_records']) }}</td>
-                                        </tr>
-                                        <tr>
                                             <td>Biaya Ternak</td>
                                             <td class="text-end fw-bold">{{
                                                 number_format($preview['transaction_records']['livestock_costs']) }}
@@ -679,7 +674,6 @@
                             <tr><td>Kematian Ternak</td><td class="text-end fw-bold">${response.cleared_data.livestock_depletion || 0}</td></tr>
                             <tr><td>Penjualan Ternak</td><td class="text-end fw-bold">${response.cleared_data.livestock_sales || 0}</td></tr>
                             <tr><td>Transaksi Penjualan</td><td class="text-end fw-bold">${response.cleared_data.sales_transactions || 0}</td></tr>
-                            <tr><td>Record OVK</td><td class="text-end fw-bold">${response.cleared_data.ovk_records || 0}</td></tr>
                             <tr><td>Biaya Ternak</td><td class="text-end fw-bold">${response.cleared_data.livestock_costs || 0}</td></tr>
                             <tr class="table-danger"><td><strong>Livestock</strong></td><td class="text-end fw-bold">${response.cleared_data.livestock || 0}</td></tr>
                             <tr class="table-danger"><td><strong>Livestock Batches</strong></td><td class="text-end fw-bold">${response.cleared_data.livestock_batches || 0}</td></tr>

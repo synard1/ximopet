@@ -105,7 +105,6 @@ class ClearTransactionDataCommand extends Command
                 ['Livestock Depletion', $preview['transaction_records']['livestock_depletion']],
                 ['Livestock Sales', $preview['transaction_records']['livestock_sales']],
                 ['Sales Transactions', $preview['transaction_records']['sales_transactions']],
-                ['OVK Records', $preview['transaction_records']['ovk_records']],
                 ['Livestock Costs', $preview['transaction_records']['livestock_costs']],
             ]
         );
@@ -179,7 +178,6 @@ class ClearTransactionDataCommand extends Command
                     ['Livestock Depletion', $result['cleared_data']['livestock_depletion'] ?? 0],
                     ['Livestock Sales', $result['cleared_data']['livestock_sales'] ?? 0],
                     ['Sales Transactions', $result['cleared_data']['sales_transactions'] ?? 0],
-                    ['OVK Records', $result['cleared_data']['ovk_records'] ?? 0],
                     ['Livestock Costs', $result['cleared_data']['livestock_costs'] ?? 0],
                 ]
             );

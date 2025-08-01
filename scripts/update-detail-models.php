@@ -73,12 +73,6 @@ $detailModels = [
         'parent' => 'TransaksiJual',
         'reason' => 'Detail transaksi jual, company_id diwarisi dari TransaksiJual'
     ],
-
-    // OVK Related
-    'OVKRecordItem' => [
-        'parent' => 'OVKRecord',
-        'reason' => 'Item detail record OVK, company_id diwarisi dari OVKRecord'
-    ],
 ];
 
 echo "=== BaseModel Company ID Handling Update Script ===\n\n";

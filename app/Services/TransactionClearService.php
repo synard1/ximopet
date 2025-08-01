@@ -24,8 +24,6 @@ use App\Models\{
     SupplyStock,
     SupplyMutation,
     SupplyMutationItem,
-    OVKRecord,
-    OVKRecordItem,
     Mutation,
     MutationItem,
     LivestockMutation,
@@ -162,12 +160,6 @@ class TransactionClearService
         $salesTransactionCount = SalesTransaction::withTrashed()->count();
         SalesTransaction::withTrashed()->forceDelete();
         $cleared['sales_transactions'] = $salesTransactionCount;
-
-        // Clear OVK records (include soft-deleted)
-        $ovkCount = OVKRecord::withTrashed()->count();
-        OVKRecord::withTrashed()->forceDelete();
-        OVKRecordItem::withTrashed()->forceDelete();
-        $cleared['ovk_records'] = $ovkCount;
 
         // Clear livestock cost records (include soft-deleted)
         $costCount = LivestockCost::withTrashed()->count();
@@ -573,7 +565,6 @@ class TransactionClearService
                 'livestock_depletion' => LivestockDepletion::withTrashed()->count(),
                 'livestock_sales' => LivestockSales::withTrashed()->count(),
                 'sales_transactions' => SalesTransaction::withTrashed()->count(),
-                'ovk_records' => OVKRecord::withTrashed()->count(),
                 'livestock_costs' => LivestockCost::withTrashed()->count(),
             ],
             'usage_data' => [

@@ -64,8 +64,6 @@ Fitur ini memungkinkan admin untuk menghapus semua data transaksi dari sistem sa
 -   **LivestockSales** - Data penjualan ternak
 -   **LivestockSalesItem** - Detail penjualan
 -   **SalesTransaction** - Transaksi penjualan
--   **OVKRecord** - Record OVK
--   **OVKRecordItem** - Detail OVK
 -   **LivestockCost** - Biaya ternak
 
 ### 🔄 Usage & Mutation Data

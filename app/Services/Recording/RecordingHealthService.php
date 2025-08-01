@@ -38,7 +38,7 @@ class RecordingHealthService
         ];
 
         $overallStatus = $this->determineOverallStatus($checks);
-        
+
         return [
             'status' => $overallStatus,
             'timestamp' => now()->toISOString(),
@@ -54,20 +54,20 @@ class RecordingHealthService
     {
         try {
             $startTime = microtime(true);
-            
+
             // Test basic connectivity
             DB::connection()->getPdo();
-            
+
             // Test simple query
             $result = DB::select('SELECT 1 as test');
-            
+
             $responseTime = microtime(true) - $startTime;
-            
+
             // Check recording tables
             $tableChecks = $this->checkRecordingTables();
-            
+
             $status = $responseTime < 1.0 && $tableChecks['healthy'] ? 'healthy' : 'degraded';
-            
+
             return [
                 'status' => $status,
                 'response_time' => round($responseTime, 4),
@@ -80,7 +80,7 @@ class RecordingHealthService
             ];
         } catch (\Exception $e) {
             Log::error('Database health check failed', ['error' => $e->getMessage()]);
-            
+
             return [
                 'status' => 'unhealthy',
                 'error' => $e->getMessage(),
@@ -97,7 +97,6 @@ class RecordingHealthService
     {
         $tables = [
             'recordings',
-            'ovk_records',
             'feed_usages',
             'supply_usages',
             'livestock_mutations',
@@ -140,23 +139,23 @@ class RecordingHealthService
     {
         try {
             $startTime = microtime(true);
-            
+
             $testKey = 'health_check_' . time();
             $testValue = 'test_value';
-            
+
             // Test write
             Cache::put($testKey, $testValue, 60);
-            
+
             // Test read
             $retrievedValue = Cache::get($testKey);
-            
+
             // Clean up
             Cache::forget($testKey);
-            
+
             $responseTime = microtime(true) - $startTime;
-            
+
             $status = ($retrievedValue === $testValue && $responseTime < 0.1) ? 'healthy' : 'degraded';
-            
+
             return [
                 'status' => $status,
                 'response_time' => round($responseTime, 4),
@@ -169,7 +168,7 @@ class RecordingHealthService
             ];
         } catch (\Exception $e) {
             Log::error('Cache health check failed', ['error' => $e->getMessage()]);
-            
+
             return [
                 'status' => 'unhealthy',
                 'error' => $e->getMessage(),
@@ -186,7 +185,7 @@ class RecordingHealthService
     {
         try {
             $lastHour = now()->subHour();
-            
+
             $performanceStats = DB::table('recording_performance_logs')
                 ->select([
                     DB::raw('AVG(execution_time) as avg_time'),
@@ -201,7 +200,7 @@ class RecordingHealthService
             $maxTime = $performanceStats->max_time ?? 0;
             $totalOps = $performanceStats->total_operations ?? 0;
             $successfulOps = $performanceStats->successful_operations ?? 0;
-            
+
             $successRate = $totalOps > 0 ? ($successfulOps / $totalOps) : 1.0;
             $errorRate = 1 - $successRate;
 
@@ -231,7 +230,7 @@ class RecordingHealthService
             ];
         } catch (\Exception $e) {
             Log::error('Performance health check failed', ['error' => $e->getMessage()]);
-            
+
             return [
                 'status' => 'unknown',
                 'error' => $e->getMessage(),
@@ -270,7 +269,7 @@ class RecordingHealthService
         try {
             $testUuid = $this->uuidHelper->generateUuid();
             $isValid = $this->uuidHelper->isValidUuid($testUuid);
-            
+
             return [
                 'status' => $isValid ? 'healthy' : 'unhealthy',
                 'test_uuid' => $testUuid,
@@ -295,7 +294,7 @@ class RecordingHealthService
             Cache::put($testKey, 'test', 60);
             $result = Cache::get($testKey);
             Cache::forget($testKey);
-            
+
             return [
                 'status' => $result === 'test' ? 'healthy' : 'unhealthy',
                 'cache_test_passed' => $result === 'test'
@@ -317,9 +316,9 @@ class RecordingHealthService
             // Test error categorization
             $testError = new \Exception('Test error');
             $errorService = app(\App\Services\Recording\RecordingErrorHandlingService::class);
-            
+
             $result = $errorService->createErrorResponse($testError, ['test' => true]);
-            
+
             return [
                 'status' => isset($result['error']['type']) ? 'healthy' : 'unhealthy',
                 'error_handling_passed' => isset($result['error']['type'])
@@ -339,7 +338,7 @@ class RecordingHealthService
     {
         try {
             $lastHour = now()->subHour();
-            
+
             $errorStats = DB::table('recording_performance_logs')
                 ->select([
                     DB::raw('COUNT(*) as total_errors'),
@@ -404,15 +403,15 @@ class RecordingHealthService
     private function determineOverallStatus(array $checks): string
     {
         $statuses = array_column($checks, 'status');
-        
+
         if (in_array('unhealthy', $statuses)) {
             return 'unhealthy';
         }
-        
+
         if (in_array('degraded', $statuses)) {
             return 'degraded';
         }
-        
+
         return 'healthy';
     }
 
@@ -423,7 +422,7 @@ class RecordingHealthService
     {
         $healthyChecks = count(array_filter($checks, fn($c) => $c['status'] === 'healthy'));
         $totalChecks = count($checks);
-        
+
         $summary = [
             'overall_status' => $overallStatus,
             'healthy_checks' => $healthyChecks,
@@ -461,7 +460,7 @@ class RecordingHealthService
     public function getDetailedHealthReport(): array
     {
         $healthStatus = $this->getHealthStatus();
-        
+
         // Add additional details
         $healthStatus['detailed_metrics'] = [
             'database_connections' => $this->getDatabaseConnectionInfo(),
@@ -480,7 +479,7 @@ class RecordingHealthService
     {
         try {
             $pdo = DB::connection()->getPdo();
-            
+
             return [
                 'driver' => config('database.default'),
                 'database' => config('database.connections.mysql.database'),
@@ -516,7 +515,7 @@ class RecordingHealthService
     {
         try {
             $last24Hours = now()->subDay();
-            
+
             $trends = DB::table('recording_performance_logs')
                 ->select([
                     DB::raw('DATE(created_at) as date'),
@@ -548,7 +547,7 @@ class RecordingHealthService
     {
         try {
             $last24Hours = now()->subDay();
-            
+
             $errors = DB::table('recording_performance_logs')
                 ->select([
                     'operation_type',
@@ -572,4 +571,4 @@ class RecordingHealthService
             ];
         }
     }
-} 
+}

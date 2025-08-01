@@ -118,10 +118,6 @@ Berdasarkan analisis, model-model berikut juga perlu diupdate:
 -   `TransaksiHarianDetail` (parent: TransaksiHarian)
 -   `TransaksiJualDetail` (parent: TransaksiJual)
 
-### OVK Related
-
--   `OVKRecordItem` (parent: OVKRecord)
-
 ### Recording Related
 
 -   `RecordingItem` (parent: Recording) ✅ **Sudah diupdate**

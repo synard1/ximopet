@@ -137,7 +137,6 @@ class UuidMigrationSeeder extends Seeder
             'feed_usages',
             'supply_usages',
             'recordings',
-            'ovk_records',
             'sales_transactions',
             'analytics_alerts',
             'verification_logs',

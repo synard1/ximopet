@@ -78,7 +78,6 @@ return new class extends Migration
             'login_logs',
 
             // OVK Tables
-            'ovk_records',
             'ovk_record_items',
 
             // QA Tables
@@ -226,7 +225,6 @@ return new class extends Migration
             'login_logs',
 
             // OVK Tables
-            'ovk_records',
             'ovk_record_items',
 
             // QA Tables

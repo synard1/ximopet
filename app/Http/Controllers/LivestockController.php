@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\DataTables\LivestockDataTable;
 use App\DataTables\LivestockMutationDataTable;
-use App\DataTables\OVKRecordDataTable;
 use App\DataTables\LivestockPurchaseDataTable;
 use App\DataTables\LivestockStrainDataTable;
 use App\DataTables\LivestockStandardDataTable;
@@ -105,14 +104,6 @@ class LivestockController extends Controller
         return $dataTable->render('pages.livestock.mutation.index');
     }
 
-    public function supplyRecordingIndex(OVKRecordDataTable $dataTable)
-    {
-        // return view('pages.ovk-records.index');
-        addVendors(['datatables']);
-
-        return $dataTable->render('pages.ovk-records.index');
-    }
-
     public function showLivestockDetails($id)
     {
         \Log::info('LivestockController::showLivestockDetails - Starting livestock details retrieval', ['livestock_id' => $id]);
@@ -135,10 +126,9 @@ class LivestockController extends Controller
         $stockAwal = $livestock->populasi_awal;
         $totalPakanUsage = 0;
         $totalDeplesi = 0;
-        $totalOvkUsage = 0;
 
         // Standar target FCR dan bobot
-        $standarData = $livestock->data[0]['standar_bobot'] ?? [];
+        $standarData = $livestock->data[0]['standar_bobot'] ?? [];  
 
         \Log::info('LivestockController::showLivestockDetails - Processing daily records', [
             'livestock_id' => $livestock->id,
@@ -194,14 +184,6 @@ class LivestockController extends Controller
             $pakanJenis = $usage->pluck('feed.name')->unique()->implode(', ') ?: '-';
             $totalPakanUsage += $pakanHarian;
 
-            // OVK Usage
-            $ovkUsage = SupplyUsageDetail::whereHas('supplyUsage', function ($q) use ($livestock, $dateStr) {
-                $q->where('livestock_id', $livestock->id)
-                    ->whereDate('usage_date', $dateStr);
-            })->sum('quantity_taken');
-
-            $totalOvkUsage += $ovkUsage;
-
             // Target standar
             $standarBobot = $standarData['data'][$umur] ?? null;
 
@@ -220,8 +202,6 @@ class LivestockController extends Controller
                 'pakan_jenis' => $pakanJenis,
                 'pakan_harian' => $pakanHarian,
                 'pakan_total' => $totalPakanUsage,
-                'ovk_harian' => $ovkUsage,
-                'total_ovk' => $totalOvkUsage,
                 'fcr_actual' => $stockAwal - $totalDeplesi > 0 ? round($totalPakanUsage / ($stockAwal - $totalDeplesi), 2) : 0,
             ];
 
@@ -240,7 +220,6 @@ class LivestockController extends Controller
             'total_deplesi' => $totalDeplesi,
             'deplesi_percentage' => $livestock->populasi_awal > 0 ? round(($totalDeplesi / $livestock->populasi_awal) * 100, 2) : 0,
             'total_pakan' => $totalPakanUsage,
-            'total_ovk' => $totalOvkUsage,
             'fcr_actual' => $stockAwal > 0 ? round($totalPakanUsage / $stockAwal, 2) : 0,
         ];
 
@@ -249,7 +228,6 @@ class LivestockController extends Controller
             'total_records' => $records->count(),
             'total_deplesi' => $totalDeplesi,
             'total_pakan' => $totalPakanUsage,
-            'total_ovk' => $totalOvkUsage
         ]);
 
         return response()->json($result);
