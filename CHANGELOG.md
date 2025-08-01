@@ -1,4 +1,4 @@
-#  (2025-07-31)
+#  (2025-08-01)
 
 
 ### Bug Fixes
@@ -107,6 +107,7 @@
 * integrate permission display and enhance farm management UI ([a678bc5](https://github.com/synard1/ximopet/commit/a678bc5cdc701ca25742a8add4a138a25669aece))
 * introduce analytics commands and models for livestock management ([ace7f28](https://github.com/synard1/ximopet/commit/ace7f28806229057401354b17a42f8f42b230fc0))
 * introduce new data management features and enhance user interfaces ([357a3bf](https://github.com/synard1/ximopet/commit/357a3bf5fd7dd6aae87125bd15c88e9e6f7e536f))
+* remove OVK record functionality and related components ([951c1a3](https://github.com/synard1/ximopet/commit/951c1a31ae5a134496210df718860197e5bf7ed7))
 * reorganize Pulse and Telescope migrations for local environments ([7fb1a3e](https://github.com/synard1/ximopet/commit/7fb1a3e559d7eccc5a4b039413d79787159805b4))
 * update Laravel application configuration and dependencies ([81410c4](https://github.com/synard1/ximopet/commit/81410c4ba81047b4bf8a8587031a04787044f8fc))
 * update livestock management table for mutation tracking ([cf74cd5](https://github.com/synard1/ximopet/commit/cf74cd543e803afdcf585acef16d3822e3aaccfb))
