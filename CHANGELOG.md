@@ -1,4 +1,4 @@
-#  (2025-07-25)
+#  (2025-07-31)
 
 
 ### Bug Fixes
@@ -39,7 +39,9 @@
 * add advanced supply purchase report component and view ([9f38c66](https://github.com/synard1/ximopet/commit/9f38c6657fc55d0b6d24943c6f86bb607f4d0417))
 * add artisan command for deleting all feed data ([10eab2c](https://github.com/synard1/ximopet/commit/10eab2cc7cee62d55dbbab732044c10de7161602))
 * add batch worker reporting functionality ([fc39793](https://github.com/synard1/ximopet/commit/fc397930d4649c47df7617f7afbc87d80f3b98b5))
+* add commands for fixing recording sales data consistency ([f861ac1](https://github.com/synard1/ximopet/commit/f861ac1e7f6efa06b40b4bccda9e58ff11ffb75d))
 * add commands for managing company roles and permissions ([7ca06cb](https://github.com/synard1/ximopet/commit/7ca06cbc87b9fe4a4bbf9d91248ec914ddc70fd5))
+* add commands for virtual quantity management and validation ([fd205c0](https://github.com/synard1/ximopet/commit/fd205c0997008c14a92d76f81f020a98a4beb9c4))
 * add comprehensive and basic recording seeders for livestock management ([90b70cd](https://github.com/synard1/ximopet/commit/90b70cddab852e1be2882de6aead426e4ccffaa9))
 * add Kandang management component and modal for CRUD operations ([ceb4de1](https://github.com/synard1/ximopet/commit/ceb4de18cc309220fe2c04ded1bf7e1aeba6faee))
 * Add Kematian Ternak feature ([a62f374](https://github.com/synard1/ximopet/commit/a62f374130e90554719147c98851bf1d2fc1a8c7))
@@ -68,6 +70,7 @@
 * enhance menu export functionality with structured JSON output and error handling ([36fc97a](https://github.com/synard1/ximopet/commit/36fc97ae472ff3f560325e402d78a53865226c1c))
 * enhance QA Checklist Monitor and reporting components for improved user experience ([0c61b8a](https://github.com/synard1/ximopet/commit/0c61b8ad14484079157bf143c2843e1e8f3425ab))
 * enhance role management with company-specific filtering ([42505b8](https://github.com/synard1/ximopet/commit/42505b89a55f8f699aed072c9f5ca59291dac0c6))
+* enhance sales configuration and reporting features ([e87f6be](https://github.com/synard1/ximopet/commit/e87f6bebd3b956b192dbb974d08b92950ee3a2ed))
 * enhance security and performance with blacklist system and reporting improvements ([7c55bec](https://github.com/synard1/ximopet/commit/7c55bec92a8e4f364be37d79eb668e96184dd621))
 * enhance user authentication metadata and UI structure ([76b2ef3](https://github.com/synard1/ximopet/commit/76b2ef37380a782325aa0cd157aa072b9c1c6845))
 * enhance user role management and sidebar menu access ([46c48e1](https://github.com/synard1/ximopet/commit/46c48e1c05c13ec14c7837908c2bbcf9b732ee76))
@@ -83,8 +86,11 @@
 * implement Expedition management with DataTable and CRUD functionality ([fa69976](https://github.com/synard1/ximopet/commit/fa699763f43dd68717a5cfa63efc171ea1f4cf3f))
 * implement extensive supply management features ([dc57f70](https://github.com/synard1/ximopet/commit/dc57f70f0faa56b973d30ad5e2fe61dbfd58c643))
 * implement flash message functionality in QA Todo List component ([fc96e61](https://github.com/synard1/ximopet/commit/fc96e6109b96c34116a911fe5941c4cfea64e622))
+* implement header-item pattern for recording sales ([c4ac4e1](https://github.com/synard1/ximopet/commit/c4ac4e1222ab24ee9d4e972bb4862e1230b65551))
+* implement livestock batch weight calculation command and job ([36f52d1](https://github.com/synard1/ximopet/commit/36f52d1a06676360c6e55b08722b61d772db9602))
 * implement Livestock Strain management with DataTable and CRUD functionality ([c2d1328](https://github.com/synard1/ximopet/commit/c2d1328a4614c0714f8461f3c7905eb11f5597c5))
 * implement major system enhancements ([ab8de3f](https://github.com/synard1/ximopet/commit/ab8de3f8e5df2263c75c2e49203d1c0f5b861cff))
+* implement OllamaChatCommand with complex queries and context data support ([ab54807](https://github.com/synard1/ximopet/commit/ab54807940874c6e40d1a3a45f3ef0e8ebe196ba))
 * implement OVK management and system improvements ([27a7b73](https://github.com/synard1/ximopet/commit/27a7b7327a66b5c3c22b7ffb04707731ffd6481f))
 * implement permission and role management helper and display service ([410ed58](https://github.com/synard1/ximopet/commit/410ed58364163170857b0b71e1d7be4b340c9595))
 * implement QA checklist management and enhance menu functionality ([76d1496](https://github.com/synard1/ximopet/commit/76d149610f8c5677f8657ea2c46214101bc1498b))
