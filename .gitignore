@@ -30,3 +30,7 @@ yarn-error.log
 /backup-nogit/......*
 /backup-nogit/.......*
 /backup-nogit/........*
+/logs/*
+/docs/*
+/flowchart/*
+/testing/*

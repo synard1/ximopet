@@ -71,7 +71,7 @@ class LivestockBatch extends BaseModel
                         'standar_data' => $breedStandard->standar_data,
                         'current_data' => [
                             'umur' => 0,
-                            'bobot' => $model->berat_awal,
+                            'bobot' => $model->initial_weight,
                             'feed_intake' => 0,
                             'fcr' => 0,
                             'mortality' => 0,
@@ -136,8 +136,10 @@ class LivestockBatch extends BaseModel
      */
     public function sourcePurchase()
     {
-        return $this->belongsTo(LivestockPurchase::class, 'source_id')
-            ->when($this->source_type === 'purchase');
+        if ($this->source_type !== 'purchase') {
+            return null;
+        }
+        return $this->belongsTo(LivestockPurchase::class, 'source_id');
     }
 
     /**
@@ -145,8 +147,7 @@ class LivestockBatch extends BaseModel
      */
     public function sourceMutation()
     {
-        return $this->belongsTo(LivestockMutation::class, 'source_id')
-            ->when($this->source_type === 'mutation');
+        return $this->belongsTo(LivestockMutation::class, 'source_id');
     }
 
     public function recordings()

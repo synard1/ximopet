@@ -15,18 +15,18 @@ class SupplyUsageBypassConfig
             'allow_operator_status_changes' => [
                 'draft' => ['pending', 'cancelled'],
                 'pending' => ['in_process', 'cancelled'],
-                'in_process' => ['completed', 'partially_used', 'cancelled']
+                'in_process' => ['completed', 'cancelled']
             ],
             'allow_supervisor_status_changes' => [
                 'draft' => ['pending', 'in_process', 'cancelled'],
                 'pending' => ['in_process', 'under_review', 'cancelled'],
-                'in_process' => ['completed', 'partially_used', 'cancelled'],
+                'in_process' => ['completed', 'cancelled'],
                 'under_review' => ['in_process', 'rejected', 'cancelled']
             ],
             'allow_manager_status_changes' => [
                 'draft' => ['pending', 'in_process', 'completed', 'cancelled'],
                 'pending' => ['in_process', 'under_review', 'completed', 'cancelled'],
-                'in_process' => ['completed', 'partially_used', 'cancelled'],
+                'in_process' => ['completed', 'cancelled'],
                 'under_review' => ['in_process', 'rejected', 'completed', 'cancelled'],
                 'rejected' => ['draft', 'cancelled']
             ],

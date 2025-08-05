@@ -35,11 +35,11 @@ return [
     |--------------------------------------------------------------------------
     | The default layout view that will be used when rendering a component via
     | Route::get('/some-endpoint', SomeComponent::class);. In this case the
-    | the view returned by SomeComponent will be wrapped in "layouts.app"
+    | the view returned by SomeComponent will be wrapped in "layout._default"
     |
     */
 
-    'layout' => 'layouts.app',
+    'layout' => 'layout._default',
 
     /*
     |--------------------------------------------------------------------------

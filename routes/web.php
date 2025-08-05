@@ -462,6 +462,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
+// Livestock Tracking Routes
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/livestock/tracking', function () {
+        return view('pages.livestock.tracking.index');
+    })->name('livestock.tracking')
+        ->middleware('can:read livestock tracking');
+
+    Route::get('/livestock/tracking/{livestockId}', function ($livestockId) {
+        return view('pages.livestock.tracking.index', compact('livestockId'));
+    })->name('livestock.tracking.detail')
+        ->middleware('can:read livestock tracking');
+});
+
 // Error Routes
 Route::get('/error', function () {
     abort(500);

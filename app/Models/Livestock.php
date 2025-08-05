@@ -213,6 +213,11 @@ class Livestock extends BaseModel
         return $this->hasMany(LivestockPurchaseItem::class, 'livestock_id', 'id');
     }
 
+    public function livestockStrain()
+    {
+        return $this->belongsTo(LivestockStrain::class, 'livestock_strain_id', 'id');
+    }
+
     /**
      * Get outgoing mutations (this livestock as source)
      */
@@ -235,7 +240,8 @@ class Livestock extends BaseModel
     public function allMutations()
     {
         return LivestockMutation::where('source_livestock_id', $this->id)
-            ->orWhere('destination_livestock_id', $this->id);
+            ->orWhere('destination_livestock_id', $this->id)
+            ->get();
     }
 
     /**
@@ -306,7 +312,7 @@ class Livestock extends BaseModel
     {
         return $this->batches()
             ->where('status', 'active')
-            ->sum('berat_awal');
+            ->sum('initial_weight');
     }
 
     /**
@@ -1341,26 +1347,49 @@ class Livestock extends BaseModel
      */
     public function getPurchaseInfo(): ?array
     {
-        $purchaseBatch = $this->batches()
-            ->where('source_type', 'purchase')
-            ->with('sourcePurchase', 'purchaseItem')
-            ->first();
+        try {
+            $purchaseBatch = $this->batches()
+                ->where('source_type', 'purchase')
+                ->first();
 
-        if (!$purchaseBatch) {
+            if (!$purchaseBatch) {
+                // Debug: Log when no purchase batch found
+                // \Log::info('No purchase batch found', [
+                //     'livestock_id' => $this->id,
+                //     'livestock_name' => $this->name,
+                //     'total_batches' => $this->batches()->count()
+                // ]);
+                return null;
+            }
+
+            // Debug: Log purchase batch found
+            // \Log::info('Purchase batch found', [
+            //     'livestock_id' => $this->id,
+            //     'batch_id' => $purchaseBatch->id,
+            //     'source_type' => $purchaseBatch->source_type,
+            //     'source_id' => $purchaseBatch->source_id
+            // ]);
+
+            return [
+                'purchase' => $purchaseBatch->sourcePurchase,
+                'purchase_item' => $purchaseBatch->purchaseItem,
+                'batch' => $purchaseBatch,
+                'invoice_number' => $purchaseBatch->sourcePurchase->invoice_number ?? null,
+                'purchase_date' => $purchaseBatch->sourcePurchase->tanggal ?? null,
+                'supplier' => $purchaseBatch->sourcePurchase->supplier ?? null,
+                'quantity' => $purchaseBatch->initial_quantity,
+                'price_per_unit' => $purchaseBatch->price_per_unit,
+                'weight_per_unit' => $purchaseBatch->weight_per_unit
+            ];
+        } catch (\Exception $e) {
+            // Debug: Log error
+            // \Log::error('Error in getPurchaseInfo', [
+            //     'livestock_id' => $this->id,
+            //     'error' => $e->getMessage(),
+            //     'trace' => $e->getTraceAsString()
+            // ]);
             return null;
         }
-
-        return [
-            'purchase' => $purchaseBatch->sourcePurchase,
-            'purchase_item' => $purchaseBatch->purchaseItem,
-            'batch' => $purchaseBatch,
-            'invoice_number' => $purchaseBatch->sourcePurchase->invoice_number ?? null,
-            'purchase_date' => $purchaseBatch->sourcePurchase->tanggal ?? null,
-            'supplier' => $purchaseBatch->sourcePurchase->supplier ?? null,
-            'quantity' => $purchaseBatch->initial_quantity,
-            'price_per_unit' => $purchaseBatch->price_per_unit,
-            'weight_per_unit' => $purchaseBatch->weight_per_unit
-        ];
     }
 
     /**
@@ -1370,12 +1399,16 @@ class Livestock extends BaseModel
      */
     public function getMutationHistory(): array
     {
-        return $this->batches()
-            ->where('source_type', 'mutation')
-            ->with('sourceMutation')
-            ->orderBy('created_at', 'asc')
-            ->get()
-            ->map(function ($batch) {
+        try {
+            $batches = $this->batches()
+                ->where('source_type', 'mutation')
+                ->with('sourceMutation')
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            return $batches->filter(function ($batch) {
+                return $batch->sourceMutation !== null && $batch->source_type === 'mutation';
+            })->map(function ($batch) {
                 return [
                     'mutation' => $batch->sourceMutation,
                     'batch' => $batch,
@@ -1386,8 +1419,10 @@ class Livestock extends BaseModel
                     'source_livestock' => $batch->sourceMutation->sourceLivestock ?? null,
                     'destination_livestock' => $batch->sourceMutation->destinationLivestock ?? null
                 ];
-            })
-            ->toArray();
+            })->toArray();
+        } catch (\Exception $e) {
+            return [];
+        }
     }
 
     /**
@@ -1405,11 +1440,12 @@ class Livestock extends BaseModel
             $chain[] = [
                 'type' => 'purchase',
                 'date' => $purchaseInfo['purchase_date'],
-                'invoice' => $purchaseInfo['invoice_number'],
+                'invoice_number' => $purchaseInfo['invoice_number'],
                 'supplier' => $purchaseInfo['supplier']->name ?? 'Unknown',
                 'quantity' => $purchaseInfo['quantity'],
                 'price_per_unit' => $purchaseInfo['price_per_unit'],
                 'weight_per_unit' => $purchaseInfo['weight_per_unit'],
+                'total_cost' => $purchaseInfo['quantity'] * $purchaseInfo['price_per_unit'],
                 'data' => $purchaseInfo
             ];
         }

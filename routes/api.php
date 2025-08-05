@@ -225,6 +225,17 @@ Route::prefix('security')->group(function () {
 // New route for getting menu data
 Route::middleware('auth:sanctum')->get('/menu', [MenuController::class, 'getMenu']);
 
+// Livestock Tracking API Routes
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::prefix('v2/livestock-tracking')->group(function () {
+        Route::get('/{livestockId}', [App\Http\Controllers\Api\V2\LivestockTrackingController::class, 'getTrackingInfo']);
+        Route::post('/summary', [App\Http\Controllers\Api\V2\LivestockTrackingController::class, 'getTrackingSummary']);
+        Route::post('/{livestockId}/export', [App\Http\Controllers\Api\V2\LivestockTrackingController::class, 'exportTrackingData']);
+        Route::get('/statistics', [App\Http\Controllers\Api\V2\LivestockTrackingController::class, 'getTrackingStatistics']);
+        Route::get('/search', [App\Http\Controllers\Api\V2\LivestockTrackingController::class, 'searchLivestock']);
+    });
+});
+
 /*
 |--------------------------------------------------------------------------
 | Legacy Routes (Kept for backward compatibility)
