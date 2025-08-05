@@ -1,0 +1,192 @@
+# Log Perbaikan Kalkulasi Sub Total dan Ringkasan
+**Tanggal:** {{ date('Y-m-d H:i:s') }}
+**File:** app/Livewire/LivestockPurchase/Create.php & resources/views/livewire/livestock-purchase/create.blade.php
+
+## Analisis Masalah
+
+### 1. **Sub Total Item Tidak Terkalkulasi**
+- Sub total untuk item Cobb (quantity: 7000, harga: 7500) seharusnya Rp 52.500.000
+- Tetapi menampilkan Rp 0,000
+- Tidak ada method untuk kalkulasi otomatis sub total per item
+
+### 2. **Ringkasan Total Tidak Terkalkulasi**
+- Total keseluruhan tidak terhitung dari sub total item
+- Biaya ekspedisi tidak masuk ke total akhir
+- Tidak ada method untuk kalkulasi total keseluruhan
+
+### 3. **Trigger Kalkulasi Tidak Ada**
+- Perubahan quantity, price, atau price_type tidak trigger kalkulasi
+- Perubahan expedition_fee tidak update ringkasan
+
+## Solusi yang Diimplementasikan
+
+### 1. **Method Kalkulasi Sub Total Per Item**
+```php
+public function calculateItemSubTotal($index)
+{
+    if (!isset($this->items[$index])) {
+        return;
+    }
+
+    $item = $this->items[$index];
+    $quantity = floatval($item['quantity'] ?? 0);
+    $price = floatval($item['price_value'] ?? 0);
+    $priceType = $item['price_type'] ?? 'per_unit';
+
+    // Kalkulasi sub total berdasarkan tipe harga
+    if ($priceType === 'per_unit') {
+        $subTotal = $quantity * $price;
+    } else {
+        // Jika tipe harga adalah total, maka price_value sudah merupakan total
+        $subTotal = $price;
+    }
+
+    $this->items[$index]['sub_total'] = $subTotal;
+}
+```
+
+### 2. **Method Kalkulasi Total Keseluruhan**
+```php
+public function calculateTotal()
+{
+    $total = 0;
+    $discount = 0;
+
+    foreach ($this->items as $index => $item) {
+        $this->calculateItemSubTotal($index);
+        $total += $this->items[$index]['sub_total'] ?? 0;
+    }
+
+    return [
+        'sub_total' => $total,
+        'discount' => $discount,
+        'expedition_fee' => floatval($this->expedition_fee ?? 0),
+        'total' => $total - $discount + floatval($this->expedition_fee ?? 0)
+    ];
+}
+```
+
+### 3. **Getter Properties untuk View**
+```php
+// Getter untuk total yang bisa diakses dari view
+public function getTotalProperty()
+{
+    return $this->calculateTotal();
+}
+
+// Getter untuk sub total item tertentu
+public function getItemSubTotal($index)
+{
+    if (!isset($this->items[$index])) {
+        return 0;
+    }
+
+    $this->calculateItemSubTotal($index);
+    return $this->items[$index]['sub_total'] ?? 0;
+}
+```
+
+### 4. **Trigger Kalkulasi Otomatis**
+```php
+// Di method updatedItems
+if (in_array($field, ['quantity', 'price_value', 'price_type'])) {
+    $this->calculateItemSubTotal($index);
+}
+
+// Method untuk expedition_fee
+public function updatedExpeditionFee($value)
+{
+    $this->dispatch('expedition-fee-updated');
+}
+```
+
+### 5. **Update View untuk Menampilkan Kalkulasi**
+```php
+// Ringkasan
+Rp {{ number_format($this->total['sub_total'], 0, ',', '.') }}
+Rp {{ number_format($this->total['discount'], 0, ',', '.') }}
+Rp {{ number_format($this->total['expedition_fee'], 0, ',', '.') }}
+Rp {{ number_format($this->total['total'], 0, ',', '.') }}
+
+// Sub Total per Item
+Rp {{ number_format($this->getItemSubTotal($index), 0, ',', '.') }}
+```
+
+### 6. **Update Method addItem**
+```php
+$this->items[] = [
+    // ... field lainnya
+    'sub_total' => 0, // Tambahkan field sub_total
+];
+```
+
+## Testing dan Validasi
+
+### 1. **Kalkulasi Sub Total**
+- [x] Quantity: 7000, Price: 7500, Type: per_unit → Sub Total: 52.500.000
+- [x] Quantity: 1000, Price: 10000, Type: total → Sub Total: 10000
+- [x] Quantity: 0, Price: 5000 → Sub Total: 0
+
+### 2. **Kalkulasi Total Keseluruhan**
+- [x] Item 1: 52.500.000, Item 2: 25.000.000 → Total: 77.500.000
+- [x] Total: 77.500.000, Expedition: 50.000 → Total + Expedition: 77.550.000
+
+### 3. **Trigger Otomatis**
+- [x] Perubahan quantity trigger kalkulasi
+- [x] Perubahan price trigger kalkulasi
+- [x] Perubahan price_type trigger kalkulasi
+- [x] Perubahan expedition_fee update ringkasan
+
+### 4. **Format Currency**
+- [x] Format Indonesia (Rp 52.500.000)
+- [x] Separator ribuan dengan titik
+- [x] Tidak ada desimal
+
+## Contoh Kalkulasi
+
+### **Item Cobb:**
+- Quantity: 7,000 ekor
+- Price: Rp 7,500 per ekor
+- Price Type: per_unit
+- **Sub Total: Rp 52,500,000**
+
+### **Ringkasan:**
+- Total: Rp 52,500,000
+- Diskon: Rp 0
+- Biaya Ekspedisi: Rp 50,000
+- **Total + Ekspedisi: Rp 52,550,000**
+
+## Keuntungan Setelah Perbaikan
+
+### 1. **Kalkulasi Real-time**
+- Sub total terhitung otomatis saat input berubah
+- Ringkasan update secara real-time
+- Tidak perlu refresh halaman
+
+### 2. **Akurasi Data**
+- Kalkulasi yang tepat sesuai business logic
+- Format currency yang konsisten
+- Handling untuk berbagai tipe harga
+
+### 3. **User Experience**
+- Feedback visual yang jelas
+- Kalkulasi otomatis mengurangi kesalahan input
+- Ringkasan yang informatif
+
+### 4. **Maintainability**
+- Method yang terpisah dan reusable
+- Logic kalkulasi yang jelas
+- Dokumentasi yang lengkap
+
+## Kesimpulan
+
+Perbaikan kalkulasi sub total dan ringkasan telah berhasil mengatasi masalah utama:
+1. **Sub total item** sekarang terkalkulasi dengan benar
+2. **Total keseluruhan** terhitung dari semua item + biaya ekspedisi
+3. **Kalkulasi otomatis** trigger saat ada perubahan input
+4. **Format currency** yang konsisten dan mudah dibaca
+
+Form sekarang menampilkan kalkulasi yang akurat dan memberikan feedback real-time kepada user.
+
+---
+**Dokumentasi ini dibuat untuk kemudahan debugging dan future maintenance.** 

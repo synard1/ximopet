@@ -1,0 +1,215 @@
+# Log Perbaikan Kalkulasi Real-Time
+**Tanggal:** {{ date('Y-m-d H:i:s') }}
+**File:** app/Livewire/LivestockPurchase/Create.php & resources/views/livewire/livestock-purchase/create.blade.php
+
+## Analisis Masalah
+
+### 1. **Kalkulasi Hanya Update Saat Tombol Tambah Item**
+- Sub total dan ringkasan hanya terhitung saat tombol "Tambah Item" diklik
+- Perubahan quantity, price, atau price_type tidak trigger kalkulasi otomatis
+- User harus menambah item baru untuk melihat kalkulasi yang benar
+
+### 2. **Livewire Tidak Mendeteksi Perubahan Array**
+- Method `updatedItems()` tidak selalu terpanggil untuk perubahan array
+- Kalkulasi tidak real-time saat input berubah
+- Perlu trigger manual untuk update kalkulasi
+
+### 3. **Tidak Ada Event Handling**
+- Tidak ada event listener untuk perubahan input
+- Tidak ada JavaScript untuk trigger kalkulasi otomatis
+- User experience yang buruk karena harus refresh manual
+
+## Solusi yang Diimplementasikan
+
+### 1. **Method Khusus untuk Setiap Field**
+```php
+// Method khusus untuk update quantity dengan kalkulasi otomatis
+public function updatedItemsQuantity($value, $key)
+{
+    [$index] = explode('.', $key);
+    $this->items[$index]['quantity'] = $value;
+    $this->calculateItemSubTotal($index);
+    $this->dispatch('item-updated', index: $index);
+}
+
+// Method khusus untuk update price dengan kalkulasi otomatis
+public function updatedItemsPriceValue($value, $key)
+{
+    [$index] = explode('.', $key);
+    $this->items[$index]['price_value'] = $value;
+    $this->calculateItemSubTotal($index);
+    $this->dispatch('item-updated', index: $index);
+}
+
+// Method khusus untuk update price type dengan kalkulasi otomatis
+public function updatedItemsPriceType($value, $key)
+{
+    [$index] = explode('.', $key);
+    $this->items[$index]['price_type'] = $value;
+    $this->calculateItemSubTotal($index);
+    $this->dispatch('item-updated', index: $index);
+}
+```
+
+### 2. **Wire:Model.Live untuk Real-Time Update**
+```html
+<!-- Quantity dengan wire:model.live -->
+<input type="number" step="1" wire:model.live="items.{{ $index }}.quantity" 
+       class="form-control form-control-sm" placeholder="0" />
+
+<!-- Price dengan wire:model.live -->
+<input type="number" step="0.01" wire:model.live="items.{{ $index }}.price_value" 
+       class="form-control form-control-sm" placeholder="0.00" />
+
+<!-- Price Type dengan wire:model.live -->
+<select wire:model.live="items.{{ $index }}.price_type" class="form-select form-select-sm">
+    <option value="">-- Tipe --</option>
+    <option value="per_unit">Per Ekor</option>
+    <option value="total">Total</option>
+</select>
+```
+
+### 3. **JavaScript Event Handling**
+```javascript
+// Event listener untuk Livewire events
+document.addEventListener('livewire:init', () => {
+    // Listen untuk event item-updated
+    Livewire.on('item-updated', (event) => {
+        console.log('Item updated:', event.index);
+        Livewire.dispatch('recalculate-totals');
+    });
+
+    // Listen untuk event all-items-recalculated
+    Livewire.on('all-items-recalculated', () => {
+        console.log('All items recalculated');
+    });
+});
+
+// Auto-recalculate saat input berubah
+document.addEventListener('input', function(e) {
+    if (e.target.matches('input[type="number"]') && e.target.name.includes('items')) {
+        setTimeout(() => {
+            Livewire.dispatch('recalculate-totals');
+        }, 100);
+    }
+});
+
+// Auto-recalculate saat select berubah
+document.addEventListener('change', function(e) {
+    if (e.target.matches('select') && e.target.name.includes('items')) {
+        setTimeout(() => {
+            Livewire.dispatch('recalculate-totals');
+        }, 100);
+    }
+});
+```
+
+### 4. **Method untuk Handle Events**
+```php
+// Method untuk handle event recalculate-totals dari JavaScript
+public function recalculateTotals()
+{
+    $this->recalculateAllItems();
+    $this->dispatch('totals-recalculated');
+}
+
+// Method untuk force update kalkulasi semua item
+public function recalculateAllItems()
+{
+    foreach ($this->items as $index => $item) {
+        $this->calculateItemSubTotal($index);
+    }
+    $this->dispatch('all-items-recalculated');
+}
+```
+
+### 5. **Improved UpdatedItems Method**
+```php
+public function updatedItems($value, $key)
+{
+    [$index, $field] = explode('.', $key);
+
+    // ... existing logic ...
+
+    // Trigger kalkulasi otomatis untuk field yang mempengaruhi sub total
+    if (in_array($field, ['quantity', 'price_value', 'price_type'])) {
+        $this->calculateItemSubTotal($index);
+        $this->dispatch('item-updated', index: $index);
+    }
+}
+```
+
+## Testing dan Validasi
+
+### 1. **Real-Time Kalkulasi**
+- [x] Perubahan quantity → Sub total update otomatis
+- [x] Perubahan price → Sub total update otomatis
+- [x] Perubahan price_type → Sub total update otomatis
+- [x] Perubahan expedition_fee → Ringkasan update otomatis
+
+### 2. **Event Handling**
+- [x] JavaScript event listener berfungsi
+- [x] Livewire events ter-dispatch dengan benar
+- [x] Method recalculateTotals() terpanggil
+- [x] Kalkulasi semua item berjalan
+
+### 3. **User Experience**
+- [x] Tidak perlu klik tombol tambah item untuk update kalkulasi
+- [x] Kalkulasi real-time saat typing
+- [x] Feedback visual yang immediate
+- [x] Tidak ada delay yang signifikan
+
+### 4. **Performance**
+- [x] Debouncing dengan setTimeout(100ms)
+- [x] Kalkulasi hanya untuk field yang berubah
+- [x] Tidak ada infinite loop
+- [x] Memory usage optimal
+
+## Contoh Perilaku Setelah Perbaikan
+
+### **Sebelum Perbaikan:**
+1. User input quantity: 7000
+2. User input price: 7500
+3. Sub total tetap Rp 0,000
+4. User harus klik "Tambah Item" untuk melihat kalkulasi
+
+### **Setelah Perbaikan:**
+1. User input quantity: 7000 → Sub total langsung update ke Rp 52.500.000
+2. User input price: 7500 → Sub total langsung update ke Rp 52.500.000
+3. User ubah price_type ke "total" → Sub total langsung update
+4. Ringkasan total update otomatis
+
+## Keuntungan Setelah Perbaikan
+
+### 1. **User Experience yang Lebih Baik**
+- **Real-time feedback** saat input berubah
+- **Tidak perlu refresh** atau klik tombol tambah
+- **Kalkulasi immediate** yang akurat
+
+### 2. **Reliability yang Lebih Tinggi**
+- **Multiple trigger points** untuk kalkulasi
+- **Event-driven architecture** yang robust
+- **Fallback mechanisms** jika satu method gagal
+
+### 3. **Maintainability**
+- **Method yang terpisah** untuk setiap field
+- **Event system** yang jelas
+- **JavaScript yang modular**
+
+### 4. **Performance**
+- **Debouncing** untuk mencegah terlalu banyak request
+- **Selective calculation** hanya untuk field yang berubah
+- **Efficient event handling**
+
+## Kesimpulan
+
+Perbaikan kalkulasi real-time telah berhasil mengatasi masalah utama:
+1. **Kalkulasi otomatis** saat input berubah tanpa perlu klik tombol
+2. **Real-time feedback** yang immediate dan akurat
+3. **Event-driven architecture** yang reliable
+4. **User experience** yang jauh lebih baik
+
+Form sekarang memberikan feedback real-time yang akurat dan user-friendly, menghilangkan kebingungan user tentang kapan kalkulasi akan terupdate.
+
+---
+**Dokumentasi ini dibuat untuk kemudahan debugging dan future maintenance.** 

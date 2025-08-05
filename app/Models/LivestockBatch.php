@@ -131,6 +131,24 @@ class LivestockBatch extends BaseModel
         return $this->belongsTo(LivestockPurchaseItem::class, 'livestock_purchase_item_id');
     }
 
+    /**
+     * Get source purchase if batch is from purchase
+     */
+    public function sourcePurchase()
+    {
+        return $this->belongsTo(LivestockPurchase::class, 'source_id')
+            ->when($this->source_type === 'purchase');
+    }
+
+    /**
+     * Get source mutation if batch is from mutation
+     */
+    public function sourceMutation()
+    {
+        return $this->belongsTo(LivestockMutation::class, 'source_id')
+            ->when($this->source_type === 'mutation');
+    }
+
     public function recordings()
     {
         return $this->hasMany(Recording::class, 'livestock_id', 'livestock_id');
@@ -281,6 +299,284 @@ class LivestockBatch extends BaseModel
             'availability_percentage' => $this->getAvailabilityPercentage(),
             'availability_status' => $this->getAvailabilityStatus(),
             'last_calculated' => now()->toDateTimeString()
+        ];
+    }
+
+    // ========================================
+    // TRACKING DATA HELPER METHODS
+    // ========================================
+
+    /**
+     * Get source object based on source_type
+     * 
+     * @return mixed
+     */
+    public function getSourceObject()
+    {
+        switch ($this->source_type) {
+            case 'purchase':
+                return $this->belongsTo(LivestockPurchase::class, 'source_id')->first();
+            case 'mutation':
+                return $this->belongsTo(LivestockMutation::class, 'source_id')->first();
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Get purchase information if batch is from purchase
+     * 
+     * @return array|null
+     */
+    public function getPurchaseInfo(): ?array
+    {
+        if ($this->source_type !== 'purchase') {
+            return null;
+        }
+
+        $purchase = $this->belongsTo(LivestockPurchase::class, 'source_id')->first();
+        if (!$purchase) {
+            return null;
+        }
+
+        return [
+            'purchase' => $purchase,
+            'purchase_item' => $this->purchaseItem,
+            'invoice_number' => $purchase->invoice_number,
+            'purchase_date' => $purchase->tanggal,
+            'supplier' => $purchase->supplier,
+            'expedition' => $purchase->expedition,
+            'expedition_fee' => $purchase->expedition_fee,
+            'batch_name' => $purchase->batch_name,
+            'status' => $purchase->status
+        ];
+    }
+
+    /**
+     * Get mutation information if batch is from mutation
+     * 
+     * @return array|null
+     */
+    public function getMutationInfo(): ?array
+    {
+        if ($this->source_type !== 'mutation') {
+            return null;
+        }
+
+        $mutation = $this->belongsTo(LivestockMutation::class, 'source_id')->first();
+        if (!$mutation) {
+            return null;
+        }
+
+        return [
+            'mutation' => $mutation,
+            'mutation_items' => $mutation->items ?? [],
+            'date' => $mutation->tanggal,
+            'direction' => $mutation->direction,
+            'type' => $mutation->jenis,
+            'source_livestock' => $mutation->sourceLivestock,
+            'destination_livestock' => $mutation->destinationLivestock,
+            'total_quantity' => $mutation->jumlah,
+            'notes' => $mutation->keterangan
+        ];
+    }
+
+    /**
+     * Get source information summary
+     * 
+     * @return array
+     */
+    public function getSourceInfo(): array
+    {
+        $info = [
+            'source_type' => $this->source_type,
+            'source_id' => $this->source_id,
+            'livestock_purchase_item_id' => $this->livestock_purchase_item_id,
+            'is_from_purchase' => $this->source_type === 'purchase',
+            'is_from_mutation' => $this->source_type === 'mutation'
+        ];
+
+        if ($this->source_type === 'purchase') {
+            $info['purchase_info'] = $this->getPurchaseInfo();
+        } elseif ($this->source_type === 'mutation') {
+            $info['mutation_info'] = $this->getMutationInfo();
+        }
+
+        return $info;
+    }
+
+    /**
+     * Check if batch is from purchase
+     * 
+     * @return bool
+     */
+    public function isFromPurchase(): bool
+    {
+        return $this->source_type === 'purchase';
+    }
+
+    /**
+     * Check if batch is from mutation
+     * 
+     * @return bool
+     */
+    public function isFromMutation(): bool
+    {
+        return $this->source_type === 'mutation';
+    }
+
+    /**
+     * Get purchase ID if available
+     * 
+     * @return string|null
+     */
+    public function getPurchaseId(): ?string
+    {
+        if ($this->source_type === 'purchase') {
+            return $this->source_id;
+        }
+        return null;
+    }
+
+    /**
+     * Get mutation ID if available
+     * 
+     * @return string|null
+     */
+    public function getMutationId(): ?string
+    {
+        if ($this->source_type === 'mutation') {
+            return $this->source_id;
+        }
+        return null;
+    }
+
+    /**
+     * Get invoice number if batch is from purchase
+     * 
+     * @return string|null
+     */
+    public function getInvoiceNumber(): ?string
+    {
+        $purchaseInfo = $this->getPurchaseInfo();
+        return $purchaseInfo['invoice_number'] ?? null;
+    }
+
+    /**
+     * Get supplier information if batch is from purchase
+     * 
+     * @return array|null
+     */
+    public function getSupplierInfo(): ?array
+    {
+        $purchaseInfo = $this->getPurchaseInfo();
+        if (!$purchaseInfo || !$purchaseInfo['supplier']) {
+            return null;
+        }
+
+        return [
+            'id' => $purchaseInfo['supplier']->id,
+            'name' => $purchaseInfo['supplier']->name,
+            'code' => $purchaseInfo['supplier']->code ?? null,
+            'type' => $purchaseInfo['supplier']->type ?? null
+        ];
+    }
+
+    /**
+     * Get expedition information if batch is from purchase
+     * 
+     * @return array|null
+     */
+    public function getExpeditionInfo(): ?array
+    {
+        $purchaseInfo = $this->getPurchaseInfo();
+        if (!$purchaseInfo || !$purchaseInfo['expedition']) {
+            return null;
+        }
+
+        return [
+            'id' => $purchaseInfo['expedition']->id,
+            'name' => $purchaseInfo['expedition']->name,
+            'code' => $purchaseInfo['expedition']->code ?? null,
+            'fee' => $purchaseInfo['expedition_fee']
+        ];
+    }
+
+    /**
+     * Get source livestock information if batch is from mutation
+     * 
+     * @return array|null
+     */
+    public function getSourceLivestockInfo(): ?array
+    {
+        $mutationInfo = $this->getMutationInfo();
+        if (!$mutationInfo || !$mutationInfo['source_livestock']) {
+            return null;
+        }
+
+        $sourceLivestock = $mutationInfo['source_livestock'];
+        return [
+            'id' => $sourceLivestock->id,
+            'name' => $sourceLivestock->name,
+            'farm' => $sourceLivestock->farm->name ?? 'Unknown',
+            'coop' => $sourceLivestock->coop->name ?? 'Unknown',
+            'status' => $sourceLivestock->status
+        ];
+    }
+
+    /**
+     * Get destination livestock information if batch is from mutation
+     * 
+     * @return array|null
+     */
+    public function getDestinationLivestockInfo(): ?array
+    {
+        $mutationInfo = $this->getMutationInfo();
+        if (!$mutationInfo || !$mutationInfo['destination_livestock']) {
+            return null;
+        }
+
+        $destinationLivestock = $mutationInfo['destination_livestock'];
+        return [
+            'id' => $destinationLivestock->id,
+            'name' => $destinationLivestock->name,
+            'farm' => $destinationLivestock->farm->name ?? 'Unknown',
+            'coop' => $destinationLivestock->coop->name ?? 'Unknown',
+            'status' => $destinationLivestock->status
+        ];
+    }
+
+    /**
+     * Get complete tracking summary
+     * 
+     * @return array
+     */
+    public function getTrackingSummary(): array
+    {
+        return [
+            'batch_id' => $this->id,
+            'batch_name' => $this->name,
+            'livestock_id' => $this->livestock_id,
+            'livestock_name' => $this->livestock->name ?? 'Unknown',
+            'source_info' => $this->getSourceInfo(),
+            'quantity_info' => $this->getQuantityBreakdown(),
+            'strain_info' => [
+                'strain_id' => $this->livestock_strain_id,
+                'strain_name' => $this->livestock_strain_name,
+                'strain_standard_id' => $this->livestock_strain_standard_id
+            ],
+            'location_info' => [
+                'farm_id' => $this->farm_id,
+                'farm_name' => $this->farm->name ?? 'Unknown',
+                'coop_id' => $this->coop_id,
+                'coop_name' => $this->coop->name ?? 'Unknown'
+            ],
+            'timing_info' => [
+                'start_date' => $this->start_date,
+                'end_date' => $this->end_date,
+                'created_at' => $this->created_at,
+                'updated_at' => $this->updated_at
+            ]
         ];
     }
 }

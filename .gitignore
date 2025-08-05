@@ -20,3 +20,13 @@ yarn-error.log
 /.vscode
 /.cursor
 /backup
+/backup-nogit
+/backup-nogit/*
+/backup-nogit/.*
+/backup-nogit/..*
+/backup-nogit/...*
+/backup-nogit/....*
+/backup-nogit/.....*
+/backup-nogit/......*
+/backup-nogit/.......*
+/backup-nogit/........*

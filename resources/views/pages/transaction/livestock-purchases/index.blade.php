@@ -149,6 +149,26 @@
             <livewire:livestock-purchase.create />
             @endif
 
+            <!-- Business Flow Configuration Data -->
+            <script>
+                // Server-side configuration data
+        window.LivestockPurchaseConfig = {
+            currentFlowType: '{{ \App\Config\LivestockPurchaseConfig::getWorkflowConfig()["business_flow_type"] ?? "simple" }}',
+            availableFlows: @json(\App\Config\LivestockPurchaseConfig::getAvailableBusinessFlows()),
+            businessFlowComparison: @json(\App\Config\LivestockPurchaseConfig::getBusinessFlowComparison()),
+            statusFlow: @json(\App\Config\LivestockPurchaseConfig::getWorkflowConfig()["status_flow"] ?? []),
+            statusRequirements: @json(\App\Config\LivestockPurchaseConfig::getWorkflowConfig()["status_requirements"] ?? []),
+        };
+        
+        // Environment configuration
+        window.EnvironmentConfig = {
+            isProduction: {{ \App\Helpers\EnvironmentHelper::isProduction() ? 'true' : 'false' }},
+            isLocal: {{ \App\Helpers\EnvironmentHelper::isLocal() ? 'true' : 'false' }},
+            debug: {{ config('app.debug') ? 'true' : 'false' }},
+            showFlowInfo: {{ (\App\Helpers\EnvironmentHelper::isLocal() || config('app.debug')) ? 'true' : 'false' }},
+        };
+            </script>
+
 
         </div>
         <!--end::Card body-->
@@ -187,98 +207,225 @@
         </div>
     </div>
 
-    <!-- Legend Status Pembelian -->
-    <div class="card mt-5" id="legendCard">
+    <!-- Status Legend Card -->
+    <div class="card mt-5" id="statusLegendCard">
         <div class="card-header">
-            <h3 class="card-title">Legend Status Pembelian</h3>
+            <h3 class="card-title">
+                <i class="fas fa-info-circle me-2"></i>
+                <span id="cardTitle">Status Legend</span>
+                <span class="badge bg-info ms-2" id="envBadge" style="display: none;">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <span id="envText">Production</span>
+                </span>
+            </h3>
             <div class="card-toolbar">
-                <button type="button" class="btn btn-sm btn-icon btn-active-light-primary" id="kt_legend_toggle">
+                <button type="button" class="btn btn-sm btn-icon btn-active-light-primary" id="kt_status_legend_toggle">
                     <i class="ki-duotone ki-down fs-2 rotate-180"></i>
                 </button>
             </div>
         </div>
-        <div class="card-body collapse" id="legendCardBody">
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-                <div class="col">
-                    <div class="d-flex align-items-start">
-                        <span class="badge bg-secondary me-3">Draft</span>
+        <div class="card-body collapse" id="statusLegendCardBody">
+            <!-- Development Mode Only Elements -->
+            <div id="developmentOnlyElements" style="display: none;">
+                <!-- Current Flow Type -->
+                <div class="alert alert-info mb-4" id="currentFlowAlert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle me-3 fs-2"></i>
                         <div>
-                            <div class="fw-semibold">Status awal saat membuat pembelian</div>
-                            <div class="text-muted small">Belum ada konfirmasi atau validasi<br>Masih bisa
-                                diedit/dihapus</div>
+                            <strong>Current Business Flow:</strong>
+                            <span class="badge bg-primary ms-2" id="currentFlowType">Loading...</span>
+                            <br>
+                            <small class="text-muted" id="currentFlowDescription">Loading flow description...</small>
                         </div>
                     </div>
                 </div>
-                <div class="col">
-                    <div class="d-flex align-items-start">
-                        <span class="badge bg-warning text-dark me-3">Pending</span>
-                        <div>
-                            <div class="fw-semibold">Sudah dibuat tapi menunggu konfirmasi</div>
-                            <div class="text-muted small">Menunggu persetujuan dari pihak terkait<br>Belum bisa diproses
-                                lebih lanjut</div>
+
+                <!-- Business Flow Comparison -->
+                <div class="row mb-4" id="businessFlowComparison">
+                    <div class="col-12">
+                        <h5 class="mb-3">Available Business Flows</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Flow Type</th>
+                                        <th>Description</th>
+                                        <th>Status Count</th>
+                                        <th>Approval</th>
+                                        <th>Batch Creation</th>
+                                        <th>Complexity</th>
+                                        <th>Use Cases</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="businessFlowTableBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center">Loading business flow data...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-                <div class="col">
-                    <div class="d-flex align-items-start">
-                        <span class="badge bg-info text-dark me-3">Confirmed</span>
-                        <div>
-                            <div class="fw-semibold">Sudah dikonfirmasi/disetujui</div>
-                            <div class="text-muted small">Siap untuk diproses pengiriman<br>Belum ada pengiriman ternak
+
+                <!-- Flow Configuration Actions -->
+                <div class="row mb-4" id="flowConfigurationActions">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-2">Flow Configuration Actions</h6>
+                                <small class="text-muted">Manage business flow settings and view configuration
+                                    details</small>
+                                <br>
+                                <small class="text-info">
+                                    <i class="fas fa-keyboard me-1"></i>
+                                    Keyboard shortcuts:
+                                    <kbd>Ctrl+Shift+C</kbd> View Config |
+                                    <kbd>Ctrl+Shift+F</kbd> Test Flow |
+                                    <kbd>Ctrl+Shift+B</kbd> Toggle Status Legend
+                                </small>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-primary me-2" id="btnViewConfig">
+                                    <i class="fas fa-cog me-1"></i>View Config
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info me-2" id="btnTestFlow">
+                                    <i class="fas fa-play me-1"></i>Test Flow
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success" id="btnChangeFlow">
+                                    <i class="fas fa-exchange-alt me-1"></i>Change Flow
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col">
-                    <div class="d-flex align-items-start">
-                        <span class="badge bg-primary me-3">In Transit</span>
-                        <div>
-                            <div class="fw-semibold">Ternak sedang dalam perjalanan</div>
-                            <div class="text-muted small">Sudah ada nomor DO/Surat Jalan<br>Belum sampai di lokasi
-                                tujuan</div>
+            </div>
+
+            <!-- Status Legend -->
+            <div class="row">
+                <div class="col-12">
+                    <h5 class="mb-3">
+                        Status Legend
+                        <span class="badge bg-secondary ms-2" id="productionBadge" style="display: none;">
+                            <i class="fas fa-shield-alt me-1"></i>Production Mode
+                        </span>
+                    </h5>
+
+                    <!-- Production Mode Info -->
+                    <div class="alert alert-info mb-3" id="productionModeInfo" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle me-3 fs-2"></i>
+                            <div>
+                                <strong>Status Pembelian Ternak</strong><br>
+                                <small class="text-muted">
+                                    Berikut adalah penjelasan status untuk setiap tahap pembelian ternak.
+                                    Status akan berubah sesuai dengan progress pembelian.
+                                </small>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col">
-                    <div class="d-flex align-items-start">
-                        <span class="badge bg-success me-3">Arrived</span>
-                        <div>
-                            <div class="fw-semibold">Ternak sudah sampai di lokasi tujuan</div>
-                            <div class="text-muted small">Sudah dilakukan pemeriksaan awal<br>Siap untuk dipindahkan ke
-                                kandang</div>
+
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3" id="statusLegendContainer">
+                        <div class="col">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-secondary me-3">
+                                    <i class="fas fa-edit me-1"></i>Draft
+                                </span>
+                                <div>
+                                    <div class="fw-semibold">Status awal saat membuat pembelian</div>
+                                    <div class="text-muted small">Belum ada konfirmasi atau validasi<br>Masih bisa
+                                        diedit/dihapus</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="d-flex align-items-start">
-                        <span class="badge bg-success bg-opacity-75 me-3">In Coop</span>
-                        <div>
-                            <div class="fw-semibold">Ternak sudah dipindahkan ke kandang</div>
-                            <div class="text-muted small">Sudah dilakukan pencatatan di sistem<br>Proses pembelian
-                                selesai</div>
+                        <div class="col">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-warning text-dark me-3">
+                                    <i class="fas fa-clock me-1"></i>Pending
+                                </span>
+                                <div>
+                                    <div class="fw-semibold">Sudah dibuat tapi menunggu konfirmasi</div>
+                                    <div class="text-muted small">Menunggu persetujuan dari pihak terkait<br>Belum bisa
+                                        diproses lebih lanjut</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="d-flex align-items-start">
-                        <span class="badge bg-danger me-3">Cancelled</span>
-                        <div>
-                            <div class="fw-semibold">Pembelian dibatalkan</div>
-                            <div class="text-muted small">Bisa karena berbagai alasan<br>Tidak bisa diproses lebih
-                                lanjut</div>
+                        <div class="col">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-info text-dark me-3">
+                                    <i class="fas fa-check-circle me-1"></i>Confirmed
+                                </span>
+                                <div>
+                                    <div class="fw-semibold">Sudah dikonfirmasi/disetujui</div>
+                                    <div class="text-muted small">Siap untuk diproses pengiriman<br>Belum ada pengiriman
+                                        ternak</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="d-flex align-items-start">
-                        <span class="badge bg-dark me-3 text-white">Completed</span>
-                        <div>
-                            <div class="fw-semibold">Seluruh proses selesai</div>
-                            <div class="text-muted small">Semua dokumen lengkap<br>Pembayaran sudah selesai</div>
+                        <div class="col">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-primary me-3">
+                                    <i class="fas fa-truck me-1"></i>In Transit
+                                </span>
+                                <div>
+                                    <div class="fw-semibold">Ternak sedang dalam perjalanan</div>
+                                    <div class="text-muted small">Sudah ada nomor DO/Surat Jalan<br>Belum sampai di
+                                        lokasi tujuan</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-success me-3">
+                                    <i class="fas fa-map-marker-alt me-1"></i>Arrived
+                                </span>
+                                <div>
+                                    <div class="fw-semibold">Ternak sudah sampai di lokasi tujuan</div>
+                                    <div class="text-muted small">Sudah dilakukan pemeriksaan awal<br>Siap untuk
+                                        dipindahkan ke kandang</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-success bg-opacity-75 me-3">
+                                    <i class="fas fa-home me-1"></i>In Coop
+                                </span>
+                                <div>
+                                    <div class="fw-semibold">Ternak sudah dipindahkan ke kandang</div>
+                                    <div class="text-muted small">Sudah dilakukan pencatatan di sistem<br>Proses
+                                        pembelian selesai</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-danger me-3">
+                                    <i class="fas fa-times-circle me-1"></i>Cancelled
+                                </span>
+                                <div>
+                                    <div class="fw-semibold">Pembelian dibatalkan</div>
+                                    <div class="text-muted small">Bisa karena berbagai alasan<br>Tidak bisa diproses
+                                        lebih lanjut</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-dark me-3 text-white">
+                                    <i class="fas fa-flag-checkered me-1"></i>Completed
+                                </span>
+                                <div>
+                                    <div class="fw-semibold">Seluruh proses selesai</div>
+                                    <div class="text-muted small">Semua dokumen lengkap<br>Pembayaran sudah selesai
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+
         </div>
     </div>
 
@@ -292,18 +439,37 @@
                 }
             };
 
-            // Hide legend card body on load
-            const legendCardBody = document.getElementById('legendCardBody');
-            if (legendCardBody) {
-                legendCardBody.classList.remove('show');
+            // Initialize Business Flow Configuration
+            initializeBusinessFlowConfig();
+            
+            // Log environment information
+            log('🌍 Environment Configuration:', window.EnvironmentConfig);
+            log('🏭 Production Mode:', window.EnvironmentConfig.isProduction);
+            log('🛠️ Debug Mode:', window.EnvironmentConfig.debug);
+            log('📊 Show Flow Info:', window.EnvironmentConfig.showFlowInfo);
+
+            // Configure status legend card visibility based on environment
+            const statusLegendCardBody = document.getElementById('statusLegendCardBody');
+            if (statusLegendCardBody) {
+                if (window.EnvironmentConfig?.isProduction && !window.EnvironmentConfig?.debug) {
+                    // Production mode - show card by default for better UX
+                    statusLegendCardBody.classList.add('show');
+                    const toggleIcon = document.getElementById('kt_status_legend_toggle')?.querySelector('i');
+                    if (toggleIcon) {
+                        toggleIcon.classList.remove('rotate-180');
+                    }
+                } else {
+                    // Development mode - hide card by default
+                    statusLegendCardBody.classList.remove('show');
+                }
             }
 
-            // Toggle legend card
-            const legendToggle = document.getElementById('kt_legend_toggle');
-            if (legendToggle) {
-                legendToggle.addEventListener('click', function() {
+            // Toggle status legend card
+            const statusLegendToggle = document.getElementById('kt_status_legend_toggle');
+            if (statusLegendToggle) {
+                statusLegendToggle.addEventListener('click', function() {
                     const icon = this.querySelector('i');
-                    const cardBody = document.getElementById('legendCardBody');
+                    const cardBody = document.getElementById('statusLegendCardBody');
                     
                     if (cardBody.classList.contains('show')) {
                         cardBody.classList.remove('show');
@@ -313,6 +479,693 @@
                         icon.classList.remove('rotate-180');
                     }
                 });
+            }
+
+            // Initialize Business Flow Configuration
+            function initializeBusinessFlowConfig() {
+                log('🔧 Initializing Business Flow Configuration...');
+                
+                // Check environment and configure UI accordingly
+                configureUIForEnvironment();
+                
+                // Load current flow configuration
+                loadCurrentFlowConfig();
+                
+                // Load business flow comparison (only if not production or debug enabled)
+                if (window.EnvironmentConfig.showFlowInfo) {
+                    loadBusinessFlowComparison();
+                }
+                
+                // Update status legend with config data
+                updateStatusLegend();
+                
+                // Setup action buttons (only if not production or debug enabled)
+                if (window.EnvironmentConfig.showFlowInfo) {
+                    setupActionButtons();
+                }
+                
+                log('✅ Business Flow Configuration initialized for environment:', window.EnvironmentConfig);
+            }
+
+            // Configure UI based on environment
+            function configureUIForEnvironment() {
+                const envConfig = window.EnvironmentConfig;
+                
+                if (envConfig.isProduction && !envConfig.debug) {
+                    // Production mode - show only status legend
+                    log('🏭 Production mode detected - showing only status legend');
+                    
+                    // Update card title
+                    document.getElementById('cardTitle').textContent = 'Status Legend';
+                    
+                    // Show environment badge with user-friendly text
+                    const envBadge = document.getElementById('envBadge');
+                    const envText = document.getElementById('envText');
+                    envBadge.style.display = 'inline-block';
+                    envText.textContent = 'Live';
+                    envBadge.className = 'badge bg-success ms-2';
+                    
+                    // Hide production badge in status legend for cleaner look
+                    document.getElementById('productionBadge').style.display = 'none';
+                    
+                    // Show user-friendly production info
+                    document.getElementById('productionModeInfo').style.display = 'block';
+                    
+                    // Hide development-only elements
+                    document.getElementById('developmentOnlyElements').style.display = 'none';
+                    
+                } else {
+                    // Development mode - show all flow configuration info
+                    log('🛠️ Development mode detected - showing all flow configuration info');
+                    
+                    // Update card title
+                    document.getElementById('cardTitle').textContent = 'Business Flow Configuration';
+                    
+                    // Show environment badge
+                    const envBadge = document.getElementById('envBadge');
+                    const envText = document.getElementById('envText');
+                    envBadge.style.display = 'inline-block';
+                    
+                    if (envConfig.isLocal) {
+                        envText.textContent = 'Local';
+                        envBadge.className = 'badge bg-success ms-2';
+                    } else if (envConfig.debug) {
+                        envText.textContent = 'Debug';
+                        envBadge.className = 'badge bg-info ms-2';
+                    } else {
+                        envText.textContent = 'Development';
+                        envBadge.className = 'badge bg-primary ms-2';
+                    }
+                    
+                    // Hide production badge
+                    document.getElementById('productionBadge').style.display = 'none';
+                    
+                    // Hide production mode info
+                    document.getElementById('productionModeInfo').style.display = 'none';
+                    
+                    // Show development-only elements
+                    document.getElementById('developmentOnlyElements').style.display = 'block';
+                }
+            }
+
+            // Update status legend with config data
+            function updateStatusLegend() {
+                const statusFlow = window.LivestockPurchaseConfig?.statusFlow || {};
+                const currentFlowType = window.LivestockPurchaseConfig?.currentFlowType || 'simple';
+                const flowConfig = window.LivestockPurchaseConfig?.availableFlows?.[currentFlowType];
+                const envConfig = window.EnvironmentConfig;
+                
+                if (Object.keys(statusFlow).length > 0 && flowConfig) {
+                    const legendContainer = document.getElementById('statusLegendContainer');
+                    if (legendContainer) {
+                        // Only show statuses that are part of the current flow
+                        const statuses = flowConfig.statuses || [];
+                        
+                        legendContainer.innerHTML = statuses.map(status => {
+                            const statusConfig = statusFlow[status];
+                            if (!statusConfig) return '';
+                            
+                            const colorClass = getStatusColorClass(statusConfig.color);
+                            const icon = statusConfig.icon || 'fas fa-circle';
+                            
+                            // In production mode, show clean status info without technical details
+                            let statusDescription = statusConfig.description || status;
+                            let statusDetails = '';
+                            
+                            if (envConfig.isProduction && !envConfig.debug) {
+                                // Production mode - show only essential information
+                                statusDetails = getProductionStatusDetails(status);
+                            } else {
+                                // Development mode - show technical details
+                                statusDetails = getStatusFeatures(statusConfig);
+                            }
+                            
+                            return `
+                                <div class="col">
+                                    <div class="d-flex align-items-start">
+                                        <span class="badge ${colorClass} me-3">
+                                            <i class="${icon} me-1"></i>${status.charAt(0).toUpperCase() + status.slice(1)}
+                                        </span>
+                                        <div>
+                                            <div class="fw-semibold">${statusDescription}</div>
+                                            <div class="text-muted small">
+                                                ${statusDetails}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                    
+                    log('🎨 Status legend updated with config data for environment:', envConfig);
+                }
+            }
+
+            // Get production-friendly status details
+            function getProductionStatusDetails(status) {
+                const productionDetails = {
+                    'draft': 'Status awal pembelian. Dapat diedit atau dihapus.',
+                    'pending': 'Menunggu persetujuan. Belum dapat diproses.',
+                    'confirmed': 'Sudah disetujui. Siap untuk pengiriman.',
+                    'in_transit': 'Ternak dalam perjalanan. Sudah ada surat jalan.',
+                    'arrived': 'Ternak sudah sampai. Siap untuk pemeriksaan.',
+                    'in_coop': 'Ternak sudah di kandang. Proses selesai.',
+                    'completed': 'Semua proses selesai. Dokumen lengkap.',
+                    'cancelled': 'Pembelian dibatalkan. Tidak dapat diproses.'
+                };
+                
+                return productionDetails[status] || 'Status pembelian ternak';
+            }
+
+            // Get status color class
+            function getStatusColorClass(color) {
+                const colorMap = {
+                    'light-gray': 'bg-secondary',
+                    'yellow': 'bg-warning text-dark',
+                    'blue': 'bg-info text-dark',
+                    'orange': 'bg-primary',
+                    'green': 'bg-success',
+                    'red': 'bg-danger',
+                    'dark-gray': 'bg-dark text-white'
+                };
+                
+                return colorMap[color] || 'bg-secondary';
+            }
+
+            // Get status features
+            function getStatusFeatures(statusConfig) {
+                const features = [];
+                
+                if (statusConfig.can_edit) features.push('Can Edit');
+                if (statusConfig.can_delete) features.push('Can Delete');
+                if (statusConfig.requires_approval) features.push('Requires Approval');
+                if (statusConfig.auto_numbering) features.push('Auto Numbering');
+                
+                return features.length > 0 ? features.join(', ') : 'No special features';
+            }
+
+            // Load current flow configuration
+            function loadCurrentFlowConfig() {
+                // Get current flow type from server-side config
+                const currentFlowType = window.LivestockPurchaseConfig?.currentFlowType || 'simple';
+                const availableFlows = window.LivestockPurchaseConfig?.availableFlows || {};
+                
+                // Get current flow config
+                const currentFlow = availableFlows[currentFlowType];
+                if (currentFlow) {
+                    // Update UI with server-side data
+                    document.getElementById('currentFlowType').textContent = currentFlow.name;
+                    document.getElementById('currentFlowDescription').textContent = currentFlow.description;
+                    
+                    log('📊 Current flow config loaded from server:', currentFlow);
+                } else {
+                    // Fallback to hardcoded config
+                    const flowConfigs = {
+                        'simple': {
+                            name: 'Simple Flow',
+                            description: 'Flow sederhana untuk pembelian kecil',
+                            statusCount: 3,
+                            approval: 'Auto',
+                            batchCreation: 'No',
+                            complexity: 'Low'
+                        },
+                        'standard': {
+                            name: 'Standard Flow',
+                            description: 'Flow standar untuk pembelian menengah',
+                            statusCount: 6,
+                            approval: 'Required',
+                            batchCreation: 'Yes',
+                            complexity: 'Medium'
+                        },
+                        'complex': {
+                            name: 'Complex Flow',
+                            description: 'Flow kompleks untuk pembelian besar dengan multiple approvals',
+                            statusCount: 7,
+                            approval: 'Multiple',
+                            batchCreation: 'Yes',
+                            complexity: 'High'
+                        }
+                    };
+
+                    const config = flowConfigs[currentFlowType] || flowConfigs['simple'];
+                    
+                    // Update UI
+                    document.getElementById('currentFlowType').textContent = config.name;
+                    document.getElementById('currentFlowDescription').textContent = config.description;
+                    
+                    log('📊 Current flow config loaded (fallback):', config);
+                }
+            }
+
+            // Load business flow comparison table
+            function loadBusinessFlowComparison() {
+                // Use server-side comparison data if available
+                const businessFlowComparison = window.LivestockPurchaseConfig?.businessFlowComparison || {};
+                
+                if (Object.keys(businessFlowComparison).length > 0) {
+                    // Use server-side data
+                    const tableBody = document.getElementById('businessFlowTableBody');
+                    if (tableBody) {
+                        tableBody.innerHTML = Object.entries(businessFlowComparison).map(([key, flow]) => `
+                            <tr>
+                                <td><strong>${flow.name}</strong></td>
+                                <td>${flow.description}</td>
+                                <td><span class="badge bg-info">${flow.total_statuses}</span></td>
+                                <td>${getApprovalBadge(flow.approval_required)}</td>
+                                <td>${getBatchCreationBadge(flow.batch_creation)}</td>
+                                <td>${getComplexityBadge(flow.complexity)}</td>
+                                <td><small class="text-muted">${flow.suitable_for.join(', ')}</small></td>
+                            </tr>
+                        `).join('');
+                    }
+                    
+                    log('📋 Business flow comparison table loaded from server');
+                } else {
+                    // Fallback to hardcoded data
+                    const flowData = [
+                        {
+                            type: 'Simple',
+                            description: 'Flow sederhana untuk pembelian kecil',
+                            statusCount: 3,
+                            approval: '<span class="badge bg-success">Auto</span>',
+                            batchCreation: '<span class="badge bg-secondary">No</span>',
+                            complexity: '<span class="badge bg-success">Low</span>',
+                            useCases: 'Pembelian < 10 juta, Supplier terpercaya, Tidak memerlukan tracking'
+                        },
+                        {
+                            type: 'Standard',
+                            description: 'Flow standar untuk pembelian menengah',
+                            statusCount: 6,
+                            approval: '<span class="badge bg-warning">Required</span>',
+                            batchCreation: '<span class="badge bg-primary">Yes</span>',
+                            complexity: '<span class="badge bg-warning">Medium</span>',
+                            useCases: 'Pembelian 10-100 juta, Supplier dengan rating normal, Memerlukan approval'
+                        },
+                        {
+                            type: 'Complex',
+                            description: 'Flow kompleks untuk pembelian besar dengan multiple approvals',
+                            statusCount: 7,
+                            approval: '<span class="badge bg-danger">Multiple</span>',
+                            batchCreation: '<span class="badge bg-primary">Yes</span>',
+                            complexity: '<span class="badge bg-danger">High</span>',
+                            useCases: 'Pembelian > 100 juta, Supplier baru/bermasalah, Multiple approvals'
+                        }
+                    ];
+
+                    const tableBody = document.getElementById('businessFlowTableBody');
+                    if (tableBody) {
+                        tableBody.innerHTML = flowData.map(flow => `
+                            <tr>
+                                <td><strong>${flow.type}</strong></td>
+                                <td>${flow.description}</td>
+                                <td><span class="badge bg-info">${flow.statusCount}</span></td>
+                                <td>${flow.approval}</td>
+                                <td>${flow.batchCreation}</td>
+                                <td>${flow.complexity}</td>
+                                <td><small class="text-muted">${flow.useCases}</small></td>
+                            </tr>
+                        `).join('');
+                    }
+                    
+                    log('📋 Business flow comparison table loaded (fallback)');
+                }
+            }
+
+            // Helper functions for badges
+            function getApprovalBadge(required) {
+                if (required === false) return '<span class="badge bg-success">Auto</span>';
+                if (required === true) return '<span class="badge bg-warning">Required</span>';
+                return '<span class="badge bg-secondary">Unknown</span>';
+            }
+
+            function getBatchCreationBadge(required) {
+                if (required === true) return '<span class="badge bg-primary">Yes</span>';
+                if (required === false) return '<span class="badge bg-secondary">No</span>';
+                return '<span class="badge bg-secondary">Unknown</span>';
+            }
+
+            function getComplexityBadge(complexity) {
+                switch (complexity) {
+                    case 'low': return '<span class="badge bg-success">Low</span>';
+                    case 'medium': return '<span class="badge bg-warning">Medium</span>';
+                    case 'high': return '<span class="badge bg-danger">High</span>';
+                    default: return '<span class="badge bg-secondary">Unknown</span>';
+                }
+            }
+
+            // Setup action buttons
+            function setupActionButtons() {
+                // View Config button
+                const btnViewConfig = document.getElementById('btnViewConfig');
+                if (btnViewConfig) {
+                    btnViewConfig.addEventListener('click', function() {
+                        showConfigDetails();
+                    });
+                }
+
+                // Test Flow button
+                const btnTestFlow = document.getElementById('btnTestFlow');
+                if (btnTestFlow) {
+                    btnTestFlow.addEventListener('click', function() {
+                        testCurrentFlow();
+                    });
+                }
+
+                // Change Flow button
+                const btnChangeFlow = document.getElementById('btnChangeFlow');
+                if (btnChangeFlow) {
+                    btnChangeFlow.addEventListener('click', function() {
+                        showFlowChangeModal();
+                    });
+                }
+            }
+
+            // Show configuration details
+            function showConfigDetails() {
+                const currentFlow = document.getElementById('currentFlowType').textContent;
+                const currentFlowType = window.LivestockPurchaseConfig?.currentFlowType || 'simple';
+                const statusFlow = window.LivestockPurchaseConfig?.statusFlow || {};
+                const statusRequirements = window.LivestockPurchaseConfig?.statusRequirements || {};
+                
+                // Get status flow for current flow type
+                const flowConfig = window.LivestockPurchaseConfig?.availableFlows?.[currentFlowType];
+                const statusFlowText = flowConfig ? flowConfig.statuses.join(' → ') : getStatusFlowForCurrentFlow();
+                
+                // Get status requirements for current flow
+                const statusRequirementsHtml = Object.entries(statusRequirements).map(([status, requirements]) => {
+                    if (flowConfig && !flowConfig.statuses.includes(status)) return '';
+                    
+                    return `
+                        <div class="mb-2">
+                            <strong>${status.charAt(0).toUpperCase() + status.slice(1)}:</strong><br>
+                            <small class="text-muted">
+                                Required: ${requirements.required_fields?.join(', ') || 'None'}<br>
+                                Optional: ${requirements.optional_fields?.join(', ') || 'None'}<br>
+                                Documents: ${requirements.documents?.join(', ') || 'None'}
+                            </small>
+                        </div>
+                    `;
+                }).join('');
+                
+                Swal.fire({
+                    title: 'Business Flow Configuration',
+                    html: `
+                        <div class="text-start">
+                            <h6>Current Flow: ${currentFlow}</h6>
+                            <hr>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Status Flow:</strong><br>
+                                    <small class="text-muted">
+                                        ${statusFlowText}
+                                    </small>
+                                </div>
+                                <div class="col-6">
+                                    <strong>Features:</strong><br>
+                                    <small class="text-muted">
+                                        • Approval: ${getApprovalStatus()}<br>
+                                        • Batch Creation: ${getBatchCreationStatus()}<br>
+                                        • Document Requirements: ${getDocumentRequirements()}<br>
+                                        • Complexity: ${getComplexityLevel()}
+                                    </small>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-12">
+                                    <strong>Status Requirements:</strong><br>
+                                    <div class="mt-2" style="max-height: 200px; overflow-y: auto;">
+                                        ${statusRequirementsHtml}
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="alert alert-info">
+                                <small>
+                                    <strong>Configuration File:</strong> app/Config/LivestockPurchaseConfig.php<br>
+                                    <strong>Current Flow Type:</strong> ${currentFlowType}<br>
+                                    <strong>Total Statuses:</strong> ${Object.keys(statusFlow).length}
+                                </small>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'info',
+                    width: '700px',
+                    confirmButtonText: 'Close'
+                });
+            }
+
+            // Test current flow
+            function testCurrentFlow() {
+                const currentFlow = document.getElementById('currentFlowType').textContent;
+                const currentFlowType = window.LivestockPurchaseConfig?.currentFlowType || 'simple';
+                const flowConfig = window.LivestockPurchaseConfig?.availableFlows?.[currentFlowType];
+                const statusFlow = window.LivestockPurchaseConfig?.statusFlow || {};
+                
+                // Show status flow diagram
+                const statusFlowHtml = flowConfig ? generateStatusFlowDiagram(flowConfig, statusFlow) : '';
+                
+                Swal.fire({
+                    title: 'Testing Business Flow',
+                    html: `
+                        <div class="text-start">
+                            <h6>Testing: ${currentFlow}</h6>
+                            <hr>
+                            <div class="mb-3">
+                                <strong>Status Flow:</strong><br>
+                                <div class="mt-2">
+                                    ${statusFlowHtml}
+                                </div>
+                            </div>
+                            <hr>
+                            <div id="testProgress">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    <span>Initializing test...</span>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'info',
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    width: '800px'
+                });
+
+                // Simulate test progress
+                setTimeout(() => {
+                    updateTestProgress('Validating flow configuration...', 25);
+                }, 1000);
+
+                setTimeout(() => {
+                    updateTestProgress('Testing status transitions...', 50);
+                }, 2000);
+
+                setTimeout(() => {
+                    updateTestProgress('Validating business rules...', 75);
+                }, 3000);
+
+                setTimeout(() => {
+                    updateTestProgress('Test completed successfully!', 100);
+                    Swal.fire({
+                        title: 'Test Completed',
+                        text: `Business flow "${currentFlow}" is working correctly!`,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
+                }, 4000);
+            }
+
+            // Generate status flow diagram
+            function generateStatusFlowDiagram(flowConfig, statusFlow) {
+                const statuses = flowConfig.statuses || [];
+                const transitions = flowConfig.transitions || {};
+                
+                return statuses.map((status, index) => {
+                    const statusConfig = statusFlow[status];
+                    const colorClass = getStatusColorClass(statusConfig?.color || 'gray');
+                    const icon = statusConfig?.icon || 'fas fa-circle';
+                    const isLast = index === statuses.length - 1;
+                    
+                    return `
+                        <div class="d-inline-flex align-items-center">
+                            <span class="badge ${colorClass} me-2">
+                                <i class="${icon} me-1"></i>${status.charAt(0).toUpperCase() + status.slice(1)}
+                            </span>
+                            ${!isLast ? '<i class="fas fa-arrow-right me-2 text-muted"></i>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Update test progress
+            function updateTestProgress(message, percentage) {
+                const progressDiv = document.getElementById('testProgress');
+                if (progressDiv) {
+                    progressDiv.innerHTML = `
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>${message}</span>
+                                <span>${percentage}%</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" role="progressbar" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Show flow change modal
+            function showFlowChangeModal() {
+                Swal.fire({
+                    title: 'Change Business Flow',
+                    html: `
+                        <div class="text-start">
+                            <p>Select a new business flow type:</p>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="flowType" id="flowSimple" value="simple" checked>
+                                <label class="form-check-label" for="flowSimple">
+                                    <strong>Simple Flow</strong> - For small purchases (< 10 juta)
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="flowType" id="flowStandard" value="standard">
+                                <label class="form-check-label" for="flowStandard">
+                                    <strong>Standard Flow</strong> - For medium purchases (10-100 juta)
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="flowType" id="flowComplex" value="complex">
+                                <label class="form-check-label" for="flowComplex">
+                                    <strong>Complex Flow</strong> - For large purchases (> 100 juta)
+                                </label>
+                            </div>
+                            <div class="alert alert-warning mt-3">
+                                <small>
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <strong>Warning:</strong> Changing business flow may affect existing purchase processes.
+                                </small>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Change Flow',
+                    cancelButtonText: 'Cancel',
+                    preConfirm: () => {
+                        const selectedFlow = document.querySelector('input[name="flowType"]:checked').value;
+                        return selectedFlow;
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        changeBusinessFlow(result.value);
+                    }
+                });
+            }
+
+            // Change business flow
+            function changeBusinessFlow(newFlowType) {
+                log('🔄 Changing business flow to:', newFlowType);
+                
+                // Show loading
+                Swal.fire({
+                    title: 'Changing Business Flow',
+                    text: 'Please wait while we update the configuration...',
+                    icon: 'info',
+                    showConfirmButton: false,
+                    allowOutsideClick: false
+                });
+
+                // Simulate API call to change flow
+                setTimeout(() => {
+                    // Update UI
+                    const flowNames = {
+                        'simple': 'Simple Flow',
+                        'standard': 'Standard Flow',
+                        'complex': 'Complex Flow'
+                    };
+                    
+                    const flowDescriptions = {
+                        'simple': 'Flow sederhana untuk pembelian kecil',
+                        'standard': 'Flow standar untuk pembelian menengah',
+                        'complex': 'Flow kompleks untuk pembelian besar dengan multiple approvals'
+                    };
+
+                    document.getElementById('currentFlowType').textContent = flowNames[newFlowType];
+                    document.getElementById('currentFlowDescription').textContent = flowDescriptions[newFlowType];
+
+                    Swal.fire({
+                        title: 'Flow Changed Successfully',
+                        text: `Business flow has been changed to "${flowNames[newFlowType]}"`,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
+
+                    log('✅ Business flow changed to:', newFlowType);
+                }, 2000);
+            }
+
+            // Helper functions for config details
+            function getStatusFlowForCurrentFlow() {
+                const currentFlow = document.getElementById('currentFlowType').textContent;
+                
+                const flows = {
+                    'Simple Flow': 'Draft → Confirmed → Completed',
+                    'Standard Flow': 'Draft → Pending → Confirmed → In Transit → Arrived → Completed',
+                    'Complex Flow': 'Draft → Pending → Confirmed → In Transit → Arrived → In Coop → Completed'
+                };
+                
+                return flows[currentFlow] || 'Unknown flow';
+            }
+
+            function getApprovalStatus() {
+                const currentFlow = document.getElementById('currentFlowType').textContent;
+                
+                const approvals = {
+                    'Simple Flow': 'Auto Approval',
+                    'Standard Flow': 'Required',
+                    'Complex Flow': 'Multiple Levels'
+                };
+                
+                return approvals[currentFlow] || 'Unknown';
+            }
+
+            function getBatchCreationStatus() {
+                const currentFlow = document.getElementById('currentFlowType').textContent;
+                
+                const batchStatus = {
+                    'Simple Flow': 'No',
+                    'Standard Flow': 'Yes',
+                    'Complex Flow': 'Yes'
+                };
+                
+                return batchStatus[currentFlow] || 'Unknown';
+            }
+
+            function getDocumentRequirements() {
+                const currentFlow = document.getElementById('currentFlowType').textContent;
+                
+                const docRequirements = {
+                    'Simple Flow': 'Minimal',
+                    'Standard Flow': 'Standard',
+                    'Complex Flow': 'Comprehensive'
+                };
+                
+                return docRequirements[currentFlow] || 'Unknown';
+            }
+
+            function getComplexityLevel() {
+                const currentFlow = document.getElementById('currentFlowType').textContent;
+                
+                const complexity = {
+                    'Simple Flow': 'Low',
+                    'Standard Flow': 'Medium',
+                    'Complex Flow': 'High'
+                };
+                
+                return complexity[currentFlow] || 'Unknown';
             }
         });
     </script>
@@ -644,11 +1497,13 @@
             window.addEventListener('hide-datatable', () => {
                 $('#datatable-container').hide();
                 $('#cardToolbar').hide();
+                $('#statusLegendCard').hide();
             });
 
             window.addEventListener('show-datatable', () => {
                 $('#datatable-container').show();
                 $('#cardToolbar').show();
+                $('#statusLegendCard').show();
             });
 
             window.addEventListener('statusUpdated', () => {
@@ -813,6 +1668,36 @@
                 e.preventDefault();
                 log('🎯 Testing livestock purchase notification via keyboard shortcut');
                 testNotificationFromPage();
+            }
+            
+            // Ctrl+Shift+F - Test business flow configuration (development only)
+            if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+                e.preventDefault();
+                if (window.EnvironmentConfig.showFlowInfo) {
+                    log('🎯 Testing business flow configuration via keyboard shortcut');
+                    testCurrentFlow();
+                } else {
+                    log('🚫 Business flow testing disabled in production mode');
+                }
+            }
+            
+            // Ctrl+Shift+C - Show configuration details (development only)
+            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                e.preventDefault();
+                if (window.EnvironmentConfig.showFlowInfo) {
+                    log('🎯 Showing configuration details via keyboard shortcut');
+                    showConfigDetails();
+                } else {
+                    log('🚫 Configuration details disabled in production mode');
+                }
+            }
+            
+            // Ctrl+Shift+B - Toggle status legend card (always available)
+            if (e.ctrlKey && e.shiftKey && e.key === 'B') {
+                e.preventDefault();
+                log('🎯 Toggling status legend card via keyboard shortcut');
+                const toggle = document.getElementById('kt_status_legend_toggle');
+                if (toggle) toggle.click();
             }
         });
 

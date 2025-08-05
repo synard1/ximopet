@@ -45,7 +45,7 @@ use App\Services\Livestock\LivestockNumberGeneratorService;
 
 class Create extends Component
 {
-    use WithFileUploads, HasTempAuthorization;
+    use WithFileUploads;
 
     public $livestockId;
     public $invoice_number;
@@ -65,6 +65,7 @@ class Create extends Component
     public $availableKandangs = [];
     public $maxItems = 3;
     public $status = null;
+    public $notes = null;
     public bool $withHistory = false; // ← Tambahkan ini di atas class Livewire
 
     protected $listeners = [
@@ -88,7 +89,7 @@ class Create extends Component
 
     public function mount()
     {
-        $this->initializeTempAuth();
+        // $this->initializeTempAuth();
     }
 
     /**
@@ -213,6 +214,7 @@ class Create extends Component
             'farm_id' => $this->farm_id,
             'coop_id' => $this->coop_id,
             'start_date' => $this->date,
+            'sub_total' => 0,
         ];
     }
 
@@ -600,41 +602,67 @@ class Create extends Component
      */
     private function validatePurchaseData(array $data): array
     {
-        // Basic validation without ValidationService
         $errors = [];
 
-        // Validate main purchase data
+        // Validate required fields
+        if (empty($data['tanggal'])) {
+            $errors['tanggal'] = 'Tanggal harus diisi';
+        }
+
+        if (empty($data['invoice_number'])) {
+            $errors['invoice_number'] = 'Nomor invoice harus diisi';
+        }
+
+        if (empty($data['supplier_id'])) {
+            $errors['supplier_id'] = 'Supplier harus dipilih';
+        }
+
         if (empty($data['farm_id'])) {
-            $errors['farm_id'] = ['Farm is required'];
+            $errors['farm_id'] = 'Farm harus dipilih';
         }
+
         if (empty($data['coop_id'])) {
-            $errors['coop_id'] = ['Coop is required'];
-        }
-        if (empty($data['date'])) {
-            $errors['date'] = ['Date is required'];
+            $errors['coop_id'] = 'Kandang harus dipilih';
         }
 
         // Validate items
-        if (empty($this->items)) {
-            $errors['items'] = ['At least one item is required'];
+        if (empty($data['items']) || count($data['items']) === 0) {
+            $errors['items'] = 'Minimal satu item livestock harus ditambahkan';
+        } else {
+            foreach ($data['items'] as $index => $item) {
+                if (empty($item['livestock_strain_id'])) {
+                    $errors["items.{$index}.livestock_strain_id"] = 'Strain harus dipilih';
+                }
+
+                if (empty($item['quantity']) || $item['quantity'] <= 0) {
+                    $errors["items.{$index}.quantity"] = 'Jumlah harus lebih dari 0';
+                }
+
+                if (empty($item['price_value']) || $item['price_value'] <= 0) {
+                    $errors["items.{$index}.price_value"] = 'Harga harus lebih dari 0';
+                }
+            }
         }
 
-        foreach ($this->items as $index => $item) {
-            if (empty($item['livestock_strain_id'])) {
-                $errors["items.{$index}.livestock_strain_id"] = ['Livestock strain is required'];
+        // FIX: Validasi ekspedisi untuk status complete
+        if ($data['status'] === 'complete') {
+            if (empty($data['expedition_id'])) {
+                $errors['expedition_id'] = 'Ekspedisi harus dipilih untuk status complete';
             }
-            if (empty($item['quantity']) || $item['quantity'] <= 0) {
-                $errors["items.{$index}.quantity"] = ['Quantity must be greater than 0'];
-            }
-            if (empty($item['price_value']) || $item['price_value'] <= 0) {
-                $errors["items.{$index}.price_value"] = ['Price must be greater than 0'];
+
+            if (empty($data['expedition_fee']) || $data['expedition_fee'] <= 0) {
+                $errors['expedition_fee'] = 'Biaya ekspedisi harus diisi untuk status complete';
             }
         }
 
-        return [
-            'is_valid' => empty($errors),
-            'errors' => $errors
-        ];
+        // Validate batch name if provided
+        if (!empty($data['batch_name'])) {
+            if (strlen($data['batch_name']) < 3) {
+                $errors['batch_name'] = 'Nama batch minimal 3 karakter';
+            }
+        }
+
+        return $errors;
     }
 
     /**
@@ -653,21 +681,37 @@ class Create extends Component
             'expedition_fee' => $this->expedition_fee,
             'items' => $this->items,
         ]);
+
         [$company, $livestockConfig] = $this->getLivestockPurchaseConfig();
         $this->errorItems = [];
         Log::info('Config loaded', ['company' => $company?->id, 'livestockConfig' => $livestockConfig]);
+
         try {
-            // Validasi utama
-            Log::info('Validating main fields');
-            $this->validate([
-                'invoice_number' => 'required|string',
-                'date' => 'required|date',
-                'supplier_id' => 'required|exists:partners,id',
-                'farm_id' => 'required|exists:farms,id',
-                'coop_id' => 'required|exists:coops,id',
-                'expedition_id' => 'nullable|exists:partners,id',
-            ]);
-            Log::info('Main fields validated');
+            // FIX: Gunakan validasi custom yang baru
+            $purchaseData = [
+                'tanggal' => $this->date,
+                'invoice_number' => $this->invoice_number,
+                'supplier_id' => $this->supplier_id,
+                'farm_id' => $this->farm_id,
+                'coop_id' => $this->coop_id,
+                'expedition_id' => $this->expedition_id,
+                'expedition_fee' => $this->expedition_fee ?? 0,
+                'batch_name' => $this->batch_name,
+                'status' => $this->status ?? LivestockPurchase::STATUS_DRAFT,
+                'items' => $this->items
+            ];
+
+            $validationErrors = $this->validatePurchaseData($purchaseData);
+
+            if (!empty($validationErrors)) {
+                Log::warning('Validation failed', ['errors' => $validationErrors]);
+                foreach ($validationErrors as $field => $message) {
+                    $this->addError($field, $message);
+                }
+                return;
+            }
+
+            Log::info('Validation passed');
 
             if (!empty($this->errorItems)) {
                 Log::warning('Config-based validation failed', ['errors' => $this->errorItems]);
@@ -677,6 +721,9 @@ class Create extends Component
 
             $normalizedExpeditionId = $this->normalizeExpeditionId($this->expedition_id);
 
+            // FIX: Pertahankan status yang ada saat edit mode, jangan selalu set ke draft
+            $finalStatus = $this->getFinalStatusForSave();
+
             $purchaseData = [
                 'invoice_number' => $this->invoice_number,
                 'tanggal' => $this->date,
@@ -685,7 +732,7 @@ class Create extends Component
                 'coop_id' => $this->coop_id,
                 'expedition_id' => $normalizedExpeditionId,
                 'expedition_fee' => $this->expedition_fee ?? 0,
-                'status' => LivestockPurchase::STATUS_DRAFT,
+                'status' => $finalStatus,
                 'updated_by' => auth()->id(),
                 'data' => [
                     'batch_name' => $this->batch_name,
@@ -697,12 +744,14 @@ class Create extends Component
                     }, $this->items)),
                 ]
             ];
+
             Log::info('Prepared purchase data', $purchaseData);
-            Log::info('Expedition ID debug info', [
-                'raw_expedition_id' => $this->expedition_id,
-                'expedition_id_type' => gettype($this->expedition_id),
-                'normalized_expedition_id' => $normalizedExpeditionId,
-                'normalized_type' => gettype($normalizedExpeditionId)
+            Log::info('Status preservation info', [
+                'edit_mode' => $this->edit_mode,
+                'pembelian_id' => $this->pembelianId,
+                'original_status' => $this->status,
+                'final_status' => $finalStatus,
+                'can_update_status' => $this->canUpdateStatus($finalStatus)
             ]);
 
             DB::beginTransaction();
@@ -789,6 +838,8 @@ class Create extends Component
                     'price_type' => $item['price_type'],
                     'price_value' => $item['price_value'],
                     'status' => 'active',
+                    'created_by' => auth()->id(),
+                    'updated_by' => auth()->id(),
                 ];
 
                 LivestockPurchaseItem::create([
@@ -867,8 +918,34 @@ class Create extends Component
         $notes = $notes ?? null;
         $previousStatus = $purchase->status;
 
+        // FIX: Validasi untuk status completed - harus ada data ekspedisi
+        if ($status === 'completed' || $status === 'complete') {
+            $validationErrors = $this->validateStatusForCompleted($purchase);
+            if (!empty($validationErrors)) {
+                Log::warning('updateStatusLivestockPurchase: Validasi gagal untuk status completed', [
+                    'purchase_id' => $purchase->id,
+                    'errors' => $validationErrors
+                ]);
+                $this->dispatch('error', 'Tidak bisa set status completed: ' . implode(', ', $validationErrors));
+                return;
+            }
+        }
+
+        // FIX: Validasi status transition untuk semua status
+        $transitionErrors = $this->validateStatusTransition($purchase, $status);
+        if (!empty($transitionErrors)) {
+            Log::warning('updateStatusLivestockPurchase: Validasi status transition gagal', [
+                'purchase_id' => $purchase->id,
+                'current_status' => $purchase->status,
+                'new_status' => $status,
+                'errors' => $transitionErrors
+            ]);
+            $this->dispatch('error', 'Tidak bisa mengubah status: ' . implode(', ', $transitionErrors));
+            return;
+        }
+
         // If status is in_coop, try generating livestock and batch first
-        if ($status === \App\Models\LivestockPurchase::STATUS_IN_COOP) {
+        if ($status === \App\Models\LivestockPurchase::STATUS_IN_COOP || $status === \App\Models\LivestockPurchase::STATUS_ARRIVED) {
             try {
                 Log::info('updateStatusLivestockPurchase: Try generateLivestockAndBatch', [
                     'purchase_id' => $purchase->id
@@ -898,6 +975,56 @@ class Create extends Component
 
         $this->dispatch('statusUpdated');
         $this->dispatch('success', 'Status pembelian berhasil diperbarui.');
+    }
+
+    /**
+     * Validate purchase data for completed status
+     * Ensure expedition data is available before setting status to completed
+     */
+    private function validateStatusForCompleted($purchase): array
+    {
+        $errors = [];
+
+        // Check if expedition data is available
+        if (empty($purchase->expedition_id)) {
+            $errors[] = 'Ekspedisi harus dipilih untuk status completed';
+        }
+
+        if (empty($purchase->expedition_fee) || $purchase->expedition_fee <= 0) {
+            $errors[] = 'Biaya ekspedisi harus diisi untuk status completed';
+        }
+
+        // Check if purchase has items
+        if ($purchase->details()->count() === 0) {
+            $errors[] = 'Pembelian harus memiliki minimal satu item untuk status completed';
+        }
+
+        // Check if all required fields are filled
+        if (empty($purchase->invoice_number)) {
+            $errors[] = 'Nomor invoice harus diisi untuk status completed';
+        }
+
+        if (empty($purchase->supplier_id)) {
+            $errors[] = 'Supplier harus dipilih untuk status completed';
+        }
+
+        if (empty($purchase->farm_id)) {
+            $errors[] = 'Farm harus dipilih untuk status completed';
+        }
+
+        if (empty($purchase->coop_id)) {
+            $errors[] = 'Kandang harus dipilih untuk status completed';
+        }
+
+        Log::info('validateStatusForCompleted: Validation result', [
+            'purchase_id' => $purchase->id,
+            'expedition_id' => $purchase->expedition_id,
+            'expedition_fee' => $purchase->expedition_fee,
+            'items_count' => $purchase->details()->count(),
+            'errors' => $errors
+        ]);
+
+        return $errors;
     }
 
     /**
@@ -1009,6 +1136,79 @@ class Create extends Component
                 $this->items[$index]['unit_id'] = null;
             }
         }
+
+        // Trigger kalkulasi otomatis untuk field yang mempengaruhi sub total
+        if (in_array($field, ['quantity', 'price_value', 'price_type'])) {
+            $this->calculateItemSubTotal($index);
+            $this->dispatch('item-updated', index: $index);
+        }
+    }
+
+    /**
+     * Kalkulasi sub total untuk item tertentu
+     */
+    public function calculateItemSubTotal($index)
+    {
+        if (!isset($this->items[$index])) {
+            return;
+        }
+
+        $item = $this->items[$index];
+        $quantity = floatval($item['quantity'] ?? 0);
+        $price = floatval($item['price_value'] ?? 0);
+        $priceType = $item['price_type'] ?? 'per_unit';
+
+        // Kalkulasi sub total berdasarkan tipe harga
+        if ($priceType === 'per_unit') {
+            $subTotal = $quantity * $price;
+        } else {
+            // Jika tipe harga adalah total, maka price_value sudah merupakan total
+            $subTotal = $price;
+        }
+
+        $this->items[$index]['sub_total'] = $subTotal;
+    }
+
+    /**
+     * Kalkulasi total keseluruhan
+     */
+    public function calculateTotal()
+    {
+        $total = 0;
+        $discount = 0;
+
+        foreach ($this->items as $index => $item) {
+            $this->calculateItemSubTotal($index);
+            $total += $this->items[$index]['sub_total'] ?? 0;
+        }
+
+        return [
+            'sub_total' => $total,
+            'discount' => $discount,
+            'expedition_fee' => floatval($this->expedition_fee ?? 0),
+            'total' => $total - $discount + floatval($this->expedition_fee ?? 0)
+        ];
+    }
+
+    /**
+     * Getter untuk total yang bisa diakses dari view
+     */
+    public function getTotalProperty()
+    {
+        return $this->calculateTotal();
+    }
+
+    /**
+     * Getter untuk sub total item tertentu
+     */
+    public function getItemSubTotal($index)
+    {
+        if (!isset($this->items[$index])) {
+            return 0;
+        }
+
+        $this->calculateItemSubTotal($index);
+        return $this->items[$index]['sub_total'] ?? 0;
     }
 
     public function updateUnitConversion($index)
@@ -1053,7 +1253,7 @@ class Create extends Component
     public function render()
     {
         // Check temp auth on every render
-        $this->checkTempAuth();
+        // $this->checkTempAuth();
 
         $user = auth()->user();
         $companyId = $user->company_id;
@@ -1104,28 +1304,163 @@ class Create extends Component
 
     public function isReadonly()
     {
-        Log::info('Checking readonly status', [
-            'tempAuthEnabled' => $this->tempAuthEnabled,
-            'edit_mode' => $this->edit_mode,
-            'status' => $this->status,
-        ]);
+        // Log::info('Checking readonly status', [
+        //     // 'tempAuthEnabled' => $this->tempAuthEnabled,
+        //     'edit_mode' => $this->edit_mode,
+        //     'status' => $this->status,
+        // ]);
 
-        if ($this->tempAuthEnabled) {
+        // if ($this->tempAuthEnabled) {
+        //     return false;
+        // }
+
+        return in_array($this->status, ['in_coop', 'arrived', 'complete']);
+    }
+
+    public function isDisabled()
+    {
+        // If temp auth is enabled, not disabled
+        // if ($this->tempAuthEnabled) {
+        //     return false;
+        // }
+
+        // Check local conditions - allow editing for arrived status
+        return in_array($this->status, ['in_coop', 'arrived', 'complete']);
+    }
+
+    /**
+     * Check if form can be saved
+     * Allow saving for arrived status to update expedition details
+     */
+    public function canSave()
+    {
+        // Allow saving for arrived status to update expedition details
+        if (in_array($this->status, ['draft', 'confirmed', 'in_transit', 'arrived'])) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if invoice number field should be readonly
+     * Invoice number should be editable for arrived status
+     */
+    public function isInvoiceNumberReadonly()
+    {
+        // Allow invoice number editing for arrived status
+        if ($this->status === 'arrived') {
             return false;
         }
 
         return in_array($this->status, ['in_coop', 'complete']);
     }
 
-    public function isDisabled()
+    /**
+     * Check if notes field should be readonly
+     * Notes should be editable for arrived status
+     */
+    public function isNotesReadonly()
     {
-        // If temp auth is enabled, not disabled
-        if ($this->tempAuthEnabled) {
+        // Allow notes editing for arrived status
+        if ($this->status === 'arrived') {
             return false;
         }
 
-        // Check local conditions
         return in_array($this->status, ['in_coop', 'complete']);
+    }
+
+    /**
+     * Get current status for display and logic
+     */
+    public function getCurrentStatus()
+    {
+        $status = $this->status ?? 'draft';
+
+        Log::info('Current status check', [
+            'status' => $status,
+            'edit_mode' => $this->edit_mode,
+            'pembelian_id' => $this->pembelianId ?? null
+        ]);
+
+        return $status;
+    }
+
+    /**
+     * Check if expedition fields should be readonly
+     * Expedition fields should be editable for in_coop and arrived status to add expedition details
+     */
+    public function isExpeditionReadonly()
+    {
+        // Allow expedition editing for in_coop and arrived status to add expedition details
+        // Only readonly for complete status if expedition is already filled
+        $isReadonly = false;
+        $currentStatus = $this->getCurrentStatus();
+
+        if ($currentStatus === 'complete' && !empty($this->expedition_id) && !empty($this->expedition_fee)) {
+            $isReadonly = true;
+        }
+
+        Log::info('Expedition readonly check', [
+            'status' => $currentStatus,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+            'is_readonly' => $isReadonly
+        ]);
+
+        return $isReadonly;
+    }
+
+    /**
+     * Check if expedition fields should be disabled
+     * Expedition fields should be editable for in_coop and arrived status
+     */
+    public function isExpeditionDisabled()
+    {
+        // Allow expedition editing for in_coop and arrived status
+        // Only disabled for complete status if expedition is already filled
+        $isDisabled = false;
+        $currentStatus = $this->getCurrentStatus();
+
+        if ($currentStatus === 'complete' && !empty($this->expedition_id) && !empty($this->expedition_fee)) {
+            $isDisabled = true;
+        }
+
+        Log::info('Expedition disabled check', [
+            'status' => $currentStatus,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+            'is_disabled' => $isDisabled
+        ]);
+
+        return $isDisabled;
+    }
+
+    /**
+     * Check if batch name field should be readonly
+     * Batch name should be editable in edit mode
+     */
+    public function isBatchNameReadonly()
+    {
+        // Allow batch name editing in edit mode
+        if ($this->edit_mode) {
+            return false;
+        }
+
+        return in_array($this->status, ['in_coop', 'arrived', 'complete']);
+    }
+
+    /**
+     * Check if batch name field should be disabled
+     */
+    public function isBatchNameDisabled()
+    {
+        // Allow batch name editing in edit mode
+        if ($this->edit_mode) {
+            return false;
+        }
+
+        return in_array($this->status, ['in_coop', 'arrived', 'complete']);
     }
 
     /**
@@ -1429,12 +1764,18 @@ class Create extends Component
         $this->items = [];
         if ($pembelian && $pembelian->details->isNotEmpty()) {
             $this->date = $pembelian->tanggal;
-            $this->batch_name = $pembelian->details->first()->livestock->name ?? null;
+
+            // FIX: Ambil batch_name dari data pembelian atau generate otomatis
+            $this->batch_name = $pembelian->data['batch_name'] ??
+                $pembelian->details->first()->livestock->name ??
+                $this->generateBatchName($pembelian);
+
             $this->invoice_number = $pembelian->invoice_number;
-            $this->supplier_id = $pembelian->supplier_id; // FIX: gunakan supplier_id, bukan vendor_id
+            $this->supplier_id = $pembelian->supplier_id;
             $this->expedition_id = $this->normalizeExpeditionId($pembelian->expedition_id);
-            $this->expedition_fee = $pembelian->expedition_fee;
+            $this->expedition_fee = $pembelian->expedition_fee ?? 0;
             $this->status = $pembelian->status;
+            $this->notes = $pembelian->notes ?? null;
 
             $firstLivestock = $pembelian->details->first()->data['livestock'];
             if ($firstLivestock) {
@@ -1470,6 +1811,21 @@ class Create extends Component
         $this->showForm = true;
         $this->edit_mode = true;
         $this->dispatch('hide-datatable');
+    }
+
+    /**
+     * Generate batch name for edit mode if not available
+     */
+    private function generateBatchName($pembelian)
+    {
+        $farm = \App\Models\Farm::find($pembelian->farm_id);
+        $coop = \App\Models\Coop::find($pembelian->coop_id);
+
+        $farmCode = $farm->code ?? $farm->name ?? 'Farm';
+        $coopCode = $coop->code ?? $coop->name ?? 'Coop';
+        $date = $pembelian->tanggal ? $pembelian->tanggal->format('dmY') : now()->format('dmY');
+
+        return "PR-{$farmCode}-{$coopCode}-{$date}";
     }
 
     /**
@@ -2576,5 +2932,154 @@ class Create extends Component
         }
 
         return false;
+    }
+
+    /**
+     * Trigger kalkulasi otomatis saat expedition_fee berubah
+     */
+    public function updatedExpeditionFee($value)
+    {
+        // Trigger re-render untuk update ringkasan
+        $this->dispatch('expedition-fee-updated');
+    }
+
+    /**
+     * Method khusus untuk update quantity dengan kalkulasi otomatis
+     */
+    public function updatedItemsQuantity($value, $key)
+    {
+        [$index] = explode('.', $key);
+        $this->items[$index]['quantity'] = $value;
+        $this->calculateItemSubTotal($index);
+        $this->dispatch('item-updated', index: $index);
+    }
+
+    /**
+     * Method khusus untuk update price dengan kalkulasi otomatis
+     */
+    public function updatedItemsPriceValue($value, $key)
+    {
+        [$index] = explode('.', $key);
+        $this->items[$index]['price_value'] = $value;
+        $this->calculateItemSubTotal($index);
+        $this->dispatch('item-updated', index: $index);
+    }
+
+    /**
+     * Method khusus untuk update price type dengan kalkulasi otomatis
+     */
+    public function updatedItemsPriceType($value, $key)
+    {
+        [$index] = explode('.', $key);
+        $this->items[$index]['price_type'] = $value;
+        $this->calculateItemSubTotal($index);
+        $this->dispatch('item-updated', index: $index);
+    }
+
+    /**
+     * Method untuk force update kalkulasi semua item
+     */
+    public function recalculateAllItems()
+    {
+        foreach ($this->items as $index => $item) {
+            $this->calculateItemSubTotal($index);
+        }
+        $this->dispatch('all-items-recalculated');
+    }
+
+    /**
+     * Method untuk handle event recalculate-totals dari JavaScript
+     */
+    public function recalculateTotals()
+    {
+        $this->recalculateAllItems();
+        $this->dispatch('totals-recalculated');
+    }
+
+    /**
+     * Check if current status allows updates
+     * Some statuses should not be changed when updating expedition details
+     */
+    public function canUpdateStatus($currentStatus)
+    {
+        // Status yang diizinkan untuk diupdate (tidak berubah saat save)
+        $allowedStatuses = ['draft', 'confirmed', 'in_transit', 'arrived'];
+
+        return in_array($currentStatus, $allowedStatuses);
+    }
+
+    /**
+     * Get final status for save operation
+     * Preserve status for edit mode, use draft for create mode
+     */
+    private function getFinalStatusForSave()
+    {
+        if ($this->edit_mode && $this->pembelianId) {
+            // Untuk edit mode, pertahankan status yang ada
+            $existingPurchase = LivestockPurchase::find($this->pembelianId);
+            if ($existingPurchase && $this->canUpdateStatus($existingPurchase->status)) {
+                return $existingPurchase->status;
+            }
+            // Jika status tidak diizinkan untuk diupdate, kembalikan status asli
+            return $this->status ?? LivestockPurchase::STATUS_DRAFT;
+        } else {
+            // Untuk create mode, gunakan status draft
+            return LivestockPurchase::STATUS_DRAFT;
+        }
+    }
+
+    /**
+     * Check if status transition is allowed
+     * Prevent invalid status transitions based on business rules
+     */
+    public function canTransitionToStatus($currentStatus, $newStatus): bool
+    {
+        // Define allowed status transitions
+        $allowedTransitions = [
+            'draft' => ['confirmed', 'cancelled'],
+            'confirmed' => ['in_transit', 'cancelled'],
+            'in_transit' => ['arrived', 'cancelled'],
+            'arrived' => ['in_coop', 'completed', 'cancelled'],
+            'in_coop' => ['completed', 'cancelled'],
+            'completed' => ['cancelled'], // Completed can only be cancelled
+            'cancelled' => [] // Cancelled is final state
+        ];
+
+        // Check if transition is allowed
+        if (isset($allowedTransitions[$currentStatus])) {
+            return in_array($newStatus, $allowedTransitions[$currentStatus]);
+        }
+
+        return false;
+    }
+
+    /**
+     * Validate status transition with business rules
+     */
+    private function validateStatusTransition($purchase, $newStatus): array
+    {
+        $errors = [];
+        $currentStatus = $purchase->status;
+
+        // Check if transition is allowed
+        if (!$this->canTransitionToStatus($currentStatus, $newStatus)) {
+            $errors[] = "Tidak bisa mengubah status dari '{$currentStatus}' ke '{$newStatus}'";
+        }
+
+        // Special validation for completed status
+        if ($newStatus === 'completed' || $newStatus === 'complete') {
+            $completedErrors = $this->validateStatusForCompleted($purchase);
+            $errors = array_merge($errors, $completedErrors);
+        }
+
+        Log::info('validateStatusTransition: Validation result', [
+            'purchase_id' => $purchase->id,
+            'current_status' => $currentStatus,
+            'new_status' => $newStatus,
+            'can_transition' => $this->canTransitionToStatus($currentStatus, $newStatus),
+            'errors' => $errors
+        ]);
+
+        return $errors;
     }
 }

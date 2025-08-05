@@ -8,6 +8,8 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class LivestockPurchaseDataTable extends DataTable
 {
@@ -25,20 +27,32 @@ class LivestockPurchaseDataTable extends DataTable
                 return $transaksi->created_at->format('d M Y, h:i a');
             })
             ->editColumn('farm_id', function (Transaksi $transaksi) {
-                $detail = $transaksi->details->first();
-                return $detail?->livestock?->farm?->name ?? '-';
+                // REFACTORED: Tampilkan farm dari transaksi langsung, bukan dari detail
+                // Ini memastikan farm selalu ditampilkan meskipun status masih draft
+                $farmName = $transaksi->farm?->name ?? '-';
+
+                // Log untuk debugging
+                Log::info("[LivestockPurchaseDataTable] Farm display for transaction {$transaksi->id}: {$farmName} (status: {$transaksi->status})");
+
+                return $farmName;
             })
             ->editColumn('coop_id', function (Transaksi $transaksi) {
-                $detail = $transaksi->details->first();
-                return $detail?->livestock?->coop?->name ?? 'N/A';
+                // REFACTORED: Tampilkan kandang dari transaksi langsung, bukan dari detail
+                // Ini memastikan kandang selalu ditampilkan meskipun status masih draft
+                $coopName = $transaksi->coop?->name ?? 'N/A';
+
+                // Log untuk debugging
+                Log::info("[LivestockPurchaseDataTable] Coop display for transaction {$transaksi->id}: {$coopName} (status: {$transaksi->status})");
+
+                return $coopName;
             })
             ->filterColumn('farm_id', function ($query, $keyword) {
-                $query->whereHas('details.livestock.farm', function ($q) use ($keyword) {
+                $query->whereHas('farm', function ($q) use ($keyword) {
                     $q->where('name', 'like', "%{$keyword}%");
                 });
             })
             ->filterColumn('coop_id', function ($query, $keyword) {
-                $query->whereHas('details.livestock.coop', function ($q) use ($keyword) {
+                $query->whereHas('coop', function ($q) use ($keyword) {
                     $q->where('name', 'like', "%{$keyword}%");
                 });
             })
@@ -58,15 +72,25 @@ class LivestockPurchaseDataTable extends DataTable
                 return formatRupiah($transaksi->details->sum('price_per_unit'), 0) ?? 0;
             })
             ->editColumn('status', function (Transaksi $transaksi) {
-                $statuses = Transaksi::STATUS_LABELS;
+                // Get available statuses for current flow using model helper
+                $filteredStatuses = $transaksi->getAvailableStatusesForFlow();
                 $currentStatus = $transaksi->status;
+                $currentFlowType = \App\Config\LivestockPurchaseConfig::getWorkflowConfig()['business_flow_type'] ?? 'simple';
 
-                // Check if user has update permission or is Supervisor
-                $canUpdate = auth()->user()->can('update livestock purchase') ||
-                    auth()->user()->hasRole('Supervisor');
+                // Log for debugging
+                Log::info("[LivestockPurchaseDataTable] Status dropdown for transaction {$transaksi->id}", [
+                    'current_status' => $currentStatus,
+                    'flow_type' => $currentFlowType,
+                    'available_statuses' => array_keys($filteredStatuses),
+                    'transaction_id' => $transaksi->id
+                ]);
+
+                // REFACTORED: Perbaiki auth()->user() menjadi Auth::user()
+                $user = Auth::user();
+                $canUpdate = $user && ($user->can('update livestock purchase') || $user->hasRole('Supervisor'));
 
                 if (!$canUpdate) {
-                    return $statuses[$currentStatus] ?? $currentStatus;
+                    return $filteredStatuses[$currentStatus] ?? $currentStatus;
                 }
 
                 $isDisabled = in_array($currentStatus, ['cancelled', 'completed']) ? 'disabled' : '';
@@ -74,10 +98,25 @@ class LivestockPurchaseDataTable extends DataTable
                 $html = '<div class="d-flex align-items-center">';
                 $html .= '<select class="form-select form-select-sm status-select" data-kt-transaction-id="' . $transaksi->id . '" data-kt-action="update_status" data-current="' . $currentStatus . '" ' . $isDisabled . '>';
 
-                foreach ($statuses as $value => $label) {
+                foreach ($filteredStatuses as $value => $label) {
                     $selected = $value === $currentStatus ? 'selected' : '';
-                    $optionDisabled = ($currentStatus === 'in_coop' && $value !== 'completed' && $value !== 'in_coop') ? 'disabled' : '';
-                    $optionStyle = ($currentStatus === 'in_coop' && $value !== 'completed' && $value !== 'in_coop') ? 'style="background-color: #f5f5f5; color: #999;"' : '';
+
+                    // Check if transition is allowed using model helper
+                    $canTransition = $transaksi->canTransitionToStatus($value, $currentFlowType);
+
+                    // Special handling for in_coop status
+                    $optionDisabled = '';
+                    $optionStyle = '';
+
+                    if ($currentStatus === 'in_coop' && $value !== 'completed' && $value !== 'in_coop') {
+                        $optionDisabled = 'disabled';
+                        $optionStyle = 'style="background-color: #f5f5f5; color: #999;"';
+                    } elseif (!$canTransition && $value !== $currentStatus && $value !== 'cancelled') {
+                        // Disable options that are not allowed transitions
+                        $optionDisabled = 'disabled';
+                        $optionStyle = 'style="background-color: #f5f5f5; color: #999;"';
+                    }
+
                     $html .= "<option value='{$value}' {$selected} {$optionDisabled} {$optionStyle}>{$label}</option>";
                 }
 
@@ -90,49 +129,7 @@ class LivestockPurchaseDataTable extends DataTable
             ->addColumn('action', function (Transaksi $transaksi) {
                 return view('pages.transaction.livestock-purchases._actions', compact('transaksi'));
             })
-            // ->editColumn('payload.doc.nama', function (Transaksi $transaksi) {
-            //     if ($transaksi->payload) {
-            //         if (isset($transaksi->payload['doc']) && !empty($transaksi->payload['doc'])) {
-            //             // The array exists and is not empty
-            //             return $transaksi->payload['doc']['kode'] . ' - ' . $transaksi->payload['doc']['nama'] ?? '';
-            //         }
-            //     } else {
-            //         return '';
-            //     }
-            // })
-            // ->editColumn('farm_id', function (Transaksi $transaksi) {
-            //     return $transaksi->farms->nama ?? '';
-            // })
-            // ->editColumn('coop_id', function (Transaksi $transaksi) {
-            //     return $transaksi->coops->nama ?? '';
-            // })
-            // ->editColumn('kelompok_ternak_id', function (Transaksi $transaksi) {
-            //     return $transaksi->kelompokTernak->name ?? '';
-            // })
-            // ->editColumn('harga', function (Transaksi $transaksi) {
-            //     return formatRupiah($transaksi->harga, 0);
-            // })
-            // ->editColumn('sub_total', function (Transaksi $transaksi) {
-            //     return formatRupiah($transaksi->sub_total, 0);
-            // })
             ->setRowId('id');
-        // ->filterColumn('rekanan_id', function ($query, $keyword) {
-        //     $query->whereHas('rekanans', function ($q) use ($keyword) {
-        //         $q->where('nama', 'like', "%{$keyword}%");
-        //     });
-        // })
-        // ->filterColumn('farm_id', function ($query, $keyword) {
-        //     $query->whereHas('farms', function ($q) use ($keyword) {
-        //         $q->where('nama', 'like', "%{$keyword}%");
-        //     });
-        // })
-
-        // })
-        // ->filterColumn('kelompok_ternak_id', function ($query, $keyword) {
-        //     $query->whereHas('kelompokTernak', function ($q) use ($keyword) {
-        //         $q->where('name', 'like', "%{$keyword}%");
-        //     });
-        // });
     }
 
 
@@ -142,11 +139,13 @@ class LivestockPurchaseDataTable extends DataTable
     public function query(Transaksi $model): QueryBuilder
     {
         $query = $model->newQuery()
-            ->with(['details.livestock.farm', 'details.livestock.coop', 'supplier', 'expedition'])
+            ->with(['farm', 'coop', 'supplier', 'expedition', 'details.livestock.farm', 'details.livestock.coop'])
             ->orderBy('tanggal', 'ASC');
 
-        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
-            $query->where('company_id', auth()->user()->company_id);
+        // REFACTORED: Perbaiki auth()->user() menjadi Auth::user()
+        $user = Auth::user();
+        if ($user && $user->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+            $query->where('company_id', $user->company_id);
         }
 
         return $query;
@@ -162,15 +161,12 @@ class LivestockPurchaseDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('Bfrtip')
-            // ->dom('rt' . "<'row'<'col-sm-12 col-md-5'l><'col-sm-12 col-md-7'p>>",)
-            // ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer text-gray-600 fw-semibold')
             ->addTableClass('table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer')
             ->setTableHeadClass('text-start text-muted fw-bold fs-7 text-uppercase gs-0')
             ->orderBy(1)
             ->parameters([
                 'scrollX'      =>  true,
                 'searching'       =>  true,
-                // 'responsive'       =>  true,
                 'lengthMenu' => [
                     [10, 25, 50, -1],
                     ['10 rows', '25 rows', '50 rows', 'Show all']
@@ -185,7 +181,8 @@ class LivestockPurchaseDataTable extends DataTable
                         window.Laravel = {};
                     }
                     if (typeof window.Laravel.user === "undefined") {
-                        window.Laravel.user = { id: ' . json_encode(auth()->check() ? auth()->id() : null) . ' };
+                        // REFACTORED: Perbaiki auth()->check() dan auth()->id()
+                        window.Laravel.user = { id: ' . json_encode(Auth::check() ? Auth::id() : null) . ' };
                     }
                     
                     // ✅ PRODUCTION REAL-TIME NOTIFICATION SYSTEM INTEGRATION
@@ -543,7 +540,6 @@ class LivestockPurchaseDataTable extends DataTable
                 ->searchable(false)
                 ->addClass('text-nowrap details-control'),
             Column::computed('action')
-                // ->addClass('text-end text-nowrap')
                 ->exportable(false)
                 ->printable(false)
                 ->width(60)
