@@ -1296,25 +1296,25 @@
 @push('scripts')
 <script>
     document.addEventListener('livewire:init', function () {
-        console.log('🔥 Manual Feed Usage component initialized');
+        log('🔥 Manual Feed Usage component initialized');
 
         // Handle modal show event
         Livewire.on('show-manual-feed-usage', function (data) {
-            console.log('🔥 show-manual-feed-usage event received', data);
+            log('🔥 show-manual-feed-usage event received', data);
             var modal = new bootstrap.Modal(document.getElementById('manual-feed-usage-modal'));
             modal.show();
         });
 
         // Handle direct modal open event
         Livewire.on('openManualFeedUsageModal', function (livestockId, feedId) {
-            console.log('🔥 openManualFeedUsageModal event received', { livestockId, feedId });
+            log('🔥 openManualFeedUsageModal event received', { livestockId, feedId });
             var modal = new bootstrap.Modal(document.getElementById('manual-feed-usage-modal'));
             modal.show();
         });
 
         // Handle feed usage completed event
         Livewire.on('feed-usage-completed', function (data) {
-            console.log('Feed usage completed:', data);
+            log('Feed usage completed:', data);
             
             // Show success notification
             if (typeof toastr !== 'undefined') {
@@ -1329,7 +1329,7 @@
 
         // Handle modal close event
         Livewire.on('close-manual-feed-usage-modal', function () {
-            console.log('🔥 close-manual-feed-usage-modal event received');
+            log('🔥 close-manual-feed-usage-modal event received');
             var modal = bootstrap.Modal.getInstance(document.getElementById('manual-feed-usage-modal'));
             if (modal) {
                 modal.hide();
@@ -1344,14 +1344,14 @@
         if (modalElement) {
             // When modal is hidden by Bootstrap (X button, ESC key, backdrop click)
             modalElement.addEventListener('hidden.bs.modal', function (event) {
-                console.log('🔥 Bootstrap modal hidden event triggered');
+                log('🔥 Bootstrap modal hidden event triggered');
                 // Call Livewire closeModalSilent method to reset component state without loop
                 Livewire.find('{{ $this->getId() }}').call('closeModalSilent');
             });
 
             // When modal is about to be hidden
             modalElement.addEventListener('hide.bs.modal', function (event) {
-                console.log('🔥 Bootstrap modal hide event triggered');
+                log('🔥 Bootstrap modal hide event triggered');
             });
         }
 
@@ -1370,13 +1370,13 @@
 
     // Handle manual modal show with debugging
     function showManualFeedUsageModal(livestockId, feedId = null) {
-        console.log('🔥 showManualFeedUsageModal called', { livestockId, feedId });
+        log('🔥 showManualFeedUsageModal called', { livestockId, feedId });
         
         // Try multiple methods
         try {
             Livewire.dispatch('openManualFeedUsageModal', livestockId, feedId);
         } catch (error) {
-            console.error('Error with openManualFeedUsageModal:', error);
+            log('Error with openManualFeedUsageModal:', error);
             
             // Fallback method
             try {
@@ -1385,7 +1385,7 @@
                     feed_id: feedId
                 });
             } catch (fallbackError) {
-                console.error('Error with show-manual-feed-usage:', fallbackError);
+                log('Error with show-manual-feed-usage:', fallbackError);
             }
         }
     }

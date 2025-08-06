@@ -37,7 +37,7 @@
 
             // Enhanced DataTable reload function with error handling
             function reloadDataTableSafely() {
-                console.log('🔄 Attempting to reload DataTable...');
+                log('🔄 Attempting to reload DataTable...');
                 
                 try {
                     if (LaravelDataTables && LaravelDataTables["ternaks-table"]) {
@@ -45,7 +45,7 @@
                         
                         // Check if table is still valid
                         if (!table.context || !table.context.length) {
-                            console.warn('⚠️  DataTable context is invalid, skipping reload');
+                            log('⚠️  DataTable context is invalid, skipping reload');
                             return;
                         }
                         
@@ -61,7 +61,7 @@
                         
                         // Reload table with proper callback and error handling
                         table.ajax.reload(function(json) {
-                            console.log('✅ DataTable reloaded successfully');
+                            log('✅ DataTable reloaded successfully');
                             
                             // Restore settings after reload
                             setTimeout(() => {
@@ -84,22 +84,22 @@
                                         table.responsive.recalc();
                                     }
                                     
-                                    console.log('✅ DataTable settings restored');
+                                    log('✅ DataTable settings restored');
                                 } catch (restoreError) {
-                                    console.error('⚠️  Error restoring DataTable settings:', restoreError);
+                                    log('⚠️  Error restoring DataTable settings:', restoreError);
                                 }
                             }, 100);
                         }, false); // false = don't reset paging
                         
                     } else {
-                        console.warn('⚠️  LaravelDataTables["ternaks-table"] not found');
+                        log('⚠️  LaravelDataTables["ternaks-table"] not found');
                     }
                 } catch (error) {
-                    console.error('❌ Error reloading DataTable:', error);
+                    log('❌ Error reloading DataTable:', error);
                     
                     // Fallback: try to reinitialize the entire page if critical error
                     if (error.message && error.message.includes('Cannot read properties')) {
-                        console.log('🔄 Attempting page refresh as fallback...');
+                        log('🔄 Attempting page refresh as fallback...');
                         setTimeout(() => {
                             window.location.reload();
                         }, 2000);
@@ -140,7 +140,7 @@
                 
                 // Event listeners for livestock settings
                 window.addEventListener('hide-livestock-setting', () => {
-                    console.log('Hiding livestock settings container');
+                    log('Hiding livestock settings container');
                     $('#livestockSettingContainer').hide();
                     $('#datatable-container').show();
                     $('#cardToolbar').show();
@@ -150,21 +150,21 @@
                 });
 
                 window.addEventListener('show-livestock-setting', () => {
-                    console.log('Showing livestock settings container');
+                    log('Showing livestock settings container');
                     $('#datatable-container').hide();
                     $('#cardToolbar').hide();
                     $('#livestockSettingContainer').show();
                 });
 
                 window.addEventListener('show-fifo-mutation', () => {
-                    console.log('Showing livestock mutation container');
+                    log('Showing livestock mutation container');
                     $('#datatable-container').hide();
                     $('#cardToolbar').hide();
                     $('#fifoMutationContainer').show();
                 });
 
                 window.addEventListener('hide-fifo-mutation', () => {
-                    console.log('Hiding livestock mutation container');
+                    log('Hiding livestock mutation container');
                     $('#fifoMutationContainer').hide();
                     $('#datatable-container').show();
                     $('#cardToolbar').show();
@@ -175,7 +175,7 @@
 
                 // Global event listeners for FIFO mutation notifications using Livewire
                 Livewire.on('fifo-mutation-completed', (data) => {
-                    console.log('🔥 Global: fifo-mutation-completed event received', data);
+                    log('🔥 Global: fifo-mutation-completed event received', data);
                     
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
@@ -190,7 +190,7 @@
                 });
 
                 Livewire.on('show-success-message', (data) => {
-                    console.log('🔥 Global: show-success-message event received', data);
+                    log('🔥 Global: show-success-message event received', data);
                     
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
@@ -211,12 +211,12 @@
 
                 // Additional Livewire event listeners for table reload
                 Livewire.on('refresh-livestock-table', () => {
-                    console.log('🔥 Global: refresh-livestock-table event received');
+                    log('🔥 Global: refresh-livestock-table event received');
                     reloadDataTableSafely();
                 });
 
                 Livewire.on('livestock-data-updated', () => {
-                    console.log('🔥 Global: livestock-data-updated event received');
+                    log('🔥 Global: livestock-data-updated event received');
                     reloadDataTableSafely();
                 });
             });
@@ -231,10 +231,10 @@
                     const detailTable = $('#detailTable').DataTable();
                     if (detailTable && typeof detailTable.destroy === 'function') {
                         detailTable.destroy();
-                        console.log('✅ Detail table destroyed successfully');
+                        log('✅ Detail table destroyed successfully');
                     }
                 } catch (error) {
-                    console.warn('⚠️  Error destroying detail table:', error);
+                    log('⚠️  Error destroying detail table:', error);
                 }
                 
                 // Optional: reload main table if needed
@@ -249,33 +249,33 @@
             //     const livestockId = $(this).data('livestock-id');
             //     const ternakId = $(this).data('ternak-id');
                 
-            //     console.log('Action triggered:', action, 'Livestock ID:', livestockId);
+            //     log('Action triggered:', action, 'Livestock ID:', livestockId);
 
             //     switch(action) {
             //         case 'manual_depletion':
             //             // Trigger manual depletion modal
-            //             console.log('Opening manual depletion for livestock:', livestockId);
+            //             log('Opening manual depletion for livestock:', livestockId);
             //             // Dispatch event to manual depletion component
             //             Livewire.dispatchTo('master-data.livestock.manual-batch-depletion', 'show-manual-depletion', { livestock_id: livestockId });
             //             break;
                         
             //         case 'update_setting':
             //             // Existing setting modal logic
-            //             console.log('Opening settings for livestock:', livestockId);
+            //             log('Opening settings for livestock:', livestockId);
             //             break;
                         
             //         case 'assign_worker':
             //             // Existing worker assignment logic
-            //             console.log('Opening worker assignment for livestock:', livestockId);
+            //             log('Opening worker assignment for livestock:', livestockId);
             //             break;
                         
             //         case 'update_records':
             //             // Existing records logic
-            //             console.log('Opening records for livestock:', ternakId);
+            //             log('Opening records for livestock:', ternakId);
             //             break;
                         
             //         default:
-            //             console.log('Unknown action:', action);
+            //             log('Unknown action:', action);
             //     }
             // });
         </script>

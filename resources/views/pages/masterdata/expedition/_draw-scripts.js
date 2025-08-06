@@ -79,9 +79,3 @@ document
             });
         });
     });
-
-// Listen for 'success' event emitted by Livewire
-Livewire.on("success", (message) => {
-    // Reload the ekspedisis-table datatable
-    LaravelDataTables["expedisis-table"].ajax.reload();
-});
