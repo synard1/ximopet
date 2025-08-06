@@ -26,6 +26,7 @@ use App\Models\Partner;
 use App\Models\Item;
 use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
@@ -64,7 +65,7 @@ class Create extends Component
     public $errorItems = [];
     public $availableKandangs = [];
     public $maxItems = 3;
-    public $status = null;
+    public $status = 'draft'; // FIX: Set default status to draft for create mode
     public $notes = null;
     public bool $withHistory = false; // ← Tambahkan ini di atas class Livewire
 
@@ -83,7 +84,7 @@ class Create extends Component
     public function getListeners()
     {
         return array_merge($this->listeners, [
-            'echo-notification:App.Models.User.' . auth()->id() => 'handleUserNotification',
+            'echo-notification:App.Models.User.' . Auth::user()->id => 'handleUserNotification',
         ]);
     }
 
@@ -152,7 +153,7 @@ class Create extends Component
     {
         $mapping = \App\Models\CompanyUser::getUserMapping();
         if (!$mapping || !$mapping->company) {
-            \Illuminate\Support\Facades\Log::warning('User not mapped to any company or company not found', ['user_id' => auth()->id()]);
+            \Illuminate\Support\Facades\Log::warning('User not mapped to any company or company not found', ['user_id' => Auth::user()->id]);
             return [null, \App\Config\CompanyConfig::getDefaultActiveConfig()['purchasing']['livestock_purchase'] ?? []];
         }
 
@@ -277,7 +278,7 @@ class Create extends Component
             'berat_awal' => $totals['avg_berat'],
             'harga' => $totals['avg_harga'],
             'start_date' => $item['start_date'],
-            'updated_by' => auth()->id(),
+            'updated_by' => Auth::user()->id,
         ]);
 
         Log::info("Updated existing livestock record", [
@@ -304,8 +305,8 @@ class Create extends Component
             'initial_weight' => $item['weight_per_unit'],
             'initial_price' => $item['price_per_unit'],
             'start_date' => $item['start_date'],
-            'created_by' => auth()->id(),
-            'updated_by' => auth()->id(),
+            'created_by' => Auth::user()->id,
+            'updated_by' => Auth::user()->id,
         ]);
 
         Log::info("Created new livestock record", [
@@ -376,8 +377,8 @@ class Create extends Component
                 'weight_avg' => $totals['avg_weight'],
                 'age' => 0,
                 'status' => 'active',
-                'created_by' => auth()->id(),
-                'updated_by' => auth()->id(),
+                'created_by' => Auth::user()->id,
+                'updated_by' => Auth::user()->id,
             ]
         );
 
@@ -426,8 +427,8 @@ class Create extends Component
     //             'initial_weight' => $item['weight_per_unit'],
     //             'initial_price' => $item['price_per_unit'],
     //             'start_date' => $this->date,
-    //             'created_by' => auth()->id(),
-    //             'updated_by' => auth()->id(),
+    //             'created_by' => Auth::user()->id,
+    //             'updated_by' => Auth::user()->id,
     //         ]);
 
     //         Log::info("Created new livestock record", [
@@ -454,8 +455,8 @@ class Create extends Component
     //             'price_total' => $item['price_total'],
     //             'weight_per_unit' => $item['weight_per_unit'],
     //             'weight_total' => $item['weight_total'],
-    //             'created_by' => auth()->id(),
-    //             'updated_by' => auth()->id(),
+    //             'created_by' => Auth::user()->id,
+    //             'updated_by' => Auth::user()->id,
     //         ]
     //     );
 
@@ -483,8 +484,8 @@ class Create extends Component
     //             'breed' => $breed->name,
     //             'start_date' => $item['start_date'],
     //             'status' => 'active',
-    //             'created_by' => auth()->id(),
-    //             'updated_by' => auth()->id(),
+    //             'created_by' => Auth::user()->id,
+    //             'updated_by' => Auth::user()->id,
     //         ]
     //     );
 
@@ -527,7 +528,7 @@ class Create extends Component
     //         'berat_awal' => $avgBerat,
     //         'harga' => $avgHarga,
     //         'start_date' => $item['start_date'],
-    //         'updated_by' => auth()->id(),
+    //         'updated_by' => Auth::user()->id,
     //     ]);
 
     //     Log::info("Updated livestock record", [
@@ -625,21 +626,43 @@ class Create extends Component
             $errors['coop_id'] = 'Kandang harus dipilih';
         }
 
-        // Validate items
-        if (empty($data['items']) || count($data['items']) === 0) {
-            $errors['items'] = 'Minimal satu item livestock harus ditambahkan';
+        // FIX: Validasi items - izinkan penyimpanan tanpa item untuk draft status
+        $currentStatus = $data['status'] ?? 'draft';
+
+        // Hanya validasi items jika status bukan draft (untuk edit mode atau status lain)
+        if ($currentStatus !== 'draft') {
+            if (empty($data['items']) || count($data['items']) === 0) {
+                $errors['items'] = 'Minimal satu item livestock harus ditambahkan';
+            } else {
+                foreach ($data['items'] as $index => $item) {
+                    if (empty($item['livestock_strain_id'])) {
+                        $errors["items.{$index}.livestock_strain_id"] = 'Strain harus dipilih';
+                    }
+
+                    if (empty($item['quantity']) || $item['quantity'] <= 0) {
+                        $errors["items.{$index}.quantity"] = 'Jumlah harus lebih dari 0';
+                    }
+
+                    if (empty($item['price_value']) || $item['price_value'] <= 0) {
+                        $errors["items.{$index}.price_value"] = 'Harga harus lebih dari 0';
+                    }
+                }
+            }
         } else {
-            foreach ($data['items'] as $index => $item) {
-                if (empty($item['livestock_strain_id'])) {
-                    $errors["items.{$index}.livestock_strain_id"] = 'Strain harus dipilih';
-                }
+            // Untuk draft status, validasi items hanya jika ada items
+            if (!empty($data['items']) && count($data['items']) > 0) {
+                foreach ($data['items'] as $index => $item) {
+                    if (empty($item['livestock_strain_id'])) {
+                        $errors["items.{$index}.livestock_strain_id"] = 'Strain harus dipilih';
+                    }
 
-                if (empty($item['quantity']) || $item['quantity'] <= 0) {
-                    $errors["items.{$index}.quantity"] = 'Jumlah harus lebih dari 0';
-                }
+                    if (empty($item['quantity']) || $item['quantity'] <= 0) {
+                        $errors["items.{$index}.quantity"] = 'Jumlah harus lebih dari 0';
+                    }
 
-                if (empty($item['price_value']) || $item['price_value'] <= 0) {
-                    $errors["items.{$index}.price_value"] = 'Harga harus lebih dari 0';
+                    if (empty($item['price_value']) || $item['price_value'] <= 0) {
+                        $errors["items.{$index}.price_value"] = 'Harga harus lebih dari 0';
+                    }
                 }
             }
         }
@@ -661,6 +684,13 @@ class Create extends Component
                 $errors['batch_name'] = 'Nama batch minimal 3 karakter';
             }
         }
+
+        Log::info('validatePurchaseData: Validation result', [
+            'status' => $currentStatus,
+            'items_count' => count($data['items'] ?? []),
+            'errors' => $errors,
+            'user_id' => Auth::user()->id
+        ]);
 
         return $errors;
     }
@@ -713,6 +743,24 @@ class Create extends Component
 
             Log::info('Validation passed');
 
+            // FIX: Handle empty items for draft status
+            $currentStatus = $this->status ?? 'draft';
+            $hasItems = !empty($this->items) && count($this->items) > 0;
+
+            Log::info('Save process - Items check', [
+                'status' => $currentStatus,
+                'has_items' => $hasItems,
+                'items_count' => count($this->items),
+                'can_save_without_items' => $this->canSaveWithoutItems(),
+                'user_id' => Auth::user()->id
+            ]);
+
+            // Jika tidak ada items dan bukan draft status, tampilkan error
+            if (!$hasItems && !$this->canSaveWithoutItems()) {
+                $this->addError('items', 'Minimal satu item livestock harus ditambahkan untuk status ini');
+                return;
+            }
+
             if (!empty($this->errorItems)) {
                 Log::warning('Config-based validation failed', ['errors' => $this->errorItems]);
                 return;
@@ -733,7 +781,7 @@ class Create extends Component
                 'expedition_id' => $normalizedExpeditionId,
                 'expedition_fee' => $this->expedition_fee ?? 0,
                 'status' => $finalStatus,
-                'updated_by' => auth()->id(),
+                'updated_by' => Auth::user()->id,
                 'data' => [
                     'batch_name' => $this->batch_name,
                     'total_quantity' => array_sum(array_column($this->items, 'quantity')),
@@ -792,78 +840,90 @@ class Create extends Component
             }
             Log::info('LivestockPurchase saved', ['id' => $purchase->id]);
 
-            // Proses setiap item
-            foreach ($this->items as $item) {
-                $breed = LivestockStrain::findOrFail($item['livestock_strain_id']);
-                $farm = Farm::findOrFail($this->farm_id);
-                $kandang = Coop::findOrFail($this->coop_id);
+            // FIX: Proses items hanya jika ada items atau bukan draft status
+            if (!empty($this->items) && count($this->items) > 0) {
+                // Proses setiap item
+                foreach ($this->items as $item) {
+                    $breed = LivestockStrain::findOrFail($item['livestock_strain_id']);
+                    $farm = Farm::findOrFail($this->farm_id);
+                    $kandang = Coop::findOrFail($this->coop_id);
 
-                $periodeFormat = 'PR-' . $farm->code . '-' . $kandang->code . '-' . Carbon::parse($purchase->tanggal)->format('dmY');
-                $periode = $this->batch_name ?? $periodeFormat;
+                    $periodeFormat = 'PR-' . $farm->code . '-' . $kandang->code . '-' . Carbon::parse($purchase->tanggal)->format('dmY');
+                    $periode = $this->batch_name ?? $periodeFormat;
 
-                $weightPerUnit = $item['weight_type'] === 'per_unit' ? $item['weight_value'] : ($item['weight_value'] / $item['quantity']);
-                $pricePerUnit = $item['price_type'] === 'per_unit' ? $item['price_value'] : ($item['price_value'] / $item['quantity']);
-                $weightTotal = $item['weight_type'] === 'per_unit' ? ($item['weight_value'] * $item['quantity']) : $item['weight_value'];
-                $priceTotal = $item['price_type'] === 'per_unit' ? ($item['price_value'] * $item['quantity']) : $item['price_value'];
+                    $weightPerUnit = $item['weight_type'] === 'per_unit' ? $item['weight_value'] : ($item['weight_value'] / $item['quantity']);
+                    $pricePerUnit = $item['price_type'] === 'per_unit' ? $item['price_value'] : ($item['price_value'] / $item['quantity']);
+                    $weightTotal = $item['weight_type'] === 'per_unit' ? ($item['weight_value'] * $item['quantity']) : $item['weight_value'];
+                    $priceTotal = $item['price_type'] === 'per_unit' ? ($item['price_value'] * $item['quantity']) : $item['price_value'];
 
-                $livestockData = [
-                    'name' => $periode,
-                    'farm_id' => $farm->id,
-                    'coop_id' => $kandang->id,
-                    'initial_quantity' => $item['quantity'],
-                    'initial_weight' => $weightPerUnit,
-                    'price' => $pricePerUnit,
-                    'start_date' => $this->date,
-                    'status' => 'active',
-                ];
+                    $livestockData = [
+                        'name' => $periode,
+                        'farm_id' => $farm->id,
+                        'coop_id' => $kandang->id,
+                        'initial_quantity' => $item['quantity'],
+                        'initial_weight' => $weightPerUnit,
+                        'price' => $pricePerUnit,
+                        'start_date' => $this->date,
+                        'status' => 'active',
+                    ];
 
-                $batchData = [
-                    'name' => $periode,
-                    'livestock_strain_id' => $breed->id,
-                    'livestock_strain_name' => $breed->name,
-                    'start_date' => $this->date,
-                    'source_type' => 'purchase',
-                    'source_id' => $purchase->id,
-                    'farm_id' => $farm->id,
-                    'coop_id' => $kandang->id,
-                    'initial_quantity' => $item['quantity'],
-                    'initial_weight' => $weightPerUnit,
-                    'weight' => $weightPerUnit,
-                    'weight_per_unit' => $weightPerUnit,
-                    'weight_total' => $weightTotal,
-                    'weight_type' => $item['weight_type'],
-                    'weight_value' => $item['weight_value'],
-                    'price_per_unit' => $pricePerUnit,
-                    'price_total' => $priceTotal,
-                    'price_type' => $item['price_type'],
-                    'price_value' => $item['price_value'],
-                    'status' => 'active',
-                    'created_by' => auth()->id(),
-                    'updated_by' => auth()->id(),
-                ];
+                    $batchData = [
+                        'name' => $periode,
+                        'livestock_strain_id' => $breed->id,
+                        'livestock_strain_name' => $breed->name,
+                        'start_date' => $this->date,
+                        'source_type' => 'purchase',
+                        'source_id' => $purchase->id,
+                        'farm_id' => $farm->id,
+                        'coop_id' => $kandang->id,
+                        'initial_quantity' => $item['quantity'],
+                        'initial_weight' => $weightPerUnit,
+                        'weight' => $weightPerUnit,
+                        'weight_per_unit' => $weightPerUnit,
+                        'weight_total' => $weightTotal,
+                        'weight_type' => $item['weight_type'],
+                        'weight_value' => $item['weight_value'],
+                        'price_per_unit' => $pricePerUnit,
+                        'price_total' => $priceTotal,
+                        'price_type' => $item['price_type'],
+                        'price_value' => $item['price_value'],
+                        'status' => 'active',
+                        'created_by' => Auth::user()->id,
+                        'updated_by' => Auth::user()->id,
+                    ];
 
-                LivestockPurchaseItem::create([
-                    'tanggal' => $this->date,
-                    'livestock_purchase_id' => $purchase->id,
-                    'livestock_strain_id' => $item['livestock_strain_id'],
-                    'livestock_strain_standard_id' => $item['livestock_strain_standard_id'] ?? null,
-                    'quantity' => $item['quantity'],
-                    'price_value' => $item['price_value'],
-                    'price_type' => $item['price_type'],
-                    'price_per_unit' => $pricePerUnit,
-                    'price_total' => $priceTotal,
-                    'tax_percentage' => $item['tax_percentage'] ?? null,
-                    'weight_value' => $item['weight_value'],
-                    'weight_type' => $item['weight_type'],
-                    'weight_per_unit' => $weightPerUnit,
-                    'weight_total' => $weightTotal,
-                    'notes' => $item['notes'] ?? null,
-                    'created_by' => auth()->id(),
-                    'updated_by' => auth()->id(),
-                    'data' => [
-                        'livestock' => $livestockData,
-                        'batch' => $batchData
-                    ]
+                    LivestockPurchaseItem::create([
+                        'tanggal' => $this->date,
+                        'livestock_purchase_id' => $purchase->id,
+                        'livestock_strain_id' => $item['livestock_strain_id'],
+                        'livestock_strain_standard_id' => $item['livestock_strain_standard_id'] ?? null,
+                        'quantity' => $item['quantity'],
+                        'price_value' => $item['price_value'],
+                        'price_type' => $item['price_type'],
+                        'weight_value' => $item['weight_value'],
+                        'weight_type' => $item['weight_type'],
+                        'weight_total' => $weightTotal,
+                        'notes' => $item['notes'] ?? null,
+                        'created_by' => Auth::user()->id,
+                        'updated_by' => Auth::user()->id,
+                        'data' => [
+                            'livestock' => $livestockData,
+                            'batch' => $batchData,
+                        ],
+                    ]);
+
+                    Log::info('LivestockPurchaseItem created', [
+                        'purchase_id' => $purchase->id,
+                        'strain_id' => $item['livestock_strain_id'],
+                        'quantity' => $item['quantity'],
+                        'price' => $item['price_value']
+                    ]);
+                }
+            } else {
+                Log::info('No items to process for draft status', [
+                    'purchase_id' => $purchase->id,
+                    'status' => $currentStatus,
+                    'items_count' => count($this->items)
                 ]);
             }
 
@@ -871,7 +931,7 @@ class Create extends Component
                 Log::info('Verifying purchase', ['purchase_id' => $purchase->id]);
                 $this->verifyPurchase([
                     'purchase_id' => $purchase->id,
-                    'user_id' => auth()->id(),
+                    'user_id' => Auth::user()->id,
                 ], $this->notes ?? null);
                 Log::info('Purchase verified, generating livestock and batch', ['purchase_id' => $purchase->id]);
                 $this->generateLivestockAndBatch($purchase->id);
@@ -906,6 +966,14 @@ class Create extends Component
      */
     public function updateStatusLivestockPurchase($purchaseId, $status, $notes)
     {
+        Log::info('updateStatusLivestockPurchase: Method called', [
+            'purchaseId' => $purchaseId,
+            'status' => $status,
+            'notes' => $notes,
+            'user_id' => Auth::user()->id,
+            'user_name' => Auth::user()->name
+        ]);
+
         if (empty($purchaseId) || empty($status)) {
             Log::warning('updateStatusLivestockPurchase: purchaseId atau status kosong', [
                 'purchaseId' => $purchaseId,
@@ -917,6 +985,13 @@ class Create extends Component
         $purchase = \App\Models\LivestockPurchase::findOrFail($purchaseId);
         $notes = $notes ?? null;
         $previousStatus = $purchase->status;
+
+        Log::info('updateStatusLivestockPurchase: Purchase found', [
+            'purchase_id' => $purchase->id,
+            'current_status' => $purchase->status,
+            'new_status' => $status,
+            'previous_status' => $previousStatus
+        ]);
 
         // FIX: Validasi untuk status completed - harus ada data ekspedisi
         if ($status === 'completed' || $status === 'complete') {
@@ -1077,11 +1152,11 @@ class Create extends Component
                 if ($this->withHistory) {
                     $batch->update([
                         'status' => 'inactive',
-                        'updated_by' => auth()->id()
+                        'updated_by' => Auth::user()->id
                     ]);
                 } else {
                     $batch->update([
-                        'updated_by' => auth()->id()
+                        'updated_by' => Auth::user()->id
                     ]);
                 }
             }
@@ -1091,11 +1166,11 @@ class Create extends Component
         if ($this->withHistory) {
             $purchase->details()->update([
                 'status' => 'inactive',
-                'updated_by' => auth()->id()
+                'updated_by' => Auth::user()->id
             ]);
         } else {
             $purchase->details()->update([
-                'updated_by' => auth()->id()
+                'updated_by' => Auth::user()->id
             ]);
         }
     }
@@ -1104,6 +1179,12 @@ class Create extends Component
     {
         $this->reset();
         $this->items = [];
+
+        // FIX: Don't reset status and edit_mode if we're in edit mode
+        if (!$this->edit_mode) {
+            $this->status = 'draft'; // FIX: Ensure status is set to draft for create mode
+            $this->edit_mode = false; // FIX: Ensure edit mode is false for create mode
+        }
     }
 
     public function updatedItems($value, $key)
@@ -1255,7 +1336,7 @@ class Create extends Component
         // Check temp auth on every render
         // $this->checkTempAuth();
 
-        $user = auth()->user();
+        $user = Auth::user();
         $companyId = $user->company_id;
 
         $strains = LivestockStrain::active()->where('company_id', $companyId)->orderBy('name')->get();
@@ -1334,12 +1415,21 @@ class Create extends Component
      */
     public function canSave()
     {
-        // Allow saving for arrived status to update expedition details
-        if (in_array($this->status, ['draft', 'confirmed', 'in_transit', 'arrived'])) {
-            return true;
-        }
+        // FIX: Handle null status for create mode
+        $currentStatus = $this->status ?? 'draft';
 
-        return false;
+        // Allow saving for draft status (create mode) and other editable statuses
+        $canSave = in_array($currentStatus, ['draft', 'confirmed', 'in_transit', 'arrived']);
+
+        Log::info('canSave: Check if form can be saved', [
+            'current_status' => $currentStatus,
+            'original_status' => $this->status,
+            'edit_mode' => $this->edit_mode,
+            'can_save' => $canSave,
+            'user_id' => Auth::user()->id
+        ]);
+
+        return $canSave;
     }
 
     /**
@@ -1375,15 +1465,16 @@ class Create extends Component
      */
     public function getCurrentStatus()
     {
-        $status = $this->status ?? 'draft';
+        // FIX: Handle null status for create mode
+        $currentStatus = $this->status ?? 'draft';
 
-        Log::info('Current status check', [
-            'status' => $status,
+        Log::info('getCurrentStatus: Current status', [
+            'status' => $currentStatus,
             'edit_mode' => $this->edit_mode,
-            'pembelian_id' => $this->pembelianId ?? null
+            'user_id' => Auth::user()->id
         ]);
 
-        return $status;
+        return $currentStatus;
     }
 
     /**
@@ -1492,7 +1583,7 @@ class Create extends Component
                     'quantity' => $newQuantity,
                     'berat_total' => $newBeratTotal,
                     'avg_berat' => $newAvgBerat,
-                    'updated_by' => auth()->id()
+                    'updated_by' => Auth::user()->id
                 ]);
 
                 // Update audit trail data
@@ -1535,7 +1626,7 @@ class Create extends Component
             'populasi_awal' => $newPopulasi,
             'berat_awal' => $newBeratAwal,
             'harga' => $newHarga,
-            'updated_by' => auth()->id()
+            'updated_by' => Auth::user()->id
         ]);
 
         // Update audit trail data
@@ -1684,7 +1775,7 @@ class Create extends Component
                         'quantity' => 0,
                         'berat_total' => 0,
                         'avg_berat' => 0,
-                        'updated_by' => auth()->id()
+                        'updated_by' => Auth::user()->id
                     ]);
                 }
 
@@ -1744,6 +1835,12 @@ class Create extends Component
     public function showEditForm($id)
     {
         $this->authorize('update livestock purchasing');
+
+        Log::info('showEditForm: Starting edit form load', [
+            'purchase_id' => $id,
+            'user_id' => Auth::user()->id
+        ]);
+
         $this->pembelianId = $id;
         $pembelian = LivestockPurchase::with([
             'details',
@@ -1751,6 +1848,17 @@ class Create extends Component
             'details.livestockBatches',
             'supplier'
         ])->findOrFail($id);
+
+        Log::info('showEditForm: Purchase found', [
+            'purchase_id' => $pembelian->id,
+            'status' => $pembelian->status,
+            'invoice_number' => $pembelian->invoice_number,
+            'supplier_id' => $pembelian->supplier_id,
+            'expedition_id' => $pembelian->expedition_id,
+            'expedition_fee' => $pembelian->expedition_fee,
+            'details_count' => $pembelian->details->count(),
+            'user_id' => Auth::user()->id
+        ]);
 
         // Check if any livestock has transactions that prevent editing
         foreach ($pembelian->details as $item) {
@@ -1761,56 +1869,140 @@ class Create extends Component
             }
         }
 
-        $this->items = [];
-        if ($pembelian && $pembelian->details->isNotEmpty()) {
-            $this->date = $pembelian->tanggal;
+        // FIX: Reset form first to ensure clean state
+        $this->resetForm();
 
-            // FIX: Ambil batch_name dari data pembelian atau generate otomatis
-            $this->batch_name = $pembelian->data['batch_name'] ??
-                $pembelian->details->first()->livestock->name ??
-                $this->generateBatchName($pembelian);
+        // FIX: Set edit mode first
+        $this->edit_mode = true;
+        $this->pembelianId = $id;
 
-            $this->invoice_number = $pembelian->invoice_number;
-            $this->supplier_id = $pembelian->supplier_id;
-            $this->expedition_id = $this->normalizeExpeditionId($pembelian->expedition_id);
-            $this->expedition_fee = $pembelian->expedition_fee ?? 0;
-            $this->status = $pembelian->status;
-            $this->notes = $pembelian->notes ?? null;
+        // FIX: Load basic purchase data
+        $this->date = $pembelian->tanggal;
+        $this->invoice_number = $pembelian->invoice_number;
+        $this->supplier_id = $pembelian->supplier_id;
+        $this->expedition_id = $this->normalizeExpeditionId($pembelian->expedition_id);
+        $this->expedition_fee = $pembelian->expedition_fee ?? 0;
+        $this->status = $pembelian->status;
+        $this->notes = $pembelian->notes ?? null;
 
-            $firstLivestock = $pembelian->details->first()->data['livestock'];
-            if ($firstLivestock) {
-                $this->farm_id = $firstLivestock['farm_id'];
-                $this->coop_id = $firstLivestock['coop_id'];
+        // FIX: Load batch name from multiple sources
+        $this->batch_name = $pembelian->data['batch_name'] ??
+            $pembelian->details->first()->livestock->name ??
+            $this->generateBatchName($pembelian);
+
+        Log::info('showEditForm: Basic data loaded', [
+            'date' => $this->date,
+            'invoice_number' => $this->invoice_number,
+            'supplier_id' => $this->supplier_id,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+            'status' => $this->status,
+            'batch_name' => $this->batch_name,
+            'user_id' => Auth::user()->id
+        ]);
+
+        // FIX: Load farm and coop data
+        // FIX: Load farm and coop data from purchase table first, then from details if available
+        $this->farm_id = $pembelian->farm_id ?? null;
+        $this->coop_id = $pembelian->coop_id ?? null;
+
+        Log::info('showEditForm: Farm and coop data from purchase table', [
+            'farm_id' => $this->farm_id,
+            'coop_id' => $this->coop_id,
+            'user_id' => Auth::user()->id
+        ]);
+
+        // If farm_id is set, load available kandangs
+        if ($this->farm_id) {
+            $this->availableKandangs = Coop::where('farm_id', $this->farm_id)
+                ->where('status', '!=', 'inactive')
+                ->whereRaw('quantity < capacity')
+                ->get();
+
+            Log::info('showEditForm: Available kandangs loaded', [
+                'farm_id' => $this->farm_id,
+                'kandangs_count' => $this->availableKandangs->count(),
+                'user_id' => Auth::user()->id
+            ]);
+        }
+
+        if ($pembelian->details->isNotEmpty()) {
+            $firstItem = $pembelian->details->first();
+
+            // FIX: Override farm_id and coop_id from details if available
+            if (isset($firstItem->data['livestock']) && is_array($firstItem->data['livestock'])) {
+                $livestockData = $firstItem->data['livestock'];
+                if (!empty($livestockData['farm_id'])) {
+                    $this->farm_id = $livestockData['farm_id'];
+                }
+                if (!empty($livestockData['coop_id'])) {
+                    $this->coop_id = $livestockData['coop_id'];
+                }
+            }
+
+            Log::info('showEditForm: Farm and coop data from details', [
+                'farm_id' => $this->farm_id,
+                'coop_id' => $this->coop_id,
+                'user_id' => Auth::user()->id
+            ]);
+
+            // Reload available kandangs if farm_id changed
+            if ($this->farm_id) {
                 $this->availableKandangs = Coop::where('farm_id', $this->farm_id)
                     ->where('status', '!=', 'inactive')
                     ->whereRaw('quantity < capacity')
                     ->get();
             }
 
+            // FIX: Load items data
+            $this->items = [];
             foreach ($pembelian->details as $item) {
-                $livestock = $item->data['batch'];
-                if ($livestock) {
-                    $batch = $item->livestockBatches->first();
-                    $this->items[] = [
-                        'livestock_id' => $item->livestock_id ?? null,
-                        'livestock_strain_id' => $livestock['livestock_strain_id'] ?? null,
-                        'quantity' => $item->quantity,
-                        'price_value' => $item->price_value,
-                        'price_type' => $item->price_type,
-                        'farm_id' => $this->farm_id,
-                        'coop_id' => $this->coop_id,
-                        'livestock_strain_standard_id' => $livestock['livestock_strain_standard_id'] ?? null,
-                        'start_date' => $this->date ?? null,
-                        'weight_type' => $item->weight_type ?? null,
-                        'weight_value' => $item->weight_value ?? null,
-                    ];
+                $itemData = [
+                    'livestock_id' => $item->livestock_id ?? null,
+                    'livestock_strain_id' => $item->livestock_strain_id ?? null,
+                    'quantity' => $item->quantity,
+                    'price_value' => $item->price_value,
+                    'price_type' => $item->price_type,
+                    'farm_id' => $this->farm_id,
+                    'coop_id' => $this->coop_id,
+                    'livestock_strain_standard_id' => $item->livestock_strain_standard_id ?? null,
+                    'start_date' => $this->date ?? null,
+                    'weight_type' => $item->weight_type ?? 'per_unit',
+                    'weight_value' => $item->weight_value ?? 0,
+                ];
+
+                // FIX: Try to get strain data from batch if not directly available
+                if (empty($itemData['livestock_strain_id']) && !empty($item->data['batch'])) {
+                    $itemData['livestock_strain_id'] = $item->data['batch']['livestock_strain_id'] ?? null;
                 }
+
+                $this->items[] = $itemData;
             }
+
+            Log::info('showEditForm: Items loaded', [
+                'items_count' => count($this->items),
+                'items' => $this->items,
+                'user_id' => Auth::user()->id
+            ]);
+        } else {
+            Log::warning('showEditForm: No details found for purchase', [
+                'purchase_id' => $pembelian->id,
+                'user_id' => Auth::user()->id
+            ]);
         }
 
         $this->showForm = true;
-        $this->edit_mode = true;
         $this->dispatch('hide-datatable');
+
+        Log::info('showEditForm: Edit form loaded successfully', [
+            'purchase_id' => $id,
+            'edit_mode' => $this->edit_mode,
+            'show_form' => $this->showForm,
+            'user_id' => Auth::user()->id
+        ]);
+
+        // FIX: Debug loaded data
+        $this->debugLoadedData();
     }
 
     /**
@@ -1949,8 +2141,8 @@ class Create extends Component
                     'initial_weight' => 0,   // Will be updated after batch creation
                     'price' => 0,           // Will be updated after batch creation
                     'status' => 'active',
-                    'created_by' => auth()->id(),
-                    'updated_by' => auth()->id(),
+                    'created_by' => Auth::user()->id,
+                    'updated_by' => Auth::user()->id,
                 ]);
 
                 // Generate automatic numbering for livestock
@@ -2127,8 +2319,8 @@ class Create extends Component
                     'price_type' => $price_type,
                     'price_value' => $price_value,
                     'status' => 'active',
-                    'created_by' => auth()->id(),
-                    'updated_by' => auth()->id(),
+                    'created_by' => Auth::user()->id,
+                    'updated_by' => Auth::user()->id,
                 ];
 
                 Log::info('Debug: Batch data to be saved:', [
@@ -2251,7 +2443,7 @@ class Create extends Component
                 'initial_quantity' => $totalQuantity,
                 'initial_weight' => $avgWeight,
                 'price' => $avgPrice,
-                'updated_by' => auth()->id(),
+                'updated_by' => Auth::user()->id,
             ]);
 
             // Refresh model untuk memastikan data ter-update
@@ -2272,7 +2464,7 @@ class Create extends Component
                         'initial_quantity' => $totalQuantity,
                         'initial_weight' => $avgWeight,
                         'price' => $avgPrice,
-                        'updated_by' => auth()->id(),
+                        'updated_by' => Auth::user()->id,
                         'updated_at' => now()
                     ]);
 
@@ -2456,7 +2648,7 @@ class Create extends Component
             'initial_quantity' => $totalQuantity,
             'initial_weight' => $avgWeight,
             'price' => $avgPrice,
-            'updated_by' => auth()->id(),
+            'updated_by' => Auth::user()->id,
         ]);
 
         Log::info('Updated livestock totals from batches:', [
@@ -2478,7 +2670,7 @@ class Create extends Component
             'old_status' => $event['old_status'] ?? 'unknown',
             'new_status' => $event['new_status'] ?? 'unknown',
             'updated_by' => $event['updated_by'] ?? 'unknown',
-            'current_user' => auth()->id()
+            'current_user' => Auth::user()->id
         ]);
 
         try {
@@ -2496,14 +2688,14 @@ class Create extends Component
 
                 Log::info('Livestock purchase status change notification dispatched to user', [
                     'batch_id' => $event['batch_id'] ?? 'unknown',
-                    'user_id' => auth()->id()
+                    'user_id' => Auth::user()->id
                 ]);
             }
         } catch (\Exception $e) {
             Log::error('Error handling livestock purchase status change notification', [
                 'error' => $e->getMessage(),
                 'event' => $event,
-                'user_id' => auth()->id()
+                'user_id' => Auth::user()->id
             ]);
         }
     }
@@ -2515,7 +2707,7 @@ class Create extends Component
     {
         Log::info('Received user-specific livestock purchase notification', [
             'notification_type' => $notification['type'] ?? 'unknown',
-            'user_id' => auth()->id()
+            'user_id' => Auth::user()->id
         ]);
 
         try {
@@ -2534,7 +2726,7 @@ class Create extends Component
             Log::error('Error handling livestock purchase user notification', [
                 'error' => $e->getMessage(),
                 'notification' => $notification,
-                'user_id' => auth()->id()
+                'user_id' => Auth::user()->id
             ]);
         }
     }
@@ -2606,7 +2798,7 @@ class Create extends Component
             $purchase->invoice_number,
             $oldLabel,
             $newLabel,
-            auth()->user()->name
+            Auth::user()->name
         );
     }
 
@@ -2668,8 +2860,8 @@ class Create extends Component
                 'data' => [
                     'batch_id' => $purchase->id,
                     'invoice_number' => $purchase->invoice_number,
-                    'updated_by' => auth()->id(),
-                    'updated_by_name' => auth()->user()->name,
+                    'updated_by' => Auth::user()->id,
+                    'updated_by_name' => Auth::user()->name,
                     'old_status' => $notificationData['old_status'],
                     'new_status' => $notificationData['new_status'],
                     'timestamp' => $notificationData['timestamp'],
@@ -2687,13 +2879,13 @@ class Create extends Component
                 Log::info('Successfully stored livestock purchase notification for SSE bridge', [
                     'batch_id' => $purchase->id,
                     'notification_id' => $result['id'],
-                    'updated_by' => auth()->id(),
+                    'updated_by' => Auth::user()->id,
                     'sse_system' => 'active'
                 ]);
             } else {
                 Log::warning('Failed to store SSE livestock purchase notification after retries', [
                     'batch_id' => $purchase->id,
-                    'updated_by' => auth()->id()
+                    'updated_by' => Auth::user()->id
                 ]);
             }
         } catch (\Exception $e) {
@@ -3037,7 +3229,7 @@ class Create extends Component
         // Define allowed status transitions
         $allowedTransitions = [
             'draft' => ['confirmed', 'cancelled'],
-            'confirmed' => ['in_transit', 'cancelled'],
+            'confirmed' => ['in_transit', 'arrived', 'cancelled'], // Allow direct transition to arrived
             'in_transit' => ['arrived', 'cancelled'],
             'arrived' => ['in_coop', 'completed', 'cancelled'],
             'in_coop' => ['completed', 'cancelled'],
@@ -3061,9 +3253,27 @@ class Create extends Component
         $errors = [];
         $currentStatus = $purchase->status;
 
+        // Log the validation attempt
+        Log::info('validateStatusTransition: Starting validation', [
+            'purchase_id' => $purchase->id,
+            'current_status' => $currentStatus,
+            'new_status' => $newStatus,
+            'user_id' => Auth::user()->id,
+            'user_name' => Auth::user()->name
+        ]);
+
         // Check if transition is allowed
         if (!$this->canTransitionToStatus($currentStatus, $newStatus)) {
             $errors[] = "Tidak bisa mengubah status dari '{$currentStatus}' ke '{$newStatus}'";
+
+            // Log detailed transition info for debugging
+            Log::warning('validateStatusTransition: Invalid transition detected', [
+                'purchase_id' => $purchase->id,
+                'current_status' => $currentStatus,
+                'new_status' => $newStatus,
+                'allowed_transitions' => $this->getAllowedTransitions($currentStatus),
+                'user_id' => Auth::user()->id
+            ]);
         }
 
         // Special validation for completed status
@@ -3077,9 +3287,79 @@ class Create extends Component
             'current_status' => $currentStatus,
             'new_status' => $newStatus,
             'can_transition' => $this->canTransitionToStatus($currentStatus, $newStatus),
-            'errors' => $errors
+            'errors' => $errors,
+            'validation_passed' => empty($errors)
         ]);
 
         return $errors;
+    }
+
+    /**
+     * Get allowed transitions for a given status (for debugging)
+     */
+    private function getAllowedTransitions($currentStatus): array
+    {
+        $allowedTransitions = [
+            'draft' => ['confirmed', 'cancelled'],
+            'confirmed' => ['in_transit', 'arrived', 'cancelled'],
+            'in_transit' => ['arrived', 'cancelled'],
+            'arrived' => ['in_coop', 'completed', 'cancelled'],
+            'in_coop' => ['completed', 'cancelled'],
+            'completed' => ['cancelled'],
+            'cancelled' => []
+        ];
+
+        return $allowedTransitions[$currentStatus] ?? [];
+    }
+
+    /**
+     * Check if form can be saved without items (for draft status)
+     */
+    public function canSaveWithoutItems()
+    {
+        $currentStatus = $this->status ?? 'draft';
+
+        // Untuk draft status, bisa disimpan tanpa items
+        if ($currentStatus === 'draft') {
+            return true;
+        }
+
+        // Untuk status lain, harus ada items
+        return !empty($this->items) && count($this->items) > 0;
+    }
+
+    /**
+     * Check if items are required for current status
+     */
+    public function isItemsRequired()
+    {
+        $currentStatus = $this->status ?? 'draft';
+
+        // Items hanya wajib untuk status selain draft
+        return $currentStatus !== 'draft';
+    }
+
+    /**
+     * Debug method to check loaded data
+     */
+    public function debugLoadedData()
+    {
+        Log::info('debugLoadedData: Current form state', [
+            'edit_mode' => $this->edit_mode,
+            'pembelian_id' => $this->pembelianId,
+            'date' => $this->date,
+            'invoice_number' => $this->invoice_number,
+            'supplier_id' => $this->supplier_id,
+            'farm_id' => $this->farm_id,
+            'coop_id' => $this->coop_id,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+            'batch_name' => $this->batch_name,
+            'status' => $this->status,
+            'notes' => $this->notes,
+            'items_count' => count($this->items),
+            'items' => $this->items,
+            'user_id' => Auth::user()->id
+        ]);
     }
 }

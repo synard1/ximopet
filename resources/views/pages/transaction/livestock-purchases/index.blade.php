@@ -1203,7 +1203,7 @@
                 init: function() {
                     log('🔧 Initializing Livestock Purchase page notification integration');
                     this.setupProductionIntegration();
-                    this.setupLivewireListeners();
+                    // this.setupLivewireListeners();
                     this.setupKeyboardShortcuts();
                 },
                 
@@ -1343,33 +1343,34 @@
                     }
                 },
                 
-                setupLivewireListeners: function() {
-                    log('🎧 [Page] Setting up enhanced Livewire listeners');
+                // setupLivewireListeners: function() {
+                //     log('🎧 [Page] Setting up enhanced Livewire listeners');
                     
                     // Enhanced notify-status-change handler
-                    Livewire.on('notify-status-change', (data) => {
-                        log('📢 [Page] Livewire notification received:', data);
+                    // disabled for now 05-08-2025 - not impact to the system
+                    // Livewire.on('notify-status-change', (data) => {
+                    //     log('📢 [Page] Livewire notification received:', data);
                         
-                        const notificationData = Array.isArray(data) ? data[0] : data;
+                    //     const notificationData = Array.isArray(data) ? data[0] : data;
                         
-                        // Show notification using production system
-                        if (typeof window.NotificationSystem !== 'undefined') {
-                            window.NotificationSystem.showNotification(
-                                notificationData.title || 'Livestock Purchase Update',
-                                notificationData.message || 'A livestock purchase has been updated.',
-                                notificationData.type || 'info'
-                            );
-                        } else {
-                            // Fallback notification
-                            this.showFallbackNotification(notificationData);
-                        }
+                    //     // Show notification using production system
+                    //     if (typeof window.NotificationSystem !== 'undefined') {
+                    //         window.NotificationSystem.showNotification(
+                    //             notificationData.title || 'Livestock Purchase Update',
+                    //             notificationData.message || 'A livestock purchase has been updated.',
+                    //             notificationData.type || 'info'
+                    //         );
+                    //     } else {
+                    //         // Fallback notification
+                    //         this.showFallbackNotification(notificationData);
+                    //     }
                         
-                        // Handle refresh requirements
-                        if (notificationData.requires_refresh || notificationData.show_refresh_button) {
-                            this.showRefreshNotification(notificationData);
-                        }
-                    });
-                },
+                    //     // Handle refresh requirements
+                    //     if (notificationData.requires_refresh || notificationData.show_refresh_button) {
+                    //         this.showRefreshNotification(notificationData);
+                    //     }
+                    // });
+                // },
                 
                 showFallbackNotification: function(data) {
                     if (typeof toastr !== 'undefined') {
@@ -1427,7 +1428,7 @@
                         // Ctrl+Shift+P - Test page notification
                         if (e.ctrlKey && e.shiftKey && e.key === 'P') {
                             e.preventDefault();
-                            this.testPageNotification();
+                            // this.testPageNotification();
                         }
                         
                         // Ctrl+Shift+R - Refresh all data
@@ -1444,22 +1445,22 @@
                     });
                 },
                 
-                testPageNotification: function() {
-                    log('🧪 [Page] Testing page notification system');
+                // testPageNotification: function() {
+                //     log('🧪 [Page] Testing page notification system');
                     
-                    const testData = {
-                        type: 'success',
-                        title: 'Page Test Notification',
-                        message: 'This is a test notification from the Livestock Purchase page - ' + new Date().toLocaleTimeString(),
-                        requires_refresh: false
-                    };
+                //     const testData = {
+                //         type: 'success',
+                //         title: 'Page Test Notification',
+                //         message: 'This is a test notification from the Livestock Purchase page - ' + new Date().toLocaleTimeString(),
+                //         requires_refresh: false
+                //     };
                     
-                    if (typeof window.NotificationSystem !== 'undefined') {
-                        window.NotificationSystem.showNotification(testData.title, testData.message, testData.type);
-                    } else {
-                        this.showFallbackNotification(testData);
-                    }
-                },
+                //     if (typeof window.NotificationSystem !== 'undefined') {
+                //         window.NotificationSystem.showNotification(testData.title, testData.message, testData.type);
+                //     } else {
+                //         this.showFallbackNotification(testData);
+                //     }
+                // },
                 
                 refreshAllData: function() {
                     log('🔄 [Page] Refreshing all data');
@@ -1522,29 +1523,29 @@
 
             // ✅ LEGACY LIVEWIRE HANDLERS (Enhanced)
             // SUCCESS AND ERROR HANDLERS
-            Livewire.on('success', function (message) {
-                log('✅ Livewire success received:', message);
+            // Livewire.on('success', function (message) {
+            //     log('✅ Livewire success received:', message);
                 
-                if (typeof window.NotificationSystem !== 'undefined') {
-                    window.NotificationSystem.showNotification('Success', Array.isArray(message) ? message[0] : message, 'success');
-                } else if (typeof toastr !== 'undefined') {
-                    toastr.success(Array.isArray(message) ? message[0] : message);
-                } else {
-                    alert('Success: ' + (Array.isArray(message) ? message[0] : message));
-                }
-            });
+            //     if (typeof window.NotificationSystem !== 'undefined') {
+            //         window.NotificationSystem.showNotification('Success', Array.isArray(message) ? message[0] : message, 'success');
+            //     } else if (typeof toastr !== 'undefined') {
+            //         toastr.success(Array.isArray(message) ? message[0] : message);
+            //     } else {
+            //         alert('Success: ' + (Array.isArray(message) ? message[0] : message));
+            //     }
+            // });
 
-            Livewire.on('error', function (message) {
-                log('❌ Livewire error received:', message);
+            // Livewire.on('error', function (message) {
+            //     log('❌ Livewire error received:', message);
                 
-                if (typeof window.NotificationSystem !== 'undefined') {
-                    window.NotificationSystem.showNotification('Error', Array.isArray(message) ? message[0] : message, 'error');
-                } else if (typeof toastr !== 'undefined') {
-                    toastr.error(Array.isArray(message) ? message[0] : message);
-                } else {
-                    alert('Error: ' + (Array.isArray(message) ? message[0] : message));
-                }
-            });
+            //     if (typeof window.NotificationSystem !== 'undefined') {
+            //         window.NotificationSystem.showNotification('Error', Array.isArray(message) ? message[0] : message, 'error');
+            //     } else if (typeof toastr !== 'undefined') {
+            //         toastr.error(Array.isArray(message) ? message[0] : message);
+            //     } else {
+            //         alert('Error: ' + (Array.isArray(message) ? message[0] : message));
+            //     }
+            // });
         });
 
         // ✅ SSE INTEGRATION FOR LIVESTOCK PURCHASE NOTIFICATIONS  

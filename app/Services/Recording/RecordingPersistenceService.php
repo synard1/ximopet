@@ -121,55 +121,369 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 'company_name' => $company->name
             ]);
 
+            // Calculate age in days
+            $age = 0;
+            if ($livestock->start_date) {
+                $startDate = Carbon::parse($livestock->start_date);
+                $recordDate = Carbon::parse($recordingDTO->date);
+                $age = $startDate->diffInDays($recordDate, false);
+            }
+
+            // Calculate stock_awal (initial stock for this recording date)
+            $stockAwal = $livestock->initial_quantity ?? 0;
+
+            logDebugIfDebug('📊 Initial stock calculation', [
+                'livestock_id' => $recordingDTO->livestockId,
+                'livestock_initial_quantity' => $livestock->initial_quantity,
+                'calculated_stock_awal' => $stockAwal
+            ]);
+
+            // If this is not the first recording, get stock_akhir from previous day
+            $previousRecording = Recording::where('livestock_id', $recordingDTO->livestockId)
+                ->whereDate('tanggal', Carbon::parse($recordingDTO->date)->subDay())
+                ->first();
+
+            if ($previousRecording) {
+                // Use previous stock_akhir, but if it's 0, fallback to livestock initial_quantity
+                $previousStockAkhir = $previousRecording->stock_akhir ?? 0;
+
+                if ($previousStockAkhir > 0) {
+                    $stockAwal = $previousStockAkhir;
+                    logDebugIfDebug('📊 Found previous recording for stock_awal calculation', [
+                        'livestock_id' => $recordingDTO->livestockId,
+                        'date' => $recordingDTO->date,
+                        'previous_date' => $previousRecording->tanggal,
+                        'previous_stock_akhir' => $previousStockAkhir,
+                        'calculated_stock_awal' => $stockAwal
+                    ]);
+                } else {
+                    // Previous recording has stock_akhir = 0, use livestock initial_quantity
+                    $stockAwal = $livestock->initial_quantity ?? 0;
+                    logDebugIfDebug('📊 Previous recording stock_akhir is 0, using livestock initial_quantity', [
+                        'livestock_id' => $recordingDTO->livestockId,
+                        'date' => $recordingDTO->date,
+                        'previous_date' => $previousRecording->tanggal,
+                        'previous_stock_akhir' => $previousStockAkhir,
+                        'livestock_initial_quantity' => $livestock->initial_quantity,
+                        'calculated_stock_awal' => $stockAwal
+                    ]);
+                }
+            } else {
+                // If no previous recording, use initial quantity from livestock
+                $stockAwal = $livestock->initial_quantity ?? 0;
+                logDebugIfDebug('📊 No previous recording found, using initial quantity', [
+                    'livestock_id' => $recordingDTO->livestockId,
+                    'date' => $recordingDTO->date,
+                    'livestock_initial_quantity' => $livestock->initial_quantity,
+                    'calculated_stock_awal' => $stockAwal
+                ]);
+            }
+
+            // Calculate stock_akhir properly
+            $totalDepletion = ($recordingDTO->mortality ?? 0) + ($recordingDTO->culling ?? 0) + ($recordingDTO->salesQuantity ?? 0);
+            $stockAkhir = $stockAwal - $totalDepletion;
+
+            // Ensure stock_akhir is not negative (minimum 0)
+            $stockAkhir = max(0, $stockAkhir);
+
+            logDebugIfDebug('📊 Stock calculation details', [
+                'livestock_id' => $recordingDTO->livestockId,
+                'date' => $recordingDTO->date,
+                'stock_awal' => $stockAwal,
+                'total_depletion' => $totalDepletion,
+                'mortality' => $recordingDTO->mortality ?? 0,
+                'culling' => $recordingDTO->culling ?? 0,
+                'sales_quantity' => $recordingDTO->salesQuantity ?? 0,
+                'calculated_stock_akhir' => $stockAkhir,
+                'formula' => "{$stockAwal} - {$totalDepletion} = {$stockAkhir}",
+                'stock_akhir_before_max' => $stockAwal - $totalDepletion,
+                'stock_akhir_after_max' => $stockAkhir
+            ]);
+
+            // Get livestock data for structured payload
+            $ternak = CurrentLivestock::with(['livestock.coop', 'livestock.farm'])->where('livestock_id', $recordingDTO->livestockId)->first();
+
+            logDebugIfDebug('📊 Livestock data verification', [
+                'livestock_id' => $recordingDTO->livestockId,
+                'livestock_initial_quantity' => $livestock->initial_quantity,
+                'livestock_initial_quantity_type' => gettype($livestock->initial_quantity),
+                'livestock_initial_quantity_null' => is_null($livestock->initial_quantity),
+                'livestock_initial_quantity_zero' => $livestock->initial_quantity == 0,
+                'ternak_found' => !is_null($ternak),
+                'ternak_quantity' => $ternak ? $ternak->quantity : 'N/A'
+            ]);
+
+            // If livestock initial_quantity is null or 0, try to get from CurrentLivestock
+            if (is_null($livestock->initial_quantity) || $livestock->initial_quantity == 0) {
+                if ($ternak && $ternak->quantity > 0) {
+                    $stockAwal = $ternak->quantity;
+                    logDebugIfDebug('📊 Using CurrentLivestock quantity as fallback', [
+                        'livestock_id' => $recordingDTO->livestockId,
+                        'livestock_initial_quantity' => $livestock->initial_quantity,
+                        'ternak_quantity' => $ternak->quantity,
+                        'fallback_stock_awal' => $stockAwal
+                    ]);
+                }
+            }
+
+            // Final fallback: if stock_awal is still 0, use ternak_quantity
+            if ($stockAwal == 0 && $ternak && $ternak->quantity > 0) {
+                $stockAwal = $ternak->quantity;
+                logDebugIfDebug('📊 Final fallback: using ternak_quantity because stock_awal is 0', [
+                    'livestock_id' => $recordingDTO->livestockId,
+                    'previous_calculated_stock_awal' => 0,
+                    'ternak_quantity' => $ternak->quantity,
+                    'final_stock_awal' => $stockAwal
+                ]);
+            }
+
+            // Get historical data for comprehensive payload
+            $recordingService = app(RecordingService::class);
+            $populationHistory = $recordingService->getPopulationHistory($recordingDTO->livestockId, Carbon::parse($recordingDTO->date));
+            $weightHistory = $this->getWeightHistory($recordingDTO->livestockId, $recordingDTO->date);
+            $feedHistory = $this->getFeedConsumptionHistory($recordingDTO->livestockId, $recordingDTO->date);
+            $outflowHistory = $this->getDetailedOutflowHistory($recordingDTO->livestockId, $recordingDTO->date);
+
+            // Prepare usage data
+            $usages = $this->prepareFeedUsageData($recordingDTO->itemQuantities ?? [], $recordingDTO->livestockId);
+            $supplyUsages = $this->prepareSupplyUsageData($recordingDTO->supplyQuantities ?? [], $recordingDTO->livestockId);
+
+            // Calculate performance metrics
+            $performanceMetrics = $this->calculatePerformanceMetrics(
+                $age,
+                $stockAkhir,
+                $livestock->initial_quantity ?? 0,
+                $recordingDTO->weightToday ?? 0,
+                $feedHistory['cumulative_feed_consumption'] ?? 0,
+                $outflowHistory['total'] ?? 0
+            );
+
+            // Calculate weight gain
+            $weightGain = ($recordingDTO->weightToday ?? 0) - ($recordingDTO->weightYesterday ?? 0);
+
+            // Build comprehensive structured payload
+            $structuredPayload = $this->buildStructuredPayload(
+                $ternak,
+                $age,
+                $stockAwal,
+                $stockAkhir,
+                $recordingDTO->weightToday ?? 0,
+                $recordingDTO->weightYesterday ?? 0,
+                $weightGain,
+                $performanceMetrics,
+                $weightHistory,
+                $feedHistory,
+                $populationHistory,
+                $outflowHistory,
+                $usages,
+                $supplyUsages,
+                $recordingDTO->mortality ?? 0,
+                $recordingDTO->culling ?? 0,
+                $recordingDTO->salesQuantity ?? 0,
+                $recordingDTO->salesWeight ?? 0,
+                $recordingDTO->salesPrice ?? 0,
+                $recordingDTO->totalSales ?? 0,
+                $recordingDTO->isManualDepletionEnabled ?? false,
+                $recordingDTO->isManualFeedUsageEnabled ?? false,
+                $recordingDTO->recordingMethod ?? 'total',
+                $recordingDTO->livestockConfig ?? [],
+                $recordingDTO->date,
+                $recordingDTO->validationStatus ?? [],
+                $recordingDTO->validatedData ?? []
+            );
+
             // Save or update recording first
             logInfoIfDebug('🔄 Saving/updating recording', [
                 'livestock_id' => $recordingDTO->livestockId,
-                'date' => $recordingDTO->date
+                'date' => $recordingDTO->date,
+                'age' => $age,
+                'stock_awal' => $stockAwal,
+                'stock_akhir' => $stockAkhir,
+                'total_depletion' => $totalDepletion,
+                'mortality' => $recordingDTO->mortality,
+                'culling' => $recordingDTO->culling,
+                'sales_quantity' => $recordingDTO->salesQuantity,
+                'weight_gain' => $weightGain
             ]);
 
             $recordingData = [
                 'livestock_id' => $recordingDTO->livestockId,
                 'tanggal' => $recordingDTO->date,
-                'berat_hari_ini' => $recordingDTO->weightToday,
-                'stock_akhir' => $recordingDTO->weightToday ?: 0, // Ensure not null
-                'payload' => [
-                    'livestock_id' => $recordingDTO->livestockId,
-                    'date' => $recordingDTO->date,
-                    'mortality' => $recordingDTO->mortality,
-                    'culling' => $recordingDTO->culling,
-                    'weight_today' => $recordingDTO->weightToday,
-                    'sales_quantity' => $recordingDTO->salesQuantity,
-                    'sales_weight' => $recordingDTO->salesWeight,
-                    'sales_price' => $recordingDTO->salesPrice,
-                    'total_sales' => $recordingDTO->totalSales,
-                    'itemQuantities' => $recordingDTO->itemQuantities,
-                    'supplyQuantities' => $recordingDTO->supplyQuantities,
-                    'livestockConfig' => $recordingDTO->livestockConfig,
-                    'isManualDepletionEnabled' => $recordingDTO->isManualDepletionEnabled,
-                    'isManualFeedUsageEnabled' => $recordingDTO->isManualFeedUsageEnabled,
-                    'recordingMethod' => $recordingDTO->recordingMethod,
-                    'validationStatus' => $recordingDTO->validationStatus,
-                    'validatedData' => $recordingDTO->validatedData,
-                ]
+                'age' => (int) $age,
+                'stock_awal' => (int) $stockAwal,
+                'berat_hari_ini' => (float) $recordingDTO->weightToday,
+                'berat_semalam' => (float) ($recordingDTO->weightYesterday ?? 0),
+                'kenaikan_berat' => (float) $weightGain,
+                'stock_akhir' => (int) $stockAkhir,
+                'total_deplesi' => (int) $totalDepletion,
+                'total_penjualan' => (int) ($recordingDTO->salesQuantity ?? 0),
+                // Tidak dipakai, karna tidak support multiple feed types / feed items
+                // 'pakan_jenis' => $this->getFeedTypesString($recordingDTO->itemQuantities ?? []),
+                // 'pakan_harian' => $this->getTotalFeedQuantity($recordingDTO->itemQuantities ?? []),
+                // 'pakan_total' => $this->getTotalFeedQuantity($recordingDTO->itemQuantities ?? []),
+                'company_id' => $livestock->company_id,
+                'payload' => $structuredPayload
             ];
+
+            logDebugIfDebug('🔄 Recording data prepared', [
+                'livestock_id' => $recordingDTO->livestockId,
+                'date' => $recordingDTO->date,
+                'weight_today' => $recordingDTO->weightToday,
+                'weight_yesterday' => $recordingDTO->weightYesterday,
+                'weight_gain' => $weightGain,
+                'stock_awal' => $stockAwal,
+                'stock_akhir' => $stockAkhir,
+                'total_depletion' => $totalDepletion,
+                'sales_quantity' => $recordingDTO->salesQuantity,
+                'feed_types' => $this->getFeedTypesString($recordingDTO->itemQuantities ?? []),
+                'feed_quantity' => $this->getTotalFeedQuantity($recordingDTO->itemQuantities ?? [])
+            ]);
+
+            logDebugIfDebug('🔄 Data being sent to saveOrUpdateRecording', [
+                'recording_data_keys' => array_keys($recordingData),
+                'stock_awal_in_data' => $recordingData['stock_awal'],
+                'stock_akhir_in_data' => $recordingData['stock_akhir'],
+                'total_deplesi_in_data' => $recordingData['total_deplesi'],
+                'berat_hari_ini_in_data' => $recordingData['berat_hari_ini'],
+                'kenaikan_berat_in_data' => $recordingData['kenaikan_berat']
+            ]);
+
+            logDebugIfDebug('🔄 Stock values verification', [
+                'stock_awal_calculated' => $stockAwal,
+                'stock_akhir_calculated' => $stockAkhir,
+                'stock_awal_in_recording_data' => $recordingData['stock_awal'],
+                'stock_akhir_in_recording_data' => $recordingData['stock_akhir'],
+                'stock_awal_type' => gettype($recordingData['stock_awal']),
+                'stock_akhir_type' => gettype($recordingData['stock_akhir'])
+            ]);
 
             logDebugIfDebug('🔄 Calculating stock_akhir', [
                 'livestock_id' => $recordingDTO->livestockId,
                 'date' => $recordingDTO->date,
                 'weight_today' => $recordingDTO->weightToday,
-                'calculated_stock_akhir' => $recordingData['stock_akhir']
+                'calculated_stock_akhir' => $recordingData['stock_akhir'],
+                'stock_awal' => $stockAwal,
+                'total_depletion' => $totalDepletion,
+                'mortality' => $recordingDTO->mortality,
+                'culling' => $recordingDTO->culling,
+                'sales_quantity' => $recordingDTO->salesQuantity
+            ]);
+
+            logInfoIfDebug('📊 Structured payload created', [
+                'livestock_id' => $recordingDTO->livestockId,
+                'date' => $recordingDTO->date,
+                'payload_keys' => array_keys($structuredPayload),
+                'production_keys' => array_keys($structuredPayload['production'] ?? []),
+                'consumption_keys' => array_keys($structuredPayload['consumption'] ?? []),
+                'history_keys' => array_keys($structuredPayload['history'] ?? [])
+            ]);
+
+            logDebugIfDebug('🔄 Final stock calculation verification', [
+                'livestock_id' => $recordingDTO->livestockId,
+                'date' => $recordingDTO->date,
+                'livestock_initial_quantity' => $livestock->initial_quantity,
+                'previous_recording_found' => !is_null($previousRecording),
+                'previous_stock_akhir' => $previousRecording ? $previousRecording->stock_akhir : 'N/A',
+                'ternak_quantity' => $ternak ? $ternak->quantity : 'N/A',
+                'final_stock_awal' => $stockAwal,
+                'final_stock_akhir' => $stockAkhir,
+                'total_depletion' => $totalDepletion,
+                'formula' => "{$stockAwal} - {$totalDepletion} = {$stockAkhir}"
+            ]);
+
+            logDebugIfDebug('🔄 Stock calculation breakdown', [
+                'livestock_id' => $recordingDTO->livestockId,
+                'date' => $recordingDTO->date,
+                'livestock_initial_quantity' => $livestock->initial_quantity,
+                'previous_recording_exists' => !is_null($previousRecording),
+                'previous_recording_date' => $previousRecording ? $previousRecording->tanggal : 'N/A',
+                'previous_stock_akhir' => $previousRecording ? $previousRecording->stock_akhir : 'N/A',
+                'previous_stock_akhir_valid' => $previousRecording ? ($previousRecording->stock_akhir > 0) : 'N/A',
+                'ternak_quantity' => $ternak ? $ternak->quantity : 'N/A',
+                'calculated_stock_awal' => $stockAwal,
+                'mortality' => $recordingDTO->mortality ?? 0,
+                'culling' => $recordingDTO->culling ?? 0,
+                'sales_quantity' => $recordingDTO->salesQuantity ?? 0,
+                'total_depletion' => $totalDepletion,
+                'calculated_stock_akhir' => $stockAkhir,
+                'calculation_formula' => "{$stockAwal} - {$totalDepletion} = {$stockAkhir}",
+                'expected_stock_akhir' => $stockAwal - $totalDepletion
+            ]);
+
+            logDebugIfDebug('🔄 Final data verification before save', [
+                'livestock_id' => $recordingDTO->livestockId,
+                'date' => $recordingDTO->date,
+                'final_stock_awal' => $stockAwal,
+                'final_stock_akhir' => $stockAkhir,
+                'final_total_depletion' => $totalDepletion,
+                'stock_awal_type' => gettype($stockAwal),
+                'stock_akhir_type' => gettype($stockAkhir),
+                'stock_awal_int' => (int) $stockAwal,
+                'stock_akhir_int' => (int) $stockAkhir,
+                'total_depletion_int' => (int) $totalDepletion
             ]);
 
             $recording = $this->saveOrUpdateRecording($recordingData);
             $recordingId = $recording->id;
 
-            // Process sales data (now uses UPDATE logic instead of DELETE/CREATE)
-            $salesResult = $this->processSalesData($recordingDTO, $isVirtualMode, $isTwoStage, $livestock, $recordingId);
+            // Store recording ID for potential rollback
+            $savedRecordingId = $recordingId;
 
-            // Process other data types
-            $this->processDepletionData($recordingDTO, $isVirtualMode, $isTwoStage);
-            $this->processFeedUsageData($recordingDTO, $recordingId);
-            $this->processSupplyUsageData($recordingDTO, $recordingId);
+            try {
+                // Process sales data (now uses UPDATE logic instead of DELETE/CREATE)
+                $salesResult = $this->processSalesData($recordingDTO, $isVirtualMode, $isTwoStage, $livestock, $recordingId);
+                if (!$salesResult->isSuccess()) {
+                    $this->rollbackRecording($savedRecordingId);
+                    logErrorIfDebug('❌ Sales processing failed, rolling back recording', [
+                        'error' => $salesResult->getMessage(),
+                        'livestock_id' => $recordingDTO->livestockId,
+                        'date' => $recordingDTO->date
+                    ]);
+                    return ServiceResult::error('Failed to process sales data: ' . $salesResult->getMessage());
+                }
+
+                // Process other data types
+                $depletionResult = $this->processDepletionData($recordingDTO);
+                if (!$depletionResult->isSuccess()) {
+                    $this->rollbackRecording($savedRecordingId);
+                    logErrorIfDebug('❌ Depletion processing failed, rolling back recording', [
+                        'error' => $depletionResult->getMessage(),
+                        'livestock_id' => $recordingDTO->livestockId,
+                        'date' => $recordingDTO->date
+                    ]);
+                    return ServiceResult::error('Failed to process depletion data: ' . $depletionResult->getMessage());
+                }
+
+                $feedResult = $this->processFeedUsageData($recordingDTO, $recordingId);
+                if (!$feedResult->isSuccess()) {
+                    $this->rollbackRecording($savedRecordingId);
+                    logErrorIfDebug('❌ Feed usage processing failed, rolling back recording', [
+                        'error' => $feedResult->getMessage(),
+                        'livestock_id' => $recordingDTO->livestockId,
+                        'date' => $recordingDTO->date
+                    ]);
+                    return ServiceResult::error('Failed to process feed usage data: ' . $feedResult->getMessage());
+                }
+
+                $supplyResult = $this->processSupplyUsageData($recordingDTO, $recordingId);
+                if (!$supplyResult->isSuccess()) {
+                    $this->rollbackRecording($savedRecordingId);
+                    logErrorIfDebug('❌ Supply usage processing failed, rolling back recording', [
+                        'error' => $supplyResult->getMessage(),
+                        'livestock_id' => $recordingDTO->livestockId,
+                        'date' => $recordingDTO->date
+                    ]);
+                    return ServiceResult::error('Failed to process supply usage data: ' . $supplyResult->getMessage());
+                }
+            } catch (Exception $e) {
+                $this->rollbackRecording($savedRecordingId);
+                logErrorIfDebug('❌ Unexpected error during processing, rolling back recording', [
+                    'error' => $e->getMessage(),
+                    'livestock_id' => $recordingDTO->livestockId,
+                    'date' => $recordingDTO->date
+                ]);
+                return ServiceResult::error('Unexpected error during processing: ' . $e->getMessage());
+            }
 
             // Clear caches
             $salesDraftCacheKey = "sales_draft_{$recordingDTO->livestockId}_{$recordingDTO->date}";
@@ -386,10 +700,68 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
     /**
      * Process depletion data with virtual calculation support
      */
-    private function processDepletionData(RecordingDTO $recordingDTO, bool $isVirtualMode, bool $isTwoStage): ServiceResult
+    private function processDepletionData(RecordingDTO $recordingDTO): ServiceResult
     {
         try {
             $totalDepletion = ($recordingDTO->mortality ?? 0) + ($recordingDTO->culling ?? 0);
+
+            // Get recording_id first - this should be available since recording is saved first
+            $recording = Recording::where('livestock_id', $recordingDTO->livestockId)
+                ->where('tanggal', $recordingDTO->date)
+                ->first();
+
+            $recordingId = $recording ? $recording->id : null;
+
+            if (!$recordingId) {
+                logErrorIfDebug('❌ Recording not found for depletion storage', [
+                    'livestock_id' => $recordingDTO->livestockId,
+                    'date' => $recordingDTO->date
+                ]);
+                return ServiceResult::error('Recording not found for depletion storage. Please try again.');
+            }
+
+            // Always save to LivestockDepletion table regardless of virtual mode
+            if ($recordingDTO->mortality > 0) {
+                try {
+                    $this->storeDeplesiWithDetails(
+                        LivestockDepletionConfig::TYPE_MORTALITY,
+                        $recordingDTO->mortality,
+                        $recordingId, // Pass the actual recording_id
+                        $recordingDTO->date,
+                        $recordingDTO->livestockId
+                    );
+                } catch (Exception $e) {
+                    logErrorIfDebug('❌ Error storing mortality depletion', [
+                        'error' => $e->getMessage(),
+                        'livestock_id' => $recordingDTO->livestockId,
+                        'date' => $recordingDTO->date,
+                        'mortality' => $recordingDTO->mortality,
+                        'recording_id' => $recordingId
+                    ]);
+                    return ServiceResult::error('Failed to store mortality depletion: ' . $e->getMessage());
+                }
+            }
+
+            if ($recordingDTO->culling > 0) {
+                try {
+                    $this->storeDeplesiWithDetails(
+                        LivestockDepletionConfig::TYPE_CULLING,
+                        $recordingDTO->culling,
+                        $recordingId, // Pass the actual recording_id
+                        $recordingDTO->date,
+                        $recordingDTO->livestockId
+                    );
+                } catch (Exception $e) {
+                    logErrorIfDebug('❌ Error storing culling depletion', [
+                        'error' => $e->getMessage(),
+                        'livestock_id' => $recordingDTO->livestockId,
+                        'date' => $recordingDTO->date,
+                        'culling' => $recordingDTO->culling,
+                        'recording_id' => $recordingId
+                    ]);
+                    return ServiceResult::error('Failed to store culling depletion: ' . $e->getMessage());
+                }
+            }
 
             if ($totalDepletion <= 0) {
                 logDebugIfDebug('No depletion data to process', [
@@ -409,8 +781,6 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                     $recordingDTO->date,
                     $recordingDTO->mortality,
                     'mortality',
-                    $isVirtualMode,
-                    $isTwoStage,
                     $companyConfig
                 );
 
@@ -426,8 +796,6 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                     $recordingDTO->date,
                     $recordingDTO->culling,
                     'culling',
-                    $isVirtualMode,
-                    $isTwoStage,
                     $companyConfig
                 );
 
@@ -437,11 +805,10 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
             }
 
             logInfoIfDebug('Depletion data processed successfully', [
-                'virtual_mode' => $isVirtualMode,
-                'two_stage_mode' => $isTwoStage,
                 'mortality' => $recordingDTO->mortality,
                 'culling' => $recordingDTO->culling,
-                'total_depletion' => $totalDepletion
+                'total_depletion' => $totalDepletion,
+                'recording_id' => $recordingId
             ]);
 
             return ServiceResult::success('Depletion data processed successfully');
@@ -464,31 +831,21 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
         string $date,
         int $quantity,
         string $depletionType,
-        bool $isVirtualMode,
-        bool $isTwoStage,
         array $companyConfig
     ): ServiceResult {
         try {
             // Get depletion method
             $depletionMethod = $this->getDepletionMethod($companyConfig, $depletionType);
 
-            if ($isVirtualMode) {
-                // Store virtual depletion data
-                $virtualResult = $this->storeVirtualDepletionData($livestockId, $date, $quantity, $depletionType);
-                if (!$virtualResult->isSuccess()) {
-                    return $virtualResult;
+            // Process real depletion
+            if ($depletionMethod === 'fifo') {
+                $allocationResult = $this->allocateDepletionToBatches($livestockId, $date, $quantity, $depletionType);
+                if (!$allocationResult['success']) {
+                    return ServiceResult::error($allocationResult['message']);
                 }
             } else {
-                // Process real depletion
-                if ($depletionMethod === 'fifo') {
-                    $allocationResult = $this->allocateDepletionToBatches($livestockId, $date, $quantity, $depletionType);
-                    if (!$allocationResult['success']) {
-                        return ServiceResult::error($allocationResult['message']);
-                    }
-                } else {
-                    // Manual depletion - store directly
-                    $this->storeDeplesiWithDetails($depletionType, $quantity, null, $date, $livestockId);
-                }
+                // Manual depletion - store directly
+                $this->storeDeplesiWithDetails($depletionType, $quantity, null, $date, $livestockId);
             }
 
             return ServiceResult::success("{$depletionType} data processed successfully");
@@ -1713,6 +2070,11 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
 
     public function getWeightHistory($livestockId, $currentDate): array
     {
+        // Convert string date to Carbon if needed
+        if (is_string($currentDate)) {
+            $currentDate = Carbon::parse($currentDate);
+        }
+
         $recordings = Recording::where('livestock_id', $livestockId)
             ->where('tanggal', '<', $currentDate->format('Y-m-d'))
             ->whereNotNull('berat_hari_ini')->orderBy('tanggal')->get();
@@ -1725,6 +2087,11 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
 
     public function getFeedConsumptionHistory($livestockId, $currentDate): array
     {
+        // Convert string date to Carbon if needed
+        if (is_string($currentDate)) {
+            $currentDate = Carbon::parse($currentDate);
+        }
+
         $totalConsumption = FeedUsage::where('livestock_id', $livestockId)
             ->where('usage_date', '<', $currentDate->format('Y-m-d'))
             ->sum('total_quantity');
@@ -1849,12 +2216,50 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
 
         logDebugIfDebug('🔄 Executing database updateOrCreate', [
             'livestock_id' => $data['livestock_id'],
-            'tanggal' => $data['tanggal']
+            'tanggal' => $data['tanggal'],
+            'stock_awal' => $data['stock_awal'] ?? 'NOT_SET',
+            'stock_akhir' => $data['stock_akhir'] ?? 'NOT_SET',
+            'total_deplesi' => $data['total_deplesi'] ?? 'NOT_SET',
+            'berat_hari_ini' => $data['berat_hari_ini'] ?? 'NOT_SET',
+            'kenaikan_berat' => $data['kenaikan_berat'] ?? 'NOT_SET'
+        ]);
+
+        // Ensure all required fields are present
+        $updateData = [
+            'livestock_id' => $data['livestock_id'],
+            'tanggal' => $data['tanggal'],
+            'age' => (int) ($data['age'] ?? 0),
+            'stock_awal' => (int) ($data['stock_awal'] ?? 0),
+            'berat_hari_ini' => (float) ($data['berat_hari_ini'] ?? 0),
+            'berat_semalam' => (float) ($data['berat_semalam'] ?? 0),
+            'kenaikan_berat' => (float) ($data['kenaikan_berat'] ?? 0),
+            'stock_akhir' => (int) ($data['stock_akhir'] ?? 0),
+            'total_deplesi' => (int) ($data['total_deplesi'] ?? 0),
+            'total_penjualan' => (int) ($data['total_penjualan'] ?? 0),
+            'pakan_jenis' => $data['pakan_jenis'] ?? '',
+            'pakan_harian' => (float) ($data['pakan_harian'] ?? 0),
+            'pakan_total' => (float) ($data['pakan_total'] ?? 0),
+            'company_id' => $data['company_id'] ?? null,
+            'payload' => $fullPayload,
+            'created_by' => Auth::id(),
+            'updated_by' => Auth::id(),
+            'data_operational' => $dataOperasional,
+            'data_audit' => $dataAudit,
+            'data' => $dataGabungan
+        ];
+
+        logDebugIfDebug('🔄 Final update data prepared', [
+            'update_data_keys' => array_keys($updateData),
+            'stock_awal_final' => $updateData['stock_awal'],
+            'stock_akhir_final' => $updateData['stock_akhir'],
+            'total_deplesi_final' => $updateData['total_deplesi'],
+            'berat_hari_ini_final' => $updateData['berat_hari_ini'],
+            'kenaikan_berat_final' => $updateData['kenaikan_berat']
         ]);
 
         $recording = Recording::updateOrCreate(
             ['livestock_id' => $data['livestock_id'], 'tanggal' => $data['tanggal']],
-            array_merge($data, ['payload' => $fullPayload, 'created_by' => Auth::id(), 'updated_by' => Auth::id(), 'data_operational' => $dataOperasional, 'data_audit' => $dataAudit, 'data' => $dataGabungan])
+            $updateData
         );
 
         logDebugIfDebug('✅ Database updateOrCreate completed', [
@@ -1875,6 +2280,33 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
             'stock_akhir' => $recording->stock_akhir,
             'was_created' => $recording->wasRecentlyCreated,
             'was_updated' => !$recording->wasRecentlyCreated
+        ]);
+
+        // Verify the saved data
+        logDebugIfDebug('🔍 Verifying saved recording data', [
+            'recording_id' => $recording->id,
+            'stock_awal_saved' => $recording->stock_awal,
+            'stock_akhir_saved' => $recording->stock_akhir,
+            'total_deplesi_saved' => $recording->total_deplesi,
+            'berat_hari_ini_saved' => $recording->berat_hari_ini,
+            'kenaikan_berat_saved' => $recording->kenaikan_berat,
+            'total_penjualan_saved' => $recording->total_penjualan,
+            'pakan_jenis_saved' => $recording->pakan_jenis,
+            'pakan_harian_saved' => $recording->pakan_harian,
+            'pakan_total_saved' => $recording->pakan_total
+        ]);
+
+        // Additional verification for stock values
+        logDebugIfDebug('🔍 Stock values verification after save', [
+            'recording_id' => $recording->id,
+            'expected_stock_awal' => $data['stock_awal'] ?? 0,
+            'actual_stock_awal' => $recording->stock_awal,
+            'expected_stock_akhir' => $data['stock_akhir'] ?? 0,
+            'actual_stock_akhir' => $recording->stock_akhir,
+            'expected_total_deplesi' => $data['total_deplesi'] ?? 0,
+            'actual_total_deplesi' => $recording->total_deplesi,
+            'stock_awal_match' => ($data['stock_awal'] ?? 0) == $recording->stock_awal,
+            'stock_akhir_match' => ($data['stock_akhir'] ?? 0) == $recording->stock_akhir
         ]);
 
         return $recording;
@@ -2871,5 +3303,76 @@ class RecordingPersistenceService implements RecordingPersistenceServiceInterfac
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Rollback recording and related data when errors occur
+     */
+    private function rollbackRecording(string $recordingId): void
+    {
+        try {
+            logWarningIfDebug('🔄 Rolling back recording due to error', [
+                'recording_id' => $recordingId
+            ]);
+
+            // Delete the recording
+            Recording::where('id', $recordingId)->delete();
+
+            // Delete related depletion records
+            LivestockDepletion::where('recording_id', $recordingId)->delete();
+
+            // Delete related feed usage records
+            FeedUsage::where('recording_id', $recordingId)->delete();
+
+            // Delete related supply usage records
+            SupplyUsage::where('recording_id', $recordingId)->delete();
+
+            logInfoIfDebug('✅ Recording rollback completed', [
+                'recording_id' => $recordingId
+            ]);
+        } catch (Exception $e) {
+            logErrorIfDebug('❌ Error during recording rollback', [
+                'recording_id' => $recordingId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get feed types as string for pakan_jenis column
+     */
+    private function getFeedTypesString(array $itemQuantities): string
+    {
+        if (empty($itemQuantities)) {
+            return '';
+        }
+
+        $feedTypes = [];
+        foreach ($itemQuantities as $item) {
+            if (isset($item['feed_name'])) {
+                $feedTypes[] = $item['feed_name'];
+            }
+        }
+
+        return implode(', ', array_unique($feedTypes));
+    }
+
+    /**
+     * Get total feed quantity for pakan_harian and pakan_total columns
+     */
+    private function getTotalFeedQuantity(array $itemQuantities): float
+    {
+        if (empty($itemQuantities)) {
+            return 0;
+        }
+
+        $total = 0;
+        foreach ($itemQuantities as $item) {
+            if (isset($item['quantity'])) {
+                $total += (float) $item['quantity'];
+            }
+        }
+
+        return $total;
     }
 }

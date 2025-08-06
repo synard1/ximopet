@@ -41,8 +41,8 @@ class RecordingService
 
         // Get all sales records up to the current date
         $sales = LivestockSalesItem::where('livestock_id', $livestockId)
-            ->where('tanggal', '<', $currentDate->format('Y-m-d'))
-            ->orderBy('tanggal')
+            ->where('date', '<', $currentDate->format('Y-m-d'))
+            ->orderBy('date')
             ->get();
 
         // Calculate daily population changes

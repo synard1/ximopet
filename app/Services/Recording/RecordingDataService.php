@@ -262,21 +262,45 @@ class RecordingDataService implements RecordingDataServiceInterface
                 }
             }
 
-            // ALWAYS fetch depletion data, regardless of recording existence
-            $data['mortality'] = LivestockDepletion::where('livestock_id', $livestockId)
-                ->where('tanggal', $date)
-                ->where('jenis', LivestockDepletionConfig::TYPE_MORTALITY)
-                ->sum('jumlah');
+            // PRIORITY: Extract depletion data from payload if exists
+            if ($recording && isset($payload['production']['depletion'])) {
+                $depletion = $payload['production']['depletion'];
+                $data['mortality'] = isset($depletion['mortality']) ? (int)$depletion['mortality'] : 0;
+                $data['culling'] = isset($depletion['culling']) ? (int)$depletion['culling'] : 0;
+                
+                logInfoIfDebug('Depletion data loaded from payload.production.depletion (PRIORITY)', [
+                    'mortality' => $data['mortality'],
+                    'culling' => $data['culling'],
+                    'source' => 'payload_production_depletion'
+                ]);
+            } else if ($recording && isset($payload['mortality']) || isset($payload['culling'])) {
+                // HIGH PRIORITY: Extract depletion data directly from payload root level
+                $data['mortality'] = isset($payload['mortality']) ? (int)$payload['mortality'] : 0;
+                $data['culling'] = isset($payload['culling']) ? (int)$payload['culling'] : 0;
+                
+                logInfoIfDebug('Depletion data loaded from payload root level (HIGH PRIORITY)', [
+                    'mortality' => $data['mortality'],
+                    'culling' => $data['culling'],
+                    'source' => 'payload_root_level'
+                ]);
+            } else {
+                // Fallback: Load from LivestockDepletion table
+                $data['mortality'] = LivestockDepletion::where('livestock_id', $livestockId)
+                    ->where('tanggal', $date)
+                    ->where('jenis', LivestockDepletionConfig::TYPE_MORTALITY)
+                    ->sum('jumlah');
 
-            $data['culling'] = LivestockDepletion::where('livestock_id', $livestockId)
-                ->where('tanggal', $date)
-                ->where('jenis', LivestockDepletionConfig::TYPE_CULLING)
-                ->sum('jumlah');
-
-            logDebugIfDebug('Depletion data loaded', [
-                'mortality' => $data['mortality'],
-                'culling' => $data['culling']
-            ]);
+                $data['culling'] = LivestockDepletion::where('livestock_id', $livestockId)
+                    ->where('tanggal', $date)
+                    ->where('jenis', LivestockDepletionConfig::TYPE_CULLING)
+                    ->sum('jumlah');
+                
+                logDebugIfDebug('Depletion data loaded from LivestockDepletion table (fallback)', [
+                    'mortality' => $data['mortality'],
+                    'culling' => $data['culling'],
+                    'source' => 'livestock_depletion_table'
+                ]);
+            }
 
             // ALWAYS fetch feed and supply usage, regardless of recording existence.
             // This ensures feedUsageId and supplyUsageId are always present.

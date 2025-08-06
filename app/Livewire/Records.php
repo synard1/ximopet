@@ -1395,12 +1395,53 @@ class Records extends Component
                     $this->dispatch('data-saved'); // To refresh table data if needed
                     $this->dispatch('refreshData'); // Force refresh all data
                 } else {
+                    // Enhanced error handling with specific messages
+                    $errorMessage = $result->getMessage();
+
+                    // Check for specific error types and provide user-friendly messages
+                    if (str_contains($errorMessage, 'recording_id') || str_contains($errorMessage, 'Integrity constraint violation')) {
+                        $userMessage = '⚠️ Terjadi kesalahan dalam penyimpanan data. Silakan coba lagi atau hubungi administrator.';
+                        logErrorIfDebug('❌ Recording save failed - database constraint error', [
+                            'error' => $errorMessage,
+                            'livestock_id' => $this->livestockId,
+                            'date' => $this->date
+                        ]);
+                    } elseif (str_contains($errorMessage, 'depletion')) {
+                        $userMessage = '⚠️ Terjadi kesalahan dalam penyimpanan data deplesi. Silakan periksa data dan coba lagi.';
+                        logErrorIfDebug('❌ Depletion processing failed', [
+                            'error' => $errorMessage,
+                            'livestock_id' => $this->livestockId,
+                            'date' => $this->date
+                        ]);
+                    } elseif (str_contains($errorMessage, 'sales')) {
+                        $userMessage = '⚠️ Terjadi kesalahan dalam penyimpanan data penjualan. Silakan periksa data dan coba lagi.';
+                        logErrorIfDebug('❌ Sales processing failed', [
+                            'error' => $errorMessage,
+                            'livestock_id' => $this->livestockId,
+                            'date' => $this->date
+                        ]);
+                    } elseif (str_contains($errorMessage, 'feed')) {
+                        $userMessage = '⚠️ Terjadi kesalahan dalam penyimpanan data pakan. Silakan periksa data dan coba lagi.';
+                        logErrorIfDebug('❌ Feed usage processing failed', [
+                            'error' => $errorMessage,
+                            'livestock_id' => $this->livestockId,
+                            'date' => $this->date
+                        ]);
+                    } else {
+                        $userMessage = '⚠️ Terjadi kesalahan dalam penyimpanan data. Silakan coba lagi.';
+                        logErrorIfDebug('❌ General recording save error', [
+                            'error' => $errorMessage,
+                            'livestock_id' => $this->livestockId,
+                            'date' => $this->date
+                        ]);
+                    }
+
                     // Check if it's a batch allocation error
                     $data = $result->getData();
                     if (isset($data['batch_allocation_errors'])) {
-                        $this->handleBatchAllocationError($result->getMessage(), $data['batch_allocation_errors']);
+                        $this->handleBatchAllocationError($userMessage, $data['batch_allocation_errors']);
                     } else {
-                        $this->dispatch('error', $result->getMessage());
+                        $this->dispatch('error', $userMessage);
                     }
                 }
                 return;

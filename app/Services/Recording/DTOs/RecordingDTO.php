@@ -18,6 +18,7 @@ class RecordingDTO
     public ?int $mortality;
     public ?int $culling;
     public ?float $weightToday;
+    public ?float $weightYesterday;
     public ?int $salesQuantity;
     public ?float $salesWeight;
     public ?float $salesPrice;
@@ -91,6 +92,7 @@ class RecordingDTO
         $this->mortality = $data['mortality'] ?? null;
         $this->culling = $data['culling'] ?? null;
         $this->weightToday = $data['weight_today'] ?? null;
+        $this->weightYesterday = $data['weight_yesterday'] ?? null;
         $this->salesQuantity = $data['sales_quantity'] ?? null;
         $this->salesWeight = $data['sales_weight'] ?? null;
         $this->salesPrice = $data['sales_price'] ?? null;
