@@ -77,6 +77,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Administrator Routes
     Route::name('administrator.')->middleware(['auth'])->prefix('administrator')->group(function () {
+
+        // Artisan Commands Management
+        Route::middleware(['auth'])->name('artisan-commands.')->prefix('artisan-commands')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\ArtisanCommandController::class, 'index'])->name('index');
+            Route::post('/execute', [App\Http\Controllers\Admin\ArtisanCommandController::class, 'execute'])->name('execute');
+            Route::post('/preview', [App\Http\Controllers\Admin\ArtisanCommandController::class, 'preview'])->name('preview');
+            Route::get('/test', [App\Http\Controllers\Admin\ArtisanCommandController::class, 'test'])->name('test');
+        });
+
         Route::get('/qa', [AdminController::class, 'qaIndex'])
             ->middleware(['permission:access qa checklist'])
             ->name('qa');
