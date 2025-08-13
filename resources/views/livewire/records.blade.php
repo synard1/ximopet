@@ -131,7 +131,13 @@
                     <h3 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">📅 Informasi Dasar</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <x-input.group label="📅 Tanggal">
-                            <input type="date" wire:model.live="date" class="form-control" max="{{ date('Y-m-d') }}">
+                            <input type="date" wire:model.live="date" class="form-control"
+                                min="{{ $livestockStartDate ?? date('Y-m-d') }}" max="{{ date('Y-m-d') }}">
+                            @if($livestockStartDate)
+                            <small class="text-muted mt-1 d-block">
+                                📅 Tanggal masuk ternak: {{ $livestockStartDate }}
+                            </small>
+                            @endif
                             <x-input.error for="date" />
                         </x-input.group>
 

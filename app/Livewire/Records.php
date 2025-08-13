@@ -71,6 +71,9 @@ class Records extends Component
     public $deplesiData = null;
     public $hasChanged = false;
 
+    // Livestock start date for date input validation
+    public $livestockStartDate = null;
+
     // Yesterday's data for better information
     public $yesterday_weight;
     public $yesterday_mortality;
@@ -193,6 +196,7 @@ class Records extends Component
     protected $messages = [
         'recordingMethod.required' => 'Recording method must be selected.',
         'recordingMethod.in' => 'Invalid recording method selected.',
+        'date.after_or_equal' => 'Tanggal recording tidak boleh lebih awal dari tanggal masuk ternak.',
     ];
 
     protected ?StocksService $stocksService = null;
@@ -339,6 +343,16 @@ class Records extends Component
         if ($this->livestockId) {
             $livestock = Livestock::findOrFail($this->livestockId);
             $company = $livestock->farm->company;
+
+            // Load livestock start date for date input validation
+            $this->livestockStartDate = $livestock->start_date ? Carbon::parse($livestock->start_date)->format('Y-m-d') : null;
+
+            logInfoIfDebug('📅 Livestock start date loaded for date validation', [
+                'livestock_id' => $livestock->id,
+                'livestock_name' => $livestock->name,
+                'start_date' => $livestock->start_date,
+                'formatted_start_date' => $this->livestockStartDate
+            ]);
 
             // Load livestock configuration
             $this->loadLivestockConfiguration($livestock);
@@ -524,6 +538,7 @@ class Records extends Component
         $this->showForm = false;
         $this->dispatch('hide-records');
         $this->resetErrorBag();
+        $this->livestockStartDate = null;
     }
 
 
@@ -623,7 +638,8 @@ class Records extends Component
             'items' => $this->items,
             'supplyQuantities' => $this->supplyQuantities,
             'availableSupplies' => $this->availableSupplies,
-            'yesterdayData' => $yesterdayData
+            'yesterdayData' => $yesterdayData,
+            'livestockStartDate' => $this->livestockStartDate
         ]);
     }
 
@@ -890,6 +906,18 @@ class Records extends Component
     // Add this method to handle date changes
     public function updatedDate($value, $bypassCache = true)
     {
+        // Validate date is not before livestock start date
+        if ($this->livestockStartDate && $value < $this->livestockStartDate) {
+            logWarningIfDebug('⚠️ Date validation failed - selected date is before livestock start date', [
+                'livestock_id' => $this->livestockId,
+                'selected_date' => $value,
+                'livestock_start_date' => $this->livestockStartDate,
+                'user_id' => Auth::id()
+            ]);
+            $this->addError('date', 'Tanggal recording tidak boleh lebih awal dari tanggal masuk ternak (' . $this->livestockStartDate . ').');
+            return;
+        }
+
         if (!$this->livestockId || !$value) {
             return;
         }
@@ -1846,5 +1874,33 @@ class Records extends Component
         $this->isReloadingHistory = true;
         $this->updatedDate($this->date, true);
         $this->isReloadingHistory = false;
+    }
+
+    /**
+     * Get formatted livestock start date for display
+     */
+    public function getFormattedLivestockStartDateProperty()
+    {
+        if (!$this->livestockStartDate) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($this->livestockStartDate)->format('d/m/Y');
+        } catch (\Exception $e) {
+            return $this->livestockStartDate;
+        }
+    }
+
+    /**
+     * Check if current date is valid (not before livestock start date)
+     */
+    public function getIsDateValidProperty()
+    {
+        if (!$this->date || !$this->livestockStartDate) {
+            return true;
+        }
+
+        return $this->date >= $this->livestockStartDate;
     }
 }

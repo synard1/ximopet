@@ -8,6 +8,7 @@ use App\Services\ValidationService;
 use App\Traits\HasValidation;
 use App\Services\VerificationService;
 use App\Models\ModelVerification;
+use App\Services\ExpeditionService;
 
 use App\Models\CurrentSupply;
 use Livewire\Component;
@@ -68,6 +69,10 @@ class Create extends Component
     public $status = 'draft'; // FIX: Set default status to draft for create mode
     public $notes = null;
     public bool $withHistory = false; // ← Tambahkan ini di atas class Livewire
+    // Snapshot data yang di-load saat edit form ditrigger
+    public $originalFormSnapshot = [];
+
+    protected ExpeditionService $expeditionService;
 
     protected $listeners = [
         'deleteLivestockPurchase' => 'deleteLivestockPurchase',
@@ -88,9 +93,163 @@ class Create extends Component
         ]);
     }
 
+    public function boot(ExpeditionService $expeditionService)
+    {
+        $this->expeditionService = $expeditionService;
+    }
+
     public function mount()
     {
         // $this->initializeTempAuth();
+    }
+
+    /**
+     * Validate expedition input using ExpeditionService
+     * 
+     * @return array - Array of validation errors (empty if valid)
+     */
+    public function validateExpeditionInput(): array
+    {
+        $inputData = [
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee
+        ];
+
+        // Expedition tidak wajib untuk draft, tapi jika diisi harus valid
+        $context = [
+            'require_expedition' => $this->status === 'complete'
+        ];
+
+        return $this->expeditionService->validateLivewireInput($inputData, 'livestock_purchase', $context);
+    }
+
+    /**
+     * Create expedition transaction using ExpeditionService
+     * 
+     * @param string $transactionId - ID of the livestock purchase transaction
+     * @return bool - Success status
+     */
+    public function createExpeditionTransaction(string $transactionId): bool
+    {
+        Log::info('=== EXPEDITION TRANSACTION CREATION/UPDATE START ===', [
+            'transaction_id' => $transactionId,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+            'expedition_id_type' => gettype($this->expedition_id),
+            'expedition_fee_type' => gettype($this->expedition_fee),
+            'user_company_id' => Auth::user()->company_id ?? 'NULL',
+            'shipping_date' => $this->date,
+            'notes' => $this->notes ?? 'NULL'
+        ]);
+
+        try {
+            // Validate input data before processing
+            if (empty($this->expedition_id)) {
+                Log::warning('Expedition ID is empty, cannot create expedition transaction', [
+                    'transaction_id' => $transactionId
+                ]);
+                return false;
+            }
+
+            if (empty($this->expedition_fee) || $this->expedition_fee <= 0) {
+                Log::warning('Expedition fee is invalid, cannot create expedition transaction', [
+                    'transaction_id' => $transactionId,
+                    'expedition_fee' => $this->expedition_fee
+                ]);
+                return false;
+            }
+
+            $inputData = [
+                'expedition_id' => $this->expedition_id,
+                'expedition_fee' => $this->expedition_fee
+            ];
+
+            $context = [
+                'shipping_date' => $this->date,
+                'company_id' => Auth::user()->company_id ?? null,
+                'notes' => $this->notes,
+                'total_weight' => $this->total['total_weight'] ?? 0
+            ];
+
+            Log::info('Calling ExpeditionService::createFromLivewireInput', [
+                'input_data' => $inputData,
+                'transaction_type' => 'livestock_purchase',
+                'transaction_id' => $transactionId,
+                'context' => $context
+            ]);
+
+            $expeditionTransaction = $this->expeditionService->createFromLivewireInput(
+                $inputData,
+                'livestock_purchase',
+                $transactionId,
+                $context
+            );
+
+            if ($expeditionTransaction) {
+                Log::info('=== EXPEDITION TRANSACTION CREATED/UPDATED SUCCESSFULLY ===', [
+                    'livestock_purchase_id' => $transactionId,
+                    'expedition_transaction_id' => $expeditionTransaction->id,
+                    'expedition_id' => $expeditionTransaction->expedition_id,
+                    'expedition_cost' => $expeditionTransaction->expedition_cost,
+                    'status' => $expeditionTransaction->status,
+                    'action' => 'created_or_updated'
+                ]);
+                return true;
+            }
+
+            Log::warning('=== EXPEDITION TRANSACTION CREATION/UPDATE FAILED ===', [
+                'livestock_purchase_id' => $transactionId,
+                'input_data' => $inputData,
+                'context' => $context,
+                'reason' => 'ExpeditionService::createFromLivewireInput returned null'
+            ]);
+            return false;
+        } catch (\Exception $e) {
+            Log::error('=== EXPEDITION TRANSACTION CREATION/UPDATE ERROR ===', [
+                'error' => $e->getMessage(),
+                'error_trace' => $e->getTraceAsString(),
+                'livestock_purchase_id' => $transactionId,
+                'expedition_id' => $this->expedition_id,
+                'expedition_fee' => $this->expedition_fee,
+                'error_code' => $e->getCode(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'error_timestamp' => now()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get estimated expedition cost using ExpeditionService
+     * 
+     * @param string $expeditionId - Expedition ID
+     * @param float $weight - Total weight
+     * @param string $destinationZone - Destination zone
+     * @return array|null - Estimated cost data or null if failed
+     */
+    public function getEstimatedExpeditionCost(string $expeditionId, float $weight, string $destinationZone = ''): ?array
+    {
+        try {
+            $context = [
+                'company_id' => Auth::user()->company_id ?? null,
+                'transaction_type' => 'livestock_purchase'
+            ];
+
+            return $this->expeditionService->getEstimatedCostForLivewire(
+                $expeditionId,
+                $weight,
+                $destinationZone,
+                $context
+            );
+        } catch (\Exception $e) {
+            Log::error('Error getting estimated expedition cost', [
+                'error' => $e->getMessage(),
+                'expedition_id' => $expeditionId,
+                'weight' => $weight
+            ]);
+            return null;
+        }
     }
 
     /**
@@ -667,7 +826,14 @@ class Create extends Component
             }
         }
 
-        // FIX: Validasi ekspedisi untuk status complete
+        // Validasi ekspedisi - jika expedition_id diisi, maka expedition_fee wajib diisi
+        if (!empty($data['expedition_id'])) {
+            if (empty($data['expedition_fee']) || $data['expedition_fee'] <= 0) {
+                $errors['expedition_fee'] = 'Biaya ekspedisi harus diisi jika ekspedisi dipilih';
+            }
+        }
+
+        // Validasi ekspedisi untuk status complete - wajib ada expedition data
         if ($data['status'] === 'complete') {
             if (empty($data['expedition_id'])) {
                 $errors['expedition_id'] = 'Ekspedisi harus dipilih untuk status complete';
@@ -700,7 +866,28 @@ class Create extends Component
      */
     public function save()
     {
-        Log::info('Save process started', [
+        // Performance tracking start
+        $startTime = microtime(true);
+        $startMemory = memory_get_usage(true);
+
+        // Check if data has meaningful changes
+        $hasChanges = $this->checkDataChanges();
+
+        if (!$hasChanges) {
+            // No changes detected, bypass save process
+            $this->dispatch('info', 'Tidak ada perubahan data yang perlu disimpan.');
+            \App\Helpers\PerformanceLogHelper::logMonitoring(
+                'Save bypassed - no changes detected',
+                [
+                    'model' => 'LivestockPurchase',
+                    'operation_type' => $this->edit_mode ? 'update' : 'create',
+                    'bypass_reason' => 'no_data_changes'
+                ]
+            );
+            return;
+        }
+
+        Log::info('=== SAVE PROCESS STARTED ===', [
             'farm_id' => $this->farm_id,
             'coop_id' => $this->coop_id,
             'status' => $this->status,
@@ -709,7 +896,13 @@ class Create extends Component
             'supplier_id' => $this->supplier_id,
             'expedition_id' => $this->expedition_id,
             'expedition_fee' => $this->expedition_fee,
-            'items' => $this->items,
+            'expedition_id_type' => gettype($this->expedition_id),
+            'expedition_fee_type' => gettype($this->expedition_fee),
+            'expedition_id_empty' => empty($this->expedition_id),
+            'expedition_fee_empty' => empty($this->expedition_fee),
+            'items_count' => count($this->items ?? []),
+            'user_id' => Auth::user()->id,
+            'company_id' => Auth::user()->company_id ?? 'NULL'
         ]);
 
         [$company, $livestockConfig] = $this->getLivestockPurchaseConfig();
@@ -927,6 +1120,73 @@ class Create extends Component
                 ]);
             }
 
+            // Create expedition transaction if expedition data exists (regardless of status)
+            Log::info('=== EXPEDITION DATA CHECK IN SAVE METHOD ===', [
+                'purchase_id' => $purchase->id,
+                'expedition_id' => $this->expedition_id,
+                'expedition_fee' => $this->expedition_fee,
+                'expedition_id_empty' => empty($this->expedition_id),
+                'expedition_fee_empty' => empty($this->expedition_fee),
+                'expedition_id_type' => gettype($this->expedition_id),
+                'expedition_fee_type' => gettype($this->expedition_fee),
+                'status' => $currentStatus,
+                'user_id' => Auth::user()->id,
+                'company_id' => Auth::user()->company_id ?? 'NULL'
+            ]);
+
+            if (!empty($this->expedition_id) && !empty($this->expedition_fee)) {
+                Log::info('=== EXPEDITION DATA VALID - CREATING TRANSACTION ===', [
+                    'purchase_id' => $purchase->id,
+                    'expedition_id' => $this->expedition_id,
+                    'expedition_fee' => $this->expedition_fee,
+                    'status' => $currentStatus
+                ]);
+
+                $expeditionSuccess = $this->createExpeditionTransaction($purchase->id);
+
+                if ($expeditionSuccess) {
+                    Log::info('=== EXPEDITION TRANSACTION CREATED SUCCESSFULLY ===', [
+                        'purchase_id' => $purchase->id,
+                        'expedition_id' => $this->expedition_id,
+                        'expedition_fee' => $this->expedition_fee
+                    ]);
+                } else {
+                    Log::error('=== EXPEDITION TRANSACTION CREATION FAILED - ROLLBACK REQUIRED ===', [
+                        'purchase_id' => $purchase->id,
+                        'expedition_id' => $this->expedition_id,
+                        'expedition_fee' => $this->expedition_fee,
+                        'status' => $currentStatus,
+                        'reason' => 'Expedition transaction creation failed - rolling back entire transaction'
+                    ]);
+
+                    // Rollback database transaction karena expedition gagal
+                    DB::rollBack();
+
+                    // Set error message untuk user
+                    $this->addError('expedition_error', 'Gagal membuat expedition transaction. Expedition ID "' . $this->expedition_id . '" tidak ditemukan dalam database. Silakan pilih expedition yang tersedia atau hubungi administrator untuk memeriksa data expedition.');
+
+                    // Log error detail untuk debugging
+                    Log::error('=== LIVESTOCK PURCHASE SAVE ROLLBACK DUE TO EXPEDITION FAILURE ===', [
+                        'purchase_id' => $purchase->id,
+                        'expedition_id' => $this->expedition_id,
+                        'expedition_fee' => $this->expedition_fee,
+                        'user_id' => Auth::user()->id,
+                        'company_id' => Auth::user()->company_id ?? 'NULL',
+                        'rollback_reason' => 'Expedition transaction creation failed',
+                        'rollback_timestamp' => now()
+                    ]);
+
+                    return; // Stop execution, tidak lanjut ke commit
+                }
+            } else {
+                Log::info('=== NO EXPEDITION DATA TO PROCESS ===', [
+                    'purchase_id' => $purchase->id,
+                    'expedition_id' => $this->expedition_id,
+                    'expedition_fee' => $this->expedition_fee,
+                    'reason' => 'Either expedition_id or expedition_fee is empty'
+                ]);
+            }
+
             if (method_exists($this, 'verifyPurchase')) {
                 Log::info('Verifying purchase', ['purchase_id' => $purchase->id]);
                 $this->verifyPurchase([
@@ -939,11 +1199,60 @@ class Create extends Component
 
             DB::commit();
             Log::info('DB transaction committed');
+
+            // Performance logging
+            $executionTime = (microtime(true) - $startTime) * 1000;
+            $memoryUsage = (memory_get_usage(true) - $startMemory) / 1024 / 1024;
+
+            // Log to performance channels
+            \App\Helpers\PerformanceLogHelper::logPerformance(
+                'save_livestock_purchase',
+                'LivestockPurchase',
+                [
+                    'execution_time_ms' => round($executionTime, 3),
+                    'memory_usage_mb' => round($memoryUsage, 2),
+                    'items_count' => count($this->items ?? []),
+                    'status' => $this->status,
+                    'operation_type' => $this->edit_mode ? 'update' : 'create'
+                ]
+            );
+
+            \App\Helpers\PerformanceLogHelper::logDatabaseOperation(
+                'save_livestock_purchase',
+                'LivestockPurchase',
+                $executionTime,
+                [
+                    'memory_usage_mb' => round($memoryUsage, 2),
+                    'items_count' => count($this->items ?? []),
+                    'status' => $this->status,
+                    'operation_type' => $this->edit_mode ? 'update' : 'create'
+                ]
+            );
+
             $this->dispatch('success', 'Pembelian berhasil disimpan');
             $this->close();
             Log::info('Form reset after save');
         } catch (\Exception $e) {
             DB::rollBack();
+
+            // Performance logging for error case
+            $executionTime = (microtime(true) - $startTime) * 1000;
+            $memoryUsage = (memory_get_usage(true) - $startMemory) / 1024 / 1024;
+
+            \App\Helpers\PerformanceLogHelper::logErrorOperation(
+                'save_livestock_purchase',
+                'LivestockPurchase',
+                $e->getMessage(),
+                [
+                    'execution_time_ms' => round($executionTime, 3),
+                    'memory_usage_mb' => round($memoryUsage, 2),
+                    'items_count' => count($this->items ?? []),
+                    'status' => $this->status,
+                    'operation_type' => $this->edit_mode ? 'update' : 'create',
+                    'error_trace' => $e->getTraceAsString()
+                ]
+            );
+
             Log::error('Error in save()', ['exception' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             $this->addError('error', $e->getMessage());
         }
@@ -1528,6 +1837,153 @@ class Create extends Component
     }
 
     /**
+     * Check if form data has meaningful changes
+     */
+    public function checkDataChanges(): bool
+    {
+        if (!$this->edit_mode) {
+            // New record always has changes
+            return true;
+        }
+
+        // Get current form data
+        $currentData = $this->getFormDataForComparison();
+
+        // Use snapshot if available; fallback to DB fetch
+        $originalData = !empty($this->originalFormSnapshot)
+            ? $this->originalFormSnapshot
+            : $this->getOriginalDataForComparison();
+
+        $excludedFields = $this->getExcludedFieldsForChangeDetection();
+
+        \Illuminate\Support\Facades\Log::info('checkDataChanges: Starting change detection', [
+            'edit_mode' => $this->edit_mode,
+            'pembelian_id' => $this->pembelianId,
+            'excluded_fields' => $excludedFields
+        ]);
+
+        \Illuminate\Support\Facades\Log::info('checkDataChanges: Data comparison', [
+            'current_data_keys' => array_keys($currentData),
+            'original_data_keys' => array_keys($originalData),
+            'current_data_sample' => array_slice($currentData, 0, 3), // Show first 3 items
+            'original_data_sample' => array_slice($originalData, 0, 3)
+        ]);
+
+        // Check for changes using DataChangeDetector
+        $hasChanges = \App\Helpers\DataChangeDetector::formHasChanges(
+            $currentData,
+            $originalData,
+            $excludedFields
+        );
+
+        $changes = \App\Helpers\DataChangeDetector::getChangedFields(
+            $currentData,
+            $originalData,
+            $excludedFields
+        );
+
+        \Illuminate\Support\Facades\Log::info('checkDataChanges: Change detection result', [
+            'has_changes' => $hasChanges,
+            'changes_count' => count($changes),
+            'changed_fields' => array_keys($changes)
+        ]);
+
+        if ($hasChanges) {
+            \Illuminate\Support\Facades\Log::info('Data changes detected LivestockPurchase form', [
+                'changed_fields' => array_keys($changes),
+                'changes' => $changes
+            ]);
+        } else {
+            \Illuminate\Support\Facades\Log::info('No meaningful changes detected - bypassing save', [
+                'pembelian_id' => $this->pembelianId
+            ]);
+        }
+
+        return $hasChanges;
+    }
+
+    /**
+     * Get current form data for comparison
+     */
+    private function getFormDataForComparison(): array
+    {
+        return [
+            'invoice_number' => $this->invoice_number,
+            'date' => $this->date,
+            'supplier_id' => $this->supplier_id,
+            'farm_id' => $this->farm_id,
+            'coop_id' => $this->coop_id,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+            'batch_name' => $this->batch_name,
+            'status' => $this->status,
+            'items' => $this->items ?? [],
+        ];
+    }
+
+    /**
+     * Get original data from database for comparison
+     */
+    private function getOriginalDataForComparison(): array
+    {
+        if (!$this->pembelianId) {
+            return [];
+        }
+
+        $pembelian = \App\Models\LivestockPurchase::find($this->pembelianId);
+        if (!$pembelian) {
+            return [];
+        }
+
+        return [
+            'invoice_number' => $pembelian->invoice_number,
+            'date' => $pembelian->tanggal,
+            'supplier_id' => $pembelian->supplier_id,
+            'farm_id' => $pembelian->farm_id,
+            'coop_id' => $pembelian->coop_id,
+            'expedition_id' => $pembelian->expedition_id,
+            'expedition_fee' => $pembelian->expedition_fee,
+            'batch_name' => $pembelian->batch_name ?? '',
+            'status' => $pembelian->status,
+            'items' => $pembelian->items->map(function ($item) {
+                return [
+                    'strain_id' => $item->strain_id,
+                    'quantity' => $item->quantity,
+                    'price' => $item->price_value ?? $item->price,
+                    'weight_value' => $item->weight_value,
+                    'weight_type' => $item->weight_type,
+                ];
+            })->toArray(),
+        ];
+    }
+
+    /**
+     * Get fields that should be excluded from change detection
+     */
+    private function getExcludedFieldsForChangeDetection(): array
+    {
+        return [
+            'updated_at',
+            'created_at',
+            'id',
+            'pembelianId',
+            'edit_mode',
+            'showForm',
+            'availableKandangs',
+            'errorItems',
+            'validationErrors',
+            'sub_total', // Exclude calculated fields
+            'total_quantity', // Exclude calculated fields
+            'total_weight', // Exclude calculated fields
+            'start_date', // Exclude date fields that might change format
+            'livestock_id', // Exclude internal IDs
+            'livestock_strain_standard_id', // Exclude optional fields
+            'farm_id', // Exclude location fields that might be auto-filled
+            'coop_id' // Exclude location fields that might be auto-filled
+        ];
+    }
+
+    /**
      * Check if batch name field should be readonly
      * Batch name should be editable in edit mode
      */
@@ -1921,7 +2377,7 @@ class Create extends Component
 
             Log::info('showEditForm: Available kandangs loaded', [
                 'farm_id' => $this->farm_id,
-                'kandangs_count' => $this->availableKandangs->count(),
+                'kandangs_count' => is_array($this->availableKandangs) ? count($this->availableKandangs) : (method_exists($this->availableKandangs, 'count') ? $this->availableKandangs->count() : 0),
                 'user_id' => Auth::user()->id
             ]);
         }
@@ -1999,6 +2455,25 @@ class Create extends Component
             'edit_mode' => $this->edit_mode,
             'show_form' => $this->showForm,
             'user_id' => Auth::user()->id
+        ]);
+
+        // Simpan snapshot form yang sudah di-normalisasi untuk perbandingan saat save
+        $this->originalFormSnapshot = [
+            'invoice_number' => $this->invoice_number,
+            'date' => $this->date,
+            'supplier_id' => $this->supplier_id,
+            'farm_id' => $this->farm_id,
+            'coop_id' => $this->coop_id,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+            'batch_name' => $this->batch_name,
+            'status' => $this->status,
+            'items' => $this->items ?? [],
+        ];
+
+        Log::info('showEditForm: Original snapshot saved', [
+            'keys' => array_keys($this->originalFormSnapshot),
+            'items_count' => isset($this->originalFormSnapshot['items']) && is_array($this->originalFormSnapshot['items']) ? count($this->originalFormSnapshot['items']) : 0
         ]);
 
         // FIX: Debug loaded data

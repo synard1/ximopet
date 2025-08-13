@@ -74,7 +74,7 @@ class PembelianDOC extends Component
         ];
 
         if (!$this->edit_mode) { // Only add the 'faktur' rule if NOT in edit mode
-            $rules['faktur'] = 'required|unique:transaksi_beli,faktur,NULL,id,deleted_at,NULL';
+            // $rules['faktur'] = 'required|unique:transaksi_beli,faktur,NULL,id,deleted_at,NULL';
         }
 
         return $rules;
