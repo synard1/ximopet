@@ -59,7 +59,15 @@ class EnvironmentHelper
      */
     public static function getInstalledDevPackages(): array
     {
-        $composerJson = json_decode(file_get_contents(base_path('composer.json')), true);
+        $composerFile = base_path('composer.json');
+        if (!is_readable($composerFile)) {
+            return [];
+        }
+
+        $composerJson = json_decode(file_get_contents($composerFile), true);
+        if (!is_array($composerJson)) {
+            return [];
+        }
         return array_keys($composerJson['require-dev'] ?? []);
     }
 

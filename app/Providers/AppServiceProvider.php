@@ -22,6 +22,14 @@ use App\Services\Recording\Contracts\RecordingDataServiceInterface;
 use App\Services\Recording\RecordingDataService;
 use App\Services\Recording\Contracts\RecordingPersistenceServiceInterface;
 use App\Services\Recording\RecordingPersistenceService;
+use App\Console\Commands\CleanupPerformanceLogs;
+use App\Console\Commands\TestPerformanceLogging;
+use App\Console\Commands\TestBypassLogic;
+use App\Console\Commands\TestLivestockPurchaseBypass;
+use App\Console\Commands\TestAdvancedBypassLogic;
+use App\Console\Commands\DebugBypassLogic;
+use App\Console\Commands\TestDateComparison;
+use App\Console\Commands\TestProductionBypass;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -66,6 +74,20 @@ class AppServiceProvider extends ServiceProvider
         Role::observe(RoleObserver::class);
         Permission::observe(PermissionObserver::class);
         LivestockDepletion::observe(LivestockDepletionObserver::class);
+
+        // Register performance tracking commands
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                CleanupPerformanceLogs::class,
+                TestPerformanceLogging::class,
+                TestBypassLogic::class,
+                TestLivestockPurchaseBypass::class,
+                TestAdvancedBypassLogic::class,
+                DebugBypassLogic::class,
+                TestDateComparison::class,
+                TestProductionBypass::class,
+            ]);
+        }
 
         // Auto-sync master data when company created
         Company::observe(CompanyObserver::class);

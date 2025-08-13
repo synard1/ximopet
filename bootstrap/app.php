@@ -30,9 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'doNotCacheResponse' => \Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class,
 
+
         ]);
         $middleware->web(append: [
             \Spatie\ResponseCache\Middlewares\CacheResponse::class,
+            // Ensure persona context is applied on every web request
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

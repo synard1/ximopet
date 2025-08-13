@@ -130,6 +130,27 @@ return [
             'level' => env('LOG_BGJOB_LEVEL', 'debug'),
             'days' => 30,
         ],
+
+        'performance' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/performance.log'),
+            'level' => 'info',
+            'permission' => 0664,
+        ],
+
+        'database_performance' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/database-performance.log'),
+            'level' => 'info',
+            'permission' => 0664,
+        ],
+
+        'monitoring' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/monitoring.log'),
+            'level' => 'info',
+            'permission' => 0664,
+        ],
     ],
 
 ];

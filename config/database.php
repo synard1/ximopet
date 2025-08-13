@@ -88,8 +88,34 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            // 'encrypt' => env('DB_ENCRYPT', 'yes'),
-            // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
+            'encrypt' => env('DB_ENCRYPT', 'yes'),
+            'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | Performance Tracking Configuration
+        |--------------------------------------------------------------------------
+        |
+        | This configuration controls the database performance tracking feature
+        | that monitors and logs database operation performance for bottleneck
+        | detection and optimization.
+        |
+        */
+        'performance_tracking' => [
+            'enabled' => env('DB_PERFORMANCE_TRACKING', true),
+            'slow_query_threshold' => env('DB_SLOW_QUERY_THRESHOLD', 100), // milliseconds
+            'track_in_testing' => env('DB_TRACK_IN_TESTING', false),
+            'excluded_models' => [
+                // Add models that should not be tracked
+                // 'App\Models\LogModel',
+                // 'App\Models\AuditModel',
+            ],
+            'cleanup' => [
+                'enabled' => env('DB_PERFORMANCE_CLEANUP', true),
+                'days_to_keep' => env('DB_PERFORMANCE_DAYS_TO_KEEP', 90),
+                'schedule' => env('DB_PERFORMANCE_CLEANUP_SCHEDULE', 'daily'),
+            ],
         ],
 
     ],

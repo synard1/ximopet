@@ -13,6 +13,7 @@ namespace App\Config;
  * @version 1.0
  * @since 2025-07-01
  */
+
 class FeedNumberingConfig
 {
     /**

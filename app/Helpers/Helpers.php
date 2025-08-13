@@ -440,7 +440,6 @@ if (!function_exists('formatRupiah')) {
         // Convert the number to a string with two decimal places
         $formattedAmount = number_format($amount, $decimal, ',', '.');
         return "Rp " . $formattedAmount;
-        return theme()->formatRupiah($name, $class, $type, $tag);
     }
 }
 
@@ -450,6 +449,44 @@ if (!function_exists('formatNumber')) {
         // Convert the number to a string with two decimal places
         $formattedAmount = number_format($amount, $decimal, ',', '.');
         return $formattedAmount;
+    }
+}
+
+if (!function_exists('formatDateId')) {
+    /**
+     * Format tanggal ke d/m/Y (atau format lain) tanpa waktu
+     */
+    function formatDateId($date, string $format = 'd/m/Y')
+    {
+        if (empty($date)) return '';
+        try {
+            return \Carbon\Carbon::parse($date)->format($format);
+        } catch (\Exception $e) {
+            return $date; // fallback as-is
+        }
+    }
+}
+
+if (!function_exists('transactionTypeLabel')) {
+    /**
+     * Konversi kode jenis transaksi menjadi label yang lebih readable
+     */
+    function transactionTypeLabel(?string $type): string
+    {
+        switch ($type) {
+            case 'livestock_purchase':
+                return 'Pembelian Livestock';
+            case 'feed_purchase':
+                return 'Pembelian Pakan';
+            case 'supply_purchase':
+                return 'Pembelian Supply/OVK';
+            case 'sales':
+                return 'Penjualan';
+            case 'livestock_sales':
+                return 'Penjualan Livestock';
+            default:
+                return ucfirst(str_replace('_', ' ', $type ?? 'Lainnya'));
+        }
     }
 }
 
