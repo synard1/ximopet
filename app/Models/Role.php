@@ -6,14 +6,19 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Illuminate\Support\Facades\Auth;
+use App\Traits\HasCompanyScope;
 
 class Role extends SpatieRole
 {
     use HasFactory;
     use HasUuids;
+    // use HasCompanyScope;
+
     protected $primaryKey = 'id';
     public $incrementing = false;
     protected $keyType = 'string';
+
+    protected $requiresCompanyId = false;
 
     protected $fillable = [
         'id',

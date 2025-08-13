@@ -17,6 +17,7 @@ class Company extends BaseModel
 
     protected $fillable = [
         'id',
+        'code',
         'name',
         'address',
         'phone',
@@ -26,14 +27,20 @@ class Company extends BaseModel
         'database',
         'package',
         'config',
+        'type',
+        'is_locked',
+        'owner_user_id',
         'status',
         'notes',
+        'metadata',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
-        'config' => 'array'
+        'config' => 'array',
+        'is_locked' => 'boolean',
+        'metadata' => 'array',
     ];
 
     /**
