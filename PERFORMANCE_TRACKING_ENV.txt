@@ -1,0 +1,25 @@
+# Database Performance Tracking Configuration
+# Add these variables to your .env file
+
+# Enable/disable performance tracking
+DB_PERFORMANCE_TRACKING=true
+
+# Threshold untuk slow query (milliseconds)
+DB_SLOW_QUERY_THRESHOLD=100
+
+# Track dalam environment testing
+DB_TRACK_IN_TESTING=false
+
+# Enable automatic cleanup
+DB_PERFORMANCE_CLEANUP=true
+
+# Days to keep logs
+DB_PERFORMANCE_DAYS_TO_KEEP=90
+
+# Cleanup schedule
+DB_PERFORMANCE_CLEANUP_SCHEDULE=daily
+
+# Log level untuk performance channels
+LOG_PERFORMANCE_LEVEL=info
+LOG_DATABASE_PERFORMANCE_LEVEL=info
+LOG_MONITORING_LEVEL=info 
