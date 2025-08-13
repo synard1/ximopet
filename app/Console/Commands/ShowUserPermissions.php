@@ -3,13 +3,12 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Models\User; // Pastikan Anda mengimpor model User Anda
-use App\Models\Permission;
+use App\Models\User;
 
 class ShowUserPermissions extends Command
 {
     protected $signature = 'user:permissions {user_id}';
-    protected $description = 'Display permissions for a specific user by ID';
+    protected $description = 'Display roles and effective permissions (including role-based) for a specific user by ID';
 
     public function handle()
     {
@@ -22,34 +21,67 @@ class ShowUserPermissions extends Command
             return 1;
         }
 
-        $permissions = $user->permissions; // Gunakan relasi permissions yang didefinisikan oleh Spatie
+        $this->info("User: {$user->name} ({$user->id})");
 
-        if ($permissions->isEmpty()) {
-            $this->info("User {$user->name} has no permissions assigned.");
-            return 0;
+        // Roles
+        $roles = $user->roles;
+        if ($roles->isEmpty()) {
+            $this->line('Roles: (none)');
+        } else {
+            $this->info('Roles:');
+            $this->table(
+                ['ID', 'Name', 'Guard Name', 'Company ID', 'Created At'],
+                $roles->map(function ($role) {
+                    return [
+                        $role->id,
+                        $role->name,
+                        $role->guard_name,
+                        $role->company_id ?? '-',
+                        $role->created_at,
+                    ];
+                })->toArray()
+            );
         }
 
-        $this->info("Permissions for user {$user->name}:");
-
-        $this->table(
-            ['ID', 'Name', 'Guard Name', 'Created At', 'Updated At'],
-            $permissions->map(function ($permission) {
-                return [
-                    $permission->id,
-                    $permission->name,
-                    $permission->guard_name,
-                    $permission->created_at,
-                    $permission->updated_at,
-                ];
-            })->toArray()
-        );
-
-        // Opsi tampilan list sederhana:
-        /*
-        foreach ($permissions as $permission) {
-            $this->line("- " . $permission->name);
+        // Direct permissions assigned to the user
+        $directPermissions = $user->permissions; // spatie relation
+        if ($directPermissions->isEmpty()) {
+            $this->line('Direct Permissions: (none)');
+        } else {
+            $this->info('Direct Permissions:');
+            $this->table(
+                ['ID', 'Name', 'Guard Name', 'Company ID', 'Created At'],
+                $directPermissions->map(function ($permission) {
+                    return [
+                        $permission->id,
+                        $permission->name,
+                        $permission->guard_name,
+                        $permission->company_id ?? '-',
+                        $permission->created_at,
+                    ];
+                })->toArray()
+            );
         }
-        */
+
+        // Effective permissions (direct + via roles)
+        $effective = $user->getAllPermissions()->unique('id')->values();
+        if ($effective->isEmpty()) {
+            $this->info("Effective Permissions: none");
+        } else {
+            $this->info('Effective Permissions (including via roles):');
+            $this->table(
+                ['ID', 'Name', 'Guard Name', 'Company ID', 'Created At'],
+                $effective->map(function ($permission) {
+                    return [
+                        $permission->id,
+                        $permission->name,
+                        $permission->guard_name,
+                        $permission->company_id ?? '-',
+                        $permission->created_at,
+                    ];
+                })->toArray()
+            );
+        }
 
         return 0;
     }
