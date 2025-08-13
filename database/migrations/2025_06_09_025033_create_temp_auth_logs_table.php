@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('temp_auth_logs', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            $table->uuid('company_id')->nullable();
 
             // User yang mendapat autorisasi
             $table->foreignUuid('user_id')->constrained('users')->onDelete('cascade');
@@ -56,6 +57,7 @@ return new class extends Migration
             $table->index(['component', 'action']);
             $table->index(['auth_method', 'action']);
             $table->index(['granted_at', 'expires_at']);
+            $table->index(['company_id', 'action']);
         });
     }
 

@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('security_blacklist', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            $table->uuid('company_id')->nullable();
             $table->string('ip_address', 45)->index(); // Support IPv6
             $table->string('reason')->default('security_violation');
             $table->integer('violation_count')->default(1);
@@ -24,6 +25,7 @@ return new class extends Migration
 
             // Index for cleanup queries
             $table->index(['expires_at', 'created_at']);
+            $table->index(['company_id', 'expires_at']);
         });
     }
 

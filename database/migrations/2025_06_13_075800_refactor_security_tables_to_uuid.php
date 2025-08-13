@@ -59,7 +59,7 @@ return new class extends Migration
         // Drop UUID tables and recreate with auto-increment IDs
         Schema::dropIfExists('security_violations');
         Schema::create('security_violations', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->string('ip_address', 45)->index(); // Support IPv6
             $table->string('reason');
             $table->json('metadata')->nullable();
@@ -73,7 +73,7 @@ return new class extends Migration
 
         Schema::dropIfExists('security_blacklist');
         Schema::create('security_blacklist', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->string('ip_address', 45)->index(); // Support IPv6
             $table->string('reason')->default('security_violation');
             $table->integer('violation_count')->default(1);

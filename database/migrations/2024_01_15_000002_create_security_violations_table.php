@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('security_violations', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            $table->uuid('company_id')->nullable();
             $table->string('ip_address', 45)->index(); // Support IPv6
             $table->string('reason');
             $table->json('metadata')->nullable();
@@ -22,6 +23,7 @@ return new class extends Migration
             // Indexes for performance
             $table->index(['ip_address', 'created_at']);
             $table->index('created_at');
+            $table->index(['company_id', 'created_at']);
         });
     }
 

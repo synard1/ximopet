@@ -9,7 +9,8 @@ return new class extends Migration
     public function up()
     {
         Schema::create('verification_rules', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            $table->uuid('company_id')->nullable();
             $table->string('name')->unique();
             $table->string('description')->nullable();
             $table->string('type')->comment('Type of verification: document, data, etc.');
@@ -17,10 +18,14 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
+
+            $table->index(['company_id', 'type']);
+            $table->index(['company_id', 'is_active']);
         });
 
         Schema::create('model_verifications', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            $table->uuid('company_id')->nullable();
             $table->string('model_type');
             $table->uuid('model_id');
             $table->string('status')->default('pending');
@@ -35,10 +40,13 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->unique(['model_type', 'model_id']);
+            $table->index(['company_id', 'model_type']);
+            $table->index(['company_id', 'status']);
         });
 
         Schema::create('verification_logs', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            $table->uuid('company_id')->nullable();
             $table->string('model_type');
             $table->uuid('model_id');
             $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
@@ -47,6 +55,10 @@ return new class extends Migration
             $table->json('changes')->nullable()->comment('Changes made during verification');
             $table->json('context')->nullable()->comment('Additional context about the verification');
             $table->timestamps();
+
+            $table->index(['company_id', 'model_type']);
+            $table->index(['company_id', 'action']);
+            $table->index(['user_id', 'action']);
         });
     }
 

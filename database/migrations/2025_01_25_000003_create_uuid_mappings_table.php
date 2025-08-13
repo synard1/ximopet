@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('uuid_mappings', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->unsignedBigInteger('old_id');
             $table->uuid('new_uuid');
             $table->string('table_name');

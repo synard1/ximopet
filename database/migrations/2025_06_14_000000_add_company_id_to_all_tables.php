@@ -27,8 +27,6 @@ return new class extends Migration
             'admins',
 
             // Transaction Tables
-            'transaksi_beli',
-            'transaksi_beli_details',
             'transaksi_jual',
             'transaksi_jual_details',
             'transaksi_harians',
@@ -36,8 +34,6 @@ return new class extends Migration
             'mutation_items',
 
             // Livestock Tables
-            'ternaks',
-            'ternak_depletions',
             'livestock_strains',
             'livestock_strain_standards',
             'livestock_management',
@@ -174,8 +170,6 @@ return new class extends Migration
             'admins',
 
             // Transaction Tables
-            'transaksi_beli',
-            'transaksi_beli_details',
             'transaksi_jual',
             'transaksi_jual_details',
             'transaksi_harians',
@@ -183,8 +177,6 @@ return new class extends Migration
             'mutation_items',
 
             // Livestock Tables
-            'ternaks',
-            'ternak_depletions',
             'livestock_strains',
             'livestock_strain_standards',
             'livestock_management',
