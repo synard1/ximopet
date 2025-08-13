@@ -70,18 +70,7 @@ class DashboardController extends Controller
                 ->sum(fn($item) => $item->sisa / $item->konversi);
         });
 
-        $stockByType = Cache::remember('dashboard:stock_by_type_' . ($isOperator ? implode('-', $farmIds) : 'all'), now()->addMinutes(10), function () use ($farmIds) {
-            return \App\Models\TransaksiBeli::where('transaksi_beli.jenis', 'Stock')
-                ->join('transaksi_beli_details', 'transaksi_beli.id', '=', 'transaksi_beli_details.transaksi_id')
-                ->where('transaksi_beli_details.jenis', 'Pembelian')
-                ->when($farmIds, fn($q) => $q->whereIn('transaksi_beli.farm_id', $farmIds))
-                ->select(
-                    'transaksi_beli_details.jenis_barang',
-                    DB::raw('SUM(transaksi_beli_details.sisa / transaksi_beli_details.konversi) as total_sisa')
-                )
-                ->groupBy('jenis_barang')
-                ->get();
-        });
+        $stockByType = [];
 
         $chartData = [];
         if ($user->hasRole('Manager')) {

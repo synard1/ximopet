@@ -13,6 +13,7 @@ use App\Services\LoginLogService;
 use App\Models\User;
 use App\Models\CompanyUser;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
 
 class AuthenticatedSessionController extends Controller
 {
