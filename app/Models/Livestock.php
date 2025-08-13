@@ -8,6 +8,7 @@ use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use App\Traits\LivestockLockCheck;
+use App\Traits\HasCompanyScope;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
@@ -15,6 +16,8 @@ class Livestock extends BaseModel
 {
     use HasFactory, SoftDeletes, HasUuids;
     use LivestockLockCheck;
+    use HasCompanyScope;
+
     /**
      * NOTE UNTUK AI DAN DEVELOPER:
      * 

@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Traits\HasCompanyScope;
 
 class LivestockStrain extends BaseModel
 {
     use HasFactory, SoftDeletes, HasUuids;
+    use HasCompanyScope;
 
     protected $fillable = [
         'company_id',

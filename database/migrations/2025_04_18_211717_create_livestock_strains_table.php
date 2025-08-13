@@ -15,20 +15,28 @@ return new class extends Migration
 
         Schema::create('livestock_strains', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('company_id');
-            $table->string('code')->unique();
-            $table->string('name');           // Name of the livestock strain (e.g., "Broiler", "Layer", "Dairy")
-            $table->text('description')->nullable(); // Optional: Description of the strain category
+            $table->uuid('company_id')->nullable();
+            $table->string('code');
+            $table->string('name');
+            $table->text('description')->nullable();
             $table->json('data')->nullable();
             $table->string('status')->default('active')->index();
-            $table->uuid('created_by')->nullable()->index();
-            $table->uuid('updated_by')->nullable()->index();
+            $table->uuid('created_by')->nullable();
+            $table->uuid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('company_id')->references('id')->on('companies');
-            $table->foreign('created_by')->references('id')->on('users');
-            $table->foreign('updated_by')->references('id')->on('users');
+            // Add foreign key constraints after table creation
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
+
+            // Make code unique per company
+            $table->unique(['company_id', 'code']);
+
+            // Add indexes for performance
+            $table->index(['company_id', 'status']);
+            $table->index(['company_id', 'name']);
         });
 
         Schema::enableForeignKeyConstraints();

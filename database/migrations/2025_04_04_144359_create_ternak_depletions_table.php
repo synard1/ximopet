@@ -29,7 +29,6 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-            $table->foreign('ternak_id')->references('id')->on('ternaks');
         });
 
         Schema::enableForeignKeyConstraints();

@@ -7,14 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\BaseModel;
+use App\Traits\HasCompanyScope;
 
 
 class Farm extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
+    use HasCompanyScope;
 
     protected $fillable = [
         'id',
+        'company_id',
         'code',
         'name',
         'contact_person',
@@ -25,6 +28,11 @@ class Farm extends BaseModel
         'created_by',
         'updated_by',
     ];
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
 
     public function kandangs()
     {
@@ -48,11 +56,6 @@ class Farm extends BaseModel
     public function operators()
     {
         return $this->belongsToMany(User::class, 'farm_operators');
-    }
-
-    public function kelompokTernak()
-    {
-        return $this->hasMany(KelompokTernak::class);
     }
 
     public function livestock()

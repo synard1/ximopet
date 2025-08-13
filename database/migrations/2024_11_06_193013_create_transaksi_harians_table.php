@@ -53,7 +53,6 @@ return new class extends Migration
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('transaksi_id')->references('id')->on('transaksi_harians');
-            $table->foreign('parent_id')->references('id')->on('transaksi_beli_details');
         });
 
         Schema::enableForeignKeyConstraints();

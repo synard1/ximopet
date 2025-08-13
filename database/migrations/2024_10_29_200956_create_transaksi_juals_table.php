@@ -28,13 +28,10 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
-            
+
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('transaksi_beli_id')->references('id')->on('transaksi_beli');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
-            $table->foreign('ternak_jual_id')->references('id')->on('ternak_jual');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
