@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('mutation_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('mutation_id');
+            $table->foreignUuid('mutation_id')->constrained('mutations')->onDelete('cascade');
             $table->string('item_type'); // feed / supply / vitamin / medicine
             $table->uuid('item_id'); // id dari item terkait (feed_id / item_id)
             $table->uuid('stock_id'); // ID dari stok yang digunakan
@@ -27,8 +27,6 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-
-            $table->foreign('mutation_id')->constrained('mutations')->onDelete('cascade');
         });
     }
 

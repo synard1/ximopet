@@ -111,8 +111,8 @@ return new class extends Migration {
         Schema::create('livestock_purchase_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->date('tanggal');
-            $table->foreignUuid('livestock_purchase_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('livestock_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignUuid('livestock_purchase_id')->constrained('livestock_purchases')->onDelete('cascade');
+            $table->foreignUuid('livestock_id')->nullable()->constrained('livestocks')->onDelete('cascade');
             $table->foreignUuid('livestock_strain_id')->constrained('livestock_strains');
             $table->foreignUuid('livestock_strain_standard_id')->nullable()->constrained('livestock_strain_standards');
 
@@ -222,7 +222,6 @@ return new class extends Migration {
 
             $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
             $table->foreign('livestock_id')->references('id')->on('livestocks')->onDelete('cascade');
-            $table->foreign('customer_id')->references('id')->on('partners')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -230,13 +229,13 @@ return new class extends Migration {
         Schema::create('livestock_sales_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('company_id')->index();
-            $table->foreignUuid('livestock_sales_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
-            $table->uuid('livestock_batch_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignUuid('livestock_sales_id')->constrained('livestock_sales')->onDelete('cascade');
+            $table->foreignUuid('livestock_id')->constrained('livestocks')->onDelete('cascade');
+            $table->foreignUuid('livestock_batch_id')->nullable()->constrained('livestock_batches')->onDelete('cascade');
             $table->date('date')->index();
             $table->integer('quantity');
             $table->decimal('weight', 10, 2)->nullable();
-            $table->foreignUuid('unit_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignUuid('unit_id')->nullable()->constrained('units')->onDelete('cascade');
             $table->decimal('total_weight', 10, 2)->nullable();
             $table->decimal('price', 12, 2);
             $table->decimal('total_price', 12, 2);
@@ -246,10 +245,6 @@ return new class extends Migration {
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('livestock_sales_id')->references('id')->on('livestock_sales')->onDelete('cascade');
-            $table->foreign('livestock_id')->references('id')->on('livestocks')->onDelete('cascade');
-            $table->foreign('livestock_batch_id')->references('id')->on('livestock_batches')->onDelete('set null');
-            $table->foreign('unit_id')->references('id')->on('units')->onDelete('set null');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });
@@ -258,7 +253,7 @@ return new class extends Migration {
         Schema::create('recordings', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->date('tanggal')->index();
-            $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('livestock_id')->constrained('livestocks')->onDelete('cascade');
             $table->integer('age');
             $table->integer('stock_awal');
             $table->integer('stock_akhir');
@@ -287,8 +282,8 @@ return new class extends Migration {
         // Deplesi (mati, afkir)
         Schema::create('livestock_depletions', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('recording_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('livestock_id')->constrained('livestocks')->onDelete('cascade');
+            $table->foreignUuid('recording_id')->constrained('recordings')->onDelete('cascade');
             $table->date('tanggal')->index();
             $table->string('jenis'); // Mati / Afkir
             $table->integer('jumlah');
@@ -307,9 +302,9 @@ return new class extends Migration {
         // Biaya Harian
         Schema::create('livestock_costs', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('livestock_id')->constrained('livestocks')->onDelete('cascade');
             $table->date('tanggal');
-            $table->foreignUuid('recording_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('recording_id')->constrained('recordings')->onDelete('cascade');
             $table->decimal('total_cost', 14, 2)->default(0);
             $table->decimal('cost_per_ayam', 10, 2)->default(0);
             $table->json('cost_breakdown')->nullable();
@@ -326,7 +321,7 @@ return new class extends Migration {
         // Ternak aktif saat ini
         Schema::create('current_livestocks', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('livestock_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('livestock_id')->constrained('livestocks')->onDelete('cascade');
             $table->uuid('farm_id')->index();
             $table->uuid('coop_id')->index();
             $table->integer('quantity');          // Jumlah saat ini

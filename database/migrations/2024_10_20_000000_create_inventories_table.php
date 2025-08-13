@@ -106,7 +106,6 @@ return new class extends Migration
             $table->foreign('item_id')->references('id')->on('items');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
 
             // Indexes
             $table->index('kelompok_ternak_id');
@@ -135,13 +134,9 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('transaksi_id')->references('id')->on('transaksi_beli');
             $table->foreign('item_id')->references('id')->on('items');
-            $table->foreign('source_id')->references('id')->on('ternaks');
-            $table->foreign('destination_id')->references('id')->on('ternaks');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
         });
 
         Schema::create('stock_histories', function (Blueprint $table) {
@@ -172,7 +167,6 @@ return new class extends Migration
             $table->foreign('location_id')->references('id')->on('inventory_locations');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
-            $table->foreign('kelompok_ternak_id')->references('id')->on('ternaks');
         });
 
         Schema::enableForeignKeyConstraints();

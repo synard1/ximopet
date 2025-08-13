@@ -168,7 +168,7 @@ return new class extends Migration
 
         Schema::create('supply_mutations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('company_id')->nullable()->constrained('companies')->onDelete('cascade');
+            $table->uuid('company_id')->nullable();
             $table->foreignUuid('mutation_id')->constrained('mutations')->onDelete('cascade');
             $table->foreignUuid('from_farm_id')->constrained('farms')->onDelete('cascade')->onUpdate('restrict');
             $table->foreignUuid('to_farm_id')->constrained('farms')->onDelete('cascade')->onUpdate('restrict');
@@ -196,6 +196,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('approved_by')->references('id')->on('users')->restrictOnDelete()->restrictOnUpdate();
@@ -206,7 +207,7 @@ return new class extends Migration
 
         Schema::create('supply_mutation_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('company_id')->nullable()->constrained('companies')->onDelete('cascade');
+            $table->uuid('company_id')->nullable();
             $table->foreignUuid('supply_mutation_id')->constrained('supply_mutations')->onDelete('cascade');
             $table->foreignUuid('supply_stock_id')->constrained('supply_stocks')->onDelete('cascade');
             $table->foreignUuid('supply_id')->constrained('supplies')->onDelete('cascade');
@@ -220,6 +221,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
         });

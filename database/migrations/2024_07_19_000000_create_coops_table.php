@@ -15,6 +15,7 @@ return new class extends Migration
 
         Schema::create('coops', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->uuid('company_id');
             $table->uuid('farm_id');
             $table->string('code');
             $table->string('name');
@@ -29,10 +30,17 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            $table->foreign('company_id')->references('id')->on('companies');
             $table->foreign('farm_id')->references('id')->on('farms');
-            $table->foreign('livestock_id')->references('id')->on('livestocks');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+
+            // Indexes for performance
+            $table->index(['company_id', 'status']);
+            $table->index(['company_id', 'code']);
+
+            // Make code unique per company
+            $table->unique(['company_id', 'code']);
         });
 
         Schema::enableForeignKeyConstraints();
