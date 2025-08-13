@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use App\Traits\HasPerformanceTracking;
 
 class BaseModel extends Model
 {
+    use HasPerformanceTracking;
     /**
      * Whether this model requires company_id handling
      * Set to false for detail models that inherit company_id from parent

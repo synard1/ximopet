@@ -112,13 +112,20 @@ class MenuCacheService
 
     /**
      * Get optimized menu query with eager loading
-     *
-     * @param string $location
-     * @param \App\Models\User $user
-     * @return \Illuminate\Database\Eloquent\Collection
+     * Menu tidak memiliki company scope, roles dan permissions tetap di-scope
      */
     private function getOptimizedMenuByLocation($location, $user)
     {
+        // Log untuk debugging
+        Log::info('MenuCacheService::getOptimizedMenuByLocation called', [
+            'location' => $location,
+            'user_id' => $user->id,
+            'user_company_id' => $user->company_id,
+            'user_roles' => $user->roles->pluck('name')->toArray()
+        ]);
+
+        // Query menu tanpa company scope (karena menu untuk semua tenant)
+        // Menu model tidak memiliki global company scope, jadi tidak perlu withoutCompanyScope()
         $query = Menu::with([
             'children' => function ($query) use ($user) {
                 $query->orderBy('order_number');
@@ -126,9 +133,11 @@ class MenuCacheService
                     $query->where(function ($q) use ($user) {
                         $q->whereHas('roles', function ($q) use ($user) {
                             $q->whereIn('roles.id', $user->roles->pluck('id'));
+                            // Roles sudah otomatis di-scope oleh CompanyScope
                         })
                             ->orWhereHas('permissions', function ($q) use ($user) {
                                 $q->whereIn('permissions.id', $user->getAllPermissions()->pluck('id'));
+                                // Permissions sudah otomatis di-scope oleh CompanyScope
                             });
                     });
                 }
@@ -145,14 +154,30 @@ class MenuCacheService
             $query->where(function ($q) use ($user) {
                 $q->whereHas('roles', function ($q) use ($user) {
                     $q->whereIn('roles.id', $user->roles->pluck('id'));
+                    // Roles sudah otomatis di-scope oleh CompanyScope
                 })
                     ->orWhereHas('permissions', function ($q) use ($user) {
                         $q->whereIn('permissions.id', $user->getAllPermissions()->pluck('id'));
+                        // Permissions sudah otomatis di-scope oleh CompanyScope
                     });
             });
         }
 
-        return $query->get();
+        // Log query yang akan dijalankan
+        Log::info('MenuCacheService optimized query built', [
+            'sql' => $query->toSql(),
+            'bindings' => $query->getBindings()
+        ]);
+
+        $result = $query->get();
+
+        // Log hasil query
+        Log::info('MenuCacheService optimized query result', [
+            'count' => $result->count(),
+            'menu_names' => $result->pluck('name')->toArray()
+        ]);
+
+        return $result;
     }
 
     /**

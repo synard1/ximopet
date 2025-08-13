@@ -851,8 +851,8 @@ class AnalyticsService
 
         // Get total sales up to the date from LivestockSalesItem
         $totalSales = \App\Models\LivestockSalesItem::where('livestock_id', $livestock->id)
-            ->whereDate('tanggal', '<=', $date)
-            ->sum('jumlah') ?? 0;
+            ->whereDate('date', '<=', $date)
+            ->sum('quantity') ?? 0;
 
         // Calculate current population
         $currentPopulation = $initialQuantity - $totalDepletion - $totalSales;

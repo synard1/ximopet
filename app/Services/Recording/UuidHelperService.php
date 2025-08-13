@@ -104,7 +104,7 @@ class UuidHelperService
         }
 
         try {
-            $exists = \DB::table($table)
+            $exists = DB::table($table)
                 ->where($column, $uuid)
                 ->exists();
 
@@ -126,7 +126,7 @@ class UuidHelperService
         }
 
         try {
-            $existingUuids = \DB::table($table)
+            $existingUuids = DB::table($table)
                 ->whereIn($column, $validUuids)
                 ->pluck($column)
                 ->toArray();
@@ -182,7 +182,7 @@ class UuidHelperService
     public function createUuidMapping(int $oldId, string $newUuid, string $tableName): bool
     {
         try {
-            \DB::table('uuid_mappings')->insertOrIgnore([
+            DB::table('uuid_mappings')->insertOrIgnore([
                 'old_id' => $oldId,
                 'new_uuid' => $newUuid,
                 'table_name' => $tableName,
@@ -202,7 +202,7 @@ class UuidHelperService
     public function getUuidFromLegacyId(int $oldId, string $tableName): ?string
     {
         try {
-            $mapping = \DB::table('uuid_mappings')
+            $mapping = DB::table('uuid_mappings')
                 ->where('old_id', $oldId)
                 ->where('table_name', $tableName)
                 ->first();
@@ -219,7 +219,7 @@ class UuidHelperService
     public function getLegacyIdFromUuid(string $uuid, string $tableName): ?int
     {
         try {
-            $mapping = \DB::table('uuid_mappings')
+            $mapping = DB::table('uuid_mappings')
                 ->where('new_uuid', $uuid)
                 ->where('table_name', $tableName)
                 ->first();
@@ -303,7 +303,7 @@ class UuidHelperService
      */
     public function logUuidValidationError(string $field, $value, string $context = ''): void
     {
-        \Log::warning('UUID validation failed', [
+        Log::warning('UUID validation failed', [
             'field' => $field,
             'value' => $value,
             'context' => $context,
