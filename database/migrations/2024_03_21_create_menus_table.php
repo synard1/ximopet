@@ -11,7 +11,6 @@ return new class extends Migration
         Schema::create('menus', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('parent_id')->nullable();
-            $table->foreign('parent_id')->references('id')->on('menus')->onDelete('cascade');
             $table->string('name');
             $table->string('label');
             $table->string('route')->nullable();
@@ -22,6 +21,17 @@ return new class extends Migration
             $table->uuid('created_by');
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
+
+            // Add indexes for better performance
+            $table->index('parent_id');
+            $table->index('location');
+            $table->index('order_number');
+            $table->index('is_active');
+        });
+
+        // Create self-referencing foreign key after table is fully created
+        Schema::table('menus', function (Blueprint $table) {
+            $table->foreign('parent_id')->references('id')->on('menus')->onDelete('cascade');
         });
 
         Schema::create('menu_role', function (Blueprint $table) {

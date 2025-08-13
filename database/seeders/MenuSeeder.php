@@ -10,27 +10,102 @@ use App\Models\Role;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 
 class MenuSeeder extends Seeder
 {
+    /**
+     * Database type detection
+     */
+    private function getDatabaseType()
+    {
+        $connection = DB::connection();
+        $driver = $connection->getDriverName();
+
+        // Log database type for debugging
+        Log::info("MenuSeeder: Detected database driver: {$driver}");
+
+        return $driver;
+    }
+
+    /**
+     * Clear tables based on database type
+     */
+    private function clearTables()
+    {
+        $dbType = $this->getDatabaseType();
+
+        try {
+            if ($dbType === 'mysql') {
+                // MySQL/MariaDB specific
+                DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
+                DB::table('menu_permission')->truncate();
+                DB::table('menu_role')->truncate();
+                DB::table('menus')->truncate();
+
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+                Log::info("MenuSeeder: Cleared tables using MySQL/MariaDB syntax");
+            } elseif ($dbType === 'pgsql') {
+                // PostgreSQL specific
+                DB::statement('SET session_replication_role = replica');
+
+                DB::table('menu_permission')->delete();
+                DB::table('menu_role')->delete();
+                DB::table('menus')->delete();
+
+                // Reset sequences for PostgreSQL
+                DB::statement("SELECT setval('menus_id_seq', 1, false)");
+                DB::statement("SELECT setval('menu_role_id_seq', 1, false)");
+                DB::statement("SELECT setval('menu_permission_id_seq', 1, false)");
+
+                DB::statement('SET session_replication_role = DEFAULT');
+
+                Log::info("MenuSeeder: Cleared tables using PostgreSQL syntax");
+            } else {
+                // Generic approach for other databases
+                DB::table('menu_permission')->delete();
+                DB::table('menu_role')->delete();
+                DB::table('menus')->delete();
+
+                Log::info("MenuSeeder: Cleared tables using generic DELETE syntax");
+            }
+        } catch (\Exception $e) {
+            Log::error("MenuSeeder: Error clearing tables: " . $e->getMessage());
+
+            // Fallback: try to delete records one by one
+            try {
+                DB::table('menu_permission')->delete();
+                DB::table('menu_role')->delete();
+                DB::table('menus')->delete();
+                Log::info("MenuSeeder: Fallback deletion successful");
+            } catch (\Exception $fallbackError) {
+                Log::error("MenuSeeder: Fallback deletion failed: " . $fallbackError->getMessage());
+                throw $fallbackError;
+            }
+        }
+    }
+
     public function run()
     {
+        Log::info("MenuSeeder: Starting menu seeding process");
+
         // Get admin user as primary user for created_by
         $adminUser = User::where('email', 'admin@peternakan.digital')->first();
         if (!$adminUser) {
             $adminUser = User::first(); // Fallback to any user
         }
 
-        // Disable foreign key checks
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        if (!$adminUser) {
+            Log::warning("MenuSeeder: No admin user found, creating menus without user reference");
+        } else {
+            Log::info("MenuSeeder: Using admin user: {$adminUser->email}");
+        }
 
         // Clear existing menus and related data
-        DB::table('menu_permission')->truncate();
-        DB::table('menu_role')->truncate();
-        DB::table('menus')->truncate();
-
-        // Re-enable foreign key checks
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        $this->clearTables();
 
         // Create main menu items
         $dashboard = Menu::create([
@@ -43,6 +118,7 @@ class MenuSeeder extends Seeder
             'created_by' => $adminUser ? $adminUser->id : null,
             'updated_by' => $adminUser ? $adminUser->id : null
         ]);
+        Log::info("MenuSeeder: Created dashboard menu");
 
         // Master Data Menu
         $masterData = Menu::create([
@@ -55,6 +131,7 @@ class MenuSeeder extends Seeder
             'created_by' => $adminUser ? $adminUser->id : null,
             'updated_by' => $adminUser ? $adminUser->id : null
         ]);
+        Log::info("MenuSeeder: Created master-data menu");
 
         // Master Data Submenu Items
         $farm = Menu::create([
@@ -603,37 +680,67 @@ class MenuSeeder extends Seeder
             'updated_by' => $adminUser ? $adminUser->id : null
         ]);
 
+        Log::info("MenuSeeder: All menu items created successfully");
+
         // Attach roles and permissions
-        $superAdminRole = Role::where('name', 'SuperAdmin')->first();
-        $adminRole = Role::where('name', 'Administrator')->first();
-        $operatorRole = Role::where('name', 'Operator')->first();
-        $managerRole = Role::where('name', 'Manager')->first();
-        $supervisorRole = Role::where('name', 'Supervisor')->first();
-        $qaTesterRole = Role::where('name', 'QA Tester')->first();
+        $this->attachRolesAndPermissions($dashboard, $masterData, $inventory, $userManagement, $peternakan, $administrator, $farm, $kandang, $supplier, $customer, $userList, $userRole, $userPermission);
 
-        // Attach roles to menus based on configuration
-        $this->attachRolesToMenu($dashboard, [$superAdminRole, $adminRole, $operatorRole, $managerRole, $supervisorRole, $qaTesterRole]);
-        $this->attachRolesToMenu($masterData, [$superAdminRole, $adminRole, $qaTesterRole]);
-        $this->attachRolesToMenu($inventory, [$adminRole, $operatorRole]);
-        $this->attachRolesToMenu($userManagement, [$superAdminRole, $adminRole]);
-        $this->attachRolesToMenu($peternakan, [$managerRole, $supervisorRole, $operatorRole]);
-        $this->attachRolesToMenu($administrator, [$superAdminRole, $qaTesterRole]);
+        Log::info("MenuSeeder: Menu seeding process completed successfully");
+    }
 
-        // Attach specific permissions to menus
-        $this->attachPermissionsToMenu($farm, ['access farm master data', 'read farm master data']);
-        $this->attachPermissionsToMenu($kandang, ['access kandang management', 'read kandang management']);
-        $this->attachPermissionsToMenu($supplier, ['read supplier management']);
-        $this->attachPermissionsToMenu($customer, ['read customer management']);
-        $this->attachPermissionsToMenu($userList, ['read user management']);
-        $this->attachPermissionsToMenu($userRole, ['read user management']);
-        $this->attachPermissionsToMenu($userPermission, ['SuperAdmin']);
+    /**
+     * Attach roles and permissions to menus
+     */
+    private function attachRolesAndPermissions($dashboard, $masterData, $inventory, $userManagement, $peternakan, $administrator, $farm, $kandang, $supplier, $customer, $userList, $userRole, $userPermission)
+    {
+        try {
+            // Get roles
+            $superAdminRole = Role::where('name', 'SuperAdmin')->first();
+            $adminRole = Role::where('name', 'Administrator')->first();
+            $operatorRole = Role::where('name', 'Operator')->first();
+            $managerRole = Role::where('name', 'Manager')->first();
+            $supervisorRole = Role::where('name', 'Supervisor')->first();
+            $qaTesterRole = Role::where('name', 'QA Tester')->first();
+
+            // Log role detection
+            Log::info("MenuSeeder: Detected roles - SuperAdmin: " . ($superAdminRole ? 'Yes' : 'No') .
+                ", Administrator: " . ($adminRole ? 'Yes' : 'No') .
+                ", Operator: " . ($operatorRole ? 'Yes' : 'No'));
+
+            // Attach roles to menus based on configuration
+            $this->attachRolesToMenu($dashboard, [$superAdminRole, $adminRole, $operatorRole, $managerRole, $supervisorRole, $qaTesterRole]);
+            $this->attachRolesToMenu($masterData, [$superAdminRole, $adminRole, $qaTesterRole]);
+            $this->attachRolesToMenu($inventory, [$adminRole, $operatorRole]);
+            $this->attachRolesToMenu($userManagement, [$superAdminRole, $adminRole]);
+            $this->attachRolesToMenu($peternakan, [$managerRole, $supervisorRole, $operatorRole]);
+            $this->attachRolesToMenu($administrator, [$superAdminRole, $qaTesterRole]);
+
+            // Attach specific permissions to menus
+            $this->attachPermissionsToMenu($farm, ['access farm master data', 'read farm master data']);
+            $this->attachPermissionsToMenu($kandang, ['access kandang management', 'read kandang management']);
+            $this->attachPermissionsToMenu($supplier, ['read supplier management']);
+            $this->attachPermissionsToMenu($customer, ['read customer management']);
+            $this->attachPermissionsToMenu($userList, ['read user management']);
+            $this->attachPermissionsToMenu($userRole, ['read user management']);
+            $this->attachPermissionsToMenu($userPermission, ['SuperAdmin']);
+
+            Log::info("MenuSeeder: Roles and permissions attached successfully");
+        } catch (\Exception $e) {
+            Log::error("MenuSeeder: Error attaching roles and permissions: " . $e->getMessage());
+            throw $e;
+        }
     }
 
     private function attachRolesToMenu($menu, $roles)
     {
         foreach ($roles as $role) {
             if ($role) {
-                $menu->roles()->attach($role->id);
+                try {
+                    $menu->roles()->attach($role->id);
+                    Log::debug("MenuSeeder: Attached role {$role->name} to menu {$menu->name}");
+                } catch (\Exception $e) {
+                    Log::warning("MenuSeeder: Failed to attach role {$role->name} to menu {$menu->name}: " . $e->getMessage());
+                }
             }
         }
     }
@@ -641,9 +748,16 @@ class MenuSeeder extends Seeder
     private function attachPermissionsToMenu($menu, $permissions)
     {
         foreach ($permissions as $permission) {
-            $perm = Permission::where('name', $permission)->first();
-            if ($perm) {
-                $menu->permissions()->attach($perm->id);
+            try {
+                $perm = Permission::where('name', $permission)->first();
+                if ($perm) {
+                    $menu->permissions()->attach($perm->id);
+                    Log::debug("MenuSeeder: Attached permission {$permission} to menu {$menu->name}");
+                } else {
+                    Log::warning("MenuSeeder: Permission '{$permission}' not found");
+                }
+            } catch (\Exception $e) {
+                Log::warning("MenuSeeder: Failed to attach permission {$permission} to menu {$menu->name}: " . $e->getMessage());
             }
         }
     }

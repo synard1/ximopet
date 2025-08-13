@@ -11,7 +11,8 @@ return new class extends Migration
         Schema::disableForeignKeyConstraints();
 
         Schema::create('route_permissions', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            $table->uuid('company_id')->nullable();
             $table->string('route_name')->nullable();
             $table->string('route_path');
             $table->string('method');
@@ -20,8 +21,11 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->text('description')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->unique(['route_path', 'method']);
+            $table->index(['company_id', 'is_active']);
+            $table->index(['permission_name', 'is_active']);
         });
     }
 
