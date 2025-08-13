@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         // First, clean up any existing duplicate default admins
-        $this->cleanupDuplicateDefaultAdmins();
+        // $this->cleanupDuplicateDefaultAdmins();
 
         // MySQL doesn't support partial unique indexes like PostgreSQL
         // Instead, we'll rely on application-level constraint enforcement
@@ -36,60 +36,60 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Clean up any existing duplicate default admins
-     * Keep only the oldest default admin per company
-     */
-    private function cleanupDuplicateDefaultAdmins(): void
-    {
-        // Find companies with multiple default admins
-        $duplicates = DB::select("
-            SELECT company_id, COUNT(*) as count
-            FROM company_users 
-            WHERE isDefaultAdmin = true 
-            AND status = 'active' 
-            AND deleted_at IS NULL
-            GROUP BY company_id
-            HAVING COUNT(*) > 1
-        ");
+    // /**
+    //  * Clean up any existing duplicate default admins
+    //  * Keep only the oldest default admin per company
+    //  */
+    // private function cleanupDuplicateDefaultAdmins(): void
+    // {
+    //     // Find companies with multiple default admins
+    //     $duplicates = DB::select("
+    //         SELECT company_id, COUNT(*) as count
+    //         FROM company_users 
+    //         WHERE isDefaultAdmin = true 
+    //         AND status = 'active' 
+    //         AND deleted_at IS NULL
+    //         GROUP BY company_id
+    //         HAVING COUNT(*) > 1
+    //     ");
 
-        foreach ($duplicates as $duplicate) {
-            $companyId = $duplicate->company_id;
+    //     foreach ($duplicates as $duplicate) {
+    //         $companyId = $duplicate->company_id;
 
-            // Get all default admins for this company, ordered by created_at
-            $defaultAdmins = DB::select("
-                SELECT id, user_id, created_at
-                FROM company_users 
-                WHERE company_id = ? 
-                AND isDefaultAdmin = true 
-                AND status = 'active' 
-                AND deleted_at IS NULL
-                ORDER BY created_at ASC
-            ", [$companyId]);
+    //         // Get all default admins for this company, ordered by created_at
+    //         $defaultAdmins = DB::select("
+    //             SELECT id, user_id, created_at
+    //             FROM company_users 
+    //             WHERE company_id = ? 
+    //             AND isDefaultAdmin = true 
+    //             AND status = 'active' 
+    //             AND deleted_at IS NULL
+    //             ORDER BY created_at ASC
+    //         ", [$companyId]);
 
-            // Keep the first (oldest) one, remove isDefaultAdmin from others
-            $keepFirst = true;
-            foreach ($defaultAdmins as $admin) {
-                if ($keepFirst) {
-                    $keepFirst = false;
-                    continue;
-                }
+    //         // Keep the first (oldest) one, remove isDefaultAdmin from others
+    //         $keepFirst = true;
+    //         foreach ($defaultAdmins as $admin) {
+    //             if ($keepFirst) {
+    //                 $keepFirst = false;
+    //                 continue;
+    //             }
 
-                // Remove default admin status from duplicates
-                DB::update("
-                    UPDATE company_users 
-                    SET isDefaultAdmin = false, 
-                        updated_at = NOW()
-                    WHERE id = ?
-                ", [$admin->id]);
+    //             // Remove default admin status from duplicates
+    //             DB::update("
+    //                 UPDATE company_users 
+    //                 SET isDefaultAdmin = false, 
+    //                     updated_at = NOW()
+    //                 WHERE id = ?
+    //             ", [$admin->id]);
 
-                // Log the cleanup
-                \Illuminate\Support\Facades\Log::info('Cleaned up duplicate default admin', [
-                    'company_id' => $companyId,
-                    'user_id' => $admin->user_id,
-                    'admin_id' => $admin->id
-                ]);
-            }
-        }
-    }
+    //             // Log the cleanup
+    //             \Illuminate\Support\Facades\Log::info('Cleaned up duplicate default admin', [
+    //                 'company_id' => $companyId,
+    //                 'user_id' => $admin->user_id,
+    //                 'admin_id' => $admin->id
+    //             ]);
+    //         }
+    //     }
+    // }
 };

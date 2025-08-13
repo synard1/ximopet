@@ -9,7 +9,8 @@ return new class extends Migration
     public function up()
     {
         Schema::create('qa_checklists', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            $table->uuid('company_id')->nullable();
             $table->string('feature_name');
             $table->string('feature_category');
             $table->string('feature_subcategory')->nullable();
@@ -28,6 +29,11 @@ return new class extends Migration
             $table->string('browser')->nullable();
             $table->string('device')->nullable();
             $table->timestamps();
+            $table->softDeletes();
+
+            $table->index(['company_id', 'feature_category']);
+            $table->index(['test_type', 'status']);
+            $table->index(['tester_name', 'test_date']);
         });
     }
 

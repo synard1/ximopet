@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('recording_performance_logs', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->string('operation_type', 50)->index(); // 'save', 'validate', 'calculate', etc.
             $table->uuid('livestock_id')->index(); // UUID format to match livestocks table
             $table->decimal('execution_time', 8, 4); // Execution time in seconds
