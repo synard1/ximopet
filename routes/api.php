@@ -236,6 +236,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 });
 
+// Expedition API Routes
+Route::prefix('expedition')->group(function () {
+    Route::get('/summary', [App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'getCostSummary']);
+    Route::get('/transactions', [App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'getTransactions']);
+    Route::get('/estimate', [App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'getEstimatedCost']);
+    Route::get('/performance/{expeditionId}', [App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'getPerformance']);
+    Route::post('/compare', [App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'getCostComparison']);
+    Route::put('/status/{transactionId}', [App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'updateStatus']);
+    Route::get('/list', [App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'getExpeditions']);
+    Route::get('/zones/{expeditionId}', [App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'getZones']);
+});
+
 /*
 |--------------------------------------------------------------------------
 | Legacy Routes (Kept for backward compatibility)

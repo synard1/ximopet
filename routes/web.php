@@ -337,6 +337,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/report/performance', [ReportsController::class, 'indexPerforma'])->name('performance');
         Route::get('/report/inventory', [ReportsController::class, 'indexInventory'])->name('inventory');
         Route::get('/report/smart-analytics', [ReportsController::class, 'smartAnalytics'])->name('smart-analytics');
+        Route::post('/report/expedition/export', [\App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'exportReport'])->name('expedition.export');
+        Route::get('/report/expedition', function () {
+            return view('pages.reports.index_report_expedition');
+        })->name('expedition');
         // Route::get('/report/pembelian-livestock', [PurchaseReportsController::class, 'indexPembelianLivestock'])->name('pembelian-livestock');
         // Route::get('/report/pembelian-pakan', [PurchaseReportsController::class, 'indexPembelianPakan'])->name('pembelian-pakan');
         // Route::get('/report/pembelian-supply', [PurchaseReportsController::class, 'indexPembelianSupply'])->name('pembelian-supply');
@@ -517,4 +521,10 @@ Route::prefix('test')->group(function () {
 
     Route::get('/debug-feed-usage/{livestockId?}', [\App\Http\Controllers\FeedController::class, 'debugFeedCardByLivestock'])
         ->name('test.debug.feed.usage');
+});
+
+// Admin Monitoring Routes
+Route::middleware(['auth', 'role:admin'])->prefix('admin/monitoring')->name('admin.monitoring.')->group(function () {
+    Route::get('/database-performance', \App\Livewire\AdminMonitoring\DatabasePerformanceMonitor::class)
+        ->name('database-performance');
 });
