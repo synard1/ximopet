@@ -382,13 +382,29 @@ class ExpeditionService
             throw new \InvalidArgumentException("Expedition cost must be greater than 0");
         }
 
-        // For draft status, other fields are optional
-        // These will be required when status changes to complete
-        if (isset($data['total_weight']) && $data['total_weight'] <= 0) {
-            Log::warning("Total weight must be greater than 0 if provided", [
-                'total_weight' => $data['total_weight']
-            ]);
-            throw new \InvalidArgumentException("Total weight must be greater than 0 if provided");
+        // For draft/pending status, other fields are optional
+        // Only enforce strict validations when status is complete/finalized
+        $status = $data['status'] ?? 'pending';
+        $isDraftLike = in_array(strtolower($status), ['draft', 'pending']);
+
+        if (array_key_exists('total_weight', $data)) {
+            if ($isDraftLike) {
+                // Allow 0 for draft-like statuses; only block negatives
+                if ($data['total_weight'] < 0) {
+                    Log::warning("Total weight cannot be negative", [
+                        'total_weight' => $data['total_weight']
+                    ]);
+                    throw new \InvalidArgumentException("Total weight cannot be negative");
+                }
+            } else {
+                if ($data['total_weight'] <= 0) {
+                    Log::warning("Total weight must be greater than 0 for finalized status", [
+                        'status' => $status,
+                        'total_weight' => $data['total_weight']
+                    ]);
+                    throw new \InvalidArgumentException("Total weight must be greater than 0 for finalized status");
+                }
+            }
         }
 
         Log::info('=== EXPEDITION SERVICE: validateExpeditionData PASSED ===', [

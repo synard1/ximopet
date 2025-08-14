@@ -1163,7 +1163,7 @@ class Create extends Component
                     DB::rollBack();
 
                     // Set error message untuk user
-                    $this->addError('expedition_error', 'Gagal membuat expedition transaction. Expedition ID "' . $this->expedition_id . '" tidak ditemukan dalam database. Silakan pilih expedition yang tersedia atau hubungi administrator untuk memeriksa data expedition.');
+                    $this->addError('expedition_error', 'Gagal membuat expedition transaction. Mohon periksa data ekspedisi dan biaya. Jika masalah berlanjut, hubungi administrator.');
 
                     // Log error detail untuk debugging
                     Log::error('=== LIVESTOCK PURCHASE SAVE ROLLBACK DUE TO EXPEDITION FAILURE ===', [

@@ -151,16 +151,6 @@
                                 </select>
                                 <x-input.error for="expedition_id" />
 
-                                <!-- Expedition Error Display -->
-                                @if ($errors->has('expedition_error'))
-                                <div class="alert alert-warning mt-2">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    <strong>Peringatan:</strong>
-                                    <div class="mt-1">
-                                        {{ $errors->first('expedition_error') }}
-                                    </div>
-                                </div>
-                                @endif
 
                                 <!-- Debug Info -->
                                 @if(config('app.debug'))
@@ -183,16 +173,6 @@
                                 </div>
                                 <x-input.error for="expedition_fee" />
 
-                                <!-- Expedition Fee Error Display -->
-                                @if ($errors->has('expedition_error'))
-                                <div class="alert alert-warning mt-2">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    <strong>Peringatan:</strong>
-                                    <div class="mt-1">
-                                        {{ $errors->first('expedition_error') }}
-                                    </div>
-                                </div>
-                                @endif
 
                                 <!-- Debug Info -->
                                 @if(config('app.debug'))
@@ -426,27 +406,6 @@
             @endif
         </div>
 
-        <!-- Expedition Error Alert - Prominent Display -->
-        @if ($errors->has('expedition_error'))
-        <div class="alert alert-warning mt-3">
-            <div class="d-flex align-items-center">
-                <i class="bi bi-exclamation-triangle fs-2 me-3 text-warning"></i>
-                <div class="flex-grow-1">
-                    <h6 class="alert-heading mb-2">Peringatan Expedition</h6>
-                    <p class="mb-2">{{ $errors->first('expedition_error') }}</p>
-                    <div class="small text-muted">
-                        <strong>Solusi yang disarankan:</strong>
-                        <ul class="mb-0 mt-1">
-                            <li>Periksa apakah expedition yang dipilih masih tersedia dalam sistem</li>
-                            <li>Pastikan expedition ID valid dan tidak kosong</li>
-                            <li>Refresh halaman dan pilih expedition yang berbeda</li>
-                            <li>Jika masalah berlanjut, hubungi administrator sistem</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endif
 
         <!-- Debug Info for Save Button -->
         @if(config('app.debug'))
@@ -477,24 +436,6 @@
     </div>
     @endif
 
-    <!-- Expedition Error Display -->
-    @if ($errors->has('expedition_error'))
-    <div class="alert alert-warning mt-3">
-        <i class="bi bi-exclamation-triangle me-2"></i>
-        <strong>Peringatan Expedition:</strong>
-        <div class="mt-2">
-            {{ $errors->first('expedition_error') }}
-        </div>
-        <div class="mt-2 small text-muted">
-            <strong>Solusi:</strong>
-            <ul class="mb-0">
-                <li>Periksa apakah expedition yang dipilih masih tersedia</li>
-                <li>Pastikan expedition ID valid dan tidak kosong</li>
-                <li>Jika masalah berlanjut, hubungi administrator</li>
-            </ul>
-        </div>
-    </div>
-    @endif
 
     @if (session()->has('error'))
     <div class="alert alert-danger mt-3">
