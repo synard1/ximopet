@@ -86,6 +86,7 @@ class AppServiceProvider extends ServiceProvider
                 DebugBypassLogic::class,
                 TestDateComparison::class,
                 TestProductionBypass::class,
+                \App\Console\Commands\TestDatabasePerformance::class,
             ]);
         }
 

@@ -95,6 +95,7 @@ class Kernel extends ConsoleKernel
             \App\Console\Commands\FixSupplyUsageDetails::class,
             \App\Console\Commands\RecalculateLivestockCost::class,
             \App\Console\Commands\FixRecalculateLivestockBatchQuantity::class,
+            \App\Console\Commands\DebugRecordingYesterday::class,
         ]);
     }
 }

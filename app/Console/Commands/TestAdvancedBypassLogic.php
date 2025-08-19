@@ -271,3 +271,4 @@ class TestAdvancedBypassLogic extends Command
         $this->line('');
     }
 }
+ 

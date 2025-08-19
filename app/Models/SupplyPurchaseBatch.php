@@ -117,6 +117,11 @@ class SupplyPurchaseBatch extends BaseModel
         return $this->belongsTo(\App\Models\Farm::class, 'farm_id', 'id');
     }
 
+    public function coop()
+    {
+        return $this->belongsTo(\App\Models\Coop::class, 'coop_id', 'id');
+    }
+
     /**
      * Update status using the new SupplyStatusHistory system
      */

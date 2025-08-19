@@ -11,6 +11,7 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Log;
 
 class SupplyPurchaseDataTable extends DataTable
 {
@@ -31,27 +32,74 @@ class SupplyPurchaseDataTable extends DataTable
 
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
+        // Debug: Log the query results
+        $results = $query->get();
+        Log::info('SupplyPurchaseDataTable query results', [
+            'total_records' => $results->count(),
+            'records' => $results->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'status' => $item->status,
+                    'invoice_number' => $item->invoice_number,
+                    'supplier_id' => $item->supplier_id,
+                    'farm_id' => $item->farm_id,
+                    'supply_purchases_count' => $item->supplyPurchases->count(),
+                    'has_supplier' => $item->supplier ? 'yes' : 'no',
+                    'data_keys' => array_keys($item->data ?? [])
+                ];
+            })->toArray()
+        ]);
+
         return (new EloquentDataTable($query))
             ->addIndexColumn() // Add this line to include row numbers
             ->editColumn('date', function (SupplyPurchaseBatch $transaction) {
                 return $transaction->date->format('d-m-Y');
             })
             ->editColumn('supplier_id', function (SupplyPurchaseBatch $transaction) {
-                return $transaction->supplier->name;
+                return $transaction->supplier?->name ?? '-';
             })
             ->editColumn('farm_id', function (SupplyPurchaseBatch $transaction) {
+                // First try to get farm info directly from the batch (for drafts)
+                if ($transaction->farm) {
+                    return $transaction->farm->name;
+                }
+
+                // Handle draft status where there might be no supply purchases
+                if ($transaction->supplyPurchases->isEmpty()) {
+                    // For drafts, try to get farm info from payload data
+                    $farmId = $transaction->data['farm_id'] ?? null;
+                    if ($farmId) {
+                        $farm = \App\Models\Farm::find($farmId);
+                        return $farm?->name ?? '-';
+                    }
+                    return '-';
+                }
+
                 $firstPurchase = $transaction->supplyPurchases->first();
                 return $firstPurchase?->farm?->name ?? '-';
-                // return $transaction->supplyPurchases->livestok ?? '';
             })
             ->editColumn('coop_id', function (SupplyPurchaseBatch $transaction) {
+                // First try to get coop info directly from the batch (for drafts)
+                if ($transaction->coop) {
+                    return $transaction->coop->name;
+                }
+
+                // Handle draft status where there might be no supply purchases
+                if ($transaction->supplyPurchases->isEmpty()) {
+                    return '-';
+                }
+
                 $firstPurchase = $transaction->supplyPurchases->first();
-                return $firstPurchase?->livestok?->kandang?->nama ?? '-';
+                return $firstPurchase?->livestock?->kandang?->nama ?? '-';
             })
             ->editColumn('total', function (SupplyPurchaseBatch $transaction) {
+                // Handle draft status where there might be no supply purchases
+                if ($transaction->supplyPurchases->isEmpty()) {
+                    return $this->formatRupiah(0);
+                }
+
                 $total = $transaction->supplyPurchases->sum(function ($purchase) {
                     return $purchase->converted_quantity * $purchase->price_per_converted_unit;
-                    // dd($purchase);
                 });
 
                 return $this->formatRupiah($total);
@@ -136,17 +184,51 @@ class SupplyPurchaseDataTable extends DataTable
      */
     public function query(SupplyPurchaseBatch $model): QueryBuilder
     {
-        $query = $model->newQuery();
+        $query = $model->newQuery()
+            ->with([
+                'supplier',
+                'farm', // Load farm directly for drafts
+                'coop', // Load coop directly for drafts
+                'supplyPurchases.farm',
+                'supplyPurchases.livestock.kandang',
+                'supplyPurchases.supply'
+            ]);
 
-        if (auth()->user()->hasRole('Operator')) {
-            $query->whereHas('supplyPurchases.farm.farmOperators', function ($q) {
-                $q->where('user_id', auth()->id());
-            });
+        // Apply role-based filtering - but ensure drafts are always visible
+        if (auth()->check()) {
+            $user = auth()->user();
+
+            if ($user->hasRole('Operator')) {
+                // Operator can see batches for farms they operate OR drafts they created
+                $query->where(function ($q) use ($user) {
+                    $q->whereHas('supplyPurchases.farm.farmOperators', function ($subQ) use ($user) {
+                        $subQ->where('user_id', $user->id);
+                    })
+                        ->orWhere('created_by', $user->id) // Include drafts created by operator
+                        ->orWhereHas('farm.farmOperators', function ($subQ) use ($user) { // Check farm access directly
+                            $subQ->where('user_id', $user->id);
+                        });
+                });
+            } elseif ($user->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
+                // Company roles can see all batches in their company
+                $query->where('company_id', $user->company_id);
+            }
+            // SuperAdmin can see all batches (no additional filtering)
         }
 
-        if (auth()->user()->hasRole(['Administrator', 'Manager', 'Supervisor'])) {
-            $query->where('company_id', auth()->user()->company_id);
-        }
+        // Always include drafts and active batches, exclude only cancelled
+        $query->where(function ($q) {
+            $q->where('status', '!=', 'cancelled')
+                ->orWhereNull('status'); // Include drafts (null status)
+        });
+
+        // Debug logging
+        Log::info('SupplyPurchaseDataTable query built', [
+            'sql' => $query->toSql(),
+            'bindings' => $query->getBindings(),
+            'user_id' => auth()->id() ?? 'guest',
+            'user_roles' => auth()->check() ? auth()->user()->roles->pluck('name')->toArray() : []
+        ]);
 
         return $query;
     }
@@ -504,7 +586,7 @@ class SupplyPurchaseDataTable extends DataTable
             // Column::make('payload.doc.nama')->title('Nama DOC')->searchable(true),
             // Column::make('qty')->searchable(true),
             // Column::make('harga')->searchable(true),
-            Column::make('total')->searchable(false),
+            Column::computed('total')->title('Total')->searchable(false),
             Column::make('status')->searchable(false),
             // Column::make('periode')->searchable(true),
             Column::make('created_at')->title('Created Date')->addClass('text-nowrap')->searchable(false)->visible(false),

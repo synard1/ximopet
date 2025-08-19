@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\CurrentSupply;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use App\Models\Ekspedisi;
-use  App\Models\Expedition;
 use App\Models\Farm;
 use App\Models\Supply;
 use App\Models\SupplyPurchaseBatch;
@@ -20,6 +18,8 @@ use App\Models\SupplyPurchase;
 use App\Models\SupplyStock;
 use App\Models\Rekanan;
 use App\Models\Partner;
+use App\Services\ExpeditionService;
+use App\Traits\HasExpeditionTransaction;
 use App\Models\Item;
 use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +37,7 @@ use App\Services\Supply\SupplyNumberGeneratorService;
 
 class Create extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, HasExpeditionTransaction;
 
     public $livestockId;
     public $invoice_number;
@@ -59,11 +59,13 @@ class Create extends Component
 
     protected $stockManagementService;
     protected $metadataService;
+    protected ExpeditionService $expeditionService;
 
-    public function boot(SupplyStockManagementService $stockManagementService, SupplyMetadataService $metadataService)
+    public function boot(SupplyStockManagementService $stockManagementService, SupplyMetadataService $metadataService, ExpeditionService $expeditionService)
     {
         $this->stockManagementService = $stockManagementService;
         $this->metadataService = $metadataService;
+        $this->expeditionService = $expeditionService;
     }
 
     // protected $listeners = [
@@ -147,34 +149,85 @@ class Create extends Component
 
         Log::info('Starting save process for Supply Purchases (Purchase Transaction Only)');
 
-        // Validasi kombinasi supply_id dan unit_id tidak boleh duplikat
-        $uniqueKeys = [];
-        foreach ($this->items as $idx => $item) {
-            $key = $item['supply_id'] . '-' . $item['unit_id'];
-            if (in_array($key, $uniqueKeys)) {
-                $this->errorItems[$idx] = 'Jenis supply dan satuan tidak boleh sama dengan baris lain.';
-            }
-            $uniqueKeys[] = $key;
-        }
-
-        if (!empty($this->errorItems)) {
-            Log::warning('Duplicate items found during validation: ' . json_encode($this->errorItems));
-            $this->dispatch('validation-errors', ['errors' => array_values($this->errorItems)]);
+        // --- FAST PATH: BYPASS SAVE IF NO CHANGES ---
+        $hasChanges = $this->checkDataChanges();
+        if (!$hasChanges) {
+            logInfoIfDebug('🟡 SupplyPurchases.save: No data changes detected, bypassing save.', [
+                'pembelian_id' => $this->pembelianId,
+                'user_id' => Auth::check() ? Auth::id() : null,
+            ]);
+            $this->dispatch('success', 'Tidak ada perubahan data. Proses simpan dibypass.');
             return;
         }
 
-        $this->validate([
+        // Filter out empty items (items without supply_id)
+        $validItems = array_filter($this->items, function ($item) {
+            return !empty($item['supply_id']);
+        });
+
+        // Allow saving drafts with no items, but validate if items exist
+        if (!empty($validItems)) {
+            // Validasi kombinasi supply_id dan unit_id tidak boleh duplikat hanya untuk item yang valid
+            $uniqueKeys = [];
+            foreach ($validItems as $idx => $item) {
+                // Check if unit_id exists, if not mark error for this item
+                if (!isset($item['unit_id']) || empty($item['unit_id'])) {
+                    $this->errorItems[$idx] = 'Satuan harus dipilih untuk supply ini.';
+                    continue;
+                }
+
+                $key = $item['supply_id'] . '-' . $item['unit_id'];
+                if (in_array($key, $uniqueKeys)) {
+                    $this->errorItems[$idx] = 'Jenis supply dan satuan tidak boleh sama dengan baris lain.';
+                }
+                $uniqueKeys[] = $key;
+            }
+
+            if (!empty($this->errorItems)) {
+                Log::warning('Duplicate supply_id-unit_id or missing unit_id detected during validation', [
+                    'errors' => $this->errorItems,
+                ]);
+                $this->dispatch('validation-errors', ['errors' => array_values($this->errorItems)]);
+                return;
+            }
+        }
+
+        // Validate expedition input if expedition data is provided
+        if (!empty($this->expedition_id) || !empty($this->expedition_fee)) {
+            $expeditionValidationErrors = $this->expeditionService->validateLivewireInput([
+                'expedition_id' => $this->expedition_id,
+                'expedition_fee' => $this->expedition_fee,
+            ], 'supply_purchase', [
+                'require_expedition' => false,
+            ]);
+            if (!empty($expeditionValidationErrors)) {
+                foreach ($expeditionValidationErrors as $field => $message) {
+                    $this->addError($field, $message);
+                }
+                return;
+            }
+        }
+
+        $validationRules = [
             'invoice_number' => 'required|string',
             'date' => 'required|date',
             'supplier_id' => 'required|exists:partners,id',
             'expedition_fee' => 'numeric|min:0',
             'farm_id' => 'required|exists:farms,id',
-            'items' => 'required|array|min:1',
-            'items.*.supply_id' => 'required|exists:supplies,id',
-            'items.*.quantity' => 'required|numeric|min:1',
-            'items.*.price_per_unit' => 'required|numeric|min:0',
-            'items.*.unit_id' => 'required|exists:units,id',
-        ]);
+        ];
+
+        // Only validate items if we have valid items
+        if (!empty($validItems)) {
+            $validationRules = array_merge($validationRules, [
+                'items' => 'required|array|min:1',
+                'items.*.supply_id' => 'required|exists:supplies,id',
+                'items.*.quantity' => 'required|numeric|min:1',
+                'items.*.price_per_unit' => 'required|numeric|min:0',
+                'items.*.unit_id' => 'required|exists:units,id',
+            ]);
+        }
+
+        $this->validate($validationRules);
 
         Log::info('Validation passed for Supply Purchases data');
 
@@ -217,7 +270,9 @@ class Create extends Component
             }
 
             // Buat key yang digunakan untuk cek data yang tidak lagi dipakai
-            $newItemKeys = collect($this->items)->map(fn($item) => $item['supply_id'] . '-' . $item['unit_id'])->toArray();
+            $newItemKeys = collect($validItems)->map(function ($item) {
+                return ($item['supply_id'] ?? '') . '-' . ($item['unit_id'] ?? '');
+            })->toArray();
 
             // Clean up obsolete purchases and their related stocks (if any)
             foreach ($batch->supplyPurchases as $purchase) {
@@ -241,40 +296,44 @@ class Create extends Component
             Log::info('Cleaned up obsolete Supply Purchases for batch ID: ' . $batch->id);
 
             // Process each purchase item (SupplyPurchase only, no stock processing yet)
-            foreach ($this->items as $item) {
-                $supply = Supply::findOrFail($item['supply_id']);
+            if (!empty($validItems)) {
+                foreach ($validItems as $item) {
+                    $supply = Supply::findOrFail($item['supply_id']);
 
-                $units = collect($supply->data['conversion_units']);
-                $selectedUnit = $units->firstWhere('unit_id', $item['unit_id']);
-                $smallestUnit = $units->firstWhere('is_smallest', true);
+                    $units = collect($supply->data['conversion_units']);
+                    $selectedUnit = $units->firstWhere('unit_id', $item['unit_id']);
+                    $smallestUnit = $units->firstWhere('is_smallest', true);
 
-                if (!$selectedUnit || !$smallestUnit) {
-                    throw new \Exception("Invalid unit conversion for supply: {$supply->name}");
+                    if (!$selectedUnit || !$smallestUnit) {
+                        throw new \Exception("Invalid unit conversion for supply: {$supply->name}");
+                    }
+
+                    $convertedQuantity = ($item['quantity'] * $selectedUnit['value']) / $smallestUnit['value'];
+
+                    $purchase = SupplyPurchase::updateOrCreate(
+                        [
+                            'supply_purchase_batch_id' => $batch->id,
+                            'supply_id' => $supply->id,
+                            'unit_id' => $item['unit_id'],
+                        ],
+                        [
+                            'farm_id' => $this->farm_id,
+                            'quantity' => $item['quantity'],
+                            'converted_quantity' => $convertedQuantity,
+                            'converted_unit' => $smallestUnit['unit_id'],
+                            'price_per_unit' => $item['price_per_unit'],
+                            'price_per_converted_unit' => $item['unit_id'] !== $smallestUnit['unit_id']
+                                ? round($item['price_per_unit'] * ($smallestUnit['value'] / $selectedUnit['value']), 2)
+                                : $item['price_per_unit'],
+                            'created_by' => Auth::user()->id,
+                            'updated_by' => Auth::user()->id,
+                        ]
+                    );
+
+                    Log::info('Processed purchase item for Supply Purchase ID: ' . $purchase->id . ' in batch ID: ' . $batch->id);
                 }
-
-                $convertedQuantity = ($item['quantity'] * $selectedUnit['value']) / $smallestUnit['value'];
-
-                $purchase = SupplyPurchase::updateOrCreate(
-                    [
-                        'supply_purchase_batch_id' => $batch->id,
-                        'supply_id' => $supply->id,
-                        'unit_id' => $item['unit_id'],
-                    ],
-                    [
-                        'farm_id' => $this->farm_id,
-                        'quantity' => $item['quantity'],
-                        'converted_quantity' => $convertedQuantity,
-                        'converted_unit' => $smallestUnit['unit_id'],
-                        'price_per_unit' => $item['price_per_unit'],
-                        'price_per_converted_unit' => $item['unit_id'] !== $smallestUnit['unit_id']
-                            ? round($item['price_per_unit'] * ($smallestUnit['value'] / $selectedUnit['value']), 2)
-                            : $item['price_per_unit'],
-                        'created_by' => Auth::user()->id,
-                        'updated_by' => Auth::user()->id,
-                    ]
-                );
-
-                Log::info('Processed purchase item for Supply Purchase ID: ' . $purchase->id . ' in batch ID: ' . $batch->id);
+            } else {
+                Log::info('No valid items to process, saving batch as draft only', ['batch_id' => $batch->id]);
             }
 
             // Save batch payload for future reference
@@ -282,7 +341,7 @@ class Create extends Component
                 'items' => collect($this->items)->map(fn($item) => [
                     'supply_id' => $item['supply_id'],
                     'quantity' => $item['quantity'],
-                    'unit_id' => $item['unit_id'],
+                    'unit_id' => $item['unit_id'] ?? null,
                     'price_per_unit' => $item['price_per_unit'],
                     'available_units' => $item['available_units'] ?? [],
                 ])->toArray(),
@@ -296,13 +355,130 @@ class Create extends Component
 
             Log::info('Batch payload saved for Supply Purchase Batch ID: ' . $batch->id);
 
+            // Create expedition transaction if expedition data exists AND we have items to ship AND expedition fee > 0
+            // Skip expedition creation for drafts with no items or when expedition fee is 0
+            if (!empty($this->expedition_id) && isset($this->expedition_fee) && $this->expedition_fee > 0 && !empty($validItems)) {
+                Log::info('=== SUPPLY EXPEDITION DATA CHECK IN SAVE METHOD ===', [
+                    'batch_id' => $batch->id,
+                    'expedition_id' => $this->expedition_id,
+                    'expedition_fee' => $this->expedition_fee,
+                    'has_items' => true,
+                    'item_count' => count($validItems),
+                ]);
+
+                // Create expedition transactions for each individual SupplyPurchase item
+                $expeditionTransactionsCreated = 0;
+                $expeditionTransactionsFailed = 0;
+
+                foreach ($validItems as $itemIndex => $item) {
+                    // Find the corresponding SupplyPurchase record that was just created
+                    $supplyPurchase = SupplyPurchase::where([
+                        'supply_purchase_batch_id' => $batch->id,
+                        'supply_id' => $item['supply_id'],
+                        'unit_id' => $item['unit_id'],
+                    ])->first();
+
+                    if (!$supplyPurchase) {
+                        Log::warning('SupplyPurchase not found for expedition transaction', [
+                            'batch_id' => $batch->id,
+                            'supply_id' => $item['supply_id'],
+                            'unit_id' => $item['unit_id'],
+                            'item_index' => $itemIndex,
+                        ]);
+                        $expeditionTransactionsFailed++;
+                        continue;
+                    }
+
+                    $inputData = [
+                        'expedition_id' => $this->expedition_id,
+                        'expedition_fee' => $this->expedition_fee,
+                    ];
+
+                    $context = [
+                        'shipping_date' => $this->date,
+                        'company_id' => Auth::user()->company_id ?? null,
+                        'notes' => 'Draft expedition transaction - expedition fee may be 0 for drafts',
+                        'total_weight' => $this->calculateTotalWeight($this->items, 'supply'),
+                        'is_draft' => true,
+                        'expedition_fee_is_zero' => ($this->expedition_fee == 0),
+                    ];
+
+                    Log::info('Creating expedition transaction for individual SupplyPurchase item', [
+                        'batch_id' => $batch->id,
+                        'supply_purchase_id' => $supplyPurchase->id,
+                        'transaction_type' => 'supply_purchase',
+                        'expedition_id' => $this->expedition_id,
+                        'expedition_fee' => $this->expedition_fee,
+                        'item_index' => $itemIndex,
+                    ]);
+
+                    $expeditionTransaction = $this->expeditionService->createFromLivewireInput(
+                        $inputData,
+                        'supply_purchase',
+                        $supplyPurchase->id, // Use the individual SupplyPurchase ID, not the batch ID
+                        $context
+                    );
+
+                    if ($expeditionTransaction) {
+                        $expeditionTransactionsCreated++;
+                        Log::info('Expedition transaction created successfully for SupplyPurchase item', [
+                            'supply_purchase_id' => $supplyPurchase->id,
+                            'expedition_transaction_id' => $expeditionTransaction->id ?? 'unknown',
+                        ]);
+                    } else {
+                        $expeditionTransactionsFailed++;
+                        Log::error('Failed to create expedition transaction for SupplyPurchase item', [
+                            'supply_purchase_id' => $supplyPurchase->id,
+                            'item_index' => $itemIndex,
+                        ]);
+                    }
+                }
+
+                // Check if any expedition transactions failed
+                if ($expeditionTransactionsFailed > 0) {
+                    Log::error('=== SUPPLY EXPEDITION TRANSACTIONS PARTIALLY FAILED - ROLLBACK REQUIRED ===', [
+                        'batch_id' => $batch->id,
+                        'total_items' => count($validItems),
+                        'expedition_transactions_created' => $expeditionTransactionsCreated,
+                        'expedition_transactions_failed' => $expeditionTransactionsFailed,
+                        'expedition_id' => $this->expedition_id,
+                        'expedition_fee' => $this->expedition_fee,
+                    ]);
+
+                    DB::rollBack();
+                    $this->addError('expedition_error', "Gagal membuat expedition transaction untuk {$expeditionTransactionsFailed} item supply purchase. Mohon periksa data ekspedisi dan biaya.");
+                    return;
+                }
+
+                Log::info('All expedition transactions created successfully', [
+                    'batch_id' => $batch->id,
+                    'expedition_transactions_created' => $expeditionTransactionsCreated,
+                ]);
+            } elseif (!empty($this->expedition_id) && isset($this->expedition_fee) && empty($validItems)) {
+                // Log that expedition data is saved but expedition transaction creation is skipped for drafts
+                Log::info('=== SUPPLY EXPEDITION DATA SAVED BUT EXPEDITION TRANSACTION SKIPPED ===', [
+                    'batch_id' => $batch->id,
+                    'expedition_id' => $this->expedition_id,
+                    'expedition_fee' => $this->expedition_fee,
+                    'reason' => 'Draft with no items - expedition transaction will be created when items are added',
+                ]);
+            } elseif (!empty($this->expedition_id) && isset($this->expedition_fee) && $this->expedition_fee == 0 && !empty($validItems)) {
+                // Log that expedition data is saved but expedition transaction creation is skipped due to 0 fee
+                Log::info('=== SUPPLY EXPEDITION DATA SAVED BUT EXPEDITION TRANSACTION SKIPPED ===', [
+                    'batch_id' => $batch->id,
+                    'expedition_id' => $this->expedition_id,
+                    'expedition_fee' => $this->expedition_fee,
+                    'reason' => 'Expedition fee is 0 - no expedition service needed',
+                ]);
+            }
+
             DB::commit();
 
             Log::info('Transaction committed successfully for Supply Purchase Batch ID: ' . $batch->id);
 
-            $message = $this->pembelianId
-                ? 'Pembelian supply berhasil diperbarui'
-                : 'Pembelian supply berhasil disimpan dengan status DRAFT. Stock akan diproses ketika status menjadi ARRIVED.';
+            $message = empty($validItems)
+                ? 'Draft pembelian supply berhasil ' . ($this->pembelianId ? 'diperbarui' : 'disimpan') . '. Stock akan diproses ketika status menjadi ARRIVED.'
+                : 'Pembelian supply berhasil ' . ($this->pembelianId ? 'diperbarui' : 'disimpan');
 
             $this->dispatch('success', $message);
             $this->close();
@@ -316,6 +492,146 @@ class Create extends Component
             Log::error('General exception in save process: ' . $e->getMessage());
             $this->dispatch('error', 'Terjadi kesalahan saat ' . ($this->pembelianId ? 'memperbarui' : 'menyimpan') . ' data. ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Change detection: bypass DB write when there is no meaningful change
+     */
+    private function checkDataChanges(): bool
+    {
+        // For new records, always treat as having changes
+        if (empty($this->pembelianId)) {
+            Log::info('DataChangeDetector: New record - treating as having changes');
+            return true;
+        }
+
+        $currentData = $this->getFormDataForComparison();
+        $originalData = $this->getOriginalDataForComparison();
+
+        Log::info('DataChangeDetector: Comparing data for change detection', [
+            'pembelian_id' => $this->pembelianId,
+            'current_data' => $currentData,
+            'original_data' => $originalData,
+            'current_keys' => array_keys($currentData),
+            'original_keys' => array_keys($originalData),
+        ]);
+
+        // Use centralized helper if available
+        if (class_exists('App\\Helpers\\DataChangeDetector')) {
+            $hasChanges = \App\Helpers\DataChangeDetector::formHasChanges(
+                $currentData,
+                $originalData,
+                []
+            );
+
+            Log::info('DataChangeDetector: Centralized helper result', [
+                'has_changes' => $hasChanges,
+                'helper_class' => 'App\\Helpers\\DataChangeDetector'
+            ]);
+
+            return $hasChanges;
+        }
+
+        // Fallback shallow comparison
+        $hasChanges = json_encode($currentData) !== json_encode($originalData);
+
+        Log::info('DataChangeDetector: Fallback comparison result', [
+            'has_changes' => $hasChanges,
+            'method' => 'json_encode comparison'
+        ]);
+
+        return $hasChanges;
+    }
+
+    private function getFormDataForComparison(): array
+    {
+        $normalizedItems = $this->normalizeSupplyItems($this->items ?? []);
+        return [
+            'invoice_number' => $this->invoice_number,
+            'date' => $this->date,
+            'supplier_id' => $this->supplier_id,
+            'expedition_id' => $this->expedition_id ?? null,
+            'expedition_fee' => (float) ($this->expedition_fee ?? 0),
+            'farm_id' => $this->farm_id,
+            'items' => $normalizedItems,
+        ];
+    }
+
+    private function getOriginalDataForComparison(): array
+    {
+        if (empty($this->pembelianId)) {
+            return [];
+        }
+
+        $batch = \App\Models\SupplyPurchaseBatch::with('supplyPurchases')
+            ->find($this->pembelianId);
+        if (!$batch) {
+            return [];
+        }
+
+        // For drafts, prioritize data from the data field
+        if ($batch->status === 'draft' && $batch->data) {
+            $items = [];
+            if (!empty($batch->data['items'])) {
+                foreach ($batch->data['items'] as $item) {
+                    $items[] = [
+                        'supply_id' => $item['supply_id'],
+                        'unit_id' => $item['unit_id'],
+                        'quantity' => isset($item['quantity']) ? (float) $item['quantity'] : null,
+                        'price_per_unit' => isset($item['price_per_unit']) ? (float) $item['price_per_unit'] : null,
+                    ];
+                }
+            }
+
+            return [
+                'invoice_number' => $batch->invoice_number,
+                'date' => $batch->data['date'] ?? (optional($batch->date)->format('Y-m-d') ?? $batch->date),
+                'supplier_id' => $batch->data['supplier_id'] ?? $batch->supplier_id,
+                'expedition_id' => $batch->data['expedition_id'] ?? $batch->expedition_id,
+                'expedition_fee' => (float) ($batch->data['expedition_fee'] ?? $batch->expedition_fee ?? 0),
+                'farm_id' => $batch->data['farm_id'] ?? $batch->farm_id,
+                'items' => $this->normalizeSupplyItems($items),
+            ];
+        }
+
+        // For confirmed/arrived batches, use supplyPurchases data
+        $items = [];
+        foreach ($batch->supplyPurchases as $purchase) {
+            $items[] = [
+                'supply_id' => $purchase->supply_id,
+                'unit_id' => $purchase->unit_id,
+                'quantity' => (float) $purchase->quantity,
+                'price_per_unit' => (float) $purchase->price_per_unit,
+            ];
+        }
+
+        return [
+            'invoice_number' => $batch->invoice_number,
+            'date' => optional($batch->date)->format('Y-m-d') ?? $batch->date,
+            'supplier_id' => $batch->supplier_id,
+            'expedition_id' => $batch->expedition_id,
+            'expedition_fee' => (float) ($batch->expedition_fee ?? 0),
+            'farm_id' => $batch->farm_id, // Use batch farm_id directly
+            'items' => $this->normalizeSupplyItems($items),
+        ];
+    }
+
+    private function normalizeSupplyItems(array $items): array
+    {
+        $normalized = array_map(function ($item) {
+            return [
+                'supply_id' => $item['supply_id'] ?? null,
+                'unit_id' => $item['unit_id'] ?? ($item['unit'] ?? null),
+                'quantity' => isset($item['quantity']) ? (float) $item['quantity'] : null,
+                'price_per_unit' => isset($item['price_per_unit']) ? (float) $item['price_per_unit'] : null,
+            ];
+        }, $items);
+
+        usort($normalized, function ($a, $b) {
+            return strcmp(($a['supply_id'] . '-' . $a['unit_id']), ($b['supply_id'] . '-' . $b['unit_id']));
+        });
+
+        return $normalized;
     }
 
     /**
@@ -526,16 +842,43 @@ class Create extends Component
 
     public function resetForm()
     {
+        // Only reset if we're not in edit mode
+        if (!$this->edit_mode) {
+            $this->reset();
+        }
+
+        $this->items = [
+            [
+                'supply_id' => null,
+                'quantity' => null,
+                'unit_id' => null, // Fixed: was 'unit', should be 'unit_id'
+                'price_per_unit' => null,
+                'available_units' => [],
+            ],
+        ];
+
+        // Reset edit mode flag
+        $this->edit_mode = false;
+        $this->pembelianId = null;
+    }
+
+    /**
+     * Reset form completely for create mode
+     */
+    public function resetFormForCreate()
+    {
         $this->reset();
         $this->items = [
             [
                 'supply_id' => null,
                 'quantity' => null,
-                'unit' => null, // ← new: satuan yang dipilih user
+                'unit_id' => null,
                 'price_per_unit' => null,
-                'available_units' => [], // ← new: daftar satuan berdasarkan supply
+                'available_units' => [],
             ],
         ];
+        $this->edit_mode = false;
+        $this->pembelianId = null;
     }
 
     public function updatedItems($value, $key)
@@ -567,6 +910,12 @@ class Create extends Component
                 $this->items[$index]['available_units'] = [];
                 $this->items[$index]['unit_id'] = null;
             }
+        }
+
+        // Trigger kalkulasi otomatis untuk field yang mempengaruhi sub total
+        if (in_array($field, ['quantity', 'price_per_unit'])) {
+            $this->items[$index]['sub_total'] = $this->calculateItemSubTotal($this->items[$index]);
+            $this->dispatch('item-updated', index: $index);
         }
     }
 
@@ -651,11 +1000,11 @@ class Create extends Component
         }
 
         if ($isSuperAdmin) {
-            $expeditions = Expedition::all();
+            $expeditions = Partner::where('type', 'Expedition')->get();
         } elseif ($isCompanyRole) {
-            $expeditions = Expedition::where('company_id', $companyId)->get();
+            $expeditions = Partner::where('type', 'Expedition')->where('company_id', $companyId)->get();
         } elseif ($isOperator) {
-            $expeditions = Expedition::where('company_id', $companyId)->get();
+            $expeditions = Partner::where('type', 'Expedition')->where('company_id', $companyId)->get();
         } else {
             $expeditions = collect();
         }
@@ -670,7 +1019,7 @@ class Create extends Component
 
     public function showCreateForm()
     {
-        $this->resetForm();
+        $this->resetFormForCreate();
         $this->showForm = true;
         $this->dispatch('hide-datatable');
     }
@@ -840,38 +1189,121 @@ class Create extends Component
     public function showEditForm($id)
     {
         $this->pembelianId = $id;
-        $pembelian = SupplyPurchaseBatch::with('supplyPurchases')->find($id);
+        $pembelian = SupplyPurchaseBatch::with(['supplyPurchases', 'supplier', 'farm'])->find($id);
 
+        if (!$pembelian) {
+            $this->dispatch('error', 'Data pembelian tidak ditemukan');
+            return;
+        }
+
+        Log::info('SupplyPurchase Edit: Loading form data', [
+            'batch_id' => $pembelian->id,
+            'status' => $pembelian->status,
+            'data_keys' => array_keys($pembelian->data ?? []),
+            'supply_purchases_count' => $pembelian->supplyPurchases->count(),
+        ]);
+
+        // Initialize form data
         $this->items = [];
-        if ($pembelian && !empty($pembelian->payload['items'])) {
-            // Prefer load from payload
-            foreach ($pembelian->payload['items'] as $item) {
-                $this->items[] = [
-                    'supply_id' => $item['supply_id'],
-                    'quantity' => $item['quantity'],
-                    'unit_id' => $item['unit_id'],
-                    'price_per_unit' => $item['price_per_unit'],
-                    'available_units' => $item['available_units'] ?? [],
-                ];
+        $this->farm_id = $pembelian->farm_id;
+        $this->supplier_id = $pembelian->supplier_id;
+        $this->expedition_id = $pembelian->expedition_id;
+        $this->expedition_fee = $pembelian->expedition_fee ?? 0;
+        $this->date = $pembelian->date ? $pembelian->date->format('Y-m-d') : null;
+        $this->invoice_number = $pembelian->invoice_number;
+
+        Log::info('SupplyPurchase Edit: Initial form data loaded', [
+            'farm_id' => $this->farm_id,
+            'supplier_id' => $this->supplier_id,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+            'date' => $this->date,
+            'invoice_number' => $this->invoice_number,
+        ]);
+
+        // Load items from data field (for drafts) or supplyPurchases (for confirmed batches)
+        if ($pembelian->data && !empty($pembelian->data['items'])) {
+            // Load from data field (draft mode)
+            Log::info('SupplyPurchase Edit: Loading from data field', [
+                'items_count' => count($pembelian->data['items']),
+                'first_item' => $pembelian->data['items'][0] ?? 'no items'
+            ]);
+
+            // Filter out truly empty items (where all required fields are null)
+            $validItemsFromData = [];
+            foreach ($pembelian->data['items'] as $item) {
+                // Check if this item has any meaningful data
+                if (!empty($item['supply_id']) || !empty($item['quantity']) || !empty($item['price_per_unit'])) {
+                    $validItemsFromData[] = [
+                        'supply_id' => $item['supply_id'],
+                        'quantity' => $item['quantity'],
+                        'unit_id' => $item['unit_id'],
+                        'price_per_unit' => $item['price_per_unit'],
+                        'available_units' => $item['available_units'] ?? [],
+                    ];
+                }
             }
-            $this->farm_id = $pembelian->payload['farm_id'] ?? null;
-            $this->supplier_id = $pembelian->payload['supplier_id'] ?? null;
-            $this->expedition_id = $pembelian->payload['expedition_id'] ?? null;
-            $this->expedition_fee = $pembelian->payload['expedition_fee'] ?? 0;
-            $this->date = $pembelian->payload['date'] ?? $pembelian->date;
-            $this->invoice_number = $pembelian->invoice_number ?? null;
-        } elseif ($pembelian && $pembelian->supplyPurchases->isNotEmpty()) {
-            $this->date = $pembelian->date;
-            $this->farm_id = $pembelian->supplyPurchases->first()->farm_id;
-            $this->invoice_number = $pembelian->invoice_number;
-            $this->supplier_id = $pembelian->supplier_id;
-            $this->expedition_id = $pembelian->expedition_id;
-            $this->expedition_fee = $pembelian->expedition_fee;
+
+            if (!empty($validItemsFromData)) {
+                $this->items = $validItemsFromData;
+                Log::info('SupplyPurchase Edit: Loaded valid items from data field', [
+                    'valid_items_count' => count($validItemsFromData)
+                ]);
+            } else {
+                // No valid items found, don't create empty rows for drafts
+                $this->items = [];
+                Log::info('SupplyPurchase Edit: No valid items found in data field, keeping items empty');
+            }
+
+            // Override with data field values if available
+            if (isset($pembelian->data['farm_id'])) {
+                $this->farm_id = $pembelian->data['farm_id'];
+            }
+            if (isset($pembelian->data['supplier_id'])) {
+                $this->supplier_id = $pembelian->data['supplier_id'];
+            }
+            if (isset($pembelian->data['expedition_id'])) {
+                $this->expedition_id = $pembelian->data['expedition_id'];
+            }
+            if (isset($pembelian->data['expedition_fee'])) {
+                $this->expedition_fee = $pembelian->data['expedition_fee'];
+            }
+            if (isset($pembelian->data['date'])) {
+                // Handle date from data field - could be string or Carbon instance
+                $dateFromData = $pembelian->data['date'];
+                if ($dateFromData instanceof \Carbon\Carbon) {
+                    $this->date = $dateFromData->format('Y-m-d');
+                } elseif (is_string($dateFromData)) {
+                    // Try to parse the string date and format it
+                    try {
+                        $parsedDate = \Carbon\Carbon::parse($dateFromData);
+                        $this->date = $parsedDate->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to parse date from data field', [
+                            'date_from_data' => $dateFromData,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Keep the original date from database
+                    }
+                }
+
+                Log::info('Date loaded from data field', [
+                    'original_date' => $dateFromData,
+                    'formatted_date' => $this->date,
+                    'type' => gettype($dateFromData)
+                ]);
+            }
+        } elseif ($pembelian->supplyPurchases->isNotEmpty()) {
+            // Load from supplyPurchases (confirmed/arrived batches)
+            Log::info('SupplyPurchase Edit: Loading from supplyPurchases', [
+                'supply_purchases_count' => $pembelian->supplyPurchases->count()
+            ]);
 
             foreach ($pembelian->supplyPurchases as $item) {
                 $supply = \App\Models\Supply::find($item->supply_id);
                 $available_units = [];
                 $unit_id = $item->unit_id !== null ? (string)$item->unit_id : null;
+
                 if ($supply && isset($supply->data['conversion_units'])) {
                     $available_units = collect($supply->data['conversion_units'])->map(function ($unit) {
                         $unitModel = \App\Models\Unit::find($unit['unit_id']);
@@ -883,8 +1315,8 @@ class Create extends Component
                         ];
                     })->toArray();
                 }
+
                 $this->items[] = [
-                    'farm_id' => $item->farm_id,
                     'supply_id' => $item->supply_id,
                     'quantity' => $item->quantity,
                     'price_per_unit' => $item->price_per_unit,
@@ -892,10 +1324,63 @@ class Create extends Component
                     'available_units' => $available_units,
                 ];
             }
+        } else {
+            // No items found, don't create empty item rows for drafts
+            Log::info('SupplyPurchase Edit: No items found, keeping items empty');
+            $this->items = [];
         }
+
+        // Only create empty item row if we're in create mode (new record)
+        // For edit mode with no items, keep items empty to avoid showing unnecessary form fields
+        if (empty($this->pembelianId)) {
+            $this->items = [
+                [
+                    'supply_id' => null,
+                    'quantity' => null,
+                    'unit_id' => null,
+                    'price_per_unit' => null,
+                    'available_units' => [],
+                ]
+            ];
+            Log::info('SupplyPurchase Edit: Created empty item row for create mode');
+        } else {
+            Log::info('SupplyPurchase Edit: Edit mode - keeping items as loaded (no empty rows for drafts)');
+        }
+
+        Log::info('SupplyPurchase Edit: Form data loaded successfully', [
+            'batch_id' => $pembelian->id,
+            'farm_id' => $this->farm_id,
+            'supplier_id' => $this->supplier_id,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+            'date' => $this->date,
+            'invoice_number' => $this->invoice_number,
+            'items_count' => count($this->items),
+            'edit_mode' => $this->edit_mode,
+            'pembelianId' => $this->pembelianId,
+        ]);
+
+        // Debug: Log the actual form properties after setting them
+        Log::info('SupplyPurchase Edit: Form properties after loading', [
+            'farm_id' => $this->farm_id,
+            'supplier_id' => $this->supplier_id,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+            'date' => $this->date,
+            'invoice_number' => $this->invoice_number,
+            'items' => $this->items,
+        ]);
+
         $this->showForm = true;
         $this->edit_mode = true;
         $this->dispatch('hide-datatable');
+
+        // Force Livewire to re-render the form with updated data
+        $this->dispatch('form-data-loaded', [
+            'farm_id' => $this->farm_id,
+            'expedition_id' => $this->expedition_id,
+            'supplier_id' => $this->supplier_id,
+        ]);
     }
 
     public function updateStatusSupplyPurchase($purchaseId, $status, $notes)
@@ -1697,5 +2182,50 @@ class Create extends Component
         } else {
             session()->flash('error', $result['error']);
         }
+    }
+
+    /**
+     * Handle supply ID change - override from trait
+     * 
+     * @param int $index - Item index
+     * @param mixed $value - New supply ID value
+     */
+    protected function handleSupplyIdChange($index, $value)
+    {
+        $supply = Supply::find($value);
+
+        if ($supply && isset($supply->data['conversion_units'])) {
+            $units = collect($supply->data['conversion_units']);
+
+            $this->items[$index]['available_units'] = $units->map(function ($unit) {
+                $unitModel = Unit::find($unit['unit_id']);
+                return [
+                    'unit_id' => $unit['unit_id'],
+                    'label' => $unitModel?->name ?? 'Unknown',
+                    'value' => $unit['value'],
+                    'is_smallest' => $unit['is_smallest'] ?? false,
+                ];
+            })->toArray();
+
+            // Set default unit based on is_default_purchase or first available unit
+            $defaultUnit = $units->firstWhere('is_default_purchase', true) ?? $units->first();
+            if ($defaultUnit) {
+                $this->items[$index]['unit_id'] = $defaultUnit['unit_id'];
+            }
+        } else {
+            $this->items[$index]['available_units'] = [];
+            $this->items[$index]['unit_id'] = null;
+        }
+    }
+
+    /**
+     * Handle feed ID change - override from trait (not used in supply purchases)
+     * 
+     * @param int $index - Item index
+     * @param mixed $value - New feed ID value
+     */
+    protected function handleFeedIdChange($index, $value)
+    {
+        // Not used in supply purchases
     }
 }

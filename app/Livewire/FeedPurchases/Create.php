@@ -8,8 +8,6 @@ use App\Services\AuditTrailService;
 use App\Models\CurrentSupply;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use App\Models\Ekspedisi;
-use  App\Models\Expedition;
 use App\Models\Feed;
 use App\Models\FeedPurchase;
 use App\Models\FeedPurchaseItem;
@@ -30,12 +28,12 @@ use App\Traits\HasTempAuthorization;
 use Illuminate\Support\Facades\Auth;
 use App\Services\Feed\FeedNumberingService;
 use App\Services\Feed\CurrentFeedService;
+use App\Services\ExpeditionService;
 
 class Create extends Component
 {
     use WithFileUploads, HasTempAuthorization;
 
-    public $livestockId;
     public $invoice_number;
     public $date;
     public $supplier_id;
@@ -51,6 +49,8 @@ class Create extends Component
 
 
     public bool $withHistory = false; // ← Tambahkan ini di atas class Livewire
+
+    protected ExpeditionService $expeditionService;
 
     protected $listeners = [
         'deleteFeedPurchaseBatch' => 'deleteFeedPurchaseBatch',
@@ -85,7 +85,7 @@ class Create extends Component
             [
                 'feed_id' => null,
                 'quantity' => null,
-                'unit' => null, // ← new: satuan yang dipilih user
+                'unit_id' => null, // ← changed from 'unit' to 'unit_id' for consistency
                 'price_per_unit' => null,
                 'available_units' => [], // ← new: daftar satuan berdasarkan feed
             ]
@@ -95,13 +95,214 @@ class Create extends Component
         // ];
     }
 
+    public function boot(ExpeditionService $expeditionService)
+    {
+        $this->expeditionService = $expeditionService;
+    }
+
+    /**
+     * Validate expedition input using ExpeditionService
+     * 
+     * @return array - Array of validation errors (empty if valid)
+     */
+    public function validateExpeditionInput(): array
+    {
+        $inputData = [
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee
+        ];
+
+        // Expedition tidak wajib untuk draft, tapi jika diisi harus valid
+        $context = [
+            'require_expedition' => $this->status === 'complete'
+        ];
+
+        return $this->expeditionService->validateLivewireInput($inputData, 'feed_purchase', $context);
+    }
+
+    /**
+     * Create expedition transaction using ExpeditionService
+     * 
+     * @param string $transactionId - ID of the feed purchase transaction
+     * @return bool - Success status
+     */
+    public function createExpeditionTransaction(string $transactionId): bool
+    {
+        Log::info('=== EXPEDITION TRANSACTION CREATION/UPDATE START ===', [
+            'transaction_id' => $transactionId,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+            'expedition_id_type' => gettype($this->expedition_id),
+            'expedition_fee_type' => gettype($this->expedition_fee),
+            'user_company_id' => Auth::user()->company_id ?? 'NULL',
+            'shipping_date' => $this->date,
+            'notes' => null
+        ]);
+
+        try {
+            // Validate input data before processing
+            if (empty($this->expedition_id)) {
+                Log::warning('Expedition ID is empty, cannot create expedition transaction', [
+                    'transaction_id' => $transactionId
+                ]);
+                return false;
+            }
+
+            if (empty($this->expedition_fee) || $this->expedition_fee <= 0) {
+                Log::warning('Expedition fee is invalid, cannot create expedition transaction', [
+                    'transaction_id' => $transactionId,
+                    'expedition_fee' => $this->expedition_fee
+                ]);
+                return false;
+            }
+
+            $inputData = [
+                'expedition_id' => $this->expedition_id,
+                'expedition_fee' => $this->expedition_fee
+            ];
+
+            $context = [
+                'shipping_date' => $this->date,
+                'company_id' => Auth::user()->company_id ?? null,
+                'notes' => null,
+                'total_weight' => $this->calculateTotalWeight()
+            ];
+
+            Log::info('Calling ExpeditionService::createFromLivewireInput', [
+                'input_data' => $inputData,
+                'transaction_type' => 'feed_purchase',
+                'transaction_id' => $transactionId,
+                'context' => $context
+            ]);
+
+            $expeditionTransaction = $this->expeditionService->createFromLivewireInput(
+                $inputData,
+                'feed_purchase',
+                $transactionId,
+                $context
+            );
+
+            if ($expeditionTransaction) {
+                Log::info('=== EXPEDITION TRANSACTION CREATED/UPDATED SUCCESSFULLY ===', [
+                    'feed_purchase_id' => $transactionId,
+                    'expedition_transaction_id' => $expeditionTransaction->id,
+                    'expedition_id' => $expeditionTransaction->expedition_id,
+                    'expedition_cost' => $expeditionTransaction->expedition_cost,
+                    'status' => $expeditionTransaction->status,
+                    'action' => 'created_or_updated'
+                ]);
+                return true;
+            }
+
+            Log::warning('=== EXPEDITION TRANSACTION CREATION/UPDATE FAILED ===', [
+                'feed_purchase_id' => $transactionId,
+                'input_data' => $inputData,
+                'context' => $context,
+                'reason' => 'ExpeditionService::createFromLivewireInput returned null'
+            ]);
+            return false;
+        } catch (\Exception $e) {
+            Log::error('=== EXPEDITION TRANSACTION CREATION/UPDATE ERROR ===', [
+                'error' => $e->getMessage(),
+                'error_trace' => $e->getTraceAsString(),
+                'feed_purchase_id' => $transactionId,
+                'expedition_id' => $this->expedition_id,
+                'expedition_fee' => $this->expedition_fee,
+                'error_code' => $e->getCode(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'error_timestamp' => now()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get estimated expedition cost using ExpeditionService
+     * 
+     * @param string $expeditionId - Expedition ID
+     * @param float $weight - Total weight
+     * @param string $destinationZone - Destination zone
+     * @return array|null - Estimated cost data or null if failed
+     */
+    public function getEstimatedExpeditionCost(string $expeditionId, float $weight, string $destinationZone = ''): ?array
+    {
+        try {
+            $context = [
+                'company_id' => Auth::user()->company_id ?? null,
+                'transaction_type' => 'feed_purchase'
+            ];
+
+            return $this->expeditionService->getEstimatedCostForLivewire(
+                $expeditionId,
+                $weight,
+                $destinationZone,
+                $context
+            );
+        } catch (\Exception $e) {
+            Log::error('Error getting estimated expedition cost', [
+                'error' => $e->getMessage(),
+                'expedition_id' => $expeditionId,
+                'weight' => $weight
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Calculate total weight from all items
+     * 
+     * @return float - Total weight
+     */
+    private function calculateTotalWeight(): float
+    {
+        $totalWeight = 0;
+        foreach ($this->items as $item) {
+            if (!empty($item['quantity']) && !empty($item['feed_id'])) {
+                $feed = Feed::find($item['feed_id']);
+                if ($feed && isset($feed->data['weight_per_unit'])) {
+                    $totalWeight += ($item['quantity'] * $feed->data['weight_per_unit']);
+                }
+            }
+        }
+        return $totalWeight;
+    }
+
+    /**
+     * Normalize expedition_id to ensure it's either a valid UUID or null
+     */
+    private function normalizeExpeditionId($expeditionId)
+    {
+        // If it's null, return null
+        if ($expeditionId === null) {
+            return null;
+        }
+
+        // If it's an empty string, return null
+        if ($expeditionId === '') {
+            return null;
+        }
+
+        // If it's a valid UUID format, return it
+        if (is_string($expeditionId) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $expeditionId)) {
+            return $expeditionId;
+        }
+
+        // If it's not a valid UUID, return null
+        Log::warning('Invalid expedition_id format detected', [
+            'expedition_id' => $expeditionId,
+            'type' => gettype($expeditionId)
+        ]);
+        return null;
+    }
+
     public function addItem()
     {
         // $this->items[] = ['feed_id' => '', 'quantity' => '', 'price_per_unit' => ''];
         $this->items[] = [
             'feed_id' => null,
             'quantity' => null,
-            'unit' => null, // ← new: satuan yang dipilih user
+            'unit_id' => null, // ← changed from 'unit' to 'unit_id' for consistency
             'price_per_unit' => null,
             'available_units' => [], // ← new: daftar satuan berdasarkan feed
         ];
@@ -119,6 +320,17 @@ class Create extends Component
         // dd($this->all());
         $this->errorItems = [];
 
+        // --- FAST PATH: BYPASS SAVE IF NO CHANGES ---
+        $hasChanges = $this->checkDataChanges();
+        if (!$hasChanges) {
+            Log::info('🟡 FeedPurchases.save: No data changes detected, bypassing save.', [
+                'pembelian_id' => $this->pembelianId,
+                'user_id' => Auth::check() ? Auth::id() : null,
+            ]);
+            $this->dispatch('success', 'Tidak ada perubahan data. Proses simpan dibypass.');
+            return;
+        }
+
         // Debug: Log items before validation
         Log::debug('FeedPurchase Save: items before duplicate check', [
             'items' => $this->items,
@@ -126,27 +338,41 @@ class Create extends Component
             'user_id' => Auth::check() ? Auth::id() : null,
         ]);
 
-        // Validasi kombinasi feed_id dan unit_id tidak boleh duplikat
-        $uniqueKeys = [];
-        foreach ($this->items as $idx => $item) {
-            $key = $item['feed_id'] . '-' . $item['unit_id'];
-            if (in_array($key, $uniqueKeys)) {
-                $this->errorItems[$idx] = 'Jenis pakan dan satuan tidak boleh sama dengan baris lain.';
-                Log::warning('FeedPurchase Save: Duplicate feed_id-unit_id found', [
-                    'index' => $idx,
-                    'key' => $key,
-                    'item' => $item,
-                ]);
-            }
-            $uniqueKeys[] = $key;
-        }
+        // Filter out empty items (items without feed_id)
+        $validItems = array_filter($this->items, function ($item) {
+            return !empty($item['feed_id']);
+        });
 
-        if (!empty($this->errorItems)) {
-            Log::info('FeedPurchase Save: Validation error - duplicate feed_id-unit_id', [
-                'errorItems' => $this->errorItems,
-            ]);
-            $this->dispatch('validation-errors', ['errors' => array_values($this->errorItems)]);
-            return;
+        // Allow saving drafts with no items, but validate if items exist
+        if (!empty($validItems)) {
+            // Validasi kombinasi feed_id dan unit_id tidak boleh duplikat hanya untuk item yang valid
+            $uniqueKeys = [];
+            foreach ($validItems as $idx => $item) {
+                // Check if unit_id exists, if not skip duplicate validation for this item
+                if (!isset($item['unit_id']) || empty($item['unit_id'])) {
+                    $this->errorItems[$idx] = 'Satuan harus dipilih untuk pakan ini.';
+                    continue;
+                }
+
+                $key = $item['feed_id'] . '-' . $item['unit_id'];
+                if (in_array($key, $uniqueKeys)) {
+                    $this->errorItems[$idx] = 'Jenis pakan dan satuan tidak boleh sama dengan baris lain.';
+                    Log::warning('FeedPurchase Save: Duplicate feed_id-unit_id found', [
+                        'index' => $idx,
+                        'key' => $key,
+                        'item' => $item,
+                    ]);
+                }
+                $uniqueKeys[] = $key;
+            }
+
+            if (!empty($this->errorItems)) {
+                Log::info('FeedPurchase Save: Validation error - duplicate feed_id-unit_id or missing unit_id', [
+                    'errorItems' => $this->errorItems,
+                ]);
+                $this->dispatch('validation-errors', ['errors' => array_values($this->errorItems)]);
+                return;
+            }
         }
 
         Log::debug('FeedPurchase Save: Passed duplicate validation, start form validation', [
@@ -156,20 +382,41 @@ class Create extends Component
             'expedition_fee' => $this->expedition_fee,
             'livestock_id' => $this->livestock_id,
             'items' => $this->items,
+            'valid_items_count' => count($validItems),
         ]);
 
-        $this->validate([
+        // Validate expedition input if expedition data is provided
+        if (!empty($this->expedition_id) || !empty($this->expedition_fee)) {
+            $expeditionValidationErrors = $this->validateExpeditionInput();
+            if (!empty($expeditionValidationErrors)) {
+                foreach ($expeditionValidationErrors as $field => $message) {
+                    $this->addError($field, $message);
+                }
+                return;
+            }
+        }
+
+        // Prepare validation rules - make items optional for drafts
+        $validationRules = [
             'invoice_number' => 'required|string',
             'date' => 'required|date',
             'supplier_id' => 'required|exists:partners,id',
             'expedition_fee' => 'numeric|min:0',
             'livestock_id' => 'required|exists:livestocks,id',
-            'items' => 'required|array|min:1',
-            'items.*.feed_id' => 'required|exists:feeds,id',
-            'items.*.quantity' => 'required|numeric|min:1',
-            'items.*.price_per_unit' => 'required|numeric|min:0',
-            'items.*.unit_id' => 'required|exists:units,id',
-        ]);
+        ];
+
+        // Only validate items if we have valid items
+        if (!empty($validItems)) {
+            $validationRules = array_merge($validationRules, [
+                'items' => 'required|array|min:1',
+                'items.*.feed_id' => 'required|exists:feeds,id',
+                'items.*.quantity' => 'required|numeric|min:1',
+                'items.*.price_per_unit' => 'required|numeric|min:0',
+                'items.*.unit_id' => 'required|exists:units,id',
+            ]);
+        }
+
+        $this->validate($validationRules);
 
         DB::beginTransaction();
 
@@ -226,95 +473,99 @@ class Create extends Component
                 }
             }
 
-            // Buat key yang digunakan untuk cek data yang tidak lagi dipakai
-            $newItemKeys = collect($this->items)->map(fn($item) => $item['feed_id'] . '-' . $item['unit_id'])->toArray();
-            Log::debug('FeedPurchase Save: New item keys for deletion check', [
-                'newItemKeys' => $newItemKeys,
-            ]);
+            // Only process items if we have valid items
+            if (!empty($validItems)) {
+                // Buat key yang digunakan untuk cek data yang tidak lagi dipakai
+                $newItemKeys = collect($validItems)->map(function ($item) {
+                    return $item['feed_id'] . '-' . ($item['unit_id'] ?? '');
+                })->toArray();
 
-            foreach ($purchase->feedPurchaseItems as $purchaseItem) {
-                $key = $purchaseItem->feed_id . '-' . $purchaseItem->original_unit;
+                Log::debug('FeedPurchase Save: New item keys for deletion check', [
+                    'newItemKeys' => $newItemKeys,
+                ]);
 
-                if (!in_array($key, $newItemKeys)) {
-                    Log::info('FeedPurchase Save: Deleting FeedStock and FeedPurchaseItem', [
-                        'feed_purchase_item_id' => $purchaseItem->id,
-                        'key' => $key,
-                    ]);
-                    FeedStock::where('feed_purchase_id', $purchaseItem->id)->delete();
+                foreach ($purchase->feedPurchaseItems as $purchaseItem) {
+                    $key = $purchaseItem->feed_id . '-' . $purchaseItem->unit_id;
 
-                    if ($this->withHistory) {
-                        $purchaseItem->delete(); // soft delete
-                    } else {
-                        $purchaseItem->forceDelete(); // hard delete
+                    if (!in_array($key, $newItemKeys)) {
+                        Log::info('FeedPurchase Save: Deleting FeedStock and FeedPurchaseItem', [
+                            'feed_purchase_item_id' => $purchaseItem->id,
+                            'key' => $key,
+                        ]);
+                        FeedStock::where('feed_purchase_id', $purchaseItem->id)->delete();
+
+                        if ($this->withHistory) {
+                            $purchaseItem->delete(); // soft delete
+                        } else {
+                            $purchaseItem->forceDelete(); // hard delete
+                        }
                     }
                 }
-            }
 
-            // dd($this->livestock_id);
-            foreach ($this->items as $item) {
-                $user = Auth::user();
-                $feed = Feed::findOrFail($item['feed_id']);
-                Log::debug('FeedPurchase Save: Processing item', [
-                    'feed_id' => $item['feed_id'],
-                    'unit_id' => $item['unit_id'],
-                    'quantity' => $item['quantity'],
-                ]);
-                // $livestock = Livestock::findOrFail($this->livestock_id);
-
-                $units = collect($feed->data['conversion_units']);
-                $selectedUnit = $units->firstWhere('unit_id', $item['unit_id']);
-                $smallestUnit = $units->firstWhere('is_smallest', true);
-
-                if (!$selectedUnit || !$smallestUnit) {
-                    Log::error('FeedPurchase Save: Invalid unit conversion', [
-                        'feed_id' => $feed->id,
-                        'feed_name' => $feed->name,
-                        'selected_unit' => $item['unit_id'],
-                        'units' => $feed->data['conversion_units'],
-                    ]);
-                    throw new \Exception("Invalid unit conversion for feed: {$feed->name}");
-                }
-
-                $convertedQuantity = ($item['quantity'] * $selectedUnit['value']) / $smallestUnit['value'];
-
-                $purchaseItem = FeedPurchaseItem::updateOrCreate(
-                    [
-                        'feed_purchase_id' => $purchase->id,
-                        'feed_id' => $feed->id,
-                    ],
-                    [
+                // Process each valid item
+                foreach ($validItems as $item) {
+                    $user = Auth::user();
+                    $feed = Feed::findOrFail($item['feed_id']);
+                    Log::debug('FeedPurchase Save: Processing item', [
+                        'feed_id' => $item['feed_id'],
+                        'unit_id' => $item['unit_id'] ?? null,
                         'quantity' => $item['quantity'],
-                        'converted_quantity' => $convertedQuantity,
-                        'converted_unit' => $smallestUnit['unit_id'],
-                        'price_per_unit' => $item['price_per_unit'],
-                        'price_per_converted_unit' => $item['unit_id'] !== $smallestUnit['unit_id']
-                            ? round($item['price_per_unit'] * ($smallestUnit['value'] / $selectedUnit['value']), 2)
-                            : $item['price_per_unit'],
-                        'created_by' => $user->id,
+                    ]);
+
+                    $units = collect($feed->data['conversion_units']);
+                    $selectedUnit = $units->firstWhere('unit_id', $item['unit_id']);
+                    $smallestUnit = $units->firstWhere('is_smallest', true);
+
+                    if (!$selectedUnit || !$smallestUnit) {
+                        Log::error('FeedPurchase Save: Invalid unit conversion', [
+                            'feed_id' => $feed->id,
+                            'feed_name' => $feed->name,
+                            'selected_unit' => $item['unit_id'] ?? 'null',
+                            'units' => $feed->data['conversion_units'],
+                        ]);
+                        throw new \Exception("Invalid unit conversion for feed: {$feed->name}");
+                    }
+
+                    $convertedQuantity = ($item['quantity'] * $selectedUnit['value']) / $smallestUnit['value'];
+
+                    $purchaseItem = FeedPurchaseItem::updateOrCreate(
+                        [
+                            'feed_purchase_id' => $purchase->id,
+                            'feed_id' => $feed->id,
+                        ],
+                        [
+                            'quantity' => $item['quantity'],
+                            'converted_quantity' => $convertedQuantity,
+                            'converted_unit' => $smallestUnit['unit_id'],
+                            'price_per_unit' => $item['price_per_unit'],
+                            'price_per_converted_unit' => $item['unit_id'] !== $smallestUnit['unit_id']
+                                ? round($item['price_per_unit'] * ($smallestUnit['value'] / $selectedUnit['value']), 2)
+                                : $item['price_per_unit'],
+                            'created_by' => $user->id,
+                            'feed_id' => $feed->id,
+                            'unit_id' => $item['unit_id'],
+                        ]
+                    );
+
+                    Log::info('FeedPurchase Save: FeedPurchaseItem created/updated', [
+                        'feed_purchase_item_id' => $purchaseItem->id,
                         'feed_id' => $feed->id,
                         'unit_id' => $item['unit_id'],
-                    ]
-                );
-
-                Log::info('FeedPurchase Save: FeedPurchaseItem created/updated', [
-                    'feed_purchase_item_id' => $purchaseItem->id,
-                    'feed_id' => $feed->id,
-                    'unit_id' => $item['unit_id'],
-                    'quantity' => $item['quantity'],
+                        'quantity' => $item['quantity'],
+                    ]);
+                }
+            } else {
+                Log::info('FeedPurchase Save: No valid items to process, saving as draft', [
+                    'purchase_id' => $purchase->id,
                 ]);
-
-                // // Process FeedStock creation/update
-                // $this->processFeedStock($purchase, $item, $feed, $livestock, $convertedQuantity);
-
-                // // Update CurrentSupply
-                // $this->updateCurrentSupply($livestock, $feed);
             }
 
+            // Save data payload including all items (valid and empty)
             $purchase->data = [
                 'items' => collect($this->items)->map(fn($item) => [
                     'feed_id' => $item['feed_id'],
                     'quantity' => $item['quantity'],
-                    'unit_id' => $item['unit_id'],
+                    'unit_id' => $item['unit_id'] ?? null,
                     'price_per_unit' => $item['price_per_unit'],
                     'available_units' => $item['available_units'] ?? [],
                 ])->toArray(),
@@ -331,9 +582,73 @@ class Create extends Component
                 'data' => $purchase->data,
             ]);
 
+            // Create expedition transaction if expedition data exists (regardless of status)
+            if (!empty($this->expedition_id) && !empty($this->expedition_fee)) {
+                Log::info('=== EXPEDITION DATA CHECK IN SAVE METHOD ===', [
+                    'purchase_id' => $purchase->id,
+                    'expedition_id' => $this->expedition_id,
+                    'expedition_fee' => $this->expedition_fee,
+                    'expedition_id_empty' => empty($this->expedition_id),
+                    'expedition_fee_empty' => empty($this->expedition_fee),
+                    'expedition_id_type' => gettype($this->expedition_id),
+                    'expedition_fee_type' => gettype($this->expedition_fee),
+                    'status' => $this->status ?? 'draft',
+                    'user_id' => Auth::user()->id,
+                    'company_id' => Auth::user()->company_id ?? 'NULL'
+                ]);
+
+                $expeditionSuccess = $this->createExpeditionTransaction($purchase->id);
+
+                if ($expeditionSuccess) {
+                    Log::info('=== EXPEDITION TRANSACTION CREATED SUCCESSFULLY ===', [
+                        'purchase_id' => $purchase->id,
+                        'expedition_id' => $this->expedition_id,
+                        'expedition_fee' => $this->expedition_fee
+                    ]);
+                } else {
+                    Log::error('=== EXPEDITION TRANSACTION CREATION FAILED - ROLLBACK REQUIRED ===', [
+                        'purchase_id' => $purchase->id,
+                        'expedition_id' => $this->expedition_id,
+                        'expedition_fee' => $this->expedition_fee,
+                        'status' => $this->status ?? 'draft',
+                        'reason' => 'Expedition transaction creation failed - rolling back entire transaction'
+                    ]);
+
+                    // Rollback database transaction karena expedition gagal
+                    DB::rollBack();
+
+                    // Set error message untuk user
+                    $this->addError('expedition_error', 'Gagal membuat expedition transaction. Mohon periksa data ekspedisi dan biaya. Jika masalah berlanjut, hubungi administrator.');
+
+                    // Log error detail untuk debugging
+                    Log::error('=== FEED PURCHASE SAVE ROLLBACK DUE TO EXPEDITION FAILURE ===', [
+                        'purchase_id' => $purchase->id,
+                        'expedition_id' => $this->expedition_id,
+                        'expedition_fee' => $this->expedition_fee,
+                        'user_id' => Auth::user()->id,
+                        'company_id' => Auth::user()->company_id ?? 'NULL',
+                        'rollback_reason' => 'Expedition transaction creation failed',
+                        'rollback_timestamp' => now()
+                    ]);
+
+                    return; // Stop execution, tidak lanjut ke commit
+                }
+            } else {
+                Log::info('=== NO EXPEDITION DATA TO PROCESS ===', [
+                    'purchase_id' => $purchase->id,
+                    'expedition_id' => $this->expedition_id,
+                    'expedition_fee' => $this->expedition_fee,
+                    'reason' => 'Either expedition_id or expedition_fee is empty'
+                ]);
+            }
+
             DB::commit();
 
-            $this->dispatch('success', 'Pembelian pakan berhasil ' . ($this->pembelianId ? 'diperbarui' : 'disimpan'));
+            $message = empty($validItems)
+                ? 'Draft pembelian pakan berhasil ' . ($this->pembelianId ? 'diperbarui' : 'disimpan')
+                : 'Pembelian pakan berhasil ' . ($this->pembelianId ? 'diperbarui' : 'disimpan');
+
+            $this->dispatch('success', $message);
             $this->close();
         } catch (ValidationException $e) {
             DB::rollBack();
@@ -359,7 +674,7 @@ class Create extends Component
             [
                 'feed_id' => null,
                 'quantity' => null,
-                'unit' => null, // ← new: satuan yang dipilih user
+                'unit_id' => null, // ← changed from 'unit' to 'unit_id' for consistency
                 'price_per_unit' => null,
                 'available_units' => [], // ← new: daftar satuan berdasarkan feed
             ],
@@ -397,6 +712,51 @@ class Create extends Component
                 $this->items[$index]['unit_id'] = null;
             }
         }
+
+        // Trigger kalkulasi otomatis untuk field yang mempengaruhi sub total
+        if (in_array($field, ['quantity', 'price_per_unit'])) {
+            $this->calculateItemSubTotal($index);
+            $this->dispatch('item-updated', index: $index);
+        }
+    }
+
+    /**
+     * Kalkulasi sub total untuk item tertentu
+     */
+    public function calculateItemSubTotal($index)
+    {
+        if (!isset($this->items[$index])) {
+            return;
+        }
+
+        $item = $this->items[$index];
+        $quantity = floatval($item['quantity'] ?? 0);
+        $price = floatval($item['price_per_unit'] ?? 0);
+
+        $subTotal = $quantity * $price;
+        $this->items[$index]['sub_total'] = $subTotal;
+    }
+
+    /**
+     * Method khusus untuk update quantity dengan kalkulasi otomatis
+     */
+    public function updatedItemsQuantity($value, $key)
+    {
+        [$index] = explode('.', $key);
+        $this->items[$index]['quantity'] = $value;
+        $this->calculateItemSubTotal($index);
+        $this->dispatch('item-updated', index: $index);
+    }
+
+    /**
+     * Method khusus untuk update price dengan kalkulasi otomatis
+     */
+    public function updatedItemsPricePerUnit($value, $key)
+    {
+        [$index] = explode('.', $key);
+        $this->items[$index]['price_per_unit'] = $value;
+        $this->calculateItemSubTotal($index);
+        $this->dispatch('item-updated', index: $index);
     }
 
     public function updateUnitConversion($index)
@@ -445,14 +805,23 @@ class Create extends Component
         $user = Auth::user();
         $companyId = $user ? $user->company_id : null;
 
-        $isSuperAdmin = $user && method_exists($user, 'hasRole') && $user->hasRole('SuperAdmin');
-        $isCompanyRole = $user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Supervisor', 'Manager', 'Administrator']);
-        $isOperator = $user && method_exists($user, 'hasRole') && $user->hasRole('Operator');
+        $roles = [];
+        if ($user && method_exists($user, 'getRoleNames')) {
+            try {
+                $roleNames = call_user_func([$user, 'getRoleNames']);
+                $roles = is_object($roleNames) && method_exists($roleNames, 'toArray') ? $roleNames->toArray() : (array) $roleNames;
+            } catch (\Throwable $e) {
+                $roles = [];
+            }
+        }
+        $isSuperAdmin = in_array('SuperAdmin', $roles, true);
+        $isCompanyRole = !empty(array_intersect($roles, ['Supervisor', 'Manager', 'Administrator']));
+        $isOperator = in_array('Operator', $roles, true);
 
         // Logging for debugging role-based data filtering
         Log::debug('FeedPurchases/Create render() called', [
             'user_id' => $user ? $user->id : null,
-            'roles' => ($user && method_exists($user, 'getRoleNames')) ? $user->getRoleNames() : [],
+            'roles' => $roles,
             'company_id' => $companyId,
             'isSuperAdmin' => $isSuperAdmin,
             'isCompanyRole' => $isCompanyRole,
@@ -472,13 +841,13 @@ class Create extends Component
             $vendors = collect();
         }
 
-        // Expeditions
+        // Expeditions (from partners)
         if ($isSuperAdmin) {
-            $expeditions = Expedition::all();
+            $expeditions = Partner::where('type', 'Expedition')->get();
         } elseif ($isCompanyRole) {
-            $expeditions = Expedition::where('company_id', $companyId)->get();
+            $expeditions = Partner::where('type', 'Expedition')->where('company_id', $companyId)->get();
         } elseif ($isOperator) {
-            $expeditions = Expedition::where('company_id', $companyId)->get();
+            $expeditions = Partner::where('type', 'Expedition')->where('company_id', $companyId)->get();
         } else {
             $expeditions = collect();
         }
@@ -506,6 +875,19 @@ class Create extends Component
             })->get();
         } else {
             $livestocks = collect();
+        }
+
+        // Debug logging for edit mode
+        if ($this->edit_mode) {
+            Log::debug('FeedPurchases/Create render() in edit mode', [
+                'livestock_id' => $this->livestock_id,
+                'expedition_id' => $this->expedition_id,
+                'supplier_id' => $this->supplier_id,
+                'available_expeditions_count' => $expeditions->count(),
+                'available_livestocks_count' => $livestocks->count(),
+                'expedition_exists' => $expeditions->where('id', $this->expedition_id)->count() > 0,
+                'livestock_exists' => $livestocks->where('id', $this->livestock_id)->count() > 0,
+            ]);
         }
 
         return view('livewire.feed-purchases.create', [
@@ -702,12 +1084,7 @@ class Create extends Component
 
     public function updateDoNumber($transaksiId, $newNoSj)
     {
-        // If FeedPurchaseBatch is not defined, fallback to FeedPurchase
-        if (class_exists('App\\Models\\FeedPurchaseBatch')) {
-            $transaksiDetail = \App\Models\FeedPurchaseBatch::findOrFail($transaksiId);
-        } else {
-            $transaksiDetail = \App\Models\FeedPurchase::findOrFail($transaksiId);
-        }
+        $transaksiDetail = \App\Models\FeedPurchase::findOrFail($transaksiId);
 
         if ($transaksiDetail->exists()) {
             $transaksiDetail->do_number = $newNoSj;
@@ -743,26 +1120,35 @@ class Create extends Component
     public function showEditForm($id)
     {
         $this->pembelianId = $id;
-        $pembelian = FeedPurchase::with(['feedPurchaseItems.feed'])->find($id);
+        $pembelian = FeedPurchase::with(['feedPurchaseItems.feed', 'livestock', 'supplier', 'expedition'])->find($id);
 
         if (!$pembelian) {
             $this->dispatch('error', 'Data pembelian tidak ditemukan');
             return;
         }
 
-        // Initialize basic data
+        // Initialize basic data directly from FeedPurchase model
         $this->date = $pembelian->date;
         $this->invoice_number = $pembelian->invoice_number;
         $this->supplier_id = $pembelian->supplier_id;
-        $this->expedition_id = $pembelian->expedition_id;
-        $this->expedition_fee = $pembelian->expedition_fee;
+        $this->expedition_id = $this->normalizeExpeditionId($pembelian->expedition_id);
+        $this->expedition_fee = $pembelian->expedition_fee ?? 0;
+        $this->livestock_id = $pembelian->livestock_id; // ← Fix: Get from main record
         $this->status = $pembelian->status;
 
-        // Get data from feedPurchases
-        $feedPurchaseData = $pembelian->feedPurchaseItems->map(function ($purchase) {
-            $feed = $purchase->feed;
+        Log::info('FeedPurchase Edit: Loading form data', [
+            'purchase_id' => $pembelian->id,
+            'livestock_id' => $this->livestock_id,
+            'supplier_id' => $this->supplier_id,
+            'expedition_id' => $this->expedition_id,
+            'expedition_fee' => $this->expedition_fee,
+        ]);
+
+        // Get data from feedPurchaseItems
+        $feedPurchaseData = $pembelian->feedPurchaseItems->map(function ($purchaseItem) {
+            $feed = $purchaseItem->feed;
             $available_units = [];
-            $unit_id = $purchase->unit_id;
+            $unit_id = $purchaseItem->unit_id;
 
             if ($feed && isset($feed->data['conversion_units'])) {
                 $available_units = collect($feed->data['conversion_units'])->map(function ($unit) {
@@ -777,24 +1163,20 @@ class Create extends Component
             }
 
             return [
-                'livestock_id' => $purchase->livestock_id,
-                'feed_id' => $purchase->feed_id,
-                'quantity' => $purchase->quantity,
-                'price_per_unit' => $purchase->price_per_unit,
+                'feed_id' => $purchaseItem->feed_id,
+                'quantity' => $purchaseItem->quantity,
+                'price_per_unit' => $purchaseItem->price_per_unit,
                 'unit_id' => $unit_id,
                 'available_units' => $available_units,
             ];
         })->toArray();
 
-        // Get data from payload
+        // Get data from payload if exists
         $payloadData = $pembelian->data['items'] ?? [];
 
-        // Compare and use the most recent data
-        $this->items = [];
-        $this->livestock_id = null;
-
+        // Set items and livestock_id
         if (!empty($payloadData)) {
-            // Check if payload data is newer than feedPurchases
+            // Check if payload data is newer than feedPurchaseItems
             $payloadItems = collect($payloadData)->map(function ($item) {
                 return [
                     'feed_id' => $item['feed_id'],
@@ -818,7 +1200,7 @@ class Create extends Component
             if ($this->isDataDifferent($payloadItems, $feedPurchaseItems)) {
                 $pembelian->data = array_merge($pembelian->data ?? [], [
                     'items' => $feedPurchaseData,
-                    'livestock_id' => $feedPurchaseData[0]['livestock_id'] ?? null,
+                    'livestock_id' => $this->livestock_id, // ← Fix: Use main record livestock_id
                     'supplier_id' => $this->supplier_id,
                     'expedition_id' => $this->expedition_id,
                     'expedition_fee' => $this->expedition_fee,
@@ -827,20 +1209,32 @@ class Create extends Component
                 $pembelian->save();
 
                 $this->items = $feedPurchaseData;
-                $this->livestock_id = $feedPurchaseData[0]['livestock_id'] ?? null;
             } else {
                 $this->items = $payloadItems;
-                $this->livestock_id = $pembelian->data['livestock_id'] ?? null;
+
+                // Ensure livestock_id from payload matches main record, fallback to main record
+                $payloadLivestockId = $pembelian->data['livestock_id'] ?? null;
+                if ($payloadLivestockId && $payloadLivestockId !== $this->livestock_id) {
+                    Log::warning('FeedPurchase Edit: Payload livestock_id differs from main record', [
+                        'purchase_id' => $pembelian->id,
+                        'main_livestock_id' => $this->livestock_id,
+                        'payload_livestock_id' => $payloadLivestockId,
+                    ]);
+                    // Keep the main record value, update payload
+                    $pembelian->data = array_merge($pembelian->data ?? [], [
+                        'livestock_id' => $this->livestock_id,
+                    ]);
+                    $pembelian->save();
+                }
             }
         } else {
-            // If no payload data, use feedPurchases data
+            // If no payload data, use feedPurchaseItems data
             $this->items = $feedPurchaseData;
-            $this->livestock_id = $feedPurchaseData[0]['livestock_id'] ?? null;
 
-            // Update payload with feedPurchases data
+            // Update payload with current data
             $pembelian->data = [
                 'items' => $feedPurchaseData,
-                'livestock_id' => $this->livestock_id,
+                'livestock_id' => $this->livestock_id, // ← Fix: Use main record livestock_id
                 'supplier_id' => $this->supplier_id,
                 'expedition_id' => $this->expedition_id,
                 'expedition_fee' => $this->expedition_fee,
@@ -849,9 +1243,34 @@ class Create extends Component
             $pembelian->save();
         }
 
+        Log::info('FeedPurchase Edit: Form data loaded successfully', [
+            'purchase_id' => $pembelian->id,
+            'livestock_id' => $this->livestock_id,
+            'supplier_id' => $this->supplier_id,
+            'expedition_id' => $this->expedition_id,
+            'items_count' => count($this->items),
+        ]);
+
+        // Add debugging for frontend values
+        Log::info('FeedPurchase Edit: Final values before showing form', [
+            'livestock_id' => $this->livestock_id,
+            'expedition_id' => $this->expedition_id,
+            'supplier_id' => $this->supplier_id,
+            'expedition_fee' => $this->expedition_fee,
+            'date' => $this->date,
+            'invoice_number' => $this->invoice_number,
+        ]);
+
         $this->showForm = true;
         $this->edit_mode = true;
         $this->dispatch('hide-datatable');
+
+        // Force Livewire to re-render the form with updated data
+        $this->dispatch('form-data-loaded', [
+            'livestock_id' => $this->livestock_id,
+            'expedition_id' => $this->expedition_id,
+            'supplier_id' => $this->supplier_id,
+        ]);
     }
 
     private function isDataDifferent($payloadItems, $feedPurchaseItems)
@@ -1168,7 +1587,7 @@ class Create extends Component
             // 5. Validate expedition if exists
             if (!empty($purchase->expedition_id)) {
                 try {
-                    $expedition = Expedition::findOrFail($purchase->expedition_id);
+                    $expedition = Partner::findOrFail($purchase->expedition_id);
                 } catch (\Exception $e) {
                     $warnings[] = "Expedition dengan ID {$purchase->expedition_id} tidak ditemukan";
                 }
@@ -2203,5 +2622,171 @@ class Create extends Component
         }
 
         return null; // Bridge not available
+    }
+
+    /**
+     * Change detection for FeedPurchases
+     */
+    private function checkDataChanges(): bool
+    {
+        if (empty($this->pembelianId)) {
+            return true;
+        }
+        $current = $this->getFormDataForComparison();
+        $original = $this->getOriginalDataForComparison();
+        if (class_exists('App\\Helpers\\DataChangeDetector')) {
+            return \App\Helpers\DataChangeDetector::formHasChanges($current, $original, []);
+        }
+        return json_encode($current) !== json_encode($original);
+    }
+
+    private function getFormDataForComparison(): array
+    {
+        $normalizedItems = $this->normalizeFeedItems($this->items ?? []);
+        // Normalize date to date-only (Y-m-d) to avoid false changes on time component differences
+        $normalizedDate = null;
+        try {
+            if ($this->date instanceof \Carbon\Carbon) {
+                $normalizedDate = $this->date->format('Y-m-d');
+            } elseif (is_string($this->date) && trim($this->date) !== '') {
+                $normalizedDate = \Carbon\Carbon::parse($this->date)->format('Y-m-d');
+            }
+        } catch (\Throwable $e) {
+            $normalizedDate = $this->date; // fallback
+        }
+
+        return [
+            'invoice_number' => $this->invoice_number,
+            'date' => $normalizedDate ?? $this->date,
+            'supplier_id' => $this->supplier_id,
+            'expedition_id' => $this->expedition_id ?? null,
+            'expedition_fee' => (float) ($this->expedition_fee ?? 0),
+            'livestock_id' => $this->livestock_id,
+            'items' => $normalizedItems,
+        ];
+    }
+
+    private function getOriginalDataForComparison(): array
+    {
+        if (empty($this->pembelianId)) {
+            return [];
+        }
+        $purchase = \App\Models\FeedPurchase::with('feedPurchaseItems')
+            ->find($this->pembelianId);
+        if (!$purchase) {
+            return [];
+        }
+        $items = [];
+        foreach ($purchase->feedPurchaseItems as $pi) {
+            $items[] = [
+                'feed_id' => $pi->feed_id,
+                'unit_id' => $pi->unit_id,
+                'quantity' => (float) $pi->quantity,
+                'price_per_unit' => (float) $pi->price_per_unit,
+            ];
+        }
+        return [
+            'invoice_number' => $purchase->invoice_number,
+            'date' => optional($purchase->date)->format('Y-m-d') ?? $purchase->date,
+            'supplier_id' => $purchase->supplier_id,
+            'expedition_id' => $purchase->expedition_id,
+            'expedition_fee' => (float) ($purchase->expedition_fee ?? 0),
+            'livestock_id' => $purchase->livestock_id,
+            'items' => $this->normalizeFeedItems($items),
+        ];
+    }
+
+    private function normalizeFeedItems(array $items): array
+    {
+        $normalized = array_map(function ($item) {
+            return [
+                'feed_id' => $item['feed_id'] ?? null,
+                'unit_id' => $item['unit_id'] ?? ($item['unit'] ?? null),
+                'quantity' => isset($item['quantity']) ? (float) $item['quantity'] : null,
+                'price_per_unit' => isset($item['price_per_unit']) ? (float) $item['price_per_unit'] : null,
+            ];
+        }, $items);
+        usort($normalized, function ($a, $b) {
+            return strcmp(($a['feed_id'] . '-' . $a['unit_id']), ($b['feed_id'] . '-' . $b['unit_id']));
+        });
+        return $normalized;
+    }
+
+    /**
+     * Trigger kalkulasi otomatis saat expedition_fee berubah
+     */
+    public function updatedExpeditionFee($value)
+    {
+        // Trigger re-render untuk update ringkasan
+        $this->dispatch('expedition-fee-updated');
+    }
+
+    /**
+     * Method untuk force update kalkulasi semua item
+     */
+    public function recalculateAllItems()
+    {
+        foreach ($this->items as $index => $item) {
+            if (isset($item['quantity']) && isset($item['price_per_unit'])) {
+                $this->items[$index]['sub_total'] = $item['quantity'] * $item['price_per_unit'];
+            }
+        }
+        $this->dispatch('all-items-recalculated');
+    }
+
+    /**
+     * Method untuk handle event recalculate-totals dari JavaScript
+     */
+    public function recalculateTotals()
+    {
+        $this->recalculateAllItems();
+        $this->dispatch('totals-recalculated');
+    }
+
+    /**
+     * Kalkulasi total keseluruhan
+     */
+    public function calculateTotal()
+    {
+        $total = 0;
+        $discount = 0;
+
+        foreach ($this->items as $index => $item) {
+            if (isset($item['quantity']) && isset($item['price_per_unit'])) {
+                $this->items[$index]['sub_total'] = $item['quantity'] * $item['price_per_unit'];
+                $total += $this->items[$index]['sub_total'];
+            }
+        }
+
+        return [
+            'sub_total' => $total,
+            'discount' => $discount,
+            'expedition_fee' => floatval($this->expedition_fee ?? 0),
+            'total' => $total - $discount + floatval($this->expedition_fee ?? 0)
+        ];
+    }
+
+    /**
+     * Getter untuk total yang bisa diakses dari view
+     */
+    public function getTotalProperty()
+    {
+        return $this->calculateTotal();
+    }
+
+    /**
+     * Getter untuk sub total item tertentu
+     */
+    public function getItemSubTotal($index)
+    {
+        if (!isset($this->items[$index])) {
+            return 0;
+        }
+
+        if (isset($this->items[$index]['quantity']) && isset($this->items[$index]['price_per_unit'])) {
+            $this->items[$index]['sub_total'] = $this->items[$index]['quantity'] * $this->items[$index]['price_per_unit'];
+        }
+
+        return $this->items[$index]['sub_total'] ?? 0;
     }
 }

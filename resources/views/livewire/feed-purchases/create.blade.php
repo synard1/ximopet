@@ -30,18 +30,23 @@
             </x-input.group>
 
             <x-input.group col="6" label="Ekspedisi">
-                <select wire:model="master_expedition_id" class="form-select" @if($this->isDisabled()) disabled @endif>
+                <!-- Debug: expedition_id = {{ $expedition_id ?? 'null' }} -->
+                <select wire:model="expedition_id" wire:key="expedition-select-{{ $edit_mode ? $pembelianId : 'new' }}"
+                    class="form-select" @if($this->isDisabled()) disabled @endif>
                     <option value="">-- Pilih Ekspedisi --</option>
                     @foreach ($expeditions as $expedition)
-                    <option value="{{ $expedition->id }}">{{ $expedition->name }}
+                    <option value="{{ $expedition->id }}" @if($expedition_id==$expedition->id) selected @endif>{{
+                        $expedition->name }}
                     </option>
                     @endforeach
                 </select>
-                <x-input.error for="master_expedition_id" />
+                <x-input.error for="expedition_id" />
             </x-input.group>
 
             <x-input.group col="6" label="Batch Ayam">
-                <select wire:model="livestock_id" class="form-select" @if($this->isDisabled()) disabled @endif>
+                <!-- Debug: livestock_id = {{ $livestock_id ?? 'null' }} -->
+                <select wire:model="livestock_id" wire:key="livestock-select-{{ $edit_mode ? $pembelianId : 'new' }}"
+                    class="form-select" @if($this->isDisabled()) disabled @endif>
                     <option value="">-- Pilih Batch Ayam --</option>
                     @foreach ($livestocks as $livestock)
                     <option value="{{ $livestock->id }}" @if($livestock_id==$livestock->id) selected @endif>{{

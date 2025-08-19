@@ -2,7 +2,7 @@
 
 namespace App\Livewire;
 
-use App\Models\QaChecklist;
+use App\Models\QaChecklist as QaChecklistModel;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -34,7 +34,7 @@ class QaChecklist extends Component
     public function render()
     {
         return view('livewire.qa checklist', [
-            'checklists' => QaChecklist::latest()->paginate(10)
+            'checklists' => QaChecklistModel::latest()->paginate(10)
         ]);
     }
 
@@ -43,7 +43,7 @@ class QaChecklist extends Component
         $this->validate();
 
         if ($this->editingId) {
-            QaChecklist::find($this->editingId)->update([
+            QaChecklistModel::find($this->editingId)->update([
                 'feature_name' => $this->feature_name,
                 'feature_category' => $this->feature_category,
                 'test_case' => $this->test_case,
@@ -54,7 +54,7 @@ class QaChecklist extends Component
                 'test_date' => $this->test_date
             ]);
         } else {
-            QaChecklist::create([
+            QaChecklistModel::create([
                 'feature_name' => $this->feature_name,
                 'feature_category' => $this->feature_category,
                 'test_case' => $this->test_case,
@@ -72,7 +72,7 @@ class QaChecklist extends Component
 
     public function edit($id)
     {
-        $checklist = QaChecklist::find($id);
+        $checklist = QaChecklistModel::find($id);
         $this->editingId = $id;
         $this->feature_name = $checklist->feature_name;
         $this->feature_category = $checklist->feature_category;
@@ -86,14 +86,14 @@ class QaChecklist extends Component
 
     public function delete($id)
     {
-        QaChecklist::find($id)->delete();
+        QaChecklistModel::find($id)->delete();
         session()->flash('message', 'Checklist deleted successfully.');
         $this->dispatch('success', 'Checklist deleted successfully.');
     }
 
     public function exportToJson()
     {
-        $checklists = QaChecklist::all();
+        $checklists = QaChecklistModel::all();
         $json = json_encode($checklists, JSON_PRETTY_PRINT);
 
         return response()->streamDownload(function () use ($json) {
@@ -103,7 +103,7 @@ class QaChecklist extends Component
 
     public function exportToTxt()
     {
-        $checklists = QaChecklist::all();
+        $checklists = QaChecklistModel::all();
         $content = '';
 
         foreach ($checklists as $checklist) {

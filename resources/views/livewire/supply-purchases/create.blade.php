@@ -4,13 +4,7 @@
 
         <div class="row g-3">
             <x-input.group col="6" label="Tanggal">
-                {{-- <input type="date" wire:model="date" class="form-control"> --}}
-                <input wire:model="date" id="date" class="form-control form-control-solid" placeholder="Tanggal" x-data
-                    x-init="flatpickr($el, {
-                            enableTime: true,
-                            dateFormat: 'Y-m-d',
-                            defaultDate: '{{ $date }}', // Set initial date from Livewire
-                        })">
+                <input type="date" wire:model="date" class="form-control form-control-solid" placeholder="Tanggal">
                 <x-input.error for="date" />
             </x-input.group>
             {{-- <x-input.group col="6" label="Tanggal">
@@ -60,19 +54,20 @@
 
             <x-input.group col="6" label="Ekspedisi">
 
-                <select wire:model="master_expedition_id" class="form-select">
+                <select wire:model="expedition_id" class="form-select">
 
                     <option value="">-- Pilih Ekspedisi --</option>
 
                     @foreach ($expeditions as $expedition)
-                    <option value="{{ $expedition->id }}">{{ $expedition->name }}
+                    <option value="{{ $expedition->id }}" @if($expedition_id==$expedition->id) selected @endif>{{
+                        $expedition->name }}
                     </option>
                     @endforeach
 
                 </select>
 
 
-                <x-input.error for="master_expedition_id" />
+                <x-input.error for="expedition_id" />
 
 
             </x-input.group>
