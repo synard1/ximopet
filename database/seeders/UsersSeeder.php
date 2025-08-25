@@ -36,6 +36,14 @@ class UsersSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
+        // System manual for system company template
+        User::create([
+            'name'              => 'System',
+            'email'             => 'system@peternakan.digital',
+            'password'          => Hash::make('System123!@'),
+            'email_verified_at' => now(),
+        ]);
+
         // Template demo emails
         $demoAccounts = [
             'admin@demo.com',

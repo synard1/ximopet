@@ -16,6 +16,7 @@ return new class extends Migration
 
         Schema::create('livestock_strain_standards', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('company_id')->index();
             $table->uuid('livestock_strain_id');
             $table->string('livestock_strain_name');
             $table->json('standar_data');
@@ -27,6 +28,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            $table->foreign('company_id')->references('id')->on('companies');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
             $table->foreign('livestock_strain_id')->references('id')->on('livestock_strains');

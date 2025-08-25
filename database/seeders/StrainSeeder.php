@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\StandarBobot;
 use App\Models\LivestockStrain;
 use App\Models\LivestockStrainStandard;
+use App\Models\Company;
 
 class StrainSeeder extends Seeder
 {
@@ -16,7 +17,9 @@ class StrainSeeder extends Seeder
      */
     public function run(): void
     {
-        $supervisor = User::where('email', 'supervisor@demo.com')->first();
+
+        $companyId = Company::where('code', 'SYSTEM')->first()->id;
+        $supervisor = User::where('email', 'system@peternakan.digital')->first();
         if (!$supervisor) {
             $this->command->error("Supervisor user not found. Cannot create standard weight data.");
             return;
@@ -1139,7 +1142,7 @@ class StrainSeeder extends Seeder
             $data = $strainData['data'];
 
             // Check if strain already exists in LivestockStrain table
-            $existingStrain = LivestockStrain::where('name', $strainName)->first();
+            $existingStrain = LivestockStrain::where('name', $strainName)->where('company_id', $companyId)->first();
             if ($existingStrain) {
                 $this->command->info("Strain '{$strainName}' already exists. Skipping standard data creation.");
                 continue; // Skip to the next strain
@@ -1148,6 +1151,7 @@ class StrainSeeder extends Seeder
             // Create LivestockStrain entry with random code
             $randomCode = strtoupper(substr(md5(uniqid()), 0, 6));
             $livestockStrain = LivestockStrain::create([
+                'company_id' => $companyId,
                 'code' => $randomCode,
                 'name' => $strainName,
                 'description' => $strainDescription,
@@ -1184,6 +1188,7 @@ class StrainSeeder extends Seeder
 
             // Create a single record in LivestockStrainStandard with all data in JSON format
             LivestockStrainStandard::create([
+                'company_id' => $companyId,
                 'livestock_strain_id' => $livestockStrain->id,
                 'livestock_strain_name' => $strainName,
                 'description' => $strainDescription,

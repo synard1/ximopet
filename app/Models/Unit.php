@@ -13,6 +13,7 @@ class Unit extends BaseModel
 
     protected $fillable = [
         'id',
+        'company_id',
         'type',
         'code',
         'symbol',
@@ -23,6 +24,11 @@ class Unit extends BaseModel
     ];
 
     protected $casts = [];
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id', 'id');
+    }
 
     public function supplyPurchase()
     {

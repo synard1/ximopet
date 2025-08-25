@@ -17,21 +17,36 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
         $this->call([
-            SystemCompanySeeder::class,
-            SystemConfigSeeder::class,
+            // ===== SYSTEM FOUNDATION SEEDERS =====
+            // These must run first to establish system infrastructure
+            SystemCompanySeeder::class,      // Creates SYSTEM company from xolution.php config
+            SystemConfigSeeder::class,       // Seeds system configuration (depends on SystemCompanySeeder)
+
+            // ===== DEMO/TESTING SEEDERS =====
+            // Optional seeders for development and testing
+            DemoSeeder::class,               // Creates DEMO company if enabled in xolution.php
+
+            // ===== USER & PERMISSION SEEDERS =====
+            // Core user management and permissions
             UsersSeeder::class,
             RolesPermissionsSeeder::class,
-            // DemoSeeder::class,
+
+            // ===== MASTER DATA SEEDERS =====
+            // Core application data
+            MenuSeeder::class,
+            UnitSeeder::class,
+            SupplyCategorySeeder::class,
+            OVKSeeder::class,               // OVK supplies for system company
+            StrainSeeder::class,
+
+
+            // ===== OPTIONAL SEEDERS =====
+            // Uncomment as needed for specific features
             // LivestockPurchaseSeeder::class,
             // QaPermissionSeeder::class,
             // QaUserSeeder::class,
             // RoutePermissionSeeder::class,
-            MenuSeeder::class,
-            // UnitSeeder::class,
-            SupplyCategorySeeder::class,
-            // BreedSeeder::class,
             // WorkerSeeder::class,
-            // OVKSeeder::class,
             // LivestockBatchSeeder::class,
             // QaTodoPermissionSeeder::class,
             // QaTodoMasterDataSeeder::class,

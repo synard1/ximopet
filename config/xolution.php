@@ -13,6 +13,107 @@ return [
         'NAME' => 'Xistem Monitoring Peternakan',
         'Tag' => 'Xistem Monitoring Peternakan',
         'Version' => 'V1.2.1',
+
+    ],
+
+    // Default Company Configuration - Reusable across seeders and application
+    'DEFAULT_COMPANY' => [
+        'SYSTEM' => [
+            'code' => 'SYSTEM',
+            'name' => 'System Template',
+            'type' => 'system',
+            'status' => 'active',
+            'is_locked' => true,
+            'description' => 'Default template company for seeding master/template data',
+            'email' => 'system@peternakan.digital',
+            'metadata' => [
+                'description' => 'Default template company for seeding master/template data',
+                'created_by' => 'SystemCompanySeeder',
+                'seeder_version' => '1.0.0',
+                'purpose' => 'system_template',
+                'environment' => 'all',
+                'features' => [
+                    'master_data_seeding',
+                    'template_configuration',
+                    'system_level_config',
+                    'default_settings'
+                ]
+            ],
+            'config_sections' => [
+                'purchasing' => true,
+                'sales' => true,
+                'mutation' => true,
+                'usage' => true,
+                'notification' => true,
+                'reporting' => true,
+                'integration' => true,
+                'livestock' => true,
+                'feed' => true,
+                'supply' => true
+            ]
+        ],
+        'DEMO' => [
+            'code' => 'DEMO',
+            'name' => 'Demo Company',
+            'type' => 'demo',
+            'status' => 'active',
+            'is_locked' => false,
+            'description' => 'Demo company for testing and development purposes',
+            'metadata' => [
+                'description' => 'Demo company for testing and development purposes',
+                'created_by' => 'DemoSeeder',
+                'seeder_version' => '1.0.0',
+                'purpose' => 'demo_testing',
+                'environment' => 'development',
+                'features' => [
+                    'demo_data',
+                    'testing_scenarios',
+                    'development_support',
+                    'user_training'
+                ]
+            ],
+            'config_sections' => [
+                'purchasing' => true,
+                'sales' => true,
+                'mutation' => true,
+                'usage' => true,
+                'notification' => false,
+                'reporting' => true,
+                'integration' => false,
+                'livestock' => true,
+                'feed' => true,
+                'supply' => true
+            ]
+        ]
+    ],
+
+    // Company Configuration Templates
+    'COMPANY_CONFIG_TEMPLATES' => [
+        'SYSTEM' => [
+            'template_name' => 'System Template',
+            'description' => 'Complete system configuration template with all features enabled',
+            'is_production_ready' => true,
+            'recommended_for' => ['system_seeding', 'production_setup'],
+            'config_priority' => 'high'
+        ],
+        'DEMO' => [
+            'template_name' => 'Demo Template',
+            'description' => 'Limited configuration template for demo and testing purposes',
+            'is_production_ready' => false,
+            'recommended_for' => ['development', 'testing', 'training'],
+            'config_priority' => 'medium'
+        ]
+    ],
+
+    // Seeder Configuration
+    'SEEDER' => [
+        'DEFAULT_COMPANY_CODE' => env('TEMPLATE_COMPANY_CODE', 'SYSTEM'),
+        'CREATE_DEMO_COMPANY' => env('CREATE_DEMO_COMPANY', false),
+        'LOG_LEVEL' => env('SEEDER_LOG_LEVEL', 'info'),
+        'VALIDATION_ENABLED' => env('SEEDER_VALIDATION', true),
+        'BACKUP_ENABLED' => env('SEEDER_BACKUP', false),
+        'MAX_RETRY_ATTEMPTS' => env('SEEDER_MAX_RETRY', 3),
+        'RETRY_DELAY_SECONDS' => env('SEEDER_RETRY_DELAY', 5)
     ],
 
     // Dipakai untuk menentukan tipe unit yang akan ditampilkan di dropdown type pada model Unit Satuan

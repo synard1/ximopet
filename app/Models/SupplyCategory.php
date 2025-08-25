@@ -14,6 +14,8 @@ class SupplyCategory extends BaseModel
     protected $fillable = [
         'id',
         'name',
+        'description',
+        'status',
         'created_by',
         'updated_by',
     ];

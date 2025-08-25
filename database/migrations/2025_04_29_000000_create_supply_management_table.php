@@ -13,7 +13,11 @@ return new class extends Migration
         // Supply Category
         Schema::create('supply_categories', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('company_id')->index();
+            $table->string('code');
             $table->string('name');
+            $table->text('description')->nullable();
+            $table->string('status')->default('active')->index();
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->timestamps();
@@ -21,12 +25,14 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('company_id')->references('id')->on('companies');
         });
 
 
         // Supply
         Schema::create('supplies', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('company_id')->index();
             $table->foreignUuid('supply_category_id')->constrained()->cascadeOnDelete();
             $table->string('code');
             $table->string('name');
@@ -42,10 +48,12 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('company_id')->references('id')->on('companies');
         });
 
         Schema::create('supply_purchase_batches', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('company_id')->index();
             $table->string('invoice_number');
             $table->string('do_number')->nullable(); // delivery order number / surat jalan
             $table->foreignUuid('farm_id')->constrained()->onDelete('cascade');
@@ -65,11 +73,13 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('company_id')->references('id')->on('companies');
         });
 
 
         Schema::create('supply_purchases', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('company_id')->index();
             $table->foreignUuid('farm_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('supply_purchase_batch_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('supply_id')->constrained()->onDelete('cascade');
@@ -88,11 +98,13 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('company_id')->references('id')->on('companies');
         });
 
 
         Schema::create('supply_stocks', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('company_id')->index();
             $table->foreignUuid('livestock_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignUuid('farm_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignUuid('coop_id')->nullable()->constrained()->onDelete('cascade');
@@ -116,12 +128,13 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('company_id')->references('id')->on('companies');
         });
 
 
         Schema::create('supply_usages', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('company_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('company_id')->index();
             $table->foreignUuid('farm_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignUuid('coop_id')->nullable()->constrained()->onDelete('cascade');
             $table->dateTime('usage_date');
@@ -138,11 +151,13 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('company_id')->references('id')->on('companies');
         });
 
 
         Schema::create('supply_usage_details', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('company_id')->index();
             $table->foreignUuid('supply_usage_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('supply_stock_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('supply_id')->constrained()->onDelete('cascade');
@@ -163,12 +178,13 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('company_id')->references('id')->on('companies');
         });
 
 
         Schema::create('supply_mutations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('company_id')->nullable();
+            $table->foreignUuid('company_id')->index();
             $table->foreignUuid('mutation_id')->constrained('mutations')->onDelete('cascade');
             $table->foreignUuid('from_farm_id')->constrained('farms')->onDelete('cascade')->onUpdate('restrict');
             $table->foreignUuid('to_farm_id')->constrained('farms')->onDelete('cascade')->onUpdate('restrict');
@@ -207,7 +223,7 @@ return new class extends Migration
 
         Schema::create('supply_mutation_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('company_id')->nullable();
+            $table->foreignUuid('company_id')->index();
             $table->foreignUuid('supply_mutation_id')->constrained('supply_mutations')->onDelete('cascade');
             $table->foreignUuid('supply_stock_id')->constrained('supply_stocks')->onDelete('cascade');
             $table->foreignUuid('supply_id')->constrained('supplies')->onDelete('cascade');
@@ -221,18 +237,19 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('company_id')->references('id')->on('companies');
         });
 
         Schema::create('current_supplies', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('livestock_id')->nullable();
-            $table->uuid('farm_id')->constrained()->onDelete('cascade');
-            $table->uuid('coop_id')->nullable();
-            $table->uuid('item_id');
-            $table->uuid('unit_id');
+            $table->foreignUuid('company_id')->index();
+            $table->foreignUuid('livestock_id')->index();
+            $table->foreignUuid('farm_id')->index();
+            $table->foreignUuid('coop_id')->index();
+            $table->foreignUuid('item_id')->index();
+            $table->foreignUuid('unit_id')->index();
             $table->string('type');
             $table->decimal('quantity', 12, 2);
             $table->string('status')->default('active')->index();
@@ -242,10 +259,13 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            $table->foreign('livestock_id')->references('id')->on('livestocks');
             $table->foreign('farm_id')->references('id')->on('farms');
             $table->foreign('coop_id')->references('id')->on('coops');
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('company_id')->references('id')->on('companies');
+            $table->foreign('unit_id')->references('id')->on('units');
         });
 
         Schema::enableForeignKeyConstraints();

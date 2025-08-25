@@ -15,6 +15,7 @@ return new class extends Migration
 
         Schema::create('units', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('company_id')->index();
             $table->string('type')->nullable();
             $table->string('code', 64);
             $table->string('symbol');
@@ -29,10 +30,12 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('company_id')->references('id')->on('companies');
         });
 
         Schema::create('unit_conversions', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('company_id')->index();
             $table->string('type')->nullable();
             $table->foreignUuid('item_id'); // Barang atau Item yang terkait
             $table->foreignUuid('unit_id'); // Satuan utama
@@ -51,6 +54,7 @@ return new class extends Migration
 
             $table->foreign('created_by')->references('id')->on('users');
             $table->foreign('updated_by')->references('id')->on('users');
+            $table->foreign('company_id')->references('id')->on('companies');
         });
 
         Schema::enableForeignKeyConstraints();

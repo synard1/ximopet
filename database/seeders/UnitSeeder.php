@@ -8,87 +8,247 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
+use App\Models\Company;
 
 class UnitSeeder extends Seeder
 {
-    public function run()
+    /**
+     * Run the database seeds.
+     * 
+     * Seeds units for the system template company.
+     * Uses configuration from xolution.php for consistency and reusability.
+     */
+    public function run(): void
     {
-        // Make sure FK checks don't interfere when users table is empty
-        Schema::disableForeignKeyConstraints();
+        $defaultCompanyCode = config('xolution.SEEDER.DEFAULT_COMPANY_CODE', 'SYSTEM');
 
-        $user = User::first();
-        $userId = $user?->id ?? Str::uuid()->toString();
+        Log::info('UnitSeeder: Starting unit seeding', [
+            'default_company_code' => $defaultCompanyCode,
+            'config_source' => 'xolution.php',
+            'timestamp' => now()->toISOString()
+        ]);
 
-        // Get company_id from the command
-        $companyId = config('seeder.current_company_id');
-        if (!$companyId) {
-            // Fallback: seeding global/default units (no company_id)
-            $this->command->warn('UnitSeeder: `company_id` not found in config, seeding as global/default units.');
-        }
+        try {
+            // Make sure FK checks don't interfere when users table is empty
+            Schema::disableForeignKeyConstraints();
 
-        $units = [
-            ['type' => 'Obat', 'code' => 'SAT01', 'name' => 'AMPUL', 'symbol' => 'amp'],
-            ['type' => 'Obat', 'code' => 'SAT02', 'name' => 'BOTOL', 'symbol' => 'btl'],
-            ['type' => 'Umum', 'code' => 'BOX', 'name' => 'BOX', 'symbol' => 'box'],
-            ['type' => 'Umum', 'code' => 'SAT03', 'name' => 'BUNGKUS', 'symbol' => 'bks'],
-            ['type' => 'Volume', 'code' => 'SAT04', 'name' => 'CC', 'symbol' => 'cc'],
-            ['type' => 'Panjang', 'code' => 'SAT05', 'name' => 'CM', 'symbol' => 'cm'],
-            ['type' => 'Obat', 'code' => 'SAT06', 'name' => 'FLS', 'symbol' => 'fls'],
-            ['type' => 'Volume', 'code' => 'SAT07', 'name' => 'GALON', 'symbol' => 'gal'],
-            ['type' => 'Berat', 'code' => 'SAT', 'name' => 'GRAM', 'symbol' => 'gr'],
-            ['type' => 'Obat', 'code' => 'SAT08', 'name' => 'INHALER', 'symbol' => 'inh'],
-            ['type' => 'Obat', 'code' => 'KAP', 'name' => 'KAPSUL', 'symbol' => 'kap'],
-            ['type' => 'Berat', 'code' => 'SAT09', 'name' => 'KG/GR', 'symbol' => 'kg'],
-            ['type' => 'Umum', 'code' => 'SAT10', 'name' => 'KOTAK', 'symbol' => 'ktk'],
-            ['type' => 'Umum', 'code' => 'SAT11', 'name' => 'LEMBAR', 'symbol' => 'lbr'],
-            ['type' => 'Volume', 'code' => 'SAT12', 'name' => 'LITER', 'symbol' => 'lt'],
-            ['type' => 'Panjang', 'code' => 'SAT13', 'name' => 'METER', 'symbol' => 'm'],
-            ['type' => 'Obat', 'code' => 'SAT14', 'name' => 'NEBULE', 'symbol' => 'neb'],
-            ['type' => 'Berat', 'code' => 'SAT15', 'name' => 'ONS/GR', 'symbol' => 'ons'],
-            ['type' => 'Umum', 'code' => 'SAT16', 'name' => 'PAKET', 'symbol' => 'pkt'],
-            ['type' => 'Umum', 'code' => 'SAT17', 'name' => 'PCS', 'symbol' => 'pcs'],
-            ['type' => 'Umum', 'code' => 'SAT18', 'name' => 'PSG', 'symbol' => 'psg'],
-            ['type' => 'Obat', 'code' => 'PUYER', 'name' => 'PUYER', 'symbol' => 'pyr'],
-            ['type' => 'Umum', 'code' => 'SAT19', 'name' => 'ROL', 'symbol' => 'rol'],
-            ['type' => 'Obat', 'code' => 'SAT20', 'name' => 'SACHET', 'symbol' => 'sch'],
-            ['type' => 'Umum', 'code' => 'SAT21', 'name' => 'SET', 'symbol' => 'set'],
-            ['type' => 'Obat', 'code' => 'SAT22', 'name' => 'STRIP', 'symbol' => 'str'],
-            ['type' => 'Obat', 'code' => 'SAT23', 'name' => 'SUPP', 'symbol' => 'sup'],
-            ['type' => 'Alat', 'code' => 'SAT24', 'name' => 'SYIRINGE', 'symbol' => 'syr'],
-            ['type' => 'Obat', 'code' => 'SAT25', 'name' => 'TAB', 'symbol' => 'tab'],
-            ['type' => 'Obat', 'code' => 'SAT26', 'name' => 'TABLET', 'symbol' => 'tbl'],
-            ['type' => 'Obat', 'code' => 'SAT27', 'name' => 'TUBE', 'symbol' => 'tbe'],
-            ['type' => 'Obat', 'code' => 'SAT28', 'name' => 'VIAL', 'symbol' => 'vial'],
-            ['type' => 'Berat', 'code' => 'SAT29', 'name' => 'KG', 'symbol' => 'kg'],
-            ['type' => 'Berat', 'code' => 'SAT30', 'name' => 'SAK', 'symbol' => 'sak'],
-            ['type' => 'Volume', 'code' => 'SAT31', 'name' => 'Jerigen 5 Liter', 'symbol' => 'jrg5'],
-            ['type' => 'Volume', 'code' => 'SAT32', 'name' => 'Jerigen 20 Liter', 'symbol' => 'jrg20'],
-            ['type' => 'Volume', 'code' => 'SAT33', 'name' => 'Jerigen 25 Liter', 'symbol' => 'jrg25'],
-        ];
+            // Get company_id from config (for job-triggered seeding)
+            $companyId = Company::where('code', $defaultCompanyCode)->first()->id;
 
-        $created = 0;
-        foreach ($units as $unitData) {
-            $searchCriteria = [
-                'code' => $unitData['code'],
-            ];
             if ($companyId) {
-                $searchCriteria['company_id'] = $companyId;
+                // Seed for specific company from config
+                $this->seedForCompany($companyId);
+                $this->command->info("✅ UnitSeeder: Seeded units for company ID: {$companyId}");
+            } else {
+                // Get system company from xolution.php configuration
+                $systemCompany = \App\Models\Company::where('code', $defaultCompanyCode)->first();
+
+                if (!$systemCompany) {
+                    $errorMessage = "System company with code '{$defaultCompanyCode}' not found. Please run SystemCompanySeeder first.";
+                    Log::error('UnitSeeder: System company not found', [
+                        'company_code' => $defaultCompanyCode,
+                        'error' => $errorMessage
+                    ]);
+
+                    $this->command->error("❌ {$errorMessage}");
+                    throw new \RuntimeException($errorMessage);
+                }
+
+                Log::info('UnitSeeder: Found system company', [
+                    'company_id' => $systemCompany->id,
+                    'company_code' => $systemCompany->code,
+                    'company_name' => $systemCompany->name
+                ]);
+
+                // Seed for system company
+                $this->seedForCompany($systemCompany->id);
+
+                // Also seed for demo company if enabled and exists
+                if (config('xolution.SEEDER.CREATE_DEMO_COMPANY', false)) {
+                    $demoCompany = \App\Models\Company::where('code', 'DEMO')->first();
+                    if ($demoCompany) {
+                        $this->seedForCompany($demoCompany->id);
+                        $this->command->info("✅ UnitSeeder: Also seeded for DEMO company ID: {$demoCompany->id}");
+                    }
+                }
+
+                $this->command->info("✅ UnitSeeder: Successfully seeded units");
+                $this->command->info("   📊 System Company: {$systemCompany->name} ({$systemCompany->code})");
+                $this->command->info("   🔧 Config Source: xolution.php");
             }
 
-            $createData = array_merge($unitData, [
-                'created_by' => $userId,
-                'company_id' => $companyId ?? null
+            Schema::enableForeignKeyConstraints();
+        } catch (\Exception $e) {
+            Log::error('UnitSeeder: Failed to seed units', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'config_source' => 'xolution.php'
             ]);
 
-            $unit = Unit::firstOrCreate($searchCriteria, $createData);
+            $this->command->error("❌ UnitSeeder: Failed to seed units: {$e->getMessage()}");
+            throw $e;
+        }
+    }
 
-            if ($unit->wasRecentlyCreated) {
+    /**
+     * Seed units for a specific company
+     * 
+     * @param string $companyId Company ID
+     * @return void
+     */
+    private function seedForCompany(string $companyId): void
+    {
+        $units = $this->getUnits();
+
+        Log::info('UnitSeeder: Seeding units for company', [
+            'company_id' => $companyId,
+            'units_count' => count($units)
+        ]);
+
+        $created = 0;
+        $updated = 0;
+
+        foreach ($units as $unitData) {
+            $existingUnit = Unit::where('code', $unitData['code'])
+                ->where('company_id', $companyId)
+                ->first();
+
+            if ($existingUnit) {
+                // Update existing unit with latest data
+                $existingUnit->update([
+                    'type' => $unitData['type'],
+                    'name' => $unitData['name'],
+                    'symbol' => $unitData['symbol'],
+                    'description' => $unitData['description'],
+                    'status' => 'active',
+                    'updated_by' => $this->getDefaultUserId($companyId),
+                ]);
+                $updated++;
+            } else {
+                // Create new unit
+                Unit::create([
+                    'id' => Str::uuid(),
+                    'company_id' => $companyId,
+                    'code' => $unitData['code'],
+                    'type' => $unitData['type'],
+                    'name' => $unitData['name'],
+                    'symbol' => $unitData['symbol'],
+                    'description' => $unitData['description'],
+                    'status' => 'active',
+                    'created_by' => $this->getDefaultUserId($companyId),
+                    'updated_by' => $this->getDefaultUserId($companyId),
+                ]);
                 $created++;
             }
         }
 
-        Schema::enableForeignKeyConstraints();
+        Log::info('UnitSeeder: Completed seeding for company', [
+            'company_id' => $companyId,
+            'created' => $created,
+            'updated' => $updated,
+            'total' => count($units)
+        ]);
 
-        $this->command->info("Units seeder completed for company {$companyId}. New units: {$created} (duplicates skipped)");
+        $this->command->info("   📋 Company {$companyId}: Created {$created}, Updated {$updated}");
+    }
+
+    /**
+     * Get units configuration
+     * 
+     * @return array Units data
+     */
+    private function getUnits(): array
+    {
+        return [
+            // Obat
+            ['type' => 'Obat', 'code' => 'SAT01', 'name' => 'AMPUL', 'symbol' => 'amp', 'description' => 'Unit ampul untuk obat cair', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'SAT02', 'name' => 'BOTOL', 'symbol' => 'btl', 'description' => 'Unit botol untuk obat cair', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'SAT06', 'name' => 'FLS', 'symbol' => 'fls', 'description' => 'Unit flask untuk obat', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'SAT08', 'name' => 'INHALER', 'symbol' => 'inh', 'description' => 'Unit inhaler untuk obat hirup', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'KAP', 'name' => 'KAPSUL', 'symbol' => 'kap', 'description' => 'Unit kapsul untuk obat padat', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'SAT14', 'name' => 'NEBULE', 'symbol' => 'neb', 'description' => 'Unit nebule untuk obat hirup', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'PUYER', 'name' => 'PUYER', 'symbol' => 'pyr', 'description' => 'Unit puyer untuk obat bubuk', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'SAT20', 'name' => 'SACHET', 'symbol' => 'sch', 'description' => 'Unit sachet untuk obat bubuk', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'SAT22', 'name' => 'STRIP', 'symbol' => 'str', 'description' => 'Unit strip untuk obat tablet', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'SAT23', 'name' => 'SUPP', 'symbol' => 'sup', 'description' => 'Unit suppositoria', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'SAT25', 'name' => 'TAB', 'symbol' => 'tab', 'description' => 'Unit tab untuk obat tablet', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'SAT26', 'name' => 'TABLET', 'symbol' => 'tbl', 'description' => 'Unit tablet untuk obat', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'SAT27', 'name' => 'TUBE', 'symbol' => 'tbe', 'description' => 'Unit tube untuk obat salep', 'status' => 'active'],
+            ['type' => 'Obat', 'code' => 'SAT28', 'name' => 'VIAL', 'symbol' => 'vial', 'description' => 'Unit vial untuk obat injeksi', 'status' => 'active'],
+
+            // Umum
+            ['type' => 'Umum', 'code' => 'BOX', 'name' => 'BOX', 'symbol' => 'box', 'description' => 'Unit box untuk kemasan', 'status' => 'active'],
+            ['type' => 'Umum', 'code' => 'SAT03', 'name' => 'BUNGKUS', 'symbol' => 'bks', 'description' => 'Unit bungkus untuk kemasan', 'status' => 'active'],
+            ['type' => 'Umum', 'code' => 'SAT10', 'name' => 'KOTAK', 'symbol' => 'ktk', 'description' => 'Unit kotak untuk kemasan', 'status' => 'active'],
+            ['type' => 'Umum', 'code' => 'SAT11', 'name' => 'LEMBAR', 'symbol' => 'lbr', 'description' => 'Unit lembar untuk dokumen', 'status' => 'active'],
+            ['type' => 'Umum', 'code' => 'SAT16', 'name' => 'PAKET', 'symbol' => 'pkt', 'description' => 'Unit paket untuk kemasan', 'status' => 'active'],
+            ['type' => 'Umum', 'code' => 'SAT17', 'name' => 'PCS', 'symbol' => 'pcs', 'description' => 'Unit pieces untuk satuan', 'status' => 'active'],
+            ['type' => 'Umum', 'code' => 'SAT18', 'name' => 'PSG', 'symbol' => 'psg', 'description' => 'Unit pasang untuk alat', 'status' => 'active'],
+            ['type' => 'Umum', 'code' => 'SAT19', 'name' => 'ROL', 'symbol' => 'rol', 'description' => 'Unit rol untuk material', 'status' => 'active'],
+            ['type' => 'Umum', 'code' => 'SAT21', 'name' => 'SET', 'symbol' => 'set', 'description' => 'Unit set untuk perangkat', 'status' => 'active'],
+
+            // Volume
+            ['type' => 'Volume', 'code' => 'SAT04', 'name' => 'CC', 'symbol' => 'cc', 'description' => 'Unit cubic centimeter', 'status' => 'active'],
+            ['type' => 'Volume', 'code' => 'SAT07', 'name' => 'GALON', 'symbol' => 'gal', 'description' => 'Unit galon untuk cairan', 'status' => 'active'],
+            ['type' => 'Volume', 'code' => 'SAT12', 'name' => 'LITER', 'symbol' => 'lt', 'description' => 'Unit liter untuk cairan', 'status' => 'active'],
+            ['type' => 'Volume', 'code' => 'SAT31', 'name' => 'Jerigen 5 Liter', 'symbol' => 'jrg5', 'description' => 'Unit jerigen 5 liter', 'status' => 'active'],
+            ['type' => 'Volume', 'code' => 'SAT32', 'name' => 'Jerigen 20 Liter', 'symbol' => 'jrg20', 'description' => 'Unit jerigen 20 liter', 'status' => 'active'],
+            ['type' => 'Volume', 'code' => 'SAT33', 'name' => 'Jerigen 25 Liter', 'symbol' => 'jrg25', 'description' => 'Unit jerigen 25 liter', 'status' => 'active'],
+
+            // Panjang
+            ['type' => 'Panjang', 'code' => 'SAT05', 'name' => 'CM', 'symbol' => 'cm', 'description' => 'Unit centimeter', 'status' => 'active'],
+            ['type' => 'Panjang', 'code' => 'SAT13', 'name' => 'METER', 'symbol' => 'm', 'description' => 'Unit meter', 'status' => 'active'],
+
+            // Berat
+            ['type' => 'Berat', 'code' => 'SAT', 'name' => 'GRAM', 'symbol' => 'gr', 'description' => 'Unit gram untuk berat', 'status' => 'active'],
+            ['type' => 'Berat', 'code' => 'SAT09', 'name' => 'KG/GR', 'symbol' => 'kg', 'description' => 'Unit kilogram/gram', 'status' => 'active'],
+            ['type' => 'Berat', 'code' => 'SAT15', 'name' => 'ONS/GR', 'symbol' => 'ons', 'description' => 'Unit ons/gram', 'status' => 'active'],
+            ['type' => 'Berat', 'code' => 'SAT29', 'name' => 'KG', 'symbol' => 'kg', 'description' => 'Unit kilogram', 'status' => 'active'],
+            ['type' => 'Berat', 'code' => 'SAT30', 'name' => 'SAK', 'symbol' => 'sak', 'description' => 'Unit sak untuk pakan', 'status' => 'active'],
+
+            // Alat
+            ['type' => 'Alat', 'code' => 'SAT24', 'name' => 'SYIRINGE', 'symbol' => 'syr', 'description' => 'Unit syringe untuk injeksi', 'status' => 'active'],
+        ];
+    }
+
+    /**
+     * Get default user ID for the company
+     * 
+     * @param string $companyId Company ID
+     * @return string User ID
+     * @throws \Exception If no users found
+     */
+    private function getDefaultUserId(string $companyId): string
+    {
+        // Try to get first user for the company
+        $user = User::where('company_id', $companyId)->first();
+
+        if ($user) {
+            Log::info('UnitSeeder: Using company-specific user', [
+                'company_id' => $companyId,
+                'user_id' => $user->id
+            ]);
+            return $user->id;
+        }
+
+        // Fallback: get any user from the system if no company-specific user found
+        $anyUser = User::first();
+        if ($anyUser) {
+            Log::warning('UnitSeeder: No company-specific user found, using system user', [
+                'company_id' => $companyId,
+                'fallback_user_id' => $anyUser->id
+            ]);
+            return $anyUser->id;
+        }
+
+        // Last resort: return null if no users exist (will cause constraint error but shows the issue)
+        $errorMessage = "No users found in database. Please create at least one user before running seeders.";
+        Log::error('UnitSeeder: No users found', [
+            'company_id' => $companyId,
+            'error' => $errorMessage
+        ]);
+
+        throw new \Exception($errorMessage);
     }
 }

@@ -50,7 +50,7 @@ return new class extends Migration
             $table->softDeletes();
 
             // Foreign keys
-            $table->foreign('expedition_id')->references('id')->on('expeditions');
+            $table->foreign('expedition_id')->references('id')->on('partners');
 
             // Indexes for reporting and analytics
             $table->index(['company_id', 'shipping_date']);

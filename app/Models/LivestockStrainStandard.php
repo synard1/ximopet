@@ -13,6 +13,7 @@ class LivestockStrainStandard extends BaseModel
 
     protected $fillable = [
         'id',
+        'company_id',
         'livestock_strain_id',
         'livestock_strain_name',
         'standar_data', // JSON column untuk menyimpan semua standar
