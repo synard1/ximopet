@@ -1,0 +1,183 @@
+{
+  "meta": {
+    "project": "Demo51 - Livestock Management System",
+    "date": "2025-08-25",
+    "prepared_by": "AI Assistant"
+  },
+  "product_overview": "Demo51 is a comprehensive Livestock Management System built with Laravel 11 and Livewire 3. The platform offers extensive features covering livestock tracking, feed and supply management, recording and analytics, user and role management, and advanced performance and security monitoring, designed for scalability, high performance, and ease of integration.",
+  "core_goals": [
+    "Optimize system performance and scalability to handle large datasets efficiently.",
+    "Enhance user interface and experience with modern technologies including Vue.js 3 integrations.",
+    "Ensure system stability and reliability via comprehensive automated testing and quality assurance.",
+    "Expand platform capabilities with mobile applications and robust API support.",
+    "Integrate advanced analytics and predictive intelligence to aid informed decision-making.",
+    "Future-proof with IoT and AI integration to automate and enhance livestock management processes."
+  ],
+  "key_features": [
+    "Livestock registration, tracking, and lifecycle management with batch and mutation handling.",
+    "Feed and supply management with stock alerts, usage tracking, and flexible mutation handling.",
+    "Advanced recording system supporting daily records, modular payloads, and real-time analytics.",
+    "Role-based access control with multi-tenant support and audit trails for user management.",
+    "Performance monitoring and database optimization with caching and background job enhancements.",
+    "Security system featuring blacklisting, violation tracking, multi-factor authentication, and GDPR compliance.",
+    "Modern UI/UX including Vue.js 3 components, responsive and themeable dashboards, and real-time notifications.",
+    "Mobile application support with offline sync, camera and GPS integration for field operations.",
+    "RESTful API v2 with comprehensive documentation, rate limiting, webhook support, and SDKs.",
+    "Roadmap for AI-powered features like disease prediction, growth optimization, and smart automation."
+  ],
+  "user_flow_summary": [
+    "Users authenticate and access the platform with secure role-based permissions.",
+    "Manage livestock and batches, recording lifecycle events and health management data.",
+    "Handle feed and supply stock entries, mutations, and consumption recording with alerts on stock levels.",
+    "Perform daily recording of livestock data and view real-time analytics dashboards.",
+    "Use reporting features to export and analyze purchase, performance, and daily reports.",
+    "Admins configure user roles, permissions, and audit user activity across companies (multi-tenant).",
+    "Mobile users interact through the native app with offline capabilities and field data capture.",
+    "Developers and integrators use enhanced RESTful APIs for data exchange and automation.",
+    "Advanced users access AI-powered dashboards for predictive analytics and decision support."
+  ],
+  "validation_criteria": [
+    "System response times must be under 200ms for 95% of requests under typical load.",
+    "Uptime of the platform must reach 99.9% ensuring high availability.",
+    "Codebase coverage through automated tests must be above 80%.",
+    "Security testing including vulnerability scanning and multi-factor authentication enforcement.",
+    "Database query optimization and caching strategies implemented and validated by load testing.",
+    "Mobile app features tested for offline synchronization and seamless field data capture.",
+    "API v2 must support comprehensive documentation, authentication, and rate limiting with functional webhooks.",
+    "AI and IoT modules must demonstrate accurate predictions and stable integrations in test environments.",
+    "User acceptance testing verifying UI/UX enhancements including responsiveness and accessibility features."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "PHP 8.3.24",
+      "Laravel 11",
+      "MySQL (Primary Database)",
+      "PostgreSQL (Secondary Database)",
+      "Vue.js 3",
+      "Livewire 3",
+      "TailwindCSS 3",
+      "Laravel Pint"
+    ],
+    "features": [
+      {
+        "name": "Authentication System",
+        "description": "Handle user authentication with security features including blacklisting and violation tracking",
+        "files": [
+          "app/Http/Controllers/Auth",
+          "config/auth.php"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "paths": {
+            "/login": {
+              "post": {
+                "summary": "Authenticate user",
+                "tags": [
+                  "Authentication"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Security System",
+        "description": "Advanced security system with blacklisting, violation tracking, and persistent monitoring",
+        "files": [
+          "config/security.php",
+          "app/Services/SecurityService.php"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "paths": {
+            "/api/security/status": {
+              "get": {
+                "summary": "Get security status",
+                "tags": [
+                  "Security"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Performance Monitoring",
+        "description": "Database performance tracking and monitoring system",
+        "files": [
+          "config/database.php",
+          "app/Services/PerformanceTrackingService.php"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "paths": {
+            "/api/performance/metrics": {
+              "get": {
+                "summary": "Get performance metrics",
+                "tags": [
+                  "Performance"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Recording Management",
+        "description": "Manage recording data with flexible storage and validation",
+        "files": [
+          "app/Services/RecordingService.php",
+          "app/Models/Records.php"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "paths": {
+            "/api/recordings": {
+              "get": {
+                "summary": "List recordings",
+                "tags": [
+                  "Recording"
+                ]
+              },
+              "post": {
+                "summary": "Create recording",
+                "tags": [
+                  "Recording"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Supply Management",
+        "description": "Handle supply mutations and usage tracking",
+        "files": [
+          "app/Services/SupplyService.php",
+          "database/migrations/2025_01_25_000000_enhance_supply_mutations_flexible_destination.php"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "paths": {
+            "/api/supplies": {
+              "get": {
+                "summary": "List supplies",
+                "tags": [
+                  "Supply"
+                ]
+              }
+            },
+            "/api/supplies/mutations": {
+              "post": {
+                "summary": "Create supply mutation",
+                "tags": [
+                  "Supply"
+                ]
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

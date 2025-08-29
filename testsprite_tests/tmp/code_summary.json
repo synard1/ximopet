@@ -1,0 +1,119 @@
+{
+  "tech_stack": [
+    "PHP 8.3.24",
+    "Laravel 11",
+    "MySQL (Primary Database)",
+    "PostgreSQL (Secondary Database)",
+    "Vue.js 3",
+    "Livewire 3",
+    "TailwindCSS 3",
+    "Laravel Pint"
+  ],
+  "features": [
+    {
+      "name": "Authentication System",
+      "description": "Handle user authentication with security features including blacklisting and violation tracking",
+      "files": [
+        "app/Http/Controllers/Auth",
+        "config/auth.php"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "paths": {
+          "/login": {
+            "post": {
+              "summary": "Authenticate user",
+              "tags": ["Authentication"]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Security System",
+      "description": "Advanced security system with blacklisting, violation tracking, and persistent monitoring",
+      "files": [
+        "config/security.php",
+        "app/Services/SecurityService.php"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "paths": {
+          "/api/security/status": {
+            "get": {
+              "summary": "Get security status",
+              "tags": ["Security"]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Performance Monitoring",
+      "description": "Database performance tracking and monitoring system",
+      "files": [
+        "config/database.php",
+        "app/Services/PerformanceTrackingService.php"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "paths": {
+          "/api/performance/metrics": {
+            "get": {
+              "summary": "Get performance metrics",
+              "tags": ["Performance"]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Recording Management",
+      "description": "Manage recording data with flexible storage and validation",
+      "files": [
+        "app/Services/RecordingService.php",
+        "app/Models/Records.php"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "paths": {
+          "/api/recordings": {
+            "get": {
+              "summary": "List recordings",
+              "tags": ["Recording"]
+            },
+            "post": {
+              "summary": "Create recording",
+              "tags": ["Recording"]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Supply Management",
+      "description": "Handle supply mutations and usage tracking",
+      "files": [
+        "app/Services/SupplyService.php",
+        "database/migrations/2025_01_25_000000_enhance_supply_mutations_flexible_destination.php"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "paths": {
+          "/api/supplies": {
+            "get": {
+              "summary": "List supplies",
+              "tags": ["Supply"]
+            }
+          },
+          "/api/supplies/mutations": {
+            "post": {
+              "summary": "Create supply mutation",
+              "tags": ["Supply"]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

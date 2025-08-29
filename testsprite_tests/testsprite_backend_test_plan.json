@@ -1,0 +1,37 @@
+[
+  {
+    "id": "TC001",
+    "title": "authenticate user with valid credentials",
+    "description": "Test the /login POST endpoint to verify that a user can successfully authenticate with valid credentials and receive an authentication token."
+  },
+  {
+    "id": "TC002",
+    "title": "get security status with valid authentication",
+    "description": "Test the /api/security/status GET endpoint to ensure it returns the current security status of the system when accessed with valid authentication."
+  },
+  {
+    "id": "TC003",
+    "title": "get performance metrics under normal load",
+    "description": "Test the /api/performance/metrics GET endpoint to verify that performance metrics are returned correctly and response times meet the required performance criteria."
+  },
+  {
+    "id": "TC004",
+    "title": "list recordings with pagination and filters",
+    "description": "Test the /api/recordings GET endpoint to ensure recordings can be listed with support for pagination and filtering parameters."
+  },
+  {
+    "id": "TC005",
+    "title": "create recording with valid data",
+    "description": "Test the /api/recordings POST endpoint to verify that a new recording can be created successfully when valid data is provided."
+  },
+  {
+    "id": "TC006",
+    "title": "list supplies with stock level information",
+    "description": "Test the /api/supplies GET endpoint to ensure it returns a list of supplies including current stock levels and relevant details."
+  },
+  {
+    "id": "TC007",
+    "title": "create supply mutation with flexible destination",
+    "description": "Test the /api/supplies/mutations POST endpoint to verify that supply mutations can be created with flexible destination handling as per the enhanced migration."
+  }
+]

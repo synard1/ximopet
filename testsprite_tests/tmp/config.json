@@ -1,0 +1,16 @@
+{
+  "status": "commited",
+  "type": "backend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:8000",
+  "backendAuthType": "public",
+  "executionArgs": {
+    "projectName": "demo51",
+    "projectPath": "c:\\laragon\\www\\demo51",
+    "testIds": [],
+    "additionalInstruction": "Focus on testing Livewire components, Vue.js interactions, and frontend security features.",
+    "envs": {
+      "API_KEY": "sk-user-a6hfgAlJlVcfezsqagwSppdtNG-V1HYvUC2dtc1UcIp5hfMEYUHgyYM4S5T_TCfRpDVPykdVPn69wjrS4Rm6twWO0uMeP8WfGtuBZH3sj4uY-GCNRaZ2ZKN0H7QwuR8c9oM"
+    }
+  }
+}
