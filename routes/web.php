@@ -86,18 +86,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/test', [App\Http\Controllers\Admin\ArtisanCommandController::class, 'test'])->name('test');
         });
 
-        Route::get('/qa', [AdminController::class, 'qaIndex'])
-            ->middleware(['permission:access qa checklist'])
-            ->name('qa');
-
-        // Resource route for standard CRUD operations (excluding index, show, edit, and destroy)
-        Route::resource('/qa', QaController::class)->except([
-            'index',
-            'show',
-            'edit',
-            'destroy' // Exclude destroy as we are defining it explicitly
-        ]);
-
         // QA Management Routes
         Route::middleware(['auth', 'permission:access qa checklist'])->name('qa.')->prefix('qa')->group(function () {
             // Add export route BEFORE the resource route
@@ -108,6 +96,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // Explicitly define the index route for DataTables
             Route::get('/', [QaController::class, 'index'])->name('index');
 
+            // Create route for new QA entries
+            Route::get('create', [QaController::class, 'create'])->name('create');
+            Route::post('/', [QaController::class, 'store'])->name('store');
+
+            // Show route for individual QA entries
+            Route::get('{qa}', [QaController::class, 'show'])->name('show');
+
             // Explicitly define the edit route
             Route::get('{qa}/edit', [QaController::class, 'edit'])->name('edit');
             Route::put('{qa}', [QaController::class, 'update'])->name('update');
@@ -117,14 +112,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // Explicitly define the delete route
             Route::delete('{qa}', [QaController::class, 'destroy'])->name('destroy');
-
-            // Resource route for standard CRUD operations (excluding index, show, edit, and destroy)
-            Route::resource('/', QaController::class)->except([
-                'index',
-                'show',
-                'edit',
-                'destroy' // Exclude destroy as we are defining it explicitly
-            ]);
 
             // Custom route for updating QA order
             Route::post('update-order', [QaController::class, 'updateOrder'])->name('update-order');
