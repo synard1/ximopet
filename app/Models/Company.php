@@ -224,4 +224,14 @@ class Company extends BaseModel
     {
         return $this->belongsToMany(Permission::class, 'company_permission');
     }
+
+    /**
+     * Users that belong to this company through company_users table
+     */
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'company_users')
+            ->withPivot('role', 'status', 'isAdmin', 'isDefaultAdmin')
+            ->withTimestamps();
+    }
 }

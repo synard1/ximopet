@@ -280,6 +280,16 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Get the companies that the user belongs to through company_users table.
+     */
+    public function companies()
+    {
+        return $this->belongsToMany(Company::class, 'company_users')
+            ->withPivot('role', 'status')
+            ->withTimestamps();
+    }
+
+    /**
      * Get the primary company for the user (from company_users table)
      */
     public function getPrimaryCompany()
@@ -302,7 +312,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Get available roles based on user type
-     * 
+     *
      * @return array
      */
     public function getAvailableRoles()
