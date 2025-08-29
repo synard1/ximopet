@@ -13,15 +13,24 @@ class FeedSeeder extends Seeder
 {
     public function run()
     {
-        $user = User::first();
-        $userId = $user?->id ?? Str::uuid()->toString();
+        // Get company ID from config (for direct seeding)
+        $companyId = config('seeder.current_company_id');
 
-        // Ambil company_id dari model User (user pertama)
-        $companyId = $user?->company_id ?? null;
         if (!$companyId) {
-            $this->command->warn('FeedSeeder: `company_id` not found, skipping.');
-            return;
+            // Fallback: try to get from first user
+            $user = User::first();
+            $companyId = $user?->company_id;
+
+            if (!$companyId) {
+                $this->command->error('FeedSeeder: No company_id found in config or user table.');
+                return;
+            }
         }
+
+        // Get user ID
+        $userId = User::where('company_id', $companyId)->first()?->id
+            ?? User::first()?->id
+            ?? Str::uuid()->toString();
 
         $unitKg = Unit::where('name', 'KG')->first();
         $unitSak = Unit::where('name', 'SAK')->first();

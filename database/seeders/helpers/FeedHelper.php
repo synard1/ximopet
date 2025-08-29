@@ -65,6 +65,7 @@ class FeedHelper
                 'item_id' => $feed->id,
                 'unit_id' => $unitKg->id,
                 'conversion_unit_id' => $unitKg->id,
+                'company_id' => $companyId,
             ],
             [
                 'conversion_value' => 1,
@@ -83,6 +84,7 @@ class FeedHelper
                 'item_id' => $feed->id,
                 'unit_id' => $unitKg->id,
                 'conversion_unit_id' => $unitSak->id,
+                'company_id' => $companyId,
             ],
             [
                 'conversion_value' => 50,
