@@ -9,18 +9,28 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Spatie\Permission\Traits\HasRoles;
 use Exception;
 
 class CompanyUser extends BaseModel
 {
     use HasFactory, HasUuids, SoftDeletes;
 
+    /**
+     * Generate a new UUID for the model.
+     */
+    public function newUniqueId()
+    {
+        return (string) Str::uuid();
+    }
+
     protected $table = 'company_users';
 
     protected $fillable = [
-        'id',
         'company_id',
         'user_id',
+        'role',
         'isAdmin',
         'isDefaultAdmin',
         'status',
@@ -29,8 +39,22 @@ class CompanyUser extends BaseModel
     ];
 
     /**
+     * Indicates if the model's ID is auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
+
+    /**
+     * The data type of the auto-incrementing ID.
+     *
+     * @var string
+     */
+    protected $keyType = 'string';
+
+    /**
      * Check if user is mapped to a company
-     * 
+     *
      * @param int $userId
      * @return bool
      */
@@ -44,7 +68,7 @@ class CompanyUser extends BaseModel
 
     /**
      * Get company mapping for user
-     * 
+     *
      * @param int $userId
      * @return CompanyUser|null
      */
@@ -58,7 +82,7 @@ class CompanyUser extends BaseModel
 
     /**
      * Check if user is company admin
-     * 
+     *
      * @param int $userId
      * @return bool
      */
@@ -73,7 +97,7 @@ class CompanyUser extends BaseModel
 
     /**
      * Check if user is default admin for company
-     * 
+     *
      * @param int|null $userId
      * @param string|null $companyId
      * @return bool
@@ -95,7 +119,7 @@ class CompanyUser extends BaseModel
 
     /**
      * Get default admin for company
-     * 
+     *
      * @param string $companyId
      * @return CompanyUser|null
      */
@@ -109,7 +133,7 @@ class CompanyUser extends BaseModel
 
     /**
      * Check if company has default admin
-     * 
+     *
      * @param string $companyId
      * @return bool
      */
@@ -124,7 +148,7 @@ class CompanyUser extends BaseModel
     /**
      * Set user as default admin for company
      * Ensures only one default admin per company
-     * 
+     *
      * @param string $companyId
      * @param string $userId
      * @return bool
@@ -177,7 +201,7 @@ class CompanyUser extends BaseModel
     /**
      * Check if user can be deleted
      * Default admin cannot be deleted by other admins
-     * 
+     *
      * @param string $userIdToDelete
      * @param string|null $deletingUserId
      * @return array ['can_delete' => bool, 'reason' => string]
@@ -187,7 +211,7 @@ class CompanyUser extends BaseModel
         $deletingUserId = $deletingUserId ?? Auth::id();
 
         // SuperAdmin can delete anyone
-        if (auth()->user()->hasRole('SuperAdmin')) {
+        if (Auth::check() && Auth::user()->hasRole('SuperAdmin')) {
             return ['can_delete' => true, 'reason' => ''];
         }
 
@@ -243,7 +267,7 @@ class CompanyUser extends BaseModel
 
     /**
      * Transfer default admin role to another user
-     * 
+     *
      * @param string $companyId
      * @param string $newDefaultAdminUserId
      * @return bool
@@ -273,7 +297,7 @@ class CompanyUser extends BaseModel
 
     /**
      * Get all companies for user
-     * 
+     *
      * @param int $userId
      * @return \Illuminate\Database\Eloquent\Collection
      */
@@ -343,7 +367,7 @@ class CompanyUser extends BaseModel
 
         // Prevent deletion of default admin by non-SuperAdmin
         static::deleting(function ($companyUser) {
-            if ($companyUser->isDefaultAdmin && !auth()->user()->hasRole('SuperAdmin')) {
+            if ($companyUser->isDefaultAdmin && (!Auth::check() || !Auth::user()->hasRole('SuperAdmin'))) {
                 $canDelete = self::canDeleteUser($companyUser->user_id);
                 if (!$canDelete['can_delete']) {
                     throw new Exception($canDelete['reason']);
@@ -431,7 +455,7 @@ class CompanyUser extends BaseModel
         Log::info('ClearUserMapping executed', [
             'company_id' => $companyId,
             'deleted_count' => $deleted,
-            'by_user' => auth()->id()
+            'by_user' => Auth::id() ?? 'system'
         ]);
 
         return $deleted;
