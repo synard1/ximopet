@@ -20,6 +20,35 @@ class RolesPermissionsSeeder extends Seeder
         $abilities = ['access', 'create', 'read', 'update', 'delete', 'export', 'import', 'print'];
 
         $permissions_by_role = [
+            'System' => [
+                'master data',
+                'user management',
+                'supplier management',
+                'customer management',
+                'farm master data',
+                'farm operator',
+                'farm storage',
+                'kandang management',
+                'stok management',
+                'inventory management',
+                'report management',
+                'api controls',
+                'database management',
+                'repository management',
+                'records management',
+                'transaction',
+                'pembelian',
+                'penjualan',
+                'ekspedisi',
+                'roles',
+                'permissions',
+                'route manager',
+                'qa checklist',
+                'worker assignment',
+                'livestock management',
+                'system management',
+                'template management'
+            ],
             'SuperAdmin' => [
                 'master data',
                 'user management',
@@ -88,8 +117,14 @@ class RolesPermissionsSeeder extends Seeder
             ],
         ];
 
-        // Buat semua permissions berdasarkan SuperAdmin scope
-        foreach ($permissions_by_role['SuperAdmin'] as $permission) {
+        // Gabungkan semua unique permissions dari System dan SuperAdmin untuk membuat base permissions
+        $allModules = array_unique(array_merge(
+            $permissions_by_role['System'],
+            $permissions_by_role['SuperAdmin']
+        ));
+
+        // Buat semua permissions
+        foreach ($allModules as $permission) {
             foreach ($abilities as $ability) {
                 Permission::firstOrCreate(['name' => "$ability $permission"]);
             }
@@ -107,8 +142,15 @@ class RolesPermissionsSeeder extends Seeder
             Role::firstOrCreate(['name' => $role])->syncPermissions($permissions);
         }
 
-        // Mapping email => role
-        $userRoleMap = [
+        // Core system users
+        $systemUserMap = [
+            'system@peternakan.digital' => 'System',
+            'admin@peternakan.digital'  => 'SuperAdmin',
+            'synard1@gmail.com'        => 'SuperAdmin',
+        ];
+
+        // Demo users mapping
+        $demoUserMap = [
             'admin@demo.com'      => 'Administrator',
             'supervisor@demo.com' => 'Supervisor',
             'operator@demo.com'   => 'Operator',
@@ -122,15 +164,22 @@ class RolesPermissionsSeeder extends Seeder
             'manager@demo2.com'    => 'Manager',
         ];
 
-        // Assign roles to users by email
-        foreach ($userRoleMap as $email => $role) {
+        // Assign roles to system users
+        foreach ($systemUserMap as $email => $role) {
             $user = \App\Models\User::where('email', $email)->first();
             if ($user) {
-                $user->assignRole($role);
+                $user->syncRoles([$role]);
+                $this->command->info("✅ Assigned role {$role} to system user {$email}");
             }
         }
 
-        // Assign SuperAdmin ke user ID 1 (creator utama)
-        \App\Models\User::where('email', 'admin@peternakan.digital')->first()?->assignRole('SuperAdmin');
+        // Assign roles to demo users if they exist
+        foreach ($demoUserMap as $email => $role) {
+            $user = \App\Models\User::where('email', $email)->first();
+            if ($user) {
+                $user->syncRoles([$role]);
+                $this->command->info("✅ Assigned role {$role} to demo user {$email}");
+            }
+        }
     }
 }

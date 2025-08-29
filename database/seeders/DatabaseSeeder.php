@@ -17,19 +17,22 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
         $this->call([
+            // ===== ROLES & PERMISSIONS SEEDERS =====
+            // Must run first to establish authorization system
+            RolesPermissionsSeeder::class,     // Creates basic roles and permissions
+
             // ===== SYSTEM FOUNDATION SEEDERS =====
-            // These must run first to establish system infrastructure
-            SystemCompanySeeder::class,      // Creates SYSTEM company from xolution.php config
-            SystemConfigSeeder::class,       // Seeds system configuration (depends on SystemCompanySeeder)
+            // These must run after roles but before other seeders
+            SystemCompanySeeder::class,        // Creates SYSTEM company & system user
+            SystemConfigSeeder::class,         // Seeds system configuration
+
+            // ===== USER SEEDERS =====
+            // Core user management
+            UsersSeeder::class,               // Creates super admin users
 
             // ===== DEMO/TESTING SEEDERS =====
             // Optional seeders for development and testing
-            DemoSeeder::class,               // Creates DEMO company if enabled in xolution.php
-
-            // ===== USER & PERMISSION SEEDERS =====
-            // Core user management and permissions
-            UsersSeeder::class,
-            RolesPermissionsSeeder::class,
+            DemoSeeder::class,                // Creates DEMO company & demo users if enabled
 
             // ===== MASTER DATA SEEDERS =====
             // Core application data

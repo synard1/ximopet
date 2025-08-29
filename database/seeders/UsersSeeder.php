@@ -3,12 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Company;
 use Faker\Generator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Jobs\SendEmailJob;
-use App\Models\FarmOperator;
-use App\Models\Farm;
+use Illuminate\Support\Facades\Log;
 
 
 class UsersSeeder extends Seeder
@@ -20,58 +19,46 @@ class UsersSeeder extends Seeder
      */
     public function run(Generator $faker)
     {
-        // Super admin manual
-        User::create([
-            'name'              => 'Mhd Iqbal Syahputra',
-            'email'             => 'synard1@gmail.com',
-            'password'          => Hash::make('Admin123!@'),
-            'email_verified_at' => now(),
-        ]);
-
-        // Super admin manual
-        User::create([
-            'name'              => 'Admin',
-            'email'             => 'admin@peternakan.digital',
-            'password'          => Hash::make('Admin123!@'),
-            'email_verified_at' => now(),
-        ]);
-
-        // System manual for system company template
-        User::create([
-            'name'              => 'System',
-            'email'             => 'system@peternakan.digital',
-            'password'          => Hash::make('System123!@'),
-            'email_verified_at' => now(),
-        ]);
-
-        // Template demo emails
-        $demoAccounts = [
-            'admin@demo.com',
-            'supervisor@demo.com',
-            'operator@demo.com',
-            'operator2@demo.com',
-            'manager@demo.com',
+        $superAdmins = [
+            [
+                'name' => 'Mhd Iqbal Syahputra',
+                'email' => 'synard1@gmail.com'
+            ],
+            [
+                'name' => 'Admin',
+                'email' => 'admin@peternakan.digital'
+            ]
         ];
 
-        foreach ($demoAccounts as $demoEmail) {
-            // Buat akun original @demo.com
-            User::create([
-                'name'              => $faker->name,
-                'email'             => $demoEmail,
-                'password'          => Hash::make('demo'),
-                'email_verified_at' => now(),
-            ]);
+        foreach ($superAdmins as $admin) {
+            try {
+                // Create super admin user
+                $user = User::create([
+                    'name'              => $admin['name'],
+                    'email'             => $admin['email'],
+                    'password'          => Hash::make('Admin123!@'),
+                    'email_verified_at' => now(),
+                ]);
 
-            // Ganti domain ke @demo2.com
-            $demo2Email = str_replace('@demo.com', '@demo2.com', $demoEmail);
+                // Assign SuperAdmin role
+                if (!$user->hasRole('SuperAdmin')) {
+                    $user->assignRole('SuperAdmin');
+                }
 
-            // Buat akun duplikat @demo2.com
-            User::create([
-                'name'              => $faker->name,
-                'email'             => $demo2Email,
-                'password'          => Hash::make('demo'),
-                'email_verified_at' => now(),
-            ]);
+                $this->command->info("✅ Created super admin user: {$admin['email']}");
+
+                Log::info('UsersSeeder: Created super admin user', [
+                    'user_id' => $user->id,
+                    'email' => $user->email
+                ]);
+
+            } catch (\Exception $e) {
+                Log::error('UsersSeeder: Failed to create super admin user', [
+                    'error' => $e->getMessage(),
+                    'email' => $admin['email']
+                ]);
+                throw $e;
+            }
         }
     }
 }
