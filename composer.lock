@@ -9388,16 +9388,16 @@
         },
         {
             "name": "laravel/boost",
-            "version": "v1.0.17",
+            "version": "v1.0.18",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/boost.git",
-                "reference": "3d1121561f793d027b76cb02b4ef9e654f8870fb"
+                "reference": "df2a62b5864759ea8cce8a4b7575b657e9c7d4ab"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/boost/zipball/3d1121561f793d027b76cb02b4ef9e654f8870fb",
-                "reference": "3d1121561f793d027b76cb02b4ef9e654f8870fb",
+                "url": "https://api.github.com/repos/laravel/boost/zipball/df2a62b5864759ea8cce8a4b7575b657e9c7d4ab",
+                "reference": "df2a62b5864759ea8cce8a4b7575b657e9c7d4ab",
                 "shasum": ""
             },
             "require": {
@@ -9449,7 +9449,7 @@
                 "issues": "https://github.com/laravel/boost/issues",
                 "source": "https://github.com/laravel/boost"
             },
-            "time": "2025-08-14T17:31:57+00:00"
+            "time": "2025-08-16T09:10:03+00:00"
         },
         {
             "name": "laravel/breeze",
