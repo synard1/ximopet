@@ -21,6 +21,7 @@ use App\Http\Controllers\MutationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\SecurityController;
+use App\Http\Controllers\Api\ChatMessageController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,10 +29,19 @@ use App\Http\Controllers\SecurityController;
 |--------------------------------------------------------------------------
 |
 | Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "api" middleware group. Make something great!
 |
 */
+
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
+});
+
+// Chat API endpoints for fallback communication - use web middleware
+Route::middleware(['web', 'auth'])->group(function () {
+    // Move to web routes to maintain session
+});
 
 // Authentication Routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -246,6 +256,78 @@ Route::prefix('expedition')->group(function () {
     Route::put('/status/{transactionId}', [App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'updateStatus']);
     Route::get('/list', [App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'getExpeditions']);
     Route::get('/zones/{expeditionId}', [App\Http\Controllers\Expedition\ExpeditionTransactionController::class, 'getZones']);
+});
+
+// AI Chat API Routes
+Route::middleware(['auth:sanctum'])->prefix('chat')->group(function () {
+    // Apply chat-specific middleware
+    Route::middleware([
+        \App\Http\Middleware\ChatAuthMiddleware::class,
+        \App\Http\Middleware\ChatRateLimitMiddleware::class,
+        \App\Http\Middleware\ChatContextMiddleware::class
+    ])->group(function () {
+
+        // Session Management Routes
+        Route::get('/sessions', [App\Http\Controllers\Api\ChatController::class, 'getSessions'])
+            ->name('api.chat.sessions.index');
+
+        Route::post('/sessions', [App\Http\Controllers\Api\ChatController::class, 'createSession'])
+            ->name('api.chat.sessions.create');
+
+        Route::get('/sessions/{session}', [App\Http\Controllers\Api\ChatController::class, 'getSession'])
+            ->name('api.chat.sessions.show');
+
+        Route::delete('/sessions/{session}', [App\Http\Controllers\Api\ChatController::class, 'deleteSession'])
+            ->name('api.chat.sessions.delete');
+
+        // Message Management Routes
+        Route::post('/messages', [App\Http\Controllers\Api\ChatController::class, 'sendMessage'])
+            ->name('api.chat.messages.send');
+
+        Route::get('/sessions/{session}/messages', [App\Http\Controllers\Api\ChatController::class, 'getMessages'])
+            ->name('api.chat.sessions.messages');
+
+        // Provider Management Routes
+        Route::post('/sessions/{session}/provider', [App\Http\Controllers\Api\ChatController::class, 'switchProvider'])
+            ->name('api.chat.sessions.switch-provider');
+
+        Route::get('/providers', [App\Http\Controllers\Api\ChatController::class, 'getProviders'])
+            ->name('api.chat.providers.index');
+
+        Route::get('/providers/{provider}/models', [App\Http\Controllers\Api\ChatController::class, 'getProviderModels'])
+            ->name('api.chat.providers.models');
+
+        Route::post('/providers/test', [App\Http\Controllers\Api\ChatController::class, 'testProvider'])
+            ->name('api.chat.providers.test');
+
+        // Context Management Routes
+        Route::get('/context/types', [App\Http\Controllers\Api\ChatController::class, 'getContextTypes'])
+            ->name('api.chat.context.types');
+
+        Route::post('/context/cache/clear', [App\Http\Controllers\Api\ChatController::class, 'clearContextCache'])
+            ->name('api.chat.context.cache.clear');
+
+        // Rating Routes
+        Route::post('/ratings', [App\Http\Controllers\Api\ChatRatingController::class, 'rateMessage'])
+            ->name('api.chat.ratings.rate');
+
+        Route::get('/ratings/stats', [App\Http\Controllers\Api\ChatRatingController::class, 'getStats'])
+            ->name('api.chat.ratings.stats');
+    });
+
+    // Health check route (no rate limiting)
+    Route::middleware([\App\Http\Middleware\ChatAuthMiddleware::class])
+        ->get('/health', function () {
+            return response()->json([
+                'success' => true,
+                'message' => 'Chat service is healthy',
+                'timestamp' => now()->toISOString(),
+                'providers' => [
+                    'ollama' => config('chat.providers.ollama.enabled', false),
+                    'openwebui' => config('chat.providers.openwebui.enabled', false)
+                ]
+            ]);
+        })->name('api.chat.health');
 });
 
 /*

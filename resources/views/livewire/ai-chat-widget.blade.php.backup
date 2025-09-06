@@ -1,0 +1,1053 @@
+<!-- Custom CSS for enhanced chat widget styling -->
+<style>
+.hover-bg-light:hover {
+    background-color: #f8f9fa !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.message-user .message-content {
+    background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%) !important;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+}
+
+.message-assistant .message-content {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chat-toggle-btn {
+    background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.chat-toggle-btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 12px rgba(13, 110, 253, 0.4) !important;
+}
+
+.chat-messages {
+    scrollbar-width: thin;
+    scrollbar-color: #dee2e6 #f8f9fa;
+}
+
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: #f8f9fa;
+    border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+}
+</style>
+
+<div x-data="{
+    position: @entangle('chatPosition'),
+    size: @entangle('chatSize'),
+    theme: @entangle('theme'),
+    showSettings: false,
+    showSessions: false,
+    autoScroll: true,
+    sounds: {{ config('chat.ui.enable_sounds', true) ? 'true' : 'false' }},
+    animations: {{ config('chat.ui.enable_animations', true) ? 'true' : 'false' }},
+    isResizing: false,
+    chatWidth: 420,
+    chatHeight: 560,
+    minWidth: 350,
+    maxWidth: 650,
+    minHeight: 450,
+    maxHeight: 800
+}" 
+    x-init="
+        // Initialize size based on current setting
+        if (size === 'small') {
+            chatWidth = 350; chatHeight = 450;
+        } else if (size === 'medium') {
+            chatWidth = 420; chatHeight = 560;
+        } else if (size === 'large') {
+            chatWidth = 520; chatHeight = 680;
+        }
+        
+        // Auto-scroll to bottom when new messages arrive
+        $watch('$wire.messages', () => {
+            if (autoScroll) {
+                $nextTick(() => {
+                    const messagesContainer = $el.querySelector('.chat-messages');
+                    if (messagesContainer) {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                });
+            }
+        });
+        
+        // Listen for Livewire events
+        $wire.on('chat-opened', () => {
+            if (sounds) playSound('open');
+        });
+        
+        $wire.on('chat-closed', () => {
+            if (sounds) playSound('close');
+        });
+        
+        $wire.on('message-sent', (data) => {
+            if (sounds) playSound('send');
+            showToast('Message sent successfully', 'success');
+        });
+        
+        $wire.on('chat-error', (message) => {
+            if (sounds) playSound('error');
+            showToast(message, 'error');
+        });
+        
+        $wire.on('chat-success', (message) => {
+            if (sounds) playSound('success');
+            showToast(message, 'success');
+        });
+        
+        // Copy message function
+        window.copyMessageToClipboard = (event, messageIndex) => {
+            const messageContent = event.target.closest('button').dataset.messageContent;
+            if (navigator.clipboard && messageContent) {
+                navigator.clipboard.writeText(messageContent).then(() => {
+                    showToast('Message copied to clipboard!', 'success');
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    showToast('Failed to copy message', 'error');
+                });
+            } else {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = messageContent;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('Message copied to clipboard!', 'success');
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                    showToast('Failed to copy message', 'error');
+                }
+                document.body.removeChild(textArea);
+            }
+        };
+        
+        // Helper functions
+        function playSound(type) {
+            if (!sounds) return;
+            // You can implement sound playing here
+            console.log('Playing sound:', type);
+        }
+        
+        function showToast(message, type) {
+            // Integration with existing toast system
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: type === 'error' ? 'Error' : 'Success',
+                    text: message,
+                    icon: type === 'error' ? 'error' : 'success',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            }
+        }
+    "
+    class="ai-chat-widget"
+    :class="{
+        'position-fixed': true,
+        'bottom-0 end-0': position === 'bottom-right',
+        'bottom-0 start-0': position === 'bottom-left',
+        'top-0 end-0': position === 'top-right',
+        'top-0 start-0': position === 'top-left'
+    }"
+    style="z-index: 1050; margin: 20px;">
+    
+    <!-- Chat Toggle Button (when closed) -->
+    <div x-show="!@this.isOpen" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 scale-90"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-90">
+        <button wire:click="openChat" 
+                class="btn btn-primary rounded-circle shadow-lg chat-toggle-btn"
+                style="width: 60px; height: 60px;"
+                title="Open AI Chat">
+            <i class="fas fa-robot fa-lg"></i>
+            @if($messageCount > 0)
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    {{ $messageCount > 99 ? '99+' : $messageCount }}
+                    <span class="visually-hidden">unread messages</span>
+                </span>
+            @endif
+        </button>
+    </div>
+    
+    <!-- Chat Window -->
+    <div x-show="@this.isOpen" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-4 scale-95"
+         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+         x-transition:leave-end="opacity-0 translate-y-4 scale-95"
+         class="chat-window card shadow-lg resizable-chat"
+         :style="`width: ${chatWidth}px; height: ${chatHeight}px;`"
+         x-cloak>
+        
+        <!-- Resize Handle -->
+        <div class="resize-handle" 
+             @mousedown.prevent="
+                isResizing = true;
+                const startX = $event.clientX;
+                const startY = $event.clientY;
+                const startWidth = chatWidth;
+                const startHeight = chatHeight;
+                
+                const doDrag = (e) => {
+                    chatWidth = Math.min(maxWidth, Math.max(minWidth, startWidth + (e.clientX - startX)));
+                    chatHeight = Math.min(maxHeight, Math.max(minHeight, startHeight + (e.clientY - startY)));
+                };
+                
+                const stopDrag = () => {
+                    isResizing = false;
+                    document.removeEventListener('mousemove', doDrag);
+                    document.removeEventListener('mouseup', stopDrag);
+                    
+                    // Update size category for Livewire
+                    if (chatWidth <= 370) {
+                        $wire.set('chatSize', 'small');
+                    } else if (chatWidth >= 480) {
+                        $wire.set('chatSize', 'large');
+                    } else {
+                        $wire.set('chatSize', 'medium');
+                    }
+                };
+                
+                document.addEventListener('mousemove', doDrag);
+                document.addEventListener('mouseup', stopDrag);
+             ">
+            <i class="fas fa-expand-arrows-alt"></i>
+        </div>
+        
+        <!-- Chat Header -->
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center p-3">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-robot me-2"></i>
+                <div>
+                    <h6 class="mb-0">AI Assistant</h6>
+                    <small class="opacity-75">
+                        @if($currentSession)
+                            {{ $currentSession['title'] ?? 'Untitled Session' }}
+                        @else
+                            Ready to help
+                        @endif
+                    </small>
+                </div>
+            </div>
+            
+            <div class="d-flex align-items-center">
+                <!-- Provider Status -->
+                <span class="badge {{ $providerStatus ? 'bg-success' : 'bg-warning' }} me-3">
+                    <i class="fas fa-circle" style="font-size: 0.5em;"></i>
+                    {{ ucfirst($selectedProvider) }}
+                </span>
+                
+                <!-- Action Buttons Group -->
+                <div class="btn-group me-2" role="group">
+                    <button @click="showSettings = !showSettings; showSessions = false" 
+                            class="btn btn-sm btn-outline-light"
+                            :class="{ 'active': showSettings }"
+                            title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    
+                    <button @click="showSessions = !showSessions; showSettings = false" 
+                            class="btn btn-sm btn-outline-light"
+                            :class="{ 'active': showSessions }"
+                            title="Chat Sessions">
+                        <i class="fas fa-history"></i>
+                    </button>
+                </div>
+                
+                <!-- Window Controls Group -->
+                <div class="btn-group" role="group">
+                    <button wire:click="toggleMinimize" 
+                            class="btn btn-sm btn-outline-light" 
+                            title="Minimize">
+                        <i class="fas" :class="@this.isMinimized ? 'fa-window-maximize' : 'fa-window-minimize'"></i>
+                    </button>
+                    
+                    <button wire:click="closeChat" 
+                            class="btn btn-sm btn-outline-light" 
+                            title="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Panel -->
+        <div x-show="showSettings" 
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 transform -translate-y-2"
+             x-transition:enter-end="opacity-100 transform translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 transform translate-y-0"
+             x-transition:leave-end="opacity-0 transform -translate-y-2"
+             class="card-body border-bottom bg-light p-3">
+            
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="fas fa-cog me-2"></i>Settings</h6>
+                <button @click="showSettings = false" 
+                        class="btn btn-sm btn-outline-secondary" 
+                        title="Close Settings">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Provider Selection -->
+            <div class="mb-3">
+                <label class="form-label small">AI Provider</label>
+                <select wire:model.live="selectedProvider" 
+                        wire:change="switchProvider"
+                        class="form-select form-select-sm">
+                    @foreach($availableProviders as $providerKey => $provider)
+                        <option value="{{ $providerKey }}" 
+                                {{ !$provider['available'] ? 'disabled' : '' }}>
+                            {{ $provider['name'] }} 
+                            @if(!$provider['available'])
+                                (Offline)
+                            @endif
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            
+            <!-- Model Selection -->
+            @if(!empty($availableModels))
+                <div class="mb-3">
+                    <label class="form-label small">Model</label>
+                    <select wire:model.live="selectedModel" class="form-select form-select-sm">
+                        @foreach($availableModels as $model)
+                            <option value="{{ $model }}">{{ $model }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+            
+            <!-- Context Type -->
+            <div class="mb-3">
+                <label class="form-label small">Context Type</label>
+                <select wire:model.live="contextType" class="form-select form-select-sm">
+                    @foreach($contextTypes as $typeKey => $typeLabel)
+                        <option value="{{ $typeKey }}">{{ $typeLabel }}</option>
+                    @endforeach
+                </select>
+            </div>
+            
+            <!-- Chat Size -->
+            <div class="mb-3">
+                <label class="form-label small">Chat Size</label>
+                <div class="btn-group w-100" role="group">
+                    <button type="button" 
+                            class="btn btn-sm"
+                            :class="size === 'small' ? 'btn-primary' : 'btn-outline-secondary'"
+                            @click="
+                                chatWidth = 350; chatHeight = 450; 
+                                $wire.set('chatSize', 'small');
+                            ">
+                        Small
+                    </button>
+                    <button type="button" 
+                            class="btn btn-sm"
+                            :class="size === 'medium' ? 'btn-primary' : 'btn-outline-secondary'"
+                            @click="
+                                chatWidth = 420; chatHeight = 560; 
+                                $wire.set('chatSize', 'medium');
+                            ">
+                        Medium
+                    </button>
+                    <button type="button" 
+                            class="btn btn-sm"
+                            :class="size === 'large' ? 'btn-primary' : 'btn-outline-secondary'"
+                            @click="
+                                chatWidth = 520; chatHeight = 680; 
+                                $wire.set('chatSize', 'large');
+                            ">
+                        Large
+                    </button>
+                </div>
+                <small class="text-muted">Or drag the resize handle in bottom-right corner</small>
+            </div>
+            
+            <!-- Actions -->
+            <div class="d-flex gap-2">
+                <button wire:click="createNewSession" 
+                        class="btn btn-sm btn-outline-primary flex-fill"
+                        wire:loading.attr="disabled">
+                    <i class="fas fa-plus"></i> New Chat
+                </button>
+                <button wire:click="exportChat" 
+                        class="btn btn-sm btn-outline-secondary"
+                        wire:loading.attr="disabled"
+                        @disabled(!$currentSessionId)>
+                    <i class="fas fa-download"></i> Export
+                </button>
+                <button wire:click="debugState" 
+                        class="btn btn-sm btn-outline-warning"
+                        title="Debug (temporary)">
+                    <i class="fas fa-bug"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Sessions Panel -->
+        <div x-show="showSessions" 
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 transform -translate-y-2"
+             x-transition:enter-end="opacity-100 transform translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 transform translate-y-0"
+             x-transition:leave-end="opacity-0 transform -translate-y-2"
+             class="card-body border-bottom bg-light p-3" 
+             style="max-height: 350px; overflow-y: auto; border-left: 4px solid #0d6efd;">
+            
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="fas fa-history me-2"></i>Recent Sessions ({{ count($sessions) }})</h6>
+                <div class="btn-group" role="group">
+                    <button wire:click="loadRecentSessions" 
+                            class="btn btn-sm btn-outline-primary" 
+                            title="Refresh sessions">
+                        <i class="fas fa-refresh"></i>
+                    </button>
+                    <button @click="showSessions = false" 
+                            class="btn btn-sm btn-outline-secondary" 
+                            title="Close Sessions">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            @if(!empty($sessions))
+                <div class="list-group list-group-flush">
+                    @foreach($sessions as $session)
+                        <div class="list-group-item p-3 {{ $session['id'] === $currentSessionId ? 'bg-primary bg-opacity-15 border-primary border-2' : 'bg-white hover-bg-light' }} rounded mb-2 shadow-sm" 
+                             style="cursor: pointer; transition: all 0.2s;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1" 
+                                     wire:click="switchSession('{{ $session['id'] }}')">
+                                    <div class="fw-bold small {{ $session['id'] === $currentSessionId ? 'text-primary' : 'text-dark' }} mb-1">
+                                        {{ $session['title'] ?? 'Untitled Session' }}
+                                        @if($session['id'] === $currentSessionId)
+                                            <span class="badge bg-primary ms-2">Active</span>
+                                        @endif
+                                    </div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">
+                                        <i class="fas fa-clock me-1"></i>
+                                        <strong>{{ Carbon\Carbon::parse($session['last_activity_at'])->format('M d, H:i') }}</strong>
+                                        • {{ Carbon\Carbon::parse($session['last_activity_at'])->diffForHumans() }}
+                                    </div>
+                                    @if(isset($session['message_count']) && $session['message_count'] > 0)
+                                        <div class="text-muted mt-1" style="font-size: 0.7rem;">
+                                            <i class="fas fa-comments me-1"></i>
+                                            {{ $session['message_count'] }} message{{ $session['message_count'] > 1 ? 's' : '' }}
+                                        </div>
+                                    @endif
+                                </div>
+                                @if(config('chat.ui.enable_session_delete', true))
+                                    <button wire:click="deleteSession('{{ $session['id'] }}')" 
+                                            class="btn btn-sm btn-outline-danger ms-2"
+                                            @if(config('chat.ui.confirm_session_delete', true))
+                                                onclick="return confirm('Are you sure you want to delete this session? This action cannot be undone.')"
+                                            @endif
+                                            title="Delete session">
+                                        <i class="fas fa-trash fa-xs"></i>
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                
+                <!-- Session Management Actions -->
+                <div class="mt-3 pt-2 border-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Sessions auto-delete after {{ config('chat.system.auto_delete_sessions_after_days', 30) }} days
+                        </small>
+                        @if(config('chat.ui.enable_session_delete', true))
+                            <button wire:click="clearAllSessions" 
+                                    class="btn btn-sm btn-outline-warning"
+                                    onclick="return confirm('Are you sure you want to delete ALL chat sessions? This action cannot be undone.')"
+                                    title="Clear all sessions">
+                                <i class="fas fa-trash-alt fa-xs me-1"></i>Clear All
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            @else
+                <div class="text-center py-4">
+                    <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                    <p class="text-muted small mb-2">No recent sessions found</p>
+                    <button wire:click="createNewSession" 
+                            class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Start New Chat
+                    </button>
+                </div>
+            @endif
+        </div>
+        
+        <!-- Chat Body -->
+        <div class="card-body p-0" x-show="!@this.isMinimized">
+            
+            <!-- Messages Container -->
+            <div class="chat-messages p-3" 
+                 :style="`height: ${Math.max(400, chatHeight - 180)}px; overflow-y: auto; background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius: 8px; margin: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);`">
+                
+                @if(empty($messages))
+                    <!-- Welcome Message -->
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-robot fa-3x mb-3 opacity-25"></i>
+                        <h6>Hi! I'm your AI assistant</h6>
+                        <p class="small mb-3">Ask me anything about your farm management, livestock, feeds, or supplies!</p>
+                        @if(!empty($sessions))
+                            <div class="alert alert-info alert-sm mt-3 border-info" style="background: linear-gradient(45deg, #d1ecf1, #bee5eb); border-width: 2px;">
+                                <i class="fas fa-history me-2 text-info"></i>
+                                <strong>{{ count($sessions) }} previous chat sessions available!</strong><br>
+                                <small class="text-info">Click the 
+                                    <span class="badge bg-info text-white"><i class="fas fa-history"></i> {{ count($sessions) }}</span> 
+                                    button below or 
+                                    <a href="#" @click="showSessions = true; showSettings = false" class="alert-link fw-bold">click here to view your chat history</a>
+                                </small>
+                            </div>
+                        @else
+                            <div class="alert alert-light alert-sm mt-3">
+                                <i class="fas fa-info-circle me-1 text-muted"></i>
+                                <small class="text-muted">This is your first chat session. Your conversations will be saved for future reference.</small>
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <!-- Messages List -->
+                    @foreach($messages as $message)
+                        <div class="message mb-3 {{ $message['message_type'] === 'user' ? 'message-user' : 'message-assistant' }}" 
+                             data-message-time="{{ $message['created_at'] }}">
+                            <div class="d-flex {{ $message['message_type'] === 'user' ? 'justify-content-end' : 'justify-content-start' }}">
+                                <div class="message-content {{ $message['message_type'] === 'user' ? 'bg-primary text-white' : 'bg-white border border-light shadow-sm' }} 
+                                            rounded px-3 py-2" 
+                                     style="max-width: 80%; {{ $message['message_type'] === 'assistant' ? 'border-left: 3px solid #0d6efd !important;' : '' }}">
+                                    
+                                    @if($message['message_type'] === 'assistant')
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-robot text-primary me-2"></i>
+                                            <small class="text-muted fw-medium">AI Assistant</small>
+                                        </div>
+                                    @else
+                                        <div class="d-flex align-items-center justify-content-end mb-1">
+                                            <small class="text-white-50 fw-medium me-2">You</small>
+                                            <i class="fas fa-user text-white-50"></i>
+                                        </div>
+                                    @endif
+                                    
+                                    <div class="message-text">{!! nl2br(e($message['content'])) !!}</div>
+                                    
+                                    <div class="message-meta mt-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="{{ $message['message_type'] === 'user' ? 'text-white-50' : 'text-muted' }}">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ Carbon\Carbon::parse($message['created_at'])->format('H:i:s') }}
+                                                @if($message['message_type'] === 'assistant' && isset($message['processing_time']))
+                                                    • {{ number_format($message['processing_time'], 2) }}s
+                                                @endif
+                                            </small>
+                                            <small class="{{ $message['message_type'] === 'user' ? 'text-white-50' : 'text-muted' }}">
+                                                #{{ $loop->iteration }}
+                                            </small>
+                                        </div>
+                                        
+                                        @if($message['message_type'] === 'assistant')
+                                            <div class="message-actions mt-1">
+                                                <button class="btn btn-sm btn-outline-secondary me-1" 
+                                                        @click="copyMessageToClipboard($event, '{{ $loop->index }}')"
+                                                        data-message-content="{{ htmlspecialchars(strip_tags($message['content']), ENT_QUOTES, 'UTF-8') }}"
+                                                        title="Copy message">
+                                                    <i class="fas fa-copy fa-xs"></i>
+                                                </button>
+                                                @if(config('chat.ui.enable_message_regenerate', true))
+                                                    <button class="btn btn-sm btn-outline-primary" 
+                                                            wire:click="regenerateMessage('{{ $message['id'] ?? '' }}')"
+                                                            title="Regenerate response">
+                                                        <i class="fas fa-redo fa-xs"></i>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                @endif
+                
+                <!-- Typing Indicator -->
+                <div wire:loading.delay wire:target="sendMessage" class="message message-assistant mb-3">
+                    <div class="d-flex justify-content-start">
+                        <div class="bg-white border rounded px-3 py-2">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-robot text-primary me-2"></i>
+                                <div class="typing-indicator">
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                </div>
+                                <span class="ms-2 text-muted small">AI is thinking...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Message Input -->
+            <div class="card-footer bg-white border-top-0 p-3">
+                <!-- Error/Success Messages -->
+                @if($errorMessage)
+                    <div class="alert alert-danger alert-sm py-2 mb-2" role="alert">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        {{ $errorMessage }}
+                    </div>
+                @endif
+                
+                @if($successMessage)
+                    <div class="alert alert-success alert-sm py-2 mb-2" role="alert">
+                        <i class="fas fa-check-circle me-1"></i>
+                        {{ $successMessage }}
+                    </div>
+                @endif
+                
+                <!-- Input Form -->
+                <div class="chat-input-container">
+                    <form wire:submit.prevent="sendMessage" class="d-flex flex-column gap-2">
+                        <div class="input-group">
+                            <textarea wire:model.defer="newMessage" 
+                                    class="form-control chat-textarea" 
+                                    rows="3" 
+                                    placeholder="Type your message here..."
+                                    maxlength="{{ config('chat.security.max_message_length', 5000) }}"
+                                    wire:loading.attr="disabled"
+                                    wire:keydown.ctrl.enter="sendMessage"
+                                    @disabled($isLoading || !$providerStatus)
+                                    style="resize: none; border-right: none;"></textarea>
+                            <div class="input-group-append d-flex flex-column justify-content-end">
+                                <button type="submit" 
+                                        class="btn btn-primary chat-send-btn h-100"
+                                        wire:loading.attr="disabled"
+                                        @disabled($isLoading || !$providerStatus)
+                                        title="Send message">
+                                    <span wire:loading.remove wire:target="sendMessage">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </span>
+                                    <span wire:loading wire:target="sendMessage">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Press Ctrl+Enter to send</small>
+                            <div class="chat-actions">
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-secondary me-1"
+                                        @click="$wire.set('newMessage', '')"
+                                        title="Clear message">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-sm {{ count($sessions) > 0 ? 'btn-info text-white fw-bold' : 'btn-outline-info' }}"
+                                        @click="showSessions = !showSessions; showSettings = false"
+                                        title="{{ count($sessions) > 0 ? count($sessions) . ' chat sessions available' : 'Show chat history' }}"
+                                        style="{{ count($sessions) > 0 ? 'border: 2px solid #0dcaf0; box-shadow: 0 2px 4px rgba(13,202,240,0.3);' : '' }}">
+                                    <i class="fas fa-history"></i>
+                                    @if(count($sessions) > 0)
+                                        <span class="badge bg-white text-info ms-1 fw-bold">{{ count($sessions) }}</span>
+                                    @endif
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                @if(!$providerStatus)
+                    <div class="text-center mt-2">
+                        <small class="text-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            AI provider is currently offline
+                        </small>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('styles')
+<style>
+.ai-chat-widget {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.chat-toggle-btn {
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+}
+
+.chat-toggle-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 123, 255, 0.6);
+}
+
+.chat-window {
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    resize: none; /* Disable default resize */
+}
+
+.resizable-chat {
+    min-width: 350px;
+    max-width: 650px;
+    min-height: 450px;
+    max-height: 800px;
+}
+
+/* Chat Input Improvements */
+.chat-input-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    padding: 12px;
+    margin: -8px;
+}
+
+.chat-textarea {
+    border: 2px solid #e9ecef;
+    border-radius: 8px 0 0 8px;
+    font-size: 14px;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+    min-height: 80px;
+}
+
+.chat-textarea:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.chat-send-btn {
+    border-radius: 0 8px 8px 0;
+    min-width: 50px;
+    font-size: 16px;
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    border: 2px solid #007bff;
+    transition: all 0.2s ease;
+}
+
+.chat-send-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.chat-send-btn:active {
+    transform: translateY(0);
+}
+
+.chat-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.chat-actions .btn {
+    transition: all 0.2s ease;
+}
+
+.chat-actions .btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Message area improvements */
+.chat-messages {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 8px;
+    margin: 8px;
+    padding: 12px;
+}
+
+/* Resize Handle */
+.resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    background: rgba(0, 123, 255, 0.1);
+    cursor: nw-resize;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: rgba(0, 123, 255, 0.6);
+    transition: all 0.2s ease;
+    border-top-left-radius: 4px;
+}
+
+.resize-handle:hover {
+    background: rgba(0, 123, 255, 0.2);
+    color: rgba(0, 123, 255, 0.8);
+}
+
+/* Button Groups */
+.btn-group .btn {
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: 0.25rem;
+    border-bottom-left-radius: 0.25rem;
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.btn-group .btn.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Legacy size classes for compatibility */
+.chat-size-small { width: 350px; height: 450px; }
+.chat-size-medium { width: 420px; height: 560px; }
+.chat-size-large { width: 520px; height: 680px; }
+
+.chat-messages {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 #f7fafc;
+    min-height: 350px;
+    border: 1px solid #e9ecef;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chat-messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: #f7fafc;
+    border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+.message-content {
+    word-wrap: break-word;
+    line-height: 1.4;
+    min-width: 120px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.message-content:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.message-user .message-content {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+    border: none !important;
+}
+
+.message-assistant .message-content {
+    background: #ffffff !important;
+    border: 2px solid #e9ecef !important;
+}
+
+.message-actions {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.message:hover .message-actions {
+    opacity: 1;
+}
+
+.typing-indicator {
+    display: inline-flex;
+    align-items: center;
+}
+
+.typing-indicator .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #007bff;
+    margin: 0 1px;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-indicator .dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-indicator .dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.alert-sm {
+    font-size: 0.875rem;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .ai-chat-widget {
+        margin: 10px;
+    }
+    
+    .resizable-chat {
+        max-width: calc(100vw - 20px);
+        max-height: calc(100vh - 20px);
+        min-width: 320px;
+    }
+    
+    .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    
+    .btn-group .btn {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .chat-textarea {
+        min-height: 60px;
+    }
+    
+    .chat-send-btn {
+        min-width: 45px;
+        font-size: 14px;
+    }
+    
+    .chat-actions {
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .chat-actions .btn {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .resizable-chat {
+        min-width: 280px;
+    }
+    
+    .chat-input-container {
+        padding: 8px;
+    }
+    
+    .chat-textarea {
+        font-size: 13px;
+        min-height: 50px;
+    }
+}
+</style>
+@endpush
+
+@push('scripts')
+<script>
+function copyToClipboard(text) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+            // Show success message
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Copied!',
+                    text: 'Message copied to clipboard',
+                    icon: 'success',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            }
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Copied!',
+                    text: 'Message copied to clipboard',
+                    icon: 'success',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            }
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+        document.body.removeChild(textArea);
+    }
+}
+</script>
+@endpush

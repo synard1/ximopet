@@ -14,24 +14,28 @@ $showMethods = $livewireComponent->shouldShowLivestockMethods();
 $isRecordingTypeEditable = $livewireComponent->isLivestockRecordingTypeEditable();
 
 // Helper function to get method status badge with better contrast
-function getMethodStatusBadge($method, $config) {
-$enabled = $config['enabled'] ?? false;
-$status = $config['status'] ?? 'not_found';
+if (!function_exists('getMethodStatusBadgeEnhanced')) {
+    function getMethodStatusBadgeEnhanced($method, $config) {
+        $enabled = $config['enabled'] ?? false;
+        $status = $config['status'] ?? 'not_found';
 
-if ($enabled && $status === 'ready') {
-return '<span class="badge bg-success text-white fw-bold">Ready</span>';
-} elseif ($status === 'development') {
-return '<span class="badge bg-warning text-dark fw-bold">Development</span>';
-} elseif ($status === 'not_applicable') {
-return '<span class="badge bg-secondary text-white fw-bold">N/A</span>';
-} else {
-return '<span class="badge bg-light text-dark fw-bold border">Disabled</span>';
-}
+        if ($enabled && $status === 'ready') {
+            return '<span class="badge bg-success text-white fw-bold">Ready</span>';
+        } elseif ($status === 'development') {
+            return '<span class="badge bg-warning text-dark fw-bold">Development</span>';
+        } elseif ($status === 'not_applicable') {
+            return '<span class="badge bg-secondary text-white fw-bold">N/A</span>';
+        } else {
+            return '<span class="badge bg-light text-dark fw-bold border">Disabled</span>';
+        }
+    }
 }
 
 // Helper function to check if method is selectable
-function isMethodSelectable($config) {
-return ($config['enabled'] ?? false) && ($config['status'] ?? '') === 'ready';
+if (!function_exists('isMethodSelectableEnhanced')) {
+    function isMethodSelectableEnhanced($config) {
+        return ($config['enabled'] ?? false) && ($config['status'] ?? '') === 'ready';
+    }
 }
 @endphp
 
@@ -120,7 +124,7 @@ return ($config['enabled'] ?? false) && ($config['status'] ?? '') === 'ready';
                     <select wire:model="livestockSettings.recording_method.batch_settings.depletion_method_default"
                         class="form-select mb-3">
                         @foreach($depletionMethods as $method => $config)
-                        <option value="{{ $method }}" {{ !isMethodSelectable($config) ? 'disabled' : '' }}>
+                        <option value="{{ $method }}" {{ !isMethodSelectableEnhanced($config) ? 'disabled' : '' }}>
                             {{ strtoupper($method) }}
                         </option>
                         @endforeach
@@ -136,7 +140,7 @@ return ($config['enabled'] ?? false) && ($config['status'] ?? '') === 'ready';
                                 @foreach($depletionMethods as $method => $config)
                                 <li class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
                                     <span class="fw-semibold text-dark">{{ strtoupper($method) }}</span>
-                                    {!! getMethodStatusBadge($method, $config) !!}
+                                    {!! getMethodStatusBadgeEnhanced($method, $config) !!}
                                 </li>
                                 @endforeach
                             </ul>
@@ -157,7 +161,7 @@ return ($config['enabled'] ?? false) && ($config['status'] ?? '') === 'ready';
                     <select wire:model="livestockSettings.recording_method.batch_settings.mutation_method_default"
                         class="form-select mb-3">
                         @foreach($mutationMethods as $method => $config)
-                        <option value="{{ $method }}" {{ !isMethodSelectable($config) ? 'disabled' : '' }}>
+                        <option value="{{ $method }}" {{ !isMethodSelectableEnhanced($config) ? 'disabled' : '' }}>
                             {{ strtoupper($method) }}
                         </option>
                         @endforeach
@@ -173,7 +177,7 @@ return ($config['enabled'] ?? false) && ($config['status'] ?? '') === 'ready';
                                 @foreach($mutationMethods as $method => $config)
                                 <li class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
                                     <span class="fw-semibold text-dark">{{ strtoupper($method) }}</span>
-                                    {!! getMethodStatusBadge($method, $config) !!}
+                                    {!! getMethodStatusBadgeEnhanced($method, $config) !!}
                                 </li>
                                 @endforeach
                             </ul>
@@ -194,7 +198,7 @@ return ($config['enabled'] ?? false) && ($config['status'] ?? '') === 'ready';
                     <select wire:model="livestockSettings.recording_method.batch_settings.feed_usage_method_default"
                         class="form-select mb-3">
                         @foreach($feedUsageMethods as $method => $config)
-                        <option value="{{ $method }}" {{ !isMethodSelectable($config) ? 'disabled' : '' }}>
+                        <option value="{{ $method }}" {{ !isMethodSelectableEnhanced($config) ? 'disabled' : '' }}>
                             {{ strtoupper($method) }}
                         </option>
                         @endforeach
@@ -210,7 +214,7 @@ return ($config['enabled'] ?? false) && ($config['status'] ?? '') === 'ready';
                                 @foreach($feedUsageMethods as $method => $config)
                                 <li class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
                                     <span class="fw-semibold text-dark">{{ strtoupper($method) }}</span>
-                                    {!! getMethodStatusBadge($method, $config) !!}
+                                    {!! getMethodStatusBadgeEnhanced($method, $config) !!}
                                 </li>
                                 @endforeach
                             </ul>

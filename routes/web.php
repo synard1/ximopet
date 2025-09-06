@@ -42,6 +42,7 @@ use App\Http\Controllers\QaController;
 use App\Http\Livewire\AuditTrail;
 use App\Http\Controllers\PurchaseReportsController;
 use App\Http\Controllers\PageController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -69,6 +70,31 @@ Route::get('/test', function () {
 // Authentication Routes
 Route::get('/auth/redirect/{provider}', [SocialiteController::class, 'redirect']);
 
+// AI Chat Demo Route
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/chat/demo', function () {
+        return view('chat.demo');
+    })->name('chat.demo');
+});
+
+// Chat direct routes for fallback communication
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::post('/chat/send', [ChatMessageController::class, 'sendMessage'])->name('chat.send');
+});
+
+// AI Chat V2 Routes
+Route::middleware(['web', 'auth'])->prefix('ai-chat-v2')->name('ai-chat-v2.')->group(function () {
+    Route::get('/', [App\AiChatV2\Http\Controllers\ChatController::class, 'index'])->name('index');
+    Route::get('/session/{sessionId}', [App\AiChatV2\Http\Controllers\ChatController::class, 'show'])->name('show');
+    Route::post('/session', [App\AiChatV2\Http\Controllers\ChatController::class, 'create'])->name('create');
+    Route::get('/test', function () {
+        return view('ai-chat-v2.test');
+    })->name('test');
+    Route::get('/demo', function () {
+        return view('ai-chat-v2.demo');
+    })->name('demo');
+});
+
 // Protected Routes
 Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard Routes
@@ -86,6 +112,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/test', [App\Http\Controllers\Admin\ArtisanCommandController::class, 'test'])->name('test');
         });
 
+        Route::get('/qa', [AdminController::class, 'qaIndex'])
+            ->middleware(['permission:access qa checklist'])
+            ->name('qa');
+
+        // Resource route for standard CRUD operations (excluding index, show, edit, and destroy)
+        Route::resource('/qa', QaController::class)->except([
+            'index',
+            'show',
+            'edit',
+            'destroy' // Exclude destroy as we are defining it explicitly
+        ]);
+
         // QA Management Routes
         Route::middleware(['auth', 'permission:access qa checklist'])->name('qa.')->prefix('qa')->group(function () {
             // Add export route BEFORE the resource route
@@ -96,13 +134,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // Explicitly define the index route for DataTables
             Route::get('/', [QaController::class, 'index'])->name('index');
 
-            // Create route for new QA entries
-            Route::get('create', [QaController::class, 'create'])->name('create');
-            Route::post('/', [QaController::class, 'store'])->name('store');
-
-            // Show route for individual QA entries
-            Route::get('{qa}', [QaController::class, 'show'])->name('show');
-
             // Explicitly define the edit route
             Route::get('{qa}/edit', [QaController::class, 'edit'])->name('edit');
             Route::put('{qa}', [QaController::class, 'update'])->name('update');
@@ -112,6 +143,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // Explicitly define the delete route
             Route::delete('{qa}', [QaController::class, 'destroy'])->name('destroy');
+
+            // Resource route for standard CRUD operations (excluding index, show, edit, and destroy)
+            Route::resource('/', QaController::class)->except([
+                'index',
+                'show',
+                'edit',
+                'destroy' // Exclude destroy as we are defining it explicitly
+            ]);
 
             // Custom route for updating QA order
             Route::post('update-order', [QaController::class, 'updateOrder'])->name('update-order');
@@ -346,7 +385,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/report/livestock-purchase/export', [PurchaseReportsController::class, 'exportPembelianLivestock'])->name('export-livestock');
         Route::post('/report/livestock-purchase/export', [PurchaseReportsController::class, 'exportPembelianLivestock'])->name('export-livestock');
 
-        // Feed Purchase Reports  
+        // Feed Purchase Reports
         Route::get('/report/feed-purchase', [PurchaseReportsController::class, 'indexPembelianPakan'])->name('pembelian-pakan');
         Route::get('/report/feed-purchase/export', [PurchaseReportsController::class, 'exportPembelianPakan'])->name('export-pakan');
         Route::post('/report/feed-purchase/export', [PurchaseReportsController::class, 'exportPembelianPakan'])->name('export-pakan');
@@ -515,3 +554,17 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin/monitoring')->name('adm
     Route::get('/database-performance', \App\Livewire\AdminMonitoring\DatabasePerformanceMonitor::class)
         ->name('database-performance');
 });
+
+// Test route for AI Chat V2
+Route::get('/test-ai-chat', function () {
+    if (!Auth::check()) {
+        return 'Please log in to test the AI Chat component.';
+    }
+    
+    return view('test-chat-bubble');
+})->name('test.ai.chat');
+
+// Test API route for AI Chat V2
+Route::get('/api/test-ai-chat', [AiChatTestController::class, 'testChatBubble'])
+    ->middleware('auth')
+    ->name('api.test.ai.chat');
