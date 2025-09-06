@@ -1,4 +1,16 @@
-<!--begin::Chat drawer-->
+<!--		<!--begin::Card header-->
+		<div class="card-header pe-4 bg-white border-bottom shadow-sm" id="kt_drawer_chat_messenger_header">
+			<!--begin::Title-->
+			<div class="card-title">
+				<!--begin::User-->
+				<div class="d-flex justify-content-center flex-column me-3">
+					<a href="#" class="fs-4 fw-bold text-gray-900 text-hover-primary me-1 mb-2 lh-1 hover:text-primary-600 transition-colors">Brian Cox</a>
+					<!--begin::Info-->
+					<div class="mb-0 lh-1">
+						<span class="badge badge-success badge-circle w-10px h-10px me-1 animate-pulse"></span>
+						<span class="fs-7 fw-medium text-gray-600">Active</span>
+					</div>
+					<!--end::Info-->awer-->
 <div id="kt_drawer_chat" class="bg-body" data-kt-drawer="true" data-kt-drawer-name="chat" data-kt-drawer-activate="true" data-kt-drawer-overlay="true" data-kt-drawer-width="{default:'300px', 'md': '500px'}" data-kt-drawer-direction="end" data-kt-drawer-toggle="#kt_drawer_chat_toggle" data-kt-drawer-close="#kt_drawer_chat_close">
 	<!--begin::Messenger-->
 	<div class="card w-100 border-0 rounded-0" id="kt_drawer_chat_messenger">
@@ -86,9 +98,9 @@
 		</div>
 		<!--end::Card header-->
 		<!--begin::Card body-->
-		<div class="card-body" id="kt_drawer_chat_messenger_body">
+		<div class="card-body bg-gray-100" id="kt_drawer_chat_messenger_body">
 			<!--begin::Messages-->
-			<div class="scroll-y me-n5 pe-5" data-kt-element="messages" data-kt-scroll="true" data-kt-scroll-activate="true" data-kt-scroll-height="auto" data-kt-scroll-dependencies="#kt_drawer_chat_messenger_header, #kt_drawer_chat_messenger_footer" data-kt-scroll-wrappers="#kt_drawer_chat_messenger_body" data-kt-scroll-offset="0px">
+			<div class="scroll-y me-n5 pe-5" data-kt-element="messages" data-kt-scroll="true" data-kt-scroll-activate="true" data-kt-scroll-height="calc(100vh - 300px)" data-kt-scroll-dependencies="#kt_drawer_chat_messenger_header, #kt_drawer_chat_messenger_footer" data-kt-scroll-wrappers="#kt_drawer_chat_messenger_body" data-kt-scroll-offset="0px">
 				<!--begin::Message(in)-->
 				<div class="d-flex justify-content-start mb-10">
 					<!--begin::Wrapper-->
@@ -292,7 +304,7 @@
 						</div>
 						<!--end::User-->
 						<!--begin::Text-->
-						<div class="p-5 rounded bg-light-primary text-gray-900 fw-semibold mw-lg-400px text-end" data-kt-element="message-text"></div>
+						<div class="p-4 rounded-lg bg-primary-100 text-gray-800 fw-medium mw-lg-400px text-end shadow-sm hover:bg-primary-200 transition-colors" data-kt-element="message-text"></div>
 						<!--end::Text-->
 					</div>
 					<!--end::Wrapper-->
@@ -318,7 +330,7 @@
 						</div>
 						<!--end::User-->
 						<!--begin::Text-->
-						<div class="p-5 rounded bg-light-info text-gray-900 fw-semibold mw-lg-400px text-start" data-kt-element="message-text">Right before vacation season we have the next Big Deal for you.</div>
+						<div class="p-4 rounded-lg bg-white text-gray-800 fw-medium mw-lg-400px text-start border border-gray-100 shadow-sm hover:bg-gray-50 transition-colors" data-kt-element="message-text">Right before vacation season we have the next Big Deal for you.</div>
 						<!--end::Text-->
 					</div>
 					<!--end::Wrapper-->
@@ -329,20 +341,26 @@
 		</div>
 		<!--end::Card body-->
 		<!--begin::Card footer-->
-		<div class="card-footer pt-4" id="kt_drawer_chat_messenger_footer">
+		<div class="card-footer pt-4 bg-white shadow-sm" id="kt_drawer_chat_messenger_footer">
 			<!--begin::Input-->
-			<textarea class="form-control form-control-flush mb-3" rows="1" data-kt-element="input" placeholder="Type a message"></textarea>
+			<textarea class="form-control form-control-solid mb-3 border rounded-lg focus:ring-2 focus:ring-primary" rows="2" data-kt-element="input" placeholder="Type your message here..."></textarea>
 			<!--end::Input-->
 			<!--begin:Toolbar-->
 			<div class="d-flex flex-stack">
 				<!--begin::Actions-->
 				<div class="d-flex align-items-center me-2">
-					<button class="btn btn-sm btn-icon btn-active-light-primary me-1" type="button" data-bs-toggle="tooltip" title="Coming soon">{!! getIcon('paper-clip', 'fs-3') !!}</button>
-					<button class="btn btn-sm btn-icon btn-active-light-primary me-1" type="button" data-bs-toggle="tooltip" title="Coming soon">{!! getIcon('cloud-add', 'fs-3') !!}</button>
+					<button class="btn btn-icon btn-active-light-primary me-2 rounded-circle hover:bg-gray-100" type="button" data-bs-toggle="tooltip" title="Attach file">
+						{!! getIcon('paper-clip', 'fs-3 text-gray-600') !!}
+					</button>
+					<button class="btn btn-icon btn-active-light-primary me-2 rounded-circle hover:bg-gray-100" type="button" data-bs-toggle="tooltip" title="Upload">
+						{!! getIcon('cloud-add', 'fs-3 text-gray-600') !!}
+					</button>
 				</div>
 				<!--end::Actions-->
 				<!--begin::Send-->
-				<button class="btn btn-primary" type="button" data-kt-element="send">Send</button>
+				<button class="btn btn-primary px-6 py-2 rounded-lg hover:bg-primary-600 transition-colors" type="button" data-kt-element="send">
+					<span class="indicator-label">Send Message</span>
+				</button>
 				<!--end::Send-->
 			</div>
 			<!--end::Toolbar-->

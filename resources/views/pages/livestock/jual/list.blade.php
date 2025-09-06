@@ -45,7 +45,7 @@
                         roles: 'Operator',
                         type: 'list'
                     },
-                    success: function(data) {                       
+                    success: function(data) {
                         if (data.farms && data.farms.length > 0) {
                             // Clear loading spinner
                             farmSelect.innerHTML = '';
@@ -91,7 +91,7 @@
                         roles: 'Operator',
                         type: 'list'
                     },
-                    success: function(data) {    
+                    success: function(data) {
                         if (data.kandangs && data.kandangs.length > 0) {
                             // Select the farm dropdown
                             const kandangSelect = document.getElementById('kandangSelect');
@@ -103,7 +103,7 @@
                                     minDate: minDat,
                                 });
 
-                            document.getElementById('tanggal').disabled = false; // Enable tanggal input 
+                            document.getElementById('tanggal').disabled = false; // Enable tanggal input
 
                             const defaultOption = new Option("=== Pilih Kandang ===", "", true, true);
                             kandangSelect.append(defaultOption);

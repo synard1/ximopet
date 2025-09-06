@@ -40,12 +40,16 @@
     @endforeach
     <!--end::Vendor Stylesheets-->
 
-    <!--begin::Custom Stylesheets(optional)-->
+    <!--begin::Custom Stylesheets(optional)--> 
     @foreach(getCustomCss() as $path)
     {!! sprintf('
     <link rel="stylesheet" href="%s">', asset($path)) !!}
     @endforeach
     <!--end::Custom Stylesheets-->
+    
+    <!-- AI Chat V2 Styles -->
+    <link rel="stylesheet" href="{{ asset('css/ai-chat-v2.css') }}">
+    <!-- End AI Chat V2 Styles -->
 
     @livewireStyles
 </head>
@@ -58,6 +62,17 @@
     @include('partials/theme-mode/_init')
 
     @yield('content')
+
+    {{-- AI Chat V2 Bubble - Disabled to prevent conflict with ai-chat-widget --}}
+    {{-- @auth
+        <!-- AI Chat V2 Bubble Container -->
+        <div id="ai-chat-v2-bubble-container" style="position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999999; visibility: visible !important;">
+            @livewire('ai-chat-v2.chat-bubble')
+        </div>
+        <!-- End AI Chat V2 Bubble Container -->
+    @else
+        <!-- User not authenticated, AI Chat V2 Bubble not shown -->
+    @endauth --}}
 
     <!--begin::Javascript-->
     <!--begin::Global Javascript Bundle(mandatory for all pages)-->

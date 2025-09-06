@@ -8,24 +8,28 @@ $mutationMethods = $livestockConfig['mutation_methods'] ?? [];
 $feedUsageMethods = $livestockConfig['feed_usage_methods'] ?? [];
 
 // Helper function to get method status badge
-function getMethodStatusBadge($method, $config) {
-$enabled = $config['enabled'] ?? false;
-$status = $config['status'] ?? 'not_found';
+if (!function_exists('getMethodStatusBadge')) {
+    function getMethodStatusBadge($method, $config) {
+        $enabled = $config['enabled'] ?? false;
+        $status = $config['status'] ?? 'not_found';
 
-if ($enabled && $status === 'ready') {
-return '<span class="badge bg-success fs-7">Ready</span>';
-} elseif ($status === 'development') {
-return '<span class="badge bg-warning fs-7">Development</span>';
-} elseif ($status === 'not_applicable') {
-return '<span class="badge bg-secondary fs-7">N/A</span>';
-} else {
-return '<span class="badge bg-light text-dark fs-7">Disabled</span>';
-}
+        if ($enabled && $status === 'ready') {
+            return '<span class="badge bg-success fs-7">Ready</span>';
+        } elseif ($status === 'development') {
+            return '<span class="badge bg-warning fs-7">Development</span>';
+        } elseif ($status === 'not_applicable') {
+            return '<span class="badge bg-secondary fs-7">N/A</span>';
+        } else {
+            return '<span class="badge bg-light text-dark fs-7">Disabled</span>';
+        }
+    }
 }
 
 // Helper function to check if method is selectable
-function isMethodSelectable($config) {
-return ($config['enabled'] ?? false) && ($config['status'] ?? '') === 'ready';
+if (!function_exists('isMethodSelectable')) {
+    function isMethodSelectable($config) {
+        return ($config['enabled'] ?? false) && ($config['status'] ?? '') === 'ready';
+    }
 }
 @endphp
 

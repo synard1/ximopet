@@ -2,11 +2,11 @@
   "status": "commited",
   "type": "backend",
   "scope": "codebase",
-  "localEndpoint": "http://localhost:8000",
+  "localEndpoint": "http://ximopet.local",
   "backendAuthType": "public",
   "executionArgs": {
-    "projectName": "demo51",
-    "projectPath": "c:\\laragon\\www\\demo51",
+    "projectName": "ximopet",
+    "projectPath": "c:\\laragon\\www\\ximopet",
     "testIds": [],
     "additionalInstruction": "Focus on testing Livewire components, Vue.js interactions, and frontend security features.",
     "envs": {

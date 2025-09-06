@@ -60,8 +60,54 @@
     <link rel="stylesheet" href="{{ asset('css/custom/sidebar-collapse.css') }}">
     <!--end::Sidebar Collapse Styles-->
 
+    {{-- <!--begin::AI Chat Styles-->
+    <link rel="stylesheet" href="{{ asset('css/ai-chat-production.css') }}">
+    <!--end::AI Chat Styles--> --}}
+
     @livewireStyles
     @stack('styles')
+
+    <!-- Critical Chat Widget Overrides -->
+    <style>
+        /* .ai-chat-widget {
+            z-index: 9999 !important;
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+        } */
+
+        /* .chat-window {
+            background: #ffffff !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            display: block !important;
+        }
+
+        .chat-window .card-header {
+            opacity: 1 !important;
+            visibility: visible !important;
+            display: flex !important;
+        }
+
+        .chat-window .card-header .btn,
+        .chat-window .card-header button {
+            opacity: 1 !important;
+            visibility: visible !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        } */
+    </style>
+
+    <!-- AI Chat Configuration -->
+    <script>
+        @include('partials.ai-chat-config')
+    </script>
+
+    <!-- AI Chat Bubble Fix CSS -->
+    {{-- <link href="{{ asset('css/chat-bubble-fix.css') }}" rel="stylesheet"> --}}
 
 </head>
 <!--end::Head-->
@@ -98,6 +144,11 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
 
             @yield('content')
 
+            {{-- AI Chat Widget (only for authenticated users) --}}
+            @auth
+            @livewire('ai-chat-widget')
+            @endauth
+
             <!--begin::Javascript-->
             <!--begin::Global Javascript Bundle(mandatory for all pages)-->
             @foreach(getGlobalAssets() as $path)
@@ -123,6 +174,25 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
             <!--begin::Sidebar Collapse Script-->
             <script src="{{ asset('js/custom/sidebar-collapse.js') }}"></script>
             <!--end::Sidebar Collapse Script-->
+
+            <!--begin::AI Chat Scripts-->
+            @auth
+            <script src="{{ asset('js/ai-chat.js') }}" defer></script>
+            <script src="{{ asset('js/ai-chat-state.js') }}" defer></script>
+            {{-- <script src="{{ asset('js/chat-form-debug.js') }}"></script> --}}
+            <script defer>
+                // Initialize AI Chat Manager
+                    document.addEventListener('DOMContentLoaded', function() {
+                        if (typeof AiChatManager !== 'undefined') {
+                            window.aiChatManager = new AiChatManager();
+                            log('✅ AI Chat Manager initialized');
+                        } else {
+                            log('❌ AI Chat Manager not found');
+                        }
+                    });
+            </script>
+            @endauth
+            <!--end::AI Chat Scripts-->
 
             @stack('scripts')
             <!--begin::Laravel User Setup-->
@@ -187,7 +257,7 @@ $isAuthRoute = $currentRoute && $currentRoute->middleware('auth:sanctum');
         //         // [title, text, confirmButtonText, cancelButtonText, onConfirmed, onCancelled, params]
         //         [
         //             'title',
-        //             'text', 
+        //             'text',
         //             'confirmButtonText',
         //             'cancelButtonText',
         //             'onConfirmed',

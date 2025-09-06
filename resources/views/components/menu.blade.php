@@ -7,46 +7,50 @@ $currentPath = request()->path(); // Use path for more reliable matching
 $isDashboard = $currentPath === '/' || $currentPath === 'dashboard';
 
 // Function to check if a menu or its children are active
-function isMenuActive($menu, $currentPath) {
-// Check if the current menu item's route matches the current path precisely
-// or if the current path starts exactly with the menu route path followed by a slash
-if ($menu->route && $menu->route !== '#') {
-$menuPath = ltrim(parse_url(url($menu->route), PHP_URL_PATH) ?? '', '/');
-if ($currentPath === $menuPath || str_starts_with($currentPath, $menuPath . '/')) {
-return true;
-}
-}
+if (!function_exists('isMenuActive')) {
+    function isMenuActive($menu, $currentPath) {
+        // Check if the current menu item's route matches the current path precisely
+        // or if the current path starts exactly with the menu route path followed by a slash
+        if ($menu->route && $menu->route !== '#') {
+            $menuPath = ltrim(parse_url(url($menu->route), PHP_URL_PATH) ?? '', '/');
+            if ($currentPath === $menuPath || str_starts_with($currentPath, $menuPath . '/')) {
+                return true;
+            }
+        }
 
-// If it's a parent menu, check if any of its children are active
-if ($menu->children->isNotEmpty()) {
-foreach ($menu->children as $child) {
-if ($child->route && $child->route !== '#') {
-$childPath = ltrim(parse_url(url($child->route), PHP_URL_PATH) ?? '', '/');
-if ($currentPath === $childPath || str_starts_with($currentPath, $childPath . '/')) {
-return true;
-}
-}
-}
-}
+        // If it's a parent menu, check if any of its children are active
+        if ($menu->children->isNotEmpty()) {
+            foreach ($menu->children as $child) {
+                if ($child->route && $child->route !== '#') {
+                    $childPath = ltrim(parse_url(url($child->route), PHP_URL_PATH) ?? '', '/');
+                    if ($currentPath === $childPath || str_starts_with($currentPath, $childPath . '/')) {
+                        return true;
+                    }
+                }
+            }
+        }
 
-return false;
+        return false;
+    }
 }
 
 // Function to check if a direct menu item is active (not a parent)
-function isMenuItemActive($menu, $currentPath, $isDashboard) {
-// Check if it's the dashboard link and the current path is the dashboard or root
-if ($isDashboard && $menu->route === '/') {
-return true;
-}
-// Check if the menu item's route matches the current path precisely
-// or if the current path starts exactly with the menu route path followed by a slash
-if ($menu->route && $menu->route !== '#') {
-$menuPath = ltrim(parse_url(url($menu->route), PHP_URL_PATH) ?? '', '/');
-if ($currentPath === $menuPath || str_starts_with($currentPath, $menuPath . '/')) {
-return true;
-}
-}
-return false;
+if (!function_exists('isMenuItemActive')) {
+    function isMenuItemActive($menu, $currentPath, $isDashboard) {
+        // Check if it's the dashboard link and the current path is the dashboard or root
+        if ($isDashboard && $menu->route === '/') {
+            return true;
+        }
+        // Check if the menu item's route matches the current path precisely
+        // or if the current path starts exactly with the menu route path followed by a slash
+        if ($menu->route && $menu->route !== '#') {
+            $menuPath = ltrim(parse_url(url($menu->route), PHP_URL_PATH) ?? '', '/');
+            if ($currentPath === $menuPath || str_starts_with($currentPath, $menuPath . '/')) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
 @endphp
 
@@ -155,7 +159,7 @@ return false;
             toggle.addEventListener('click', function(e) {
                 // Always prevent default for menu toggles
                 e.preventDefault();
-                
+
                 const parentItem = this.closest('.menu-item.menu-accordion');
                 if (!parentItem) return; // Exit if not inside an accordion menu item
 
@@ -170,7 +174,7 @@ return false;
 
                 // Get current state
                 const isCurrentlyOpen = submenu.classList.contains('show');
-                
+
                 // If menu is currently open, close it
                 if (isCurrentlyOpen) {
                     this.classList.remove('active', 'show');
@@ -218,7 +222,7 @@ return false;
                 });
                 document.querySelectorAll('.menu-toggle.active, .menu-toggle.show').forEach(toggle => {
                     // Only remove 'active' and 'show' classes, not classes set by route matching
-                    const wasActiveByRoute = toggle.querySelector('.menu-title') && 
+                    const wasActiveByRoute = toggle.querySelector('.menu-title') &&
                         toggle.closest('.menu-item').querySelector('.menu-link.active');
                     if (!wasActiveByRoute) {
                         toggle.classList.remove('active', 'show');
