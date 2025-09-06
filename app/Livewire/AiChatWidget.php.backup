@@ -1,0 +1,842 @@
+<?php
+
+namespace App\Livewire;
+
+use Livewire\Component;
+use Livewire\Attributes\On;
+use App\Services\AiChatService;
+use App\Services\ChatContextService;
+use App\Models\ChatSession;
+use App\Models\ChatMessage;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Exception;
+
+class AiChatWidget extends Component
+{
+    // Component state
+    public bool $isOpen = false;
+    public bool $isMinimized = false;
+    public bool $isLoading = false;
+    public bool $isTyping = false;
+    
+    // Chat session data
+    public ?string $currentSessionId = null;
+    public array $sessions = [];
+    public array $messages = [];
+    
+    // Form inputs
+    public string $newMessage = '';
+    public string $selectedProvider = 'ollama';
+    public string $selectedModel = '';
+    public string $contextType = 'general';
+    public array $contextFilters = [];
+    
+    // UI settings
+    public string $chatPosition = 'bottom-right';
+    public string $chatSize = 'medium';
+    public string $theme = 'auto';
+    
+    // Available options
+    public array $availableProviders = [];
+    public array $availableModels = [];
+    public array $contextTypes = [];
+    
+    // Error handling
+    public ?string $errorMessage = null;
+    public ?string $successMessage = null;
+    
+    protected AiChatService $chatService;
+    protected ChatContextService $contextService;
+    
+    protected $rules = [
+        'newMessage' => 'required|string|max:5000',
+        'selectedProvider' => 'required|string|in:ollama,openwebui',
+        'selectedModel' => 'sometimes|string|max:100',
+        'contextType' => 'required|string',
+    ];
+    
+    public function boot(AiChatService $chatService, ChatContextService $contextService)
+    {
+        $this->chatService = $chatService;
+        $this->contextService = $contextService;
+    }
+    
+    public function mount()
+    {
+        $this->initializeComponent();
+    }
+    
+    /**
+     * Initialize component with default settings
+     */
+    private function initializeComponent()
+    {
+        try {
+            // Load UI settings from config
+            $this->chatPosition = config('chat.ui.default_position', 'bottom-right');
+            $this->chatSize = config('chat.ui.default_size', 'medium');
+            $this->theme = config('chat.ui.theme', 'auto');
+            
+            // Initialize context types
+            $this->contextTypes = config('chat.context.context_types', []);
+            $this->contextType = config('chat.context.default_context_type', 'livestock_management');
+            
+            // Set default provider based on configuration and availability
+            $defaultProvider = config('chat.system.default_provider', 'openwebui');
+            $this->selectedProvider = $defaultProvider;
+            
+            // If default provider is not available, fall back to available ones
+            if (!config("chat.providers.{$defaultProvider}.enabled", false)) {
+                $this->selectedProvider = config('chat.providers.ollama.enabled') ? 'ollama' : 'openwebui';
+            }
+            
+            // Load available providers and models FIRST
+            $this->loadAvailableProviders();
+            
+            // Load recent sessions ALWAYS (not just when opened)
+            $this->loadRecentSessions();
+            
+            // Try to restore the last active session
+            $this->restoreLastSession();
+            
+            // Auto-open if configured
+            if (config('chat.ui.auto_open', false)) {
+                $this->isOpen = true;
+            }
+            
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error initializing component', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+            
+            $this->setError('Failed to initialize chat widget');
+        }
+    }
+    
+    /**
+     * Restore the last active session
+     */
+    private function restoreLastSession()
+    {
+        try {
+            if (!empty($this->sessions)) {
+                // Get the most recent session
+                $lastSession = $this->sessions[0] ?? null;
+                
+                if ($lastSession) {
+                    $this->currentSessionId = $lastSession['id'];
+                    $this->loadSessionMessages($lastSession['id']);
+                    
+                    Log::debug('AiChatWidget: Restored last session', [
+                        'session_id' => $lastSession['id'],
+                        'user_id' => Auth::id()
+                    ]);
+                }
+            }
+        } catch (Exception $e) {
+            Log::warning('AiChatWidget: Could not restore last session', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+            // Don't fail initialization if session restore fails
+        }
+    }
+    
+    /**
+     * Open chat widget
+     */
+    public function openChat()
+    {
+        $this->isOpen = true;
+        $this->isMinimized = false;
+        $this->clearMessages();
+        
+        // Load recent sessions if none are loaded
+        if (empty($this->sessions)) {
+            $this->loadRecentSessions();
+        }
+        
+        // If no current session and no existing sessions, create new session
+        if (!$this->currentSessionId && empty($this->sessions)) {
+            $this->createNewSession();
+        } else if (!$this->currentSessionId && !empty($this->sessions)) {
+            // If we have sessions but no current session, restore the most recent one
+            $this->restoreLastSession();
+        }
+        
+        $this->dispatch('chat-opened');
+    }
+    
+    /**
+     * Close chat widget
+     */
+    public function closeChat()
+    {
+        $this->isOpen = false;
+        $this->isMinimized = false;
+        $this->clearMessages();
+        $this->dispatch('chat-closed');
+    }
+    
+    /**
+     * Minimize/maximize chat widget
+     */
+    public function toggleMinimize()
+    {
+        $this->isMinimized = !$this->isMinimized;
+        $this->dispatch('chat-toggled', $this->isMinimized);
+    }
+    
+    /**
+     * Send message to AI
+     */
+    public function sendMessage()
+    {
+        $this->validate();
+        
+        if (empty($this->newMessage)) {
+            return;
+        }
+        
+        try {
+            $this->isLoading = true;
+            $this->isTyping = true;
+            $this->clearMessages();
+            
+            // Process natural language to detect context
+            $nlpResult = $this->contextService->processNaturalLanguageQuery($this->newMessage);
+            if ($nlpResult['context_type'] !== 'general') {
+                $this->contextType = $nlpResult['context_type'];
+                $this->contextFilters = $nlpResult['criteria'];
+            }
+            
+            $result = $this->chatService->sendMessage(
+                $this->newMessage,
+                $this->currentSessionId,
+                $this->selectedProvider,
+                $this->selectedModel,
+                $this->contextFilters,
+                $this->contextType
+            );
+            
+            if ($result['success']) {
+                // Update current session ID if new session was created
+                if (!$this->currentSessionId) {
+                    $this->currentSessionId = $result['session_id'];
+                }
+                
+                // Add messages to the UI
+                $this->addMessage($result['user_message']);
+                $this->addMessage($result['assistant_message']);
+                
+                // Clear input
+                $this->newMessage = '';
+                
+                // Refresh sessions list
+                $this->loadRecentSessions();
+                
+                $this->setSuccess('Message sent successfully');
+                
+                $this->dispatch('message-sent', [
+                    'processing_time' => $result['processing_time'],
+                    'context_type' => $result['context_type']
+                ]);
+                
+            } else {
+                $this->setError($result['error'] ?? 'Failed to send message');
+            }
+            
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error sending message', [
+                'error' => $e->getMessage(),
+                'message' => $this->newMessage,
+                'user_id' => Auth::id()
+            ]);
+            
+            $this->setError('An error occurred while sending the message');
+        } finally {
+            $this->isLoading = false;
+            $this->isTyping = false;
+        }
+    }
+    
+    /**
+     * Regenerate the last AI message
+     */
+    public function regenerateMessage($messageId = null)
+    {
+        try {
+            $this->isLoading = true;
+            $this->isTyping = true;
+            $this->clearMessages();
+            
+            // Find the last user message and remove the subsequent AI response
+            $messages = collect($this->messages);
+            $lastUserMessageIndex = null;
+            
+            // Find the last user message
+            for ($i = count($this->messages) - 1; $i >= 0; $i--) {
+                if ($this->messages[$i]['message_type'] === 'user') {
+                    $lastUserMessageIndex = $i;
+                    break;
+                }
+            }
+            
+            if ($lastUserMessageIndex === null) {
+                $this->setError('No user message found to regenerate response');
+                return;
+            }
+            
+            $lastUserMessage = $this->messages[$lastUserMessageIndex]['content'];
+            
+            // Remove AI messages after the last user message
+            $this->messages = array_slice($this->messages, 0, $lastUserMessageIndex + 1);
+            
+            // Process the query again
+            $nlpResult = $this->contextService->processNaturalLanguageQuery($lastUserMessage);
+            if ($nlpResult['context_type'] !== 'general') {
+                $this->contextType = $nlpResult['context_type'];
+                $this->contextFilters = $nlpResult['criteria'];
+            }
+            
+            $result = $this->chatService->sendMessage(
+                $lastUserMessage,
+                $this->currentSessionId,
+                $this->selectedProvider,
+                $this->selectedModel,
+                $this->contextFilters,
+                $this->contextType,
+                true // isRegenerate flag
+            );
+            
+            if ($result['success']) {
+                // Add the new AI response
+                $this->addMessage($result['assistant_message']);
+                $this->setSuccess('Response regenerated successfully');
+                
+                $this->dispatch('message-regenerated', [
+                    'processing_time' => $result['processing_time'],
+                    'context_type' => $result['context_type']
+                ]);
+            } else {
+                $this->setError($result['error'] ?? 'Failed to regenerate message');
+            }
+            
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error regenerating message', [
+                'error' => $e->getMessage(),
+                'message_id' => $messageId,
+                'user_id' => Auth::id()
+            ]);
+            
+            $this->setError('An error occurred while regenerating the message');
+        } finally {
+            $this->isLoading = false;
+            $this->isTyping = false;
+        }
+    }
+    
+    /**
+     * Create new chat session
+     */
+    public function createNewSession()
+    {
+        try {
+            $session = $this->chatService->createSession($this->selectedProvider, $this->selectedModel);
+            
+            if ($session) {
+                $this->currentSessionId = $session->id;
+                $this->messages = [];
+                $this->loadRecentSessions();
+                $this->setSuccess('New chat session created');
+                
+                $this->dispatch('session-created', $session->id);
+            } else {
+                $this->setError('Failed to create new session');
+            }
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error creating session', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+            
+            $this->setError('Failed to create new session');
+        }
+    }
+    
+    /**
+     * Switch to different chat session
+     */
+    public function switchSession(string $sessionId)
+    {
+        try {
+            $this->currentSessionId = $sessionId;
+            $this->loadSessionMessages($sessionId);
+            $this->clearMessages(); // Clear any error/success messages
+            
+            Log::debug('AiChatWidget: Switched to session', [
+                'session_id' => $sessionId,
+                'user_id' => Auth::id(),
+                'message_count' => count($this->messages)
+            ]);
+            
+            $this->dispatch('session-switched', $sessionId);
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error switching session', [
+                'error' => $e->getMessage(),
+                'session_id' => $sessionId,
+                'user_id' => Auth::id()
+            ]);
+            
+            $this->setError('Failed to switch session');
+        }
+    }
+    
+    /**
+     * Delete chat session
+     */
+    public function deleteSession(string $sessionId)
+    {
+        try {
+            $result = $this->chatService->deleteSession($sessionId);
+            
+            if ($result['success']) {
+                // If deleted session was current, create new one
+                if ($this->currentSessionId === $sessionId) {
+                    $this->currentSessionId = null;
+                    $this->messages = [];
+                    $this->createNewSession();
+                }
+                
+                $this->loadRecentSessions();
+                $this->setSuccess('Session deleted successfully');
+                
+                $this->dispatch('session-deleted', $sessionId);
+            } else {
+                $this->setError($result['error'] ?? 'Failed to delete session');
+            }
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error deleting session', [
+                'error' => $e->getMessage(),
+                'session_id' => $sessionId,
+                'user_id' => Auth::id()
+            ]);
+            
+            $this->setError('Failed to delete session');
+        }
+    }
+    
+    /**
+     * Clear all sessions for current user
+     */
+    public function clearAllSessions()
+    {
+        try {
+            $result = $this->chatService->clearAllUserSessions();
+            
+            if ($result['success']) {
+                $this->sessions = [];
+                $this->currentSessionId = null;
+                $this->messages = [];
+                
+                // Create new session
+                $this->createNewSession();
+                
+                $this->setSuccess('All sessions cleared successfully');
+                
+                Log::info('AiChatWidget: All sessions cleared', [
+                    'user_id' => Auth::id(),
+                    'deleted_count' => $result['deleted_count'] ?? 0
+                ]);
+                
+                $this->dispatch('sessions-cleared');
+            } else {
+                $this->setError($result['error'] ?? 'Failed to clear sessions');
+            }
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error clearing all sessions', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+            
+            $this->setError('An error occurred while clearing sessions');
+        }
+    }
+    
+    /**
+     * Switch AI provider
+     */
+    public function switchProvider()
+    {
+        try {
+            if ($this->currentSessionId) {
+                $result = $this->chatService->switchProvider(
+                    $this->currentSessionId,
+                    $this->selectedProvider,
+                    $this->selectedModel
+                );
+                
+                if ($result['success']) {
+                    $this->setSuccess("Switched to {$this->selectedProvider}");
+                    $this->loadSessionMessages($this->currentSessionId);
+                    
+                    $this->dispatch('provider-switched', $this->selectedProvider);
+                } else {
+                    $this->setError($result['error'] ?? 'Failed to switch provider');
+                }
+            }
+            
+            // Update available models for new provider
+            $this->loadAvailableModels();
+            
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error switching provider', [
+                'error' => $e->getMessage(),
+                'provider' => $this->selectedProvider,
+                'user_id' => Auth::id()
+            ]);
+            
+            $this->setError('Failed to switch provider');
+        }
+    }
+    
+    /**
+     * Load available providers
+     */
+    private function loadAvailableProviders()
+    {
+        try {
+            $result = $this->chatService->getAvailableProviders();
+            
+            if ($result['success']) {
+                $this->availableProviders = $result['providers'];
+                $this->loadAvailableModels();
+                
+                Log::debug('AiChatWidget: Providers loaded', [
+                    'provider_count' => count($this->availableProviders),
+                    'selected_provider' => $this->selectedProvider,
+                    'selected_model' => $this->selectedModel,
+                    'user_id' => Auth::id()
+                ]);
+            } else {
+                Log::warning('AiChatWidget: Failed to load providers', [
+                    'error' => $result['error'] ?? 'Unknown error',
+                    'user_id' => Auth::id()
+                ]);
+            }
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error loading providers', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
+     * Load available models for current provider
+     */
+    private function loadAvailableModels()
+    {
+        try {
+            if (isset($this->availableProviders[$this->selectedProvider])) {
+                $provider = $this->availableProviders[$this->selectedProvider];
+                $this->availableModels = $provider['models'] ?? [];
+                
+                // If no models are available from API, use fallback defaults
+                if (empty($this->availableModels)) {
+                    $this->availableModels = $this->getFallbackModels($this->selectedProvider);
+                    Log::warning('AiChatWidget: Using fallback models for provider', [
+                        'provider' => $this->selectedProvider,
+                        'fallback_models' => $this->availableModels
+                    ]);
+                }
+                
+                // Set default model from configuration or use first available
+                if (empty($this->selectedModel) && !empty($this->availableModels)) {
+                    $configDefaultModel = config("chat.providers.{$this->selectedProvider}.default_model");
+                    
+                    // Check if the configured default model is available
+                    if ($configDefaultModel && in_array($configDefaultModel, $this->availableModels)) {
+                        $this->selectedModel = $configDefaultModel;
+                    } else {
+                        // Fallback to first available model
+                        $this->selectedModel = $this->availableModels[0] ?? '';
+                    }
+                    
+                    Log::debug('AiChatWidget: Model selected', [
+                        'provider' => $this->selectedProvider,
+                        'selected_model' => $this->selectedModel,
+                        'config_default' => $configDefaultModel,
+                        'available_models' => $this->availableModels
+                    ]);
+                }
+            }
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error loading models', [
+                'error' => $e->getMessage(),
+                'provider' => $this->selectedProvider
+            ]);
+            
+            // Use fallback models in case of error
+            $this->availableModels = $this->getFallbackModels($this->selectedProvider);
+            if (empty($this->selectedModel) && !empty($this->availableModels)) {
+                $this->selectedModel = $this->availableModels[0];
+            }
+        }
+    }
+    
+    /**
+     * Get fallback models when API is not available
+     */
+    private function getFallbackModels(string $provider): array
+    {
+        $fallbacks = [
+            'openwebui' => [
+                'qwen2.5:3b',
+                'llama3.1:8b',
+                'mistral:7b',
+                'phi3:mini',
+                'gemma2:2b'
+            ],
+            'ollama' => [
+                'llama3.1:8b',
+                'llama2:7b',
+                'mistral:7b',
+                'phi3:mini',
+                'gemma2:2b'
+            ]
+        ];
+        
+        return $fallbacks[$provider] ?? ['default-model'];
+    }
+    
+    /**
+     * Load recent chat sessions
+     */
+    private function loadRecentSessions()
+    {
+        try {
+            $maxSessions = config('chat.ui.max_sessions_display', 10);
+            $result = $this->chatService->getUserSessions($maxSessions);
+            
+            if ($result['success']) {
+                $this->sessions = $result['sessions']->toArray();
+                
+                Log::debug('AiChatWidget: Sessions loaded', [
+                    'user_id' => Auth::id(),
+                    'session_count' => count($this->sessions)
+                ]);
+            } else {
+                Log::warning('AiChatWidget: Failed to load sessions', [
+                    'error' => $result['error'] ?? 'Unknown error',
+                    'user_id' => Auth::id()
+                ]);
+                $this->sessions = [];
+            }
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error loading sessions', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+            $this->sessions = [];
+        }
+    }
+    
+    /**
+     * Load messages for a session
+     */
+    private function loadSessionMessages(string $sessionId)
+    {
+        try {
+            $result = $this->chatService->getSessionHistory($sessionId, 50);
+            
+            if ($result['success']) {
+                // Ensure messages are in proper chronological order (oldest first)
+                // Double-check ordering at multiple levels for reliability
+                $messages = $result['messages']
+                    ->sortBy('created_at')
+                    ->values()
+                    ->map(function ($message) {
+                        // Ensure the message is properly formatted as array
+                        return is_array($message) ? $message : $message->toArray();
+                    })
+                    ->toArray();
+                
+                $this->messages = $messages;
+                
+                Log::debug('AiChatWidget: Session messages loaded', [
+                    'session_id' => $sessionId,
+                    'message_count' => count($this->messages),
+                    'first_message_time' => !empty($this->messages) ? $this->messages[0]['created_at'] ?? null : null,
+                    'last_message_time' => !empty($this->messages) ? end($this->messages)['created_at'] ?? null : null,
+                    'user_id' => Auth::id()
+                ]);
+            } else {
+                Log::warning('AiChatWidget: Failed to load session messages', [
+                    'session_id' => $sessionId,
+                    'error' => $result['error'] ?? 'Unknown error',
+                    'user_id' => Auth::id()
+                ]);
+                $this->messages = [];
+            }
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error loading messages', [
+                'error' => $e->getMessage(),
+                'session_id' => $sessionId
+            ]);
+            $this->messages = [];
+        }
+    }
+    
+    /**
+     * Add message to UI
+     */
+    private function addMessage($message)
+    {
+        $this->messages[] = is_array($message) ? $message : $message->toArray();
+    }
+    
+    /**
+     * Clear error and success messages
+     */
+    private function clearMessages()
+    {
+        $this->errorMessage = null;
+        $this->successMessage = null;
+    }
+    
+    /**
+     * Set error message
+     */
+    private function setError(string $message)
+    {
+        $this->errorMessage = $message;
+        $this->successMessage = null;
+        
+        $this->dispatch('chat-error', $message);
+    }
+    
+    /**
+     * Set success message
+     */
+    private function setSuccess(string $message)
+    {
+        $this->successMessage = $message;
+        $this->errorMessage = null;
+        
+        // Auto-clear success message after 3 seconds
+        $this->dispatch('chat-success', $message);
+    }
+    
+    /**
+     * Export chat session
+     */
+    public function exportChat()
+    {
+        try {
+            if (!$this->currentSessionId) {
+                $this->setError('No active session to export');
+                return;
+            }
+            
+            $result = $this->chatService->getSessionHistory($this->currentSessionId);
+            
+            if ($result['success']) {
+                $this->dispatch('export-chat', [
+                    'session' => $result['session'],
+                    'messages' => $result['messages']
+                ]);
+            } else {
+                $this->setError('Failed to export chat');
+            }
+        } catch (Exception $e) {
+            Log::error('AiChatWidget: Error exporting chat', [
+                'error' => $e->getMessage(),
+                'session_id' => $this->currentSessionId
+            ]);
+            
+            $this->setError('Failed to export chat');
+        }
+    }
+    
+    /**
+     * Listen for external events
+     */
+    #[On('chat-widget-open')]
+    public function handleOpenEvent()
+    {
+        $this->openChat();
+    }
+    
+    #[On('chat-widget-close')]
+    public function handleCloseEvent()
+    {
+        $this->closeChat();
+    }
+    
+    #[On('chat-send-message')]
+    public function handleSendMessageEvent($message)
+    {
+        $this->newMessage = $message;
+        $this->sendMessage();
+    }
+    
+    /**
+     * Computed properties
+     */
+    public function getCurrentSessionProperty()
+    {
+        if (!$this->currentSessionId) {
+            return null;
+        }
+        
+        return collect($this->sessions)->firstWhere('id', $this->currentSessionId);
+    }
+    
+    public function getMessageCountProperty()
+    {
+        return count($this->messages);
+    }
+    
+    public function getProviderStatusProperty()
+    {
+        return $this->availableProviders[$this->selectedProvider]['available'] ?? false;
+    }
+    
+    public function render()
+    {
+        return view('livewire.ai-chat-widget', [
+            'currentSession' => $this->getCurrentSessionProperty(),
+            'messageCount' => $this->getMessageCountProperty(),
+            'providerStatus' => $this->getProviderStatusProperty()
+        ]);
+    }
+    
+    /**
+     * Debug method to check current state
+     */
+    public function debugState()
+    {
+        Log::info('AiChatWidget Debug State', [
+            'user_id' => Auth::id(),
+            'company_id' => Auth::user()->company_id ?? null,
+            'selected_provider' => $this->selectedProvider,
+            'selected_model' => $this->selectedModel,
+            'available_providers' => array_keys($this->availableProviders),
+            'available_models' => $this->availableModels,
+            'sessions_count' => count($this->sessions),
+            'current_session_id' => $this->currentSessionId,
+            'messages_count' => count($this->messages),
+            'config_default_model' => config('chat.providers.openwebui.default_model'),
+            'config_default_provider' => config('chat.system.default_provider')
+        ]);
+        
+        // Also check database directly
+        $dbSessionCount = \App\Models\ChatSession::where('user_id', Auth::id())->count();
+        Log::info('Database session count: ' . $dbSessionCount);
+        
+        $this->setSuccess('Debug info logged - check application logs');
+    }
+}

@@ -1,0 +1,1048 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+use Exception;
+
+class AiDatabaseService
+{
+    /**
+     * Check if user has SuperAdmin role - Centralized helper method
+     */
+    private function isSuperAdmin(User $user): bool
+    {
+        $userRoles = $user->getRoleNames()->toArray();
+        return !empty(array_intersect(
+            array_map('strtolower', $userRoles),
+            ['superadmin', 'super-admin', 'system', 'admin']
+        ));
+    }
+    /**
+     * Get livestock summary for the current user/company
+     */
+    public function getLivestockSummary(): array
+    {
+        try {
+            $user = Auth::user();
+            $companyId = $user->company_id;
+
+            // Example queries - adjust table names based on your schema
+            $summary = [
+                'total_livestock' => $this->getTotalLivestock($companyId),
+                'active_batches' => $this->getActiveBatches($companyId),
+                'recent_mortality' => $this->getRecentMortality($companyId),
+                'feed_consumption' => $this->getFeedConsumption($companyId),
+            ];
+
+            return $summary;
+
+        } catch (Exception $e) {
+            Log::error('AiDatabaseService: Error getting livestock summary', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Get financial summary
+     */
+    public function getFinancialSummary(): array
+    {
+        try {
+            $user = Auth::user();
+            $companyId = $user->company_id;
+            $currentMonth = Carbon::now()->format('Y-m');
+
+            $summary = [
+                'monthly_expenses' => $this->getMonthlyExpenses($companyId, $currentMonth),
+                'monthly_revenue' => $this->getMonthlyRevenue($companyId, $currentMonth),
+                'feed_costs' => $this->getFeedCosts($companyId, $currentMonth),
+                'recent_purchases' => $this->getRecentPurchases($companyId),
+            ];
+
+            return $summary;
+
+        } catch (Exception $e) {
+            Log::error('AiDatabaseService: Error getting financial summary', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Search data based on user query - Enhanced with optimized keyword detection
+     */
+    public function searchData(string $query, array $filters = []): array
+    {
+        try {
+            $user = Auth::user();
+            $companyId = $user->company_id;
+            $results = [];
+
+            // DEBUG: Log user and company information
+            Log::info('AiDatabaseService: Starting data search', [
+                'query' => $query,
+                'user_id' => $user->id,
+                'user_company_id' => $companyId,
+                'user_email' => $user->email ?? 'N/A'
+            ]);
+
+            // Analyze query to determine what data to fetch
+            $queryLower = strtolower($query);
+
+            // Check for company/organization related queries first
+            if (strpos($queryLower, 'perusahaan') !== false || strpos($queryLower, 'company') !== false ||
+                strpos($queryLower, 'organisasi') !== false || strpos($queryLower, 'terdaftar') !== false ||
+                strpos($queryLower, 'list perusahaan') !== false || strpos($queryLower, 'daftar perusahaan') !== false ||
+                strpos($queryLower, 'show all companies') !== false || strpos($queryLower, 'list companies') !== false ||
+                strpos($queryLower, 'companies') !== false || strpos($queryLower, 'all companies') !== false) {
+                $results['companies'] = $this->getCompanyData($user);
+            }
+
+            // Check for farm/farming operations (peternakan) - Priority check to avoid confusion with livestock
+            if (strpos($queryLower, 'peternakan') !== false || strpos($queryLower, 'kandang') !== false ||
+                strpos($queryLower, 'farm') !== false || strpos($queryLower, 'coop') !== false ||
+                strpos($queryLower, 'fasilitas') !== false || strpos($queryLower, 'facility') !== false ||
+                strpos($queryLower, 'lokasi') !== false || strpos($queryLower, 'location') !== false ||
+                strpos($queryLower, 'operasi') !== false || strpos($queryLower, 'operation') !== false ||
+                strpos($queryLower, 'usaha') !== false || strpos($queryLower, 'business') !== false) {
+                
+                Log::info('AiDatabaseService: Farm query detected', [
+                    'query' => $query,
+                    'user_id' => Auth::id(),
+                    'company_id' => $companyId,
+                    'company_id_is_null' => is_null($companyId),
+                    'detected_keywords' => array_filter([
+                        'peternakan' => strpos($queryLower, 'peternakan') !== false,
+                        'kandang' => strpos($queryLower, 'kandang') !== false,
+                        'farm' => strpos($queryLower, 'farm') !== false
+                    ])
+                ]);
+                
+                $results['farms'] = $this->getFarmDetails($companyId);
+                
+                Log::info('AiDatabaseService: Farm data retrieved', [
+                    'company_id' => $companyId,
+                    'farm_results' => $results['farms'],
+                    'farm_count' => isset($results['farms']['total_farms']) ? $results['farms']['total_farms'] : 0
+                ]);
+                
+                // DEBUG: If no farms found, check if it's due to company_id mismatch
+                if (empty($results['farms']) || (isset($results['farms']['total_farms']) && $results['farms']['total_farms'] === 0)) {
+                    Log::warning('AiDatabaseService: No farms found for user', [
+                        'user_company_id' => $companyId,
+                        'user_id' => Auth::id(),
+                        'query' => $query
+                    ]);
+                    
+                    // Check if there are farms for other companies
+                    try {
+                        $totalFarmsInDb = DB::table('farms')
+                            ->where('status', 'active')
+                            ->whereNull('deleted_at')
+                            ->count();
+                        
+                        Log::info('AiDatabaseService: Total active farms in database', [
+                            'total_farms' => $totalFarmsInDb,
+                            'user_company_id' => $companyId
+                        ]);
+                        
+                        if ($totalFarmsInDb > 0) {
+                            Log::warning('AiDatabaseService: Farms exist but not for user\'s company', [
+                                'total_farms_in_db' => $totalFarmsInDb,
+                                'user_company_id' => $companyId
+                            ]);
+                        }
+                    } catch (Exception $debugError) {
+                        Log::error('AiDatabaseService: Debug query failed', ['error' => $debugError->getMessage()]);
+                    }
+                }
+            }
+
+            // Check for livestock animals (ternak) - Exclude if already detected as farm operation
+            // Also exclude if query contains 'peternakan' to avoid confusion
+            if (!isset($results['farms']) &&
+                strpos($queryLower, 'peternakan') === false && // Critical: Don't match livestock if 'peternakan' is mentioned
+                (strpos($queryLower, 'ternak') !== false || strpos($queryLower, 'livestock') !== false ||
+                 strpos($queryLower, 'ayam') !== false || strpos($queryLower, 'chicken') !== false ||
+                 strpos($queryLower, 'bebek') !== false || strpos($queryLower, 'duck') !== false ||
+                 strpos($queryLower, 'hewan') !== false || strpos($queryLower, 'animal') !== false)) {
+                $results['livestock'] = $this->getLivestockSummary();
+                $results['livestock_details'] = $this->getLivestockDetails($companyId);
+            }
+
+            // If user specifically asks for both farm AND livestock, provide both
+            if ((strpos($queryLower, 'ternak') !== false || strpos($queryLower, 'livestock') !== false) &&
+                (strpos($queryLower, 'kandang') !== false || strpos($queryLower, 'farm') !== false) &&
+                (strpos($queryLower, 'dan') !== false || strpos($queryLower, 'and') !== false ||
+                 strpos($queryLower, 'semua') !== false || strpos($queryLower, 'all') !== false ||
+                 strpos($queryLower, 'kedua') !== false || strpos($queryLower, 'both') !== false)) {
+                $results['livestock'] = $this->getLivestockSummary();
+                $results['livestock_details'] = $this->getLivestockDetails($companyId);
+                $results['farms'] = $this->getFarmDetails($companyId);
+            }
+
+            if (strpos($queryLower, 'keuangan') !== false || strpos($queryLower, 'financial') !== false ||
+                strpos($queryLower, 'untung') !== false || strpos($queryLower, 'rugi') !== false ||
+                strpos($queryLower, 'profit') !== false || strpos($queryLower, 'loss') !== false ||
+                strpos($queryLower, 'pendapatan') !== false || strpos($queryLower, 'income') !== false ||
+                strpos($queryLower, 'biaya') !== false || strpos($queryLower, 'cost') !== false) {
+                $results['financial'] = $this->getFinancialSummary();
+            }
+
+            if (strpos($queryLower, 'pakan') !== false || strpos($queryLower, 'feed') !== false ||
+                strpos($queryLower, 'makanan') !== false || strpos($queryLower, 'food') !== false) {
+                $results['feed'] = $this->getFeedData($companyId);
+                $results['feed_usage'] = $this->getFeedUsageDetails($companyId);
+            }
+
+            if (strpos($queryLower, 'berapa') !== false || strpos($queryLower, 'how many') !== false ||
+                strpos($queryLower, 'jumlah') !== false || strpos($queryLower, 'total') !== false ||
+                strpos($queryLower, 'count') !== false || strpos($queryLower, 'sum') !== false) {
+                $results['counts'] = $this->getCounts($companyId);
+            }
+
+            if (strpos($queryLower, 'batch') !== false || strpos($queryLower, 'periode') !== false ||
+                strpos($queryLower, 'period') !== false || strpos($queryLower, 'cycle') !== false ||
+                strpos($queryLower, 'siklus') !== false) {
+                $results['batches'] = $this->getBatchDetails($companyId);
+            }
+
+            return $results;
+
+        } catch (Exception $e) {
+            Log::error('AiDatabaseService: Error searching data', [
+                'error' => $e->getMessage(),
+                'query' => $query,
+                'user_id' => Auth::id()
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Get total livestock count
+     */
+    private function getTotalLivestock($companyId): int
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            $query = DB::table('livestocks')
+                ->whereNull('deleted_at')
+                ->where('status', '!=', 'inactive');
+
+            // SuperAdmin bypass: see all livestock, regular users see only their company's livestock
+            if (!$isSuperAdmin && $companyId) {
+                $query->where('company_id', $companyId);
+            } else if (!$isSuperAdmin && !$companyId) {
+                $query->whereNull('company_id');
+            }
+
+            return $query->count();
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get livestock count', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
+    /**
+     * Get active batches count
+     */
+    private function getActiveBatches($companyId): int
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            $query = DB::table('livestock_batches')
+                ->where('status', 'active')
+                ->whereNull('deleted_at');
+
+            // SuperAdmin bypass: see all batches, regular users see only their company's batches
+            if (!$isSuperAdmin && $companyId) {
+                $query->where('company_id', $companyId);
+            }
+
+            return $query->count();
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get batch count', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
+    /**
+     * Get recent mortality data
+     */
+    private function getRecentMortality($companyId): array
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            // Use livestock_depletions table for mortality data
+            $query = DB::table('livestock_depletions')
+                ->where('depletion_type', 'mortality')
+                ->where('created_at', '>=', Carbon::now()->subDays(30));
+
+            // SuperAdmin bypass: see all mortality data, regular users see only their company's data
+            if (!$isSuperAdmin && $companyId) {
+                $query->where('company_id', $companyId);
+            }
+
+            $mortalityCount = $query->sum('quantity') ?? 0;
+
+            return [
+                'count' => $mortalityCount,
+                'period' => '30 days'
+            ];
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get mortality data', ['error' => $e->getMessage()]);
+            return ['count' => 0, 'period' => '30 days'];
+        }
+    }
+
+    /**
+     * Get feed consumption data
+     */
+    private function getFeedConsumption($companyId): array
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            // Use feed_usages table for consumption data
+            $query = DB::table('feed_usages')
+                ->where('created_at', '>=', Carbon::now()->subDays(7));
+
+            // SuperAdmin bypass: see all feed consumption, regular users see only their company's data
+            if (!$isSuperAdmin && $companyId) {
+                $query->where('company_id', $companyId);
+            }
+
+            $totalConsumption = $query->sum('quantity') ?? 0;
+
+            return [
+                'total_kg' => $totalConsumption,
+                'period' => '7 days'
+            ];
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get feed consumption', ['error' => $e->getMessage()]);
+            return ['total_kg' => 0, 'period' => '7 days'];
+        }
+    }
+
+    /**
+     * Get monthly expenses
+     */
+    private function getMonthlyExpenses($companyId, $month): float
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            // Get expenses from livestock purchase items
+            $livestockQuery = DB::table('livestock_purchase_items')
+                ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$month]);
+                
+            // SuperAdmin bypass: see all expenses, regular users see only their company's expenses
+            if (!$isSuperAdmin && $companyId) {
+                $livestockQuery->where('company_id', $companyId);
+            }
+            
+            $livestockExpenses = $livestockQuery->sum('price_total') ?? 0;
+
+            // Get expenses from feed purchase items (if table exists)
+            $feedExpenses = 0;
+            try {
+                $feedQuery = DB::table('feed_purchase_items')
+                    ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$month]);
+                    
+                // SuperAdmin bypass: see all feed expenses, regular users see only their company's expenses
+                if (!$isSuperAdmin && $companyId) {
+                    $feedQuery->where('company_id', $companyId);
+                }
+                
+                $feedExpenses = $feedQuery->sum('price_total') ?? 0;
+            } catch (Exception $e) {
+                // Feed purchase items table might not exist, ignore
+            }
+
+            // Get expenses from supply purchase items (if table exists)
+            $supplyExpenses = 0;
+            try {
+                $supplyQuery = DB::table('supply_purchase_items')
+                    ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$month]);
+                    
+                // SuperAdmin bypass: see all supply expenses, regular users see only their company's expenses
+                if (!$isSuperAdmin && $companyId) {
+                    $supplyQuery->where('company_id', $companyId);
+                }
+                
+                $supplyExpenses = $supplyQuery->sum('price_total') ?? 0;
+            } catch (Exception $e) {
+                // Supply purchase items table might not exist, ignore
+            }
+
+            return $livestockExpenses + $feedExpenses + $supplyExpenses;
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get monthly expenses', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
+    /**
+     * Get monthly revenue
+     */
+    private function getMonthlyRevenue($companyId, $month): float
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            // Get revenue from livestock sales items
+            $livestockQuery = DB::table('livestock_sales_items')
+                ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$month]);
+                
+            // SuperAdmin bypass: see all revenue, regular users see only their company's revenue
+            if (!$isSuperAdmin && $companyId) {
+                $livestockQuery->where('company_id', $companyId);
+            }
+            
+            $livestockRevenue = $livestockQuery->sum('price_total') ?? 0;
+
+            // Get revenue from recording sales
+            $recordingQuery = DB::table('recording_sale_items')
+                ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$month]);
+                
+            // SuperAdmin bypass: see all recording revenue, regular users see only their company's revenue
+            if (!$isSuperAdmin && $companyId) {
+                $recordingQuery->where('company_id', $companyId);
+            }
+            
+            $recordingRevenue = $recordingQuery->sum('total_price') ?? 0;
+
+            return $livestockRevenue + $recordingRevenue;
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get monthly revenue', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
+    /**
+     * Get feed costs
+     */
+    private function getFeedCosts($companyId, $month): float
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            // Get feed costs from feed purchase items
+            $query = DB::table('feed_purchase_items')
+                ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$month]);
+
+            // SuperAdmin bypass: see all feed costs, regular users see only their company's costs
+            if (!$isSuperAdmin && $companyId) {
+                $query->where('company_id', $companyId);
+            }
+
+            return $query->sum('price_total') ?? 0;
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get feed costs', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
+    /**
+     * Get recent purchases
+     */
+    private function getRecentPurchases($companyId): array
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            // Get recent livestock purchases with total amounts
+            $livestockQuery = DB::table('livestock_purchase_items')
+                ->select('created_at', 'price_total as amount', DB::raw("'livestock' as type"))
+                ->where('created_at', '>=', Carbon::now()->subDays(7))
+                ->orderBy('created_at', 'desc')
+                ->limit(10);
+                
+            // SuperAdmin bypass: see all purchases, regular users see only their company's purchases
+            if (!$isSuperAdmin && $companyId) {
+                $livestockQuery->where('company_id', $companyId);
+            }
+            
+            $livestockPurchases = $livestockQuery->get();
+
+            // Get recent feed purchases if table exists
+            $feedPurchases = collect();
+            try {
+                $feedQuery = DB::table('feed_purchase_items')
+                    ->select('created_at', 'price_total as amount', DB::raw("'feed' as type"))
+                    ->where('created_at', '>=', Carbon::now()->subDays(7))
+                    ->orderBy('created_at', 'desc')
+                    ->limit(10);
+                    
+                // SuperAdmin bypass: see all feed purchases, regular users see only their company's purchases
+                if (!$isSuperAdmin && $companyId) {
+                    $feedQuery->where('company_id', $companyId);
+                }
+                
+                $feedPurchases = $feedQuery->get();
+            } catch (Exception $e) {
+                // Feed purchase items table might not exist
+            }
+
+            $allPurchases = $livestockPurchases->concat($feedPurchases)
+                ->sortByDesc('created_at')
+                ->take(5)
+                ->values();
+
+            return $allPurchases->toArray();
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get recent purchases', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * Get feed data
+     */
+    private function getFeedData($companyId): array
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            // Use feed_stocks table for inventory data
+            $query = DB::table('feed_stocks');
+
+            // SuperAdmin bypass: see all feed data, regular users see only their company's feed data
+            if (!$isSuperAdmin && $companyId) {
+                $query->where('company_id', $companyId);
+            }
+
+            $totalStock = $query->sum('quantity') ?? 0;
+            $lowStockItems = $query->where('quantity', '<', 100)->count();
+            $feedTypes = $query->distinct()->count('feed_id');
+
+            return [
+                'total_stock_kg' => $totalStock,
+                'low_stock_items' => $lowStockItems,
+                'feed_types' => $feedTypes
+            ];
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get feed data', ['error' => $e->getMessage()]);
+            return ['total_stock_kg' => 0, 'low_stock_items' => 0, 'feed_types' => 0];
+        }
+    }
+
+    /**
+     * Get various counts
+     */
+    private function getCounts($companyId): array
+    {
+        $user = Auth::user();
+        $isSuperAdmin = $this->isSuperAdmin($user);
+        
+        Log::info('AiDatabaseService: Getting counts', [
+            'user_id' => $user->id,
+            'company_id' => $companyId,
+            'is_super_admin' => $isSuperAdmin
+        ]);
+        
+        $counts = [
+            'livestock' => $this->getTotalLivestock($companyId),
+            'batches' => $this->getActiveBatches($companyId),
+            'users' => $this->getUserCount($companyId),
+        ];
+        
+        // Add farm counts with SuperAdmin bypass
+        try {
+            $farmQuery = DB::table('farms')
+                ->where('status', 'active')
+                ->whereNull('deleted_at');
+            
+            // SuperAdmin bypass: count all farms, regular users count only their company's farms
+            if (!$isSuperAdmin && $companyId) {
+                $farmQuery->where('company_id', $companyId);
+            }
+            
+            $farmCounts = $farmQuery->count();
+            
+            $counts['farms'] = $farmCounts;
+            $counts['active_farms'] = $farmCounts; // Same as farms since we filter by active
+            $counts['access_level'] = $isSuperAdmin ? 'SuperAdmin (All Data)' : 'Company Scoped';
+            
+            Log::info('AiDatabaseService: Farm counts included', [
+                'company_id' => $companyId,
+                'is_super_admin' => $isSuperAdmin,
+                'farm_count' => $farmCounts
+            ]);
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get farm counts', [
+                'error' => $e->getMessage(),
+                'company_id' => $companyId
+            ]);
+            $counts['farms'] = 0;
+            $counts['active_farms'] = 0;
+        }
+        
+        return $counts;
+    }
+
+    /**
+     * Get user count
+     */
+    private function getUserCount($companyId): int
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            $query = DB::table('users');
+
+            // SuperAdmin bypass: see all users, regular users see only their company's users
+            if (!$isSuperAdmin && $companyId) {
+                $query->where('company_id', $companyId);
+            }
+
+            return $query->count();
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get user count', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
+    /**
+     * Format data for AI consumption - Ultra-lightweight with prompt-based language detection
+     */
+    public function formatDataForAI(array $data, string $userQuery = ''): string
+    {
+        if (empty($data)) {
+            // Simple language instruction - let AI handle the language naturally
+            $languageHint = $this->getLanguageHint($userQuery);
+            return $languageHint . "No specific data available for this query.";
+        }
+
+        // Ultra-lightweight language detection and formatting
+        $languageHint = $this->getLanguageHint($userQuery);
+        $formatted = $languageHint . "Data terkait perusahaan yang tersedia telah berhasil diperoleh.\n\n";
+
+        // Only show company data when available
+        if (isset($data['companies']) && !empty($data['companies'])) {
+            $companyInfo = $data['companies'];
+            
+            if (isset($companyInfo['companies']) && !empty($companyInfo['companies'])) {
+                if (count($companyInfo['companies']) == 1) {
+                    $company = $companyInfo['companies'][0];
+                    $formatted .= "**Perusahaan:**\n";
+                    $formatted .= "- {$company['name']}";
+                    if (isset($company['type']) && $company['type']) {
+                        $formatted .= " ({$company['type']})";
+                    }
+                    if (isset($company['created_formatted'])) {
+                        $formatted .= " - Aktif sejak {$company['created_formatted']}";
+                    }
+                    $formatted .= "\n\n";
+                } else {
+                    $formatted .= "**Perusahaan:**\n";
+                    foreach ($companyInfo['companies'] as $company) {
+                        $formatted .= "- {$company['name']}";
+                        if (isset($company['type']) && $company['type']) {
+                            $formatted .= " ({$company['type']})";
+                        }
+                        if (isset($company['created_formatted'])) {
+                            $formatted .= " - Aktif sejak {$company['created_formatted']}";
+                        }
+                        $formatted .= "\n";
+                    }
+                    $formatted .= "\n";
+                }
+            }
+        }
+
+        // Check if there's any farm, coop, or livestock data
+        $hasFarmData = false;
+        $hasCoopData = false;
+        $hasLivestockData = false;
+        
+        if (isset($data['farms']) && !empty($data['farms'])) {
+            if (isset($data['farms']['total_farms']) && $data['farms']['total_farms'] > 0) {
+                $hasFarmData = true;
+            }
+        }
+        
+        if (isset($data['coops']) && !empty($data['coops'])) {
+            if (isset($data['coops']['total_coops']) && $data['coops']['total_coops'] > 0) {
+                $hasCoopData = true;
+            }
+        }
+        
+        if (isset($data['livestock']) && !empty($data['livestock'])) {
+            if (isset($data['livestock']['total_livestock']) && $data['livestock']['total_livestock'] > 0) {
+                $hasLivestockData = true;
+            }
+        }
+        
+        // Only add the "no data" message if there's no farm, coop, or livestock data
+        if (!$hasFarmData && !$hasCoopData && !$hasLivestockData) {
+            $formatted .= "Tidak terdapat data farm, coop, atau livestock yang tersedia untuk perusahaan ini.";
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * Get detailed livestock information
+     */
+    private function getLivestockDetails($companyId): array
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            $livestocks = DB::table('livestocks')
+                ->select('name', 'initial_quantity', 'quantity_depletion', 'quantity_sales', 'status', 'start_date')
+                ->whereNull('deleted_at')
+                ->orderBy('start_date', 'desc')
+                ->limit(5);
+                
+            // SuperAdmin bypass: see all livestock, regular users see only their company's livestock
+            if (!$isSuperAdmin && $companyId) {
+                $livestocks->where('company_id', $companyId);
+            }
+
+            $livestocks = $livestocks->get();
+
+            return [
+                'recent_livestock' => $livestocks->toArray(),
+                'active_count' => $livestocks->where('status', 'active')->count(),
+                'total_initial_quantity' => $livestocks->sum('initial_quantity')
+            ];
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get livestock details', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * Get feed usage details
+     */
+    private function getFeedUsageDetails($companyId): array
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            $recentUsageQuery = DB::table('feed_usages')
+                ->where('created_at', '>=', Carbon::now()->subDays(7));
+                
+            $monthlyUsageQuery = DB::table('feed_usages')
+                ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [Carbon::now()->format('Y-m')]);
+
+            // SuperAdmin bypass: see all feed usage, regular users see only their company's feed usage
+            if (!$isSuperAdmin && $companyId) {
+                $recentUsageQuery->where('company_id', $companyId);
+                $monthlyUsageQuery->where('company_id', $companyId);
+            }
+
+            $recentUsage = $recentUsageQuery->sum('quantity') ?? 0;
+            $thisMonthUsage = $monthlyUsageQuery->sum('quantity') ?? 0;
+
+            return [
+                'last_7_days_kg' => $recentUsage,
+                'this_month_kg' => $thisMonthUsage,
+                'daily_average' => $thisMonthUsage > 0 ? round($thisMonthUsage / Carbon::now()->day, 2) : 0
+            ];
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get feed usage details', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * Get farm details
+     */
+    private function getFarmDetails($companyId): array
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            Log::info('AiDatabaseService: Getting farm details', [
+                'user_id' => $user->id,
+                'company_id' => $companyId,
+                'is_super_admin' => $isSuperAdmin
+            ]);
+            
+            $farmQuery = DB::table('farms')
+                ->select('id', 'name', 'code', 'status', 'created_at', 'company_id')
+                ->where('status', 'active') // Filter for active farms only
+                ->whereNull('deleted_at');  // Handle soft deletes
+            
+            // SuperAdmin bypass: see all farms, regular users see only their company's farms
+            if (!$isSuperAdmin && $companyId) {
+                $farmQuery->where('company_id', $companyId);
+            }
+            
+            $farms = $farmQuery->get();
+
+            // Handle coops table query with error handling
+            $coops = 0;
+            try {
+                $coopQuery = DB::table('coops')
+                    ->whereNull('deleted_at');   // Handle soft deletes for coops too
+                
+                // SuperAdmin bypass: see all coops, regular users see only their company's coops
+                if (!$isSuperAdmin && $companyId) {
+                    $coopQuery->where('company_id', $companyId);
+                }
+                
+                $coops = $coopQuery->count();
+            } catch (Exception $coopError) {
+                Log::warning('AiDatabaseService: Could not query coops table', [
+                    'error' => $coopError->getMessage(),
+                    'company_id' => $companyId
+                ]);
+                // Continue without coops data
+            }
+
+            Log::info('AiDatabaseService: Farm details query results', [
+                'company_id' => $companyId,
+                'is_super_admin' => $isSuperAdmin,
+                'farms_found' => $farms->count(),
+                'coops_found' => $coops,
+                'farm_names' => $farms->pluck('name')->toArray()
+            ]);
+
+            return [
+                'total_farms' => $farms->count(),
+                'total_coops' => $coops,
+                'farm_list' => $farms->pluck('name')->toArray(),
+                'active_farms' => $farms->where('status', 'active')->count(),
+                // Removed access_level - not needed for user responses
+                'farm_details' => $farms->map(function($farm) {
+                    return [
+                        'id' => $farm->id,
+                        'name' => $farm->name,
+                        'code' => $farm->code ?? 'N/A',
+                        'status' => $farm->status,
+                        'company_id' => $farm->company_id,
+                        'created_date' => Carbon::parse($farm->created_at)->format('d M Y')
+                    ];
+                })->toArray()
+            ];
+        } catch (Exception $e) {
+            Log::error('AiDatabaseService: Could not get farm details', [
+                'error' => $e->getMessage(),
+                'company_id' => $companyId,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * Get batch details
+     */
+    private function getBatchDetails($companyId): array
+    {
+        try {
+            $user = Auth::user();
+            $isSuperAdmin = $this->isSuperAdmin($user);
+            
+            $activeBatchQuery = DB::table('livestock_batches')
+                ->where('status', 'active')
+                ->whereNull('deleted_at')
+                ->orderBy('created_at', 'desc')
+                ->limit(5);
+                
+            // SuperAdmin bypass: see all batches, regular users see only their company's batches
+            if (!$isSuperAdmin && $companyId) {
+                $activeBatchQuery->where('company_id', $companyId);
+            }
+            
+            $activeBatches = $activeBatchQuery->get();
+
+            $completedBatchQuery = DB::table('livestock_batches')
+                ->where('status', 'completed')
+                ->whereNull('deleted_at');
+                
+            // SuperAdmin bypass: see all completed batches, regular users see only their company's batches
+            if (!$isSuperAdmin && $companyId) {
+                $completedBatchQuery->where('company_id', $companyId);
+            }
+            
+            $completedBatches = $completedBatchQuery->count();
+
+            return [
+                'active_batches' => $activeBatches->count(),
+                'completed_batches' => $completedBatches,
+                'batch_names' => $activeBatches->pluck('name')->take(5)->toArray(),
+                'batch_details' => $activeBatches->map(function($batch) {
+                    return [
+                        'id' => $batch->id,
+                        'name' => $batch->name,
+                        'status' => $batch->status,
+                        'created_date' => Carbon::parse($batch->created_at)->format('d M Y')
+                    ];
+                })->toArray()
+            ];
+        } catch (Exception $e) {
+            Log::warning('AiDatabaseService: Could not get batch details', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * Get company data based on user permissions
+     */
+    public function getCompanyData(User $user): array
+    {
+        try {
+            $userRoles = $user->getRoleNames()->toArray();
+            $isSuperAdmin = !empty(array_intersect(
+                array_map('strtolower', $userRoles),
+                ['superadmin', 'super-admin', 'system', 'admin']
+            ));
+
+            Log::info('AiDatabaseService: Getting company data', [
+                'user_id' => $user->id,
+                'user_roles' => $userRoles,
+                'is_super_admin' => $isSuperAdmin,
+                'user_company_id' => $user->company_id
+            ]);
+
+            $companies = collect();
+
+            if ($isSuperAdmin) {
+                // SuperAdmin can see all companies
+                $companies = DB::table('companies')
+                    ->select('id', 'code', 'name', 'address', 'phone', 'email', 'status', 'type', 'created_at')
+                    ->whereNull('deleted_at')
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+
+                Log::info('AiDatabaseService: SuperAdmin accessing all companies', [
+                    'total_companies' => $companies->count()
+                ]);
+            } else {
+                // Regular users can only see their own company
+                if ($user->company_id) {
+                    $companies = DB::table('companies')
+                        ->select('id', 'code', 'name', 'address', 'phone', 'email', 'status', 'type', 'created_at')
+                        ->where('id', $user->company_id)
+                        ->whereNull('deleted_at')
+                        ->get();
+
+                    Log::info('AiDatabaseService: Regular user accessing own company', [
+                        'company_id' => $user->company_id,
+                        'found_company' => $companies->count() > 0
+                    ]);
+                } else {
+                    Log::warning('AiDatabaseService: User has no company association', [
+                        'user_id' => $user->id
+                    ]);
+                }
+            }
+
+            if ($companies->isEmpty()) {
+                return [
+                    'message' => 'Belum ada data perusahaan yang tersedia',
+                    'total_companies' => 0,
+                    'companies' => []
+                ];
+            }
+
+            // Format company data for AI response
+            $formattedCompanies = $companies->map(function ($company) {
+                return [
+                    'id' => $company->id,
+                    'code' => $company->code,
+                    'name' => $company->name,
+                    'address' => $company->address,
+                    'phone' => $company->phone,
+                    'email' => $company->email,
+                    'status' => $company->status,
+                    'type' => $company->type,
+                    'created_date' => Carbon::parse($company->created_at)->format('Y-m-d'),
+                    'created_formatted' => Carbon::parse($company->created_at)->format('d M Y')
+                ];
+            });
+
+            $result = [
+                'message' => 'Company data retrieved successfully',
+                'total_companies' => $companies->count(),
+                'companies' => $formattedCompanies->toArray()
+            ];
+
+            Log::info('AiDatabaseService: Company data retrieval successful', [
+                'total_companies' => $companies->count()
+            ]);
+
+            return $result;
+
+        } catch (Exception $e) {
+            Log::error('AiDatabaseService: Error getting company data', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'message' => 'Maaf, terjadi kendala saat mengambil data perusahaan. Silakan coba lagi nanti.',
+                'total_companies' => 0,
+                'companies' => []
+            ];
+        }
+    }
+
+    /**
+     * Ultra-lightweight language hint generation
+     * Instead of complex detection, use simple prompt instruction
+     */
+    private function getLanguageHint(string $query): string
+    {
+        if (empty($query)) {
+            return "";
+        }
+
+        // Enhanced Indonesian keywords for better detection
+        $indonesianKeywords = [
+            'tampilkan', 'perusahaan', 'berapa', 'cara', 'bagaimana', 'apa', 'siapa',
+            'dimana', 'kapan', 'mengapa', 'kenapa', 'yang', 'dan', 'atau', 'dengan',
+            'untuk', 'dari', 'ke', 'di', 'pada', 'dalam', 'saya', 'kami', 'kita',
+            'ternak', 'ayam', 'pakan', 'kandang', 'keuangan', 'data', 'informasi',
+            'jumlah', 'total', 'daftar', 'laporan', 'status', 'bisa', 'dapat',
+            'harus', 'akan', 'sudah', 'telah', 'sedang', 'tidak', 'belum',
+            'optimasi', 'server', 'sistem', 'aplikasi'
+        ];
+        
+        // Convert query to lowercase for comparison
+        $query = strtolower($query);
+        
+        // Check if any Indonesian keyword is present
+        foreach ($indonesianKeywords as $keyword) {
+            if (strpos($query, $keyword) !== false) {
+                return "[Respond in Indonesian/Bahasa Indonesia] ";
+            }
+        }
+
+        return "";
+    }
+
+}
