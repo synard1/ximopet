@@ -45,6 +45,19 @@ class AppServiceProvider extends ServiceProvider
 
         // Register VirtualQuantityCalculationService (simplified)
         $this->app->singleton(\App\Services\Recording\VirtualQuantityCalculationService::class);
+
+        // Register chat services
+        $this->app->singleton(\App\Services\AiChatService::class);
+        $this->app->singleton(\App\Services\ChatContextService::class);
+        $this->app->singleton(\App\Services\AiDatabaseServiceRefactored::class);
+        $this->app->singleton(\App\Services\AiPlanningService::class);
+        $this->app->singleton(\App\Services\OllamaChatService::class);
+        $this->app->singleton(\App\Services\OpenWebUIService::class);
+        $this->app->singleton(\App\Services\UIResourceService::class);
+
+        // Register new secure data access services
+        $this->app->singleton(\App\Services\DataAccessService::class);
+        $this->app->singleton(\App\Services\PermissionChecker::class);
     }
 
     /**
@@ -69,6 +82,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Register Livewire components
         Livewire::component('qa-checklist-form', QaChecklistForm::class);
+        Livewire::component('ai-chat-widget', \App\Livewire\AiChatWidget::class);
 
         // Register observers
         Role::observe(RoleObserver::class);

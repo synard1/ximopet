@@ -62,13 +62,14 @@ class DashboardController extends Controller
                 ->get();
         });
 
-        $stock = Cache::remember('dashboard:stock_sum', now()->addMinutes(5), function () {
-            return \App\Models\TransaksiBeliDetail::where('jenis', 'Pembelian')
-                ->where('jenis_barang', '!=', 'DOC')
-                ->where('company_id', auth()->user()->company_id)
-                ->get()
-                ->sum(fn($item) => $item->sisa / $item->konversi);
-        });
+        // $stock = Cache::remember('dashboard:stock_sum', now()->addMinutes(5), function () {
+        //     return \App\Models\TransaksiBeliDetail::where('jenis', 'Pembelian')
+        //         ->where('jenis_barang', '!=', 'DOC')
+        //         ->where('company_id', auth()->user()->company_id)
+        //         ->get()
+        //         ->sum(fn($item) => $item->sisa / $item->konversi);
+        // });
+        $stock = [];
 
         $stockByType = [];
 

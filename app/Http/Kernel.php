@@ -70,5 +70,12 @@ class Kernel extends HttpKernel
         // 'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
         // 'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         // 'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+        
+        // Chat Middleware
+        'chat.auth' => \App\Http\Middleware\ChatAuthMiddleware::class,
+        'chat.rate_limit' => \App\Http\Middleware\ChatRateLimitMiddleware::class,
+        'chat.context' => \App\Http\Middleware\ChatContextMiddleware::class,
+        'chat.rate_limit' => \App\Http\Middleware\ChatRateLimitMiddleware::class,
+        'chat.context' => \App\Http\Middleware\ChatContextMiddleware::class,
     ];
 }
