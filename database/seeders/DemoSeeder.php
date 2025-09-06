@@ -5,6 +5,8 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Company;
 use App\Models\User;
+use App\Models\Farm;
+use App\Models\Coop;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -74,6 +76,10 @@ class DemoSeeder extends Seeder
                 $this->command->info("   📊 Updated from: {$companyConfig['name']} ({$companyConfig['type']})");
                 $this->command->info("   🎯 Purpose: {$companyConfig['description']}");
 
+                // Create demo farms and coops if they don't exist
+                $this->createDemoFarms($existingCompany);
+                $this->createDemoCoops($existingCompany);
+
                 return;
             }
 
@@ -110,7 +116,10 @@ class DemoSeeder extends Seeder
 
             // Create demo users for the new company
             $this->createDemoUsers($company);
-
+            
+            // Create demo farms and coops for the new company
+            $this->createDemoFarms($company);
+            $this->createDemoCoops($company);
         } catch (\Exception $e) {
             Log::error('DemoSeeder: Failed to create/update demo company', [
                 'error' => $e->getMessage(),
@@ -208,8 +217,6 @@ class DemoSeeder extends Seeder
                     'email'             => $email,
                     'password'          => \Illuminate\Support\Facades\Hash::make('demo'),
                     'email_verified_at' => now(),
-                    'created_by'        => 'DemoSeeder',
-                    'updated_by'        => 'DemoSeeder'
                 ]);
 
                 // Create demo@demo2.com user
@@ -219,8 +226,6 @@ class DemoSeeder extends Seeder
                     'email'             => $demo2Email,
                     'password'          => \Illuminate\Support\Facades\Hash::make('demo'),
                     'email_verified_at' => now(),
-                    'created_by'        => 'DemoSeeder',
-                    'updated_by'        => 'DemoSeeder'
                 ]);
 
                 // Associate both users with demo company and assign roles
@@ -230,7 +235,6 @@ class DemoSeeder extends Seeder
                 $this->command->info("✅ Created demo users with role {$role}:");
                 $this->command->info("   - {$email}");
                 $this->command->info("   - {$demo2Email}");
-
             } catch (\Exception $e) {
                 Log::error('DemoSeeder: Failed to create demo user', [
                     'error' => $e->getMessage(),
@@ -260,13 +264,208 @@ class DemoSeeder extends Seeder
             'isDefaultAdmin' => $isDefaultAdmin,
             'created_at' => now(),
             'updated_at' => now(),
-            'created_by' => 'DemoSeeder',
-            'updated_by' => 'DemoSeeder'
         ]);
 
         // Assign role through Spatie permissions if not already assigned
         if (!$user->hasRole($role)) {
             $user->assignRole($role);
+        }
+    }
+
+    /**
+     * Create demo farms for the demo company
+     */
+    protected function createDemoFarms(Company $company)
+    {
+        $demoFarms = [
+            [
+                'code' => 'FARM-001',
+                'name' => 'Demo Farm Central',
+                'contact_person' => 'John Doe',
+                'phone_number' => '081234567890',
+                'address' => 'Jl. Demo Farm No. 1, Jakarta Selatan',
+                'description' => 'Main demo farm for testing and development',
+                'status' => 'active'
+            ],
+            [
+                'code' => 'FARM-002',
+                'name' => 'Demo Farm North',
+                'contact_person' => 'Jane Smith',
+                'phone_number' => '081234567891',
+                'address' => 'Jl. Demo Farm No. 2, Jakarta Utara',
+                'description' => 'Secondary demo farm for testing purposes',
+                'status' => 'active'
+            ],
+            [
+                'code' => 'FARM-003',
+                'name' => 'Demo Farm East',
+                'contact_person' => 'Bob Wilson',
+                'phone_number' => '081234567892',
+                'address' => 'Jl. Demo Farm No. 3, Jakarta Timur',
+                'description' => 'Eastern demo farm facility',
+                'status' => 'active'
+            ]
+        ];
+
+        Log::info('DemoSeeder: Starting demo farms creation', [
+            'company_id' => $company->id,
+            'company_code' => $company->code,
+            'farm_count' => count($demoFarms)
+        ]);
+
+        foreach ($demoFarms as $farmData) {
+            try {
+                // Check if farm already exists
+                $existingFarm = Farm::where('code', $farmData['code'])
+                    ->where('company_id', $company->id)
+                    ->first();
+
+                if ($existingFarm) {
+                    $this->command->info("   ⚠️  Farm {$farmData['code']} already exists, skipping...");
+                    continue;
+                }
+
+                // Create farm with company association
+                $farmData['company_id'] = $company->id;
+                // Get the first user from the company or any user as fallback
+                $user = User::where('company_id', $company->id)->first() ?? User::first();
+                $farmData['created_by'] = $user->id;
+                
+                $farm = Farm::create($farmData);
+
+                Log::info('DemoSeeder: Successfully created demo farm', [
+                    'farm_id' => $farm->id,
+                    'farm_code' => $farm->code,
+                    'farm_name' => $farm->name,
+                    'company_id' => $company->id
+                ]);
+
+                $this->command->info("   ✅ Created demo farm: {$farmData['code']} - {$farmData['name']}");
+            } catch (\Exception $e) {
+                Log::error('DemoSeeder: Failed to create demo farm', [
+                    'error' => $e->getMessage(),
+                    'farm_code' => $farmData['code'],
+                    'company_id' => $company->id
+                ]);
+                $this->command->error("   ❌ Failed to create demo farm {$farmData['code']}: {$e->getMessage()}");
+            }
+        }
+    }
+
+    /**
+     * Create demo coops for the demo farms
+     */
+    protected function createDemoCoops(Company $company)
+    {
+        // Get demo farms for this company
+        $demoFarms = Farm::where('company_id', $company->id)
+            ->whereIn('code', ['FARM-001', 'FARM-002', 'FARM-003'])
+            ->get();
+
+        if ($demoFarms->isEmpty()) {
+            $this->command->info("   ⚠️  No demo farms found, skipping coop creation...");
+            return;
+        }
+
+        $demoCoops = [
+            // Coops for FARM-001
+            [
+                'farm_code' => 'FARM-001',
+                'code' => 'COOP-001-A',
+                'name' => 'Kandang A - Central',
+                'capacity' => 1000,
+                'notes' => 'Main coop for broiler chickens',
+                'status' => 'active'
+            ],
+            [
+                'farm_code' => 'FARM-001',
+                'code' => 'COOP-001-B',
+                'name' => 'Kandang B - Central',
+                'capacity' => 800,
+                'notes' => 'Secondary coop for layer chickens',
+                'status' => 'active'
+            ],
+            // Coops for FARM-002
+            [
+                'farm_code' => 'FARM-002',
+                'code' => 'COOP-002-A',
+                'name' => 'Kandang A - North',
+                'capacity' => 1200,
+                'notes' => 'Large capacity coop for broilers',
+                'status' => 'active'
+            ],
+            [
+                'farm_code' => 'FARM-002',
+                'code' => 'COOP-002-B',
+                'name' => 'Kandang B - North',
+                'capacity' => 600,
+                'notes' => 'Smaller coop for special breeds',
+                'status' => 'active'
+            ],
+            // Coops for FARM-003
+            [
+                'farm_code' => 'FARM-003',
+                'code' => 'COOP-003-A',
+                'name' => 'Kandang A - East',
+                'capacity' => 900,
+                'notes' => 'Modern automated coop',
+                'status' => 'active'
+            ]
+        ];
+
+        Log::info('DemoSeeder: Starting demo coops creation', [
+            'company_id' => $company->id,
+            'company_code' => $company->code,
+            'coop_count' => count($demoCoops)
+        ]);
+
+        foreach ($demoCoops as $coopData) {
+            try {
+                // Find the farm for this coop
+                $farm = $demoFarms->where('code', $coopData['farm_code'])->first();
+                
+                if (!$farm) {
+                    $this->command->error("   ❌ Farm {$coopData['farm_code']} not found for coop {$coopData['code']}");
+                    continue;
+                }
+
+                // Check if coop already exists
+                $existingCoop = Coop::where('code', $coopData['code'])
+                    ->where('farm_id', $farm->id)
+                    ->first();
+
+                if ($existingCoop) {
+                    $this->command->info("   ⚠️  Coop {$coopData['code']} already exists, skipping...");
+                    continue;
+                }
+
+                // Create coop with farm association
+                unset($coopData['farm_code']); // Remove farm_code as it's not needed in the database
+                $coopData['farm_id'] = $farm->id;
+                $coopData['company_id'] = $company->id;
+                // Get the first user from the company or any user as fallback
+                $user = User::where('company_id', $company->id)->first() ?? User::first();
+                $coopData['created_by'] = $user->id;
+                
+                $coop = Coop::create($coopData);
+
+                Log::info('DemoSeeder: Successfully created demo coop', [
+                    'coop_id' => $coop->id,
+                    'coop_code' => $coop->code,
+                    'coop_name' => $coop->name,
+                    'farm_id' => $farm->id,
+                    'farm_code' => $farm->code
+                ]);
+
+                $this->command->info("   ✅ Created demo coop: {$coop->code} - {$coop->name} (Farm: {$farm->code})");
+            } catch (\Exception $e) {
+                Log::error('DemoSeeder: Failed to create demo coop', [
+                    'error' => $e->getMessage(),
+                    'coop_code' => $coopData['code'],
+                    'farm_code' => $coopData['farm_code'] ?? 'unknown'
+                ]);
+                $this->command->error("   ❌ Failed to create demo coop {$coopData['code']}: {$e->getMessage()}");
+            }
         }
     }
 }

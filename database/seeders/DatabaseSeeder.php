@@ -56,6 +56,9 @@ class DatabaseSeeder extends Seeder
             // QaChecklistSeeder::class,
             // ExpeditionSeeder::class,
             // VerificationRuleSeeder::class,
+            
+            // ===== AI CHAT V2 SEEDERS =====
+            // UserChatSettingsV2Seeder::class,
         ]);
 
         // \App\Models\User::factory(20)->create();
