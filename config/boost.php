@@ -42,9 +42,9 @@ return [
     |
     */
     'mcp' => [
-        'timeout' => env('BOOST_MCP_TIMEOUT', 30),
+        'timeout' => env('BOOST_MCP_TIMEOUT', 60),
         'host' => env('BOOST_MCP_HOST', '127.0.0.1'),
-        'port' => env('BOOST_MCP_PORT', null),
+        'port' => env('BOOST_MCP_PORT', 8002),
     ],
 
     /*

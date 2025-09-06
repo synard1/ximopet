@@ -151,6 +151,14 @@ return [
             'level' => 'info',
             'permission' => 0664,
         ],
+
+        'model_testing' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/model-testing.log'),
+            'level' => env('LOG_MODEL_TESTING_LEVEL', 'debug'),
+            'days' => 30,
+            'permission' => 0664,
+        ],
     ],
 
 ];

@@ -13,6 +13,12 @@ return [
         'NAME' => 'Xistem Monitoring Peternakan',
         'Tag' => 'Xistem Monitoring Peternakan',
         'Version' => 'V1.2.1',
+        'DESCRIPTION' => 'Xistem Monitoring Peternakan',
+        'AUTHOR' => 'PT. Satu Pintu Digital',
+        'URL' => 'https://peternakan.digital',
+        'Email' => 'support@peternakan.digital',
+        'Phone' => '+6282243543715',
+        'Whatsapp' => '+6282243543715'
 
     ],
 

@@ -197,6 +197,7 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         App\Providers\RecordingServiceProvider::class,
+        App\AiChatV2\Providers\AiChatV2ServiceProvider::class,
 
     ], env('APP_ENV') === 'local' ? [
         /*
