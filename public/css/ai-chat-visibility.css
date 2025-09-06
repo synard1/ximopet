@@ -1,0 +1,149 @@
+/* Chat Widget Visibility Controls */
+.ai-chat-widget {
+    position: fixed;
+    z-index: 1050;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ai-chat-widget[x-cloak] {
+    display: none !important;
+}
+
+/* Chat Bubble Visibility */
+.ai-chat-widget .chat-bubble-wrapper {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: scale(1);
+}
+
+.ai-chat-widget.chat-open .chat-bubble-wrapper {
+    display: none;
+    visibility: hidden;
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+/* Chat Window Visibility */
+.ai-chat-widget .chat-window-container {
+    display: none;
+    visibility: hidden;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ai-chat-widget.chat-open .chat-window-container {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Chat Window */
+.chat-window {
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    height: 600px !important;
+}
+
+/* Ensure header stays fixed during transitions */
+.chat-window .card-header {
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-window.show-chat-window {
+    display: flex;
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Chat Toggle Button */
+.chat-toggle-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1049;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.3s ease-out;
+}
+
+.chat-toggle-btn.show {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Transitions */
+.transition {
+    transition-property: opacity, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.duration-200 {
+    transition-duration: 200ms;
+}
+
+.duration-300 {
+    transition-duration: 300ms;
+}
+
+.ease-in {
+    transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+}
+
+.ease-out {
+    transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 480px) {
+    .chat-window-container {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+    }
+
+    .chat-window {
+        width: 100% !important;
+        height: calc(100vh - 100px) !important;
+        max-width: 420px !important;
+        margin: 0 auto;
+    }
+
+    .chat-toggle-btn {
+        bottom: 10px;
+        right: 10px;
+    }
+}
+
+/* Hide elements when not in view */
+[x-cloak] {
+    display: none !important;
+}
+
+/* Ensure chat window and bubble don't appear simultaneously */
+.chat-open .chat-toggle-btn {
+    display: none !important;
+}
+
+/* Force proper stacking context */
+.position-fixed {
+    position: fixed !important;
+    z-index: 1050;
+}
+
+/* Smooth transitions for opening/closing */
+.chat-bubble-wrapper,
+.chat-window-container {
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}

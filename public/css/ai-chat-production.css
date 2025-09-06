@@ -1,0 +1,89 @@
+/* Production-ready AI Chat Styles */
+
+/* Clean, minimalist button styles */
+.chat-header-btn {
+    color: white !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    padding: 0.25rem 0.5rem !important;
+    font-weight: normal !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease !important;
+}
+
+.chat-header-btn:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.chat-header-btn.active {
+    background: rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Footer menu visibility fix */
+.card-footer {
+    background: white !important;
+    border-top: 1px solid rgba(0,0,0,0.1) !important;
+    z-index: 1060 !important;
+    position: relative !important;
+    padding: 1rem !important;
+}
+
+/* Chat window fixes */
+.chat-window {
+    border: none !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
+}
+
+/* Minimize functionality fix */
+.chat-window[x-show="@this.isOpen"] {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.chat-window[x-show="@this.isOpen"][x-cloak] {
+    display: none !important;
+}
+
+/* Fix minimized state */
+.chat-window[x-show="@this.isOpen"] .card-body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-window[x-show="@this.isOpen"] .card-body[x-show="!$wire.isMinimized"] {
+    display: flex !important;
+}
+
+/* Chat toggle button styles */
+.chat-toggle-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 48px !important;
+    height: 48px !important;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+.chat-toggle-btn:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4) !important;
+}
+
+/* Clean toolbar look */
+.btn-group {
+    gap: 4px;
+}
+
+.btn-group .btn {
+    border-radius: 4px !important;
+}
+
+/* Ensure bottom actions are visible */
+.chat-actions {
+    z-index: 1070 !important;
+    position: relative !important;
+    opacity: 1 !important;
+}

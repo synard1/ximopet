@@ -1,0 +1,91 @@
+/*
+ * High-priority button styles for AI chat header buttons
+ * This file should be loaded last to ensure these styles take precedence
+ */
+
+/* Button container styles */
+.ai-chat-widget .card-header .btn-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    margin: 0 8px !important;
+    height: 30px !important;
+}
+
+/* Apply directly to button elements with maximum specificity */
+.ai-chat-widget .card-header button,
+.ai-chat-widget .card-header .btn,
+.ai-chat-widget .card-header .btn-sm,
+.ai-chat-widget .card-header .btn-outline-light,
+.ai-chat-widget .card-header [class*="btn-"] {
+    color: white !important;
+    border: 2px solid rgba(255, 255, 255, 0.7) !important;
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    font-weight: bold !important;
+    padding: 0.25rem 0.75rem !important;
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.2) !important;
+    transition: all 0.2s ease !important;
+    height: 30px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    min-width: 32px !important;
+}
+
+/* Hover state with maximum specificity */
+.ai-chat-widget .card-header button:hover:not(:disabled),
+.ai-chat-widget .card-header .btn:hover:not(:disabled),
+.ai-chat-widget .card-header .btn-sm:hover:not(:disabled),
+.ai-chat-widget .card-header .btn-outline-light:hover:not(:disabled),
+.ai-chat-widget .card-header [class*="btn-"]:hover:not(:disabled) {
+    color: white !important;
+    background-color: rgba(255, 255, 255, 0.35) !important;
+    border-color: white !important;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4) !important;
+    transform: translateY(-1px);
+}
+
+/* Active state with maximum specificity */
+.ai-chat-widget .card-header button.active,
+.ai-chat-widget .card-header .btn.active,
+.ai-chat-widget .card-header .btn-sm.active,
+.ai-chat-widget .card-header .btn-outline-light.active,
+.ai-chat-widget .card-header [class*="btn-"].active {
+    color: white !important;
+    background-color: rgba(255, 255, 255, 0.4) !important;
+    border-color: white !important;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Send button states */
+.ai-chat-widget .chat-send-btn:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    transform: none !important;
+}
+
+.ai-chat-widget .chat-send-btn:not(:disabled) {
+    background-color: #007bff !important;
+    border-color: #007bff !important;
+    opacity: 1 !important;
+    cursor: pointer !important;
+}
+
+.ai-chat-widget .chat-send-btn:not(:disabled):hover {
+    background-color: #0056b3 !important;
+    border-color: #0056b3 !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Ensure consistent header height */
+.ai-chat-widget .card-header {
+    height: 60px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0.75rem 1rem !important;
+}

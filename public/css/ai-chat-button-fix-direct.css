@@ -1,0 +1,37 @@
+/**
+ * AI Chat Button Fix - High Priority Styles
+ * This file contains the most critical fixes for the chat header buttons
+ * and should be included directly in the layout
+ */
+
+/* Direct element selector with very high specificity */
+html body .ai-chat-widget .card-header button,
+html body .ai-chat-widget .card-header .btn,
+html body .ai-chat-widget .card-header .btn-sm,
+html body .ai-chat-widget .card-header .btn-outline-light {
+    color: white !important;
+    background-color: rgba(255, 255, 255, 0.4) !important;
+    border: 2px solid white !important;
+    font-weight: bold !important;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5) !important;
+    padding: 0.25rem 0.75rem !important;
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Hover state */
+html body .ai-chat-widget .card-header button:hover,
+html body .ai-chat-widget .card-header .btn:hover,
+html body .ai-chat-widget .card-header .btn-sm:hover,
+html body .ai-chat-widget .card-header .btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.6) !important;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Active state */
+html body .ai-chat-widget .card-header button.active,
+html body .ai-chat-widget .card-header .btn.active,
+html body .ai-chat-widget .card-header .btn-sm.active,
+html body .ai-chat-widget .card-header .btn-outline-light.active {
+    background-color: rgba(255, 255, 255, 0.7) !important;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.6) !important;
+}

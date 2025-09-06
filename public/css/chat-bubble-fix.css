@@ -1,0 +1,57 @@
+/**
+ * Chat Bubble Fix CSS
+ * Critical overrides to ensure the chat bubble is shown first and the chat window is hidden
+ * These rules have !important to override any conflicting styles
+ */
+
+/* Always show the chat bubble when chat is closed */
+.chat-toggle-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 48px !important;
+    height: 48px !important;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3) !important;
+    transition: all 0.2s ease !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Ensure chat bubble container is visible */
+.ai-chat-widget [x-show="!@this.isOpen"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Make sure chat window is correctly hidden by default */
+.chat-window {
+    display: none;
+}
+
+/* Only display chat window when isOpen is true */
+.ai-chat-widget .chat-window[x-show="@this.isOpen"] {
+    display: flex !important;
+}
+
+/* Ensure chat window is visible when open state is true */
+.ai-chat-widget .chat-window.show-chat-window {
+    display: flex !important;
+}
+
+/* Hide chat window when Livewire loads before Alpine initializes */
+[x-cloak] {
+    display: none !important;
+}
+
+/* Special helper class to force chat window to show */
+.force-show-chat {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Ensure the bubble is not shown when chat is open */
+.ai-chat-widget.chat-is-open [x-show="!@this.isOpen"] {
+    display: none !important;
+}

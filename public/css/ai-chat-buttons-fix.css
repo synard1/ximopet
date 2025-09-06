@@ -1,0 +1,104 @@
+/* Button Container Layout */
+.ai-chat-widget .card-header .btn-group {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    margin: 0 8px !important;
+    height: 32px !important;
+    position: relative !important;
+    z-index: 1052 !important;
+}
+
+/* Header Button Base Styles */
+.ai-chat-widget .card-header .btn,
+.ai-chat-widget .card-header button {
+    height: 32px !important;
+    min-width: 32px !important;
+    padding: 0 0.75rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+    border-radius: 4px !important;
+    transition: all 0.2s ease-in-out !important;
+    color: white !important;
+    border: 2px solid rgba(255, 255, 255, 0.7) !important;
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    font-weight: bold !important;
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.2) !important;
+    position: relative !important;
+    z-index: 1 !important;
+    will-change: transform !important;
+    backface-visibility: hidden !important;
+}
+
+/* Button Hover State */
+.ai-chat-widget .card-header .btn:hover:not(:disabled),
+.ai-chat-widget .card-header button:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.35) !important;
+    border-color: white !important;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Button Active State */
+.ai-chat-widget .card-header .btn.active,
+.ai-chat-widget .card-header button.active {
+    background-color: rgba(255, 255, 255, 0.4) !important;
+    border-color: white !important;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.6) !important;
+    transform: none !important;
+}
+
+/* Button Disabled State */
+.ai-chat-widget .card-header .btn:disabled,
+.ai-chat-widget .card-header button:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* Send Button States */
+.ai-chat-widget .chat-send-btn {
+    transition: all 0.2s ease-in-out !important;
+    height: 100% !important;
+    border-radius: 0 4px 4px 0 !important;
+}
+
+.ai-chat-widget .chat-send-btn:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    transform: none !important;
+}
+
+.ai-chat-widget .chat-send-btn:not(:disabled) {
+    background-color: #007bff !important;
+    border-color: #007bff !important;
+    opacity: 1 !important;
+    cursor: pointer !important;
+}
+
+.ai-chat-widget .chat-send-btn:not(:disabled):hover {
+    background-color: #0056b3 !important;
+    border-color: #0056b3 !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Fix Header Layout */
+.ai-chat-widget .card-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0.75rem 1rem !important;
+    height: 60px !important;
+    position: relative !important;
+    z-index: 1051 !important;
+}
