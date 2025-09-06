@@ -1,80 +1,95 @@
-# Project Demo 51
+# XiMoPet - Livestock Management System
 
-This is a Laravel 11 project that serves as a powerful and feature-rich web application. It includes a variety of backend and frontend packages for building a modern, data-driven application.
+## Overview
+
+XiMoPet is a comprehensive livestock management system designed specifically for poultry farming operations. It provides tools for managing farms, livestock, feed, supplies, and financial records.
 
 ## Features
 
-This project comes with a wide array of features, thanks to the included packages:
+- Farm and coop management
+- Livestock tracking and management
+- Feed and supply inventory management
+- Financial reporting and analytics
+- Worker management
+- Expedition tracking
+- AI-powered chat assistant with rating system
 
-*   **Backend:**
-    *   [Laravel 11](https://laravel.com/): The latest version of the popular PHP framework.
-    *   [Livewire](https://livewire.laravel.com/): For building dynamic interfaces.
-    *   [Laravel DataTables](https://yajrabox.com/docs/laravel-datatables/master): For handling server-side DataTables.
-    *   [Laravel Permission](https://spatie.be/docs/laravel-permission/v6/introduction): For managing user permissions and roles.
-    *   [Laravel Backup](https://spatie.be/docs/laravel-backup/v9/introduction): For backing up the application and database.
-    *   [Laravel Sanctum](https://laravel.com/docs/11.x/sanctum): For API authentication.
-    *   [Laravel Socialite](https://laravel.com/docs/11.x/socialite): For OAuth authentication.
-    *   [Barryvdh Laravel DomPDF](https://github.com/barryvdh/laravel-dompdf): For generating PDFs from HTML.
-    *   And many more...
+## New Features
 
-*   **Frontend:**
-    *   [Vite](https://vitejs.dev/): For fast frontend development.
-    *   [Bootstrap 5](https://getbootstrap.com/): The world's most popular front-end open source toolkit.
-    *   [jQuery](https://jquery.com/): A fast, small, and feature-rich JavaScript library.
-    *   [DataTables](https://datatables.net/): For creating advanced interaction controls for HTML tables.
-    *   [Font Awesome](https://fontawesome.com/): For vector icons and social logos.
-    *   [SweetAlert2](https://sweetalert2.github.io/): A beautiful, responsive, customizable, and accessible replacement for JavaScript's popup boxes.
-    *   And many more...
+### AI Chat Rating System
+
+We've implemented a 1-5 star rating system for AI chat responses to help improve the quality of our AI assistant. Users can now rate AI responses and provide feedback, which will be used to tune prompts and improve future responses.
+
+Key features:
+- 5-star rating system for AI responses
+- Optional feedback form for detailed comments
+- Admin dashboard with rating statistics
+- Metadata collection for analytics
+- API endpoints for integration
 
 ## Installation
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    ```
-
-2.  **Install PHP dependencies:**
-    ```bash
-    composer install
-    ```
-
-3.  **Install JavaScript dependencies:**
-    ```bash
-    npm install
-    ```
-
-4.  **Create a copy of the `.env` file:**
-    ```bash
-    cp .env.example .env
-    ```
-
-5.  **Generate an application key:**
-    ```bash
-    php artisan key:generate
-    ```
-
-6.  **Configure your database credentials in the `.env` file.**
-
-7.  **Run the database migrations:**
-    ```bash
-    php artisan migrate
-    ```
-
-8.  **Seed the database (optional):**
-    ```bash
-    php artisan db:seed
-    ```
+1. Clone the repository
+2. Run `composer install`
+3. Copy `.env.example` to `.env` and configure your database settings
+4. Run `php artisan key:generate`
+5. Run `php artisan migrate`
+6. Run `php artisan db:seed`
 
 ## Usage
 
-To start the development server, run the following commands:
+### AI Chat
+
+The AI chat assistant can be accessed through the chat widget in the application. Users can ask questions about livestock management, feed, supplies, and financial data.
+
+### Rating System
+
+After receiving an AI response, users will see a rating prompt. They can:
+1. Click on stars (1-5) to rate the response
+2. For ratings of 1-2 or 5 stars, provide detailed feedback
+3. For ratings of 3-4 stars, submit immediately
+
+### Admin Dashboard
+
+Administrators can view chat rating statistics in the admin dashboard, including:
+- Average ratings
+- Rating distribution
+- Recent feedback
+- Filter by time period
+
+## API Endpoints
+
+### Chat Rating
+
+- `POST /api/chat/ratings` - Rate a chat message
+- `GET /api/chat/ratings/stats` - Get rating statistics (admin only)
+
+## Development
+
+### Running Tests
 
 ```bash
-# Start the Vite development server
-npm run dev
-
-# Start the Laravel development server
-php artisan serve
+php artisan test
 ```
 
-Then, open your browser and navigate to `http://localhost:8000`.
+### Code Structure
+
+- `app/Models/` - Eloquent models
+- `app/Services/` - Business logic services
+- `app/Http/Controllers/` - API controllers
+- `app/Livewire/` - Livewire components
+- `resources/views/` - Blade templates
+- `database/migrations/` - Database migrations
+- `tests/` - Unit and feature tests
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a pull request
+
+## License
+
+This project is proprietary and confidential. All rights reserved.
