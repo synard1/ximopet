@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 
 use App\Models\Farm;
 use App\Models\Coop;
+use Illuminate\Support\Facades\Auth;
 
 class FarmModal extends Component
 {
@@ -105,6 +106,14 @@ class FarmModal extends Component
                 'contact_person' => $this->contact_person,
                 'status' => $this->status,
             ];
+
+            // Add company_id for new farms
+            if (!$this->isEdit) {
+                $data['company_id'] = Auth::user()->company_id;
+                $data['created_by'] = Auth::id();
+            } else {
+                $data['updated_by'] = Auth::id();
+            }
 
             if ($this->isEdit) {
                 $farm = Farm::findOrFail($this->farm_id);

@@ -47,10 +47,10 @@ class KandangForm extends Component
             return;
         }
 
-        if (auth()->user()->hasRole('SuperAdmin')) {
+        if (Auth::user()->hasRole('SuperAdmin')) {
             $this->farms = Farm::where('status', 'active')->get();
         } else {
-            $this->farms = Farm::where('status', 'active')->where('company_id', auth()->user()->company_id)->get();
+            $this->farms = Farm::where('status', 'active')->where('company_id', Auth::user()->company_id)->get();
         }
     }
 
@@ -94,10 +94,13 @@ class KandangForm extends Component
         // Define rules dynamically based on whether it's an edit operation
         $rules = [
             'farm_id' => 'required',
+            'code' => 'required|' . ($this->isEdit ? 'unique:coops,code,' . $this->coop_id : 'unique:coops,code'),
             'name' => 'required|string|max:255',
             'capacity' => 'required|integer|min:1',
             'status' => 'required|in:active,inactive'
         ];
+        
+        $this->validate($rules);
 
         try {
             DB::beginTransaction();
@@ -128,6 +131,7 @@ class KandangForm extends Component
             ];
 
             if ($this->isEdit) {
+                $data['updated_by'] = Auth::id();
                 $coop = Coop::findOrFail($this->coop_id);
                 $coop->update($data);
                 $message = 'Kandang berhasil diperbarui';
