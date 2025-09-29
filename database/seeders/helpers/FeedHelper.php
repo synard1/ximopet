@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders\Helpers;
+namespace Database\Seeders\helpers;
 
 use App\Models\Feed;
 use App\Models\Unit;

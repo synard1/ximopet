@@ -7,7 +7,7 @@ use App\Models\Feed;
 use App\Models\User;
 use App\Models\Unit;
 use Illuminate\Support\Str;
-use Database\Seeders\Helpers\FeedHelper;
+use Database\Seeders\helpers\FeedHelper;
 
 class FeedSeeder extends Seeder
 {
