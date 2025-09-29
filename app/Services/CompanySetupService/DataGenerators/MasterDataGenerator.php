@@ -6,6 +6,7 @@ use App\Contracts\CompanySetup\DataGeneratorInterface;
 use App\Models\Company;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class MasterDataGenerator implements DataGeneratorInterface
 {
@@ -91,8 +92,7 @@ class MasterDataGenerator implements DataGeneratorInterface
     private function tableExists(string $tableName): bool
     {
         try {
-            $tables = DB::select("SHOW TABLES LIKE ?", [$tableName]);
-            return count($tables) > 0;
+            return Schema::hasTable($tableName);
         } catch (\Exception $e) {
             Log::warning('Failed to check table existence', [
                 'table' => $tableName,
