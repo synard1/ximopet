@@ -16,10 +16,12 @@ class QaUserSeeder extends Seeder
     {
         // Create QA user
         $user = User::updateOrCreate([
-            'name' => 'Nova Indah',
             'email' => 'n0v4ip@gmail.com',
+        ], [
+            'name' => 'Nova Indah',
             'password' => Hash::make('Admin123!@'),
             'email_verified_at' => now(),
+            'company_id' => null, // SuperAdmin QA user has null company_id for global access
         ]);
 
         // Create QA role if not exists

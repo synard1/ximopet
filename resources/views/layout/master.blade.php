@@ -47,8 +47,10 @@
     @endforeach
     <!--end::Custom Stylesheets-->
     
-    <!-- AI Chat V2 Styles -->
-    <link rel="stylesheet" href="{{ asset('css/ai-chat-v2.css') }}">
+    <!-- AI Chat V2 Styles (only when chat is enabled) -->
+    @if(config('chat.system.enabled', false))
+        <link rel="stylesheet" href="{{ asset('css/ai-chat-v2.css') }}">
+    @endif
     <!-- End AI Chat V2 Styles -->
 
     @livewireStyles

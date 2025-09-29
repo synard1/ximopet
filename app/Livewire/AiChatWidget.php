@@ -19,10 +19,8 @@ class AiChatWidget extends Component
     public bool $isMinimized = false;
     public bool $isLoading = false;
     public bool $isTyping = false;
-    public bool $isRegenerating = false; // Track regenerate status for UI optimization
     public bool $showSettings = false;
     public bool $showSessions = false;
-    public bool $providerStatus = false; // Added for Alpine.js entanglement
 
     // Chat session data
     public ?string $currentSessionId = null;
@@ -113,16 +111,6 @@ class AiChatWidget extends Component
                 $this->selectedProvider = config('chat.providers.ollama.enabled') ? 'ollama' : 'openwebui';
             }
 
-            // Reset selectedModel to ensure fresh load from config
-            $this->selectedModel = '';
-            
-            // Log component initialization (reduced to debug level)
-            Log::debug('AiChatWidget: Component initialized', [
-                'provider' => $this->selectedProvider,
-                'context_type' => $this->contextType,
-                'user_id' => Auth::id()
-            ]);
-
             // Load available providers and models FIRST
             $this->loadAvailableProviders();
 
@@ -137,6 +125,7 @@ class AiChatWidget extends Component
 
             // Don't auto-open chat on mount to ensure bubble is shown first
             $this->isOpen = false;
+
         } catch (Exception $e) {
             Log::error('AiChatWidget: Error initializing component', [
                 'error' => $e->getMessage(),
@@ -144,66 +133,6 @@ class AiChatWidget extends Component
             ]);
 
             $this->setError('Failed to initialize chat widget');
-        }
-    }
-    
-    /**
-     * Reset model to configuration default
-     */
-    public function resetToDefaultModel()
-    {
-        try {
-            $configDefaultModel = config("chat.providers.{$this->selectedProvider}.default_model");
-            
-            if ($configDefaultModel && in_array($configDefaultModel, $this->availableModels)) {
-                $previousModel = $this->selectedModel;
-                $this->selectedModel = $configDefaultModel;
-                
-                // Log model reset activity
-                Log::info('AiChatWidget: Model reset to config default', [
-                    'previous_model' => $previousModel,
-                    'reset_to_model' => $configDefaultModel,
-                    'provider' => $this->selectedProvider,
-                    'source' => 'config/chat.php',
-                    'user_id' => Auth::id(),
-                    'timestamp' => now()->toISOString()
-                ]);
-                
-                $this->setSuccess("Model reset to default: {$configDefaultModel}");
-                
-                // Update session if exists
-                if ($this->currentSessionId) {
-                    $result = $this->chatService->updateSessionModel(
-                        $this->currentSessionId,
-                        $configDefaultModel
-                    );
-                    
-                    if (!$result['success']) {
-                        Log::warning('AiChatWidget: Failed to update session with default model', [
-                            'session_id' => $this->currentSessionId,
-                            'model' => $configDefaultModel,
-                            'error' => $result['error'] ?? 'Unknown error'
-                        ]);
-                    }
-                }
-            } else {
-                $this->setError('Default model not available');
-                
-                Log::error('AiChatWidget: Cannot reset to default model - not available', [
-                    'config_default' => $configDefaultModel,
-                    'available_models' => $this->availableModels,
-                    'provider' => $this->selectedProvider,
-                    'user_id' => Auth::id()
-                ]);
-            }
-        } catch (Exception $e) {
-            Log::error('AiChatWidget: Error resetting to default model', [
-                'error' => $e->getMessage(),
-                'provider' => $this->selectedProvider,
-                'user_id' => Auth::id()
-            ]);
-            
-            $this->setError('Failed to reset to default model');
         }
     }
 
@@ -307,10 +236,10 @@ class AiChatWidget extends Component
 
         // Clear any existing messages to prepare for display
         $this->clearMessages();
-
+        
         // Notify JavaScript that chat is opened
         $this->dispatch('chat-opened');
-
+        
         // Log the action
         Log::debug('AiChatWidget: Chat opened', [
             'user_id' => Auth::id(),
@@ -367,15 +296,6 @@ class AiChatWidget extends Component
     }
 
     /**
-     * Minimize/maximize chat widget
-     */
-    public function toggleMinimize()
-    {
-        $this->isMinimized = !$this->isMinimized;
-        $this->dispatch('chat-toggled', $this->isMinimized);
-    }
-
-    /**
      * Send message to AI
      */
     public function sendMessage()
@@ -385,7 +305,7 @@ class AiChatWidget extends Component
             'user_id' => Auth::id(),
             'currentSessionId' => $this->currentSessionId
         ]);
-
+        
         try {
             $this->validate();
             Log::debug('AiChatWidget: Validation passed');
@@ -394,7 +314,7 @@ class AiChatWidget extends Component
                 'errors' => $e->errors(),
                 'newMessage' => $this->newMessage
             ]);
-
+            
             $this->setError('Validation failed: ' . json_encode($e->errors()));
             return;
         }
@@ -438,7 +358,7 @@ class AiChatWidget extends Component
 
             // Clear input immediately for better user experience
             $this->newMessage = '';
-
+            
             // Force UI to refresh
             $this->dispatch('ui-refresh');
 
@@ -470,12 +390,13 @@ class AiChatWidget extends Component
                     'processing_time' => $result['processing_time'],
                     'context_type' => $result['context_type']
                 ]);
-
+                
                 // Force UI to refresh again after AI response
                 $this->dispatch('ui-refresh');
             } else {
                 $this->setError($result['error'] ?? 'Failed to send message');
             }
+
         } catch (Exception $e) {
             Log::error('AiChatWidget: Error sending message', [
                 'error' => $e->getMessage(),
@@ -487,7 +408,6 @@ class AiChatWidget extends Component
         } finally {
             $this->isLoading = false;
             $this->isTyping = false;
-            $this->isRegenerating = false;
         }
     }
 
@@ -499,7 +419,6 @@ class AiChatWidget extends Component
         try {
             $this->isLoading = true;
             $this->isTyping = true;
-            $this->isRegenerating = true;
             $this->clearMessages();
 
             // Find the last user message and remove the subsequent AI response
@@ -516,7 +435,6 @@ class AiChatWidget extends Component
 
             if ($lastUserMessageIndex === null) {
                 $this->setError('No user message found to regenerate response');
-                $this->isRegenerating = false;
                 return;
             }
 
@@ -554,6 +472,7 @@ class AiChatWidget extends Component
             } else {
                 $this->setError($result['error'] ?? 'Failed to regenerate message');
             }
+
         } catch (Exception $e) {
             Log::error('AiChatWidget: Error regenerating message', [
                 'error' => $e->getMessage(),
@@ -565,7 +484,6 @@ class AiChatWidget extends Component
         } finally {
             $this->isLoading = false;
             $this->isTyping = false;
-            $this->isRegenerating = false;
         }
     }
 
@@ -721,15 +639,7 @@ class AiChatWidget extends Component
 
             // Update available models for new provider
             $this->loadAvailableModels();
-            
-            // Log provider switch activity
-            Log::info('AiChatWidget: Provider switched', [
-                'provider' => $this->selectedProvider,
-                'model' => $this->selectedModel,
-                'session_id' => $this->currentSessionId,
-                'user_id' => Auth::id(),
-                'timestamp' => now()->toISOString()
-            ]);
+
         } catch (Exception $e) {
             Log::error('AiChatWidget: Error switching provider', [
                 'error' => $e->getMessage(),
@@ -738,63 +648,6 @@ class AiChatWidget extends Component
             ]);
 
             $this->setError('Failed to switch provider');
-        }
-    }
-
-    /**
-     * Handle model change with logging and notification
-     */
-    public function updatedSelectedModel($value)
-    {
-        try {
-            $previousModel = $this->selectedModel;
-            $configDefaultModel = config("chat.providers.{$this->selectedProvider}.default_model");
-            
-            // Log model change activity
-            Log::info('AiChatWidget: Model changed', [
-                'previous_model' => $previousModel,
-                'new_model' => $value,
-                'provider' => $this->selectedProvider,
-                'config_default_model' => $configDefaultModel,
-                'is_temporary_change' => true,
-                'session_id' => $this->currentSessionId,
-                'user_id' => Auth::id(),
-                'timestamp' => now()->toISOString(),
-                'note' => 'Model change is temporary and will reset to config default on login'
-            ]);
-            
-            // Show notification about temporary model change
-            if ($value !== $configDefaultModel) {
-                $this->setSuccess("Model changed to {$value} (temporary - will reset to {$configDefaultModel} on next login)");
-            } else {
-                $this->setSuccess("Model set to {$value} (matches default configuration)");
-            }
-            
-            // Update session if exists
-            if ($this->currentSessionId) {
-                $result = $this->chatService->updateSessionModel(
-                    $this->currentSessionId,
-                    $value
-                );
-                
-                if (!$result['success']) {
-                    Log::warning('AiChatWidget: Failed to update session model', [
-                        'session_id' => $this->currentSessionId,
-                        'model' => $value,
-                        'error' => $result['error'] ?? 'Unknown error'
-                    ]);
-                }
-            }
-            
-        } catch (Exception $e) {
-            Log::error('AiChatWidget: Error handling model change', [
-                'error' => $e->getMessage(),
-                'model' => $value,
-                'provider' => $this->selectedProvider,
-                'user_id' => Auth::id()
-            ]);
-            
-            $this->setError('Failed to change model');
         }
     }
 
@@ -810,14 +663,10 @@ class AiChatWidget extends Component
                 $this->availableProviders = $result['providers'];
                 $this->loadAvailableModels();
 
-                // Update providerStatus property based on selected provider availability
-                $this->providerStatus = $this->availableProviders[$this->selectedProvider]['available'] ?? false;
-
                 Log::debug('AiChatWidget: Providers loaded', [
                     'provider_count' => count($this->availableProviders),
                     'selected_provider' => $this->selectedProvider,
                     'selected_model' => $this->selectedModel,
-                    'provider_status' => $this->providerStatus,
                     'user_id' => Auth::id()
                 ]);
             } else {
@@ -872,47 +721,23 @@ class AiChatWidget extends Component
                     ]);
                 }
 
-                // Always prioritize configuration default model on fresh load
-                $configDefaultModel = config("chat.providers.{$this->selectedProvider}.default_model");
-                
                 // Set default model from configuration or use first available
                 if (empty($this->selectedModel) && !empty($this->availableModels)) {
+                    $configDefaultModel = config("chat.providers.{$this->selectedProvider}.default_model");
+
                     // Check if the configured default model is available
                     if ($configDefaultModel && in_array($configDefaultModel, $this->availableModels)) {
                         $this->selectedModel = $configDefaultModel;
-                        
-                        Log::info('AiChatWidget: Default model loaded from config', [
-                            'provider' => $this->selectedProvider,
-                            'selected_model' => $this->selectedModel,
-                            'config_default' => $configDefaultModel,
-                            'source' => 'config/chat.php',
-                            'user_id' => Auth::id(),
-                            'timestamp' => now()->toISOString()
-                        ]);
                     } else {
                         // Fallback to first available model
                         $this->selectedModel = $this->availableModels[0] ?? '';
-                        
-                        Log::warning('AiChatWidget: Config default model not available, using fallback', [
-                            'provider' => $this->selectedProvider,
-                            'selected_model' => $this->selectedModel,
-                            'config_default' => $configDefaultModel,
-                            'available_models' => $this->availableModels,
-                            'fallback_used' => true,
-                            'user_id' => Auth::id(),
-                            'timestamp' => now()->toISOString()
-                        ]);
                     }
-                } elseif (!empty($this->selectedModel) && !empty($this->availableModels)) {
-                    // Log when model is already set (temporary change scenario)
-                    Log::info('AiChatWidget: Model already set (temporary change)', [
+
+                    Log::debug('AiChatWidget: Model selected', [
                         'provider' => $this->selectedProvider,
-                        'current_model' => $this->selectedModel,
+                        'selected_model' => $this->selectedModel,
                         'config_default' => $configDefaultModel,
-                        'is_config_default' => ($this->selectedModel === $configDefaultModel),
-                        'note' => 'Will reset to config default on next login',
-                        'user_id' => Auth::id(),
-                        'timestamp' => now()->toISOString()
+                        'available_models' => $this->availableModels
                     ]);
                 }
             }
@@ -1001,7 +826,7 @@ class AiChatWidget extends Component
 
             if ($result['success']) {
                 // Process messages to ensure correct boolean values
-                $this->messages = array_map(function ($message) {
+                $this->messages = array_map(function($message) {
                     // Ensure is_greeting is explicitly a boolean
                     if (isset($message['is_greeting'])) {
                         $message['is_greeting'] = (bool)$message['is_greeting'];
@@ -1013,7 +838,7 @@ class AiChatWidget extends Component
                 $this->loadRatedMessages();
 
                 // Debug logging for greeting messages
-                $greetingCount = count(array_filter($this->messages, function ($msg) {
+                $greetingCount = count(array_filter($this->messages, function($msg) {
                     return isset($msg['is_greeting']) && $msg['is_greeting'] === true;
                 }));
 
@@ -1048,7 +873,7 @@ class AiChatWidget extends Component
             $data['is_greeting'] = $message->is_greeting ? true : false;
             $this->messages[] = $data;
         }
-
+        
         // Force UI refresh after adding a message
         $this->dispatch('ui-refresh');
     }
@@ -1061,12 +886,12 @@ class AiChatWidget extends Component
     {
         // This method will force a refresh of the component
         Log::debug('AiChatWidget: Force refresh triggered');
-
+        
         // Make sure messages are loaded if we have a session
         if ($this->currentSessionId && empty($this->messages)) {
             $this->loadSessionMessages($this->currentSessionId);
         }
-
+        
         // Dispatch event for JavaScript to handle
         $this->dispatch('ui-refresh');
     }
@@ -1184,127 +1009,6 @@ class AiChatWidget extends Component
     }
 
     /**
-     * Toggle settings panel visibility with RBAC protection
-     * Only SuperAdmin users can access settings
-     */
-    public function toggleSettings()
-    {
-        // Check if user has SuperAdmin role
-        if (!Auth::user() || !Auth::user()->hasRole('SuperAdmin')) {
-            $this->setError('Access denied. Only SuperAdmin users can access settings.');
-            return;
-        }
-
-        $this->showSettings = !$this->showSettings;
-        // Hide other panels when showing settings
-        if ($this->showSettings) {
-            $this->showSessions = false;
-            $this->showTemplates = false;
-            $this->showSearch = false;
-        }
-
-        Log::info('AiChatWidget: Settings panel toggled', [
-            'user_id' => Auth::id(),
-            'show_settings' => $this->showSettings
-        ]);
-    }
-
-    /**
-     * Clear the current message input and create new chat session
-     */
-    public function clearMessage()
-    {
-        $oldMessage = $this->newMessage;
-        $oldSessionId = $this->currentSessionId;
-        
-        Log::info('AiChatWidget: Clear message called', [
-            'user_id' => Auth::id(),
-            'old_message' => $oldMessage,
-            'message_length' => strlen($oldMessage),
-            'old_session_id' => $oldSessionId,
-            'component_id' => $this->getId(),
-            'session_id' => session()->getId(),
-            'timestamp' => now()->toISOString()
-        ]);
-        
-        // Log before clearing
-        Log::debug('AiChatWidget: Before clearing message', [
-            'newMessage_property' => $this->newMessage,
-            'property_type' => gettype($this->newMessage),
-            'is_empty' => empty($this->newMessage),
-            'current_session_id' => $this->currentSessionId
-        ]);
-        
-        // Clear the message input
-        $this->newMessage = '';
-        
-        // Clear current messages
-        $this->messages = [];
-        
-        // Create new chat session
-        $this->createNewSession();
-        
-        // Log after clearing and creating new session
-        Log::debug('AiChatWidget: After clearing message and creating new session', [
-            'newMessage_property' => $this->newMessage,
-            'property_type' => gettype($this->newMessage),
-            'is_empty' => empty($this->newMessage),
-            'new_session_id' => $this->currentSessionId,
-            'messages_count' => count($this->messages)
-        ]);
-        
-        Log::info('AiChatWidget: Message cleared and new session created', [
-            'user_id' => Auth::id(),
-            'new_message' => $this->newMessage,
-            'cleared_successfully' => empty($this->newMessage),
-            'old_session_id' => $oldSessionId,
-            'new_session_id' => $this->currentSessionId,
-            'component_id' => $this->getId(),
-            'timestamp' => now()->toISOString()
-        ]);
-        
-        // Force component re-render
-        $this->skipRender = false;
-        
-        // Dispatch browser event for additional frontend debugging
-        $this->dispatch('message-cleared', [
-            'old_message' => $oldMessage,
-            'new_message' => $this->newMessage,
-            'old_session_id' => $oldSessionId,
-            'new_session_id' => $this->currentSessionId,
-            'success' => true,
-            'component_id' => $this->getId(),
-            'timestamp' => now()->toISOString()
-        ]);
-        
-        // Also dispatch session-created event
-        $this->dispatch('session-created', $this->currentSessionId);
-        
-        Log::info('AiChatWidget: Clear message completed', [
-            'final_message_state' => $this->newMessage,
-            'final_session_id' => $this->currentSessionId,
-            'event_dispatched' => true
-        ]);
-    }
-
-    /**
-     * Livewire property update hook for newMessage
-     */
-    public function updatedNewMessage($value)
-    {
-        Log::info('AiChatWidget: newMessage property updated', [
-            'old_value' => $this->newMessage ?? 'null',
-            'new_value' => $value,
-            'value_type' => gettype($value),
-            'value_length' => strlen($value ?? ''),
-            'component_id' => $this->getId(),
-            'session_id' => session()->getId(),
-            'user_id' => Auth::id(),
-            'timestamp' => now()->toISOString()
-        ]);
-    }
-
-    /**
      * Search chat history
      */
     public function searchChatHistory()
@@ -1343,6 +1047,7 @@ class AiChatWidget extends Component
             $this->sessions = $filteredSessions->toArray();
 
             $this->setSuccess('Found ' . count($this->sessions) . ' matching sessions');
+
         } catch (Exception $e) {
             Log::error('AiChatWidget: Error searching chat history', [
                 'error' => $e->getMessage(),
@@ -1407,7 +1112,7 @@ class AiChatWidget extends Component
             'data' => $data,
             'currentMessage' => $this->newMessage
         ]);
-
+        
         // If message is provided in data, use it
         if (is_array($data) && isset($data['message'])) {
             $this->newMessage = $data['message'];
@@ -1416,10 +1121,10 @@ class AiChatWidget extends Component
         elseif (is_string($data) && !empty($data)) {
             $this->newMessage = $data;
         }
-
+        
         $this->sendMessage();
     }
-
+    
     #[On('clear-errors')]
     public function clearErrors()
     {
@@ -1448,22 +1153,22 @@ class AiChatWidget extends Component
 
     public function getMessageCountProperty()
     {
-        // Return 0 to hide the notification badge
-        // Badge should only show for unread messages, not total messages
-        return 0;
+        return count($this->messages);
     }
 
     public function getProviderStatusProperty()
     {
-        // Update the public property for Alpine.js entanglement
-        $this->providerStatus = $this->availableProviders[$this->selectedProvider]['available'] ?? false;
-        return $this->providerStatus;
+        return $this->availableProviders[$this->selectedProvider]['available'] ?? false;
     }
 
     public function render()
     {
+        // Check if chat is enabled in configuration
+        if (!config('chat.system.enabled', false)) {
+            return view('livewire.empty-component');
+        }
 
-        return view('livewire.ai-chat.ai-chat-widget', [
+        return view('livewire.ai-chat-widget', [
             'currentSession' => $this->getCurrentSessionProperty(),
             'messageCount' => $this->getMessageCountProperty(),
             'providerStatus' => $this->getProviderStatusProperty()

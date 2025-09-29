@@ -30,6 +30,9 @@ class UsersSeeder extends Seeder
             ]
         ];
 
+        // Get SYSTEM company for SuperAdmin users
+        $systemCompany = Company::where('code', 'SYSTEM')->first();
+        
         foreach ($superAdmins as $admin) {
             try {
                 // Create super admin user
@@ -38,7 +41,7 @@ class UsersSeeder extends Seeder
                     'email'             => $admin['email'],
                     'password'          => Hash::make('Admin123!@'),
                     'email_verified_at' => now(),
-                    'company_id'        => null, // SuperAdmin users have null company_id for global access
+                    'company_id'        => $systemCompany ? $systemCompany->id : null, // Assign SYSTEM company_id
                 ]);
 
                 // Assign SuperAdmin role

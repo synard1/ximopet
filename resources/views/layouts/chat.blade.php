@@ -20,10 +20,12 @@
     <!-- SweetAlert2 -->
     <link href=\"https://cdn.jsdelivr.net/npm/sweetalert2@11.4.0/dist/sweetalert2.min.css\" rel=\"stylesheet\">
 
-    <!-- AI Chat Styles -->
-    <link href=\"{{ asset('css/ai-chat.css') }}\" rel=\"stylesheet\">
-    <link href=\"{{ asset('css/ai-chat-button-fix-direct.css') }}\" rel=\"stylesheet\">
-    <link href=\"{{ asset('css/chat-bubble-fix.css') }}\" rel=\"stylesheet\">
+    <!-- AI Chat Styles (only when chat is enabled) -->
+    @if(config('chat.system.enabled', false))
+        <link href=\"{{ asset('css/ai-chat.css') }}\" rel=\"stylesheet\">
+        <link href=\"{{ asset('css/ai-chat-button-fix-direct.css') }}\" rel=\"stylesheet\">
+        <link href=\"{{ asset('css/chat-bubble-fix.css') }}\" rel=\"stylesheet\">
+    @endif
 
     <!-- Custom Styles -->
     @stack('styles')
@@ -96,9 +98,11 @@
             @yield('content')
         </main>
 
-        <!-- AI Chat Widget -->
+        <!-- AI Chat Widget (only when chat is enabled) -->
         @auth
-            @livewire('ai-chat-widget')
+            @if(config('chat.system.enabled', false))
+                @livewire('ai-chat-widget')
+            @endif
         @endauth
 
         <!-- Flash Messages -->
@@ -140,12 +144,14 @@
     <!-- SweetAlert2 -->
     <script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11.4.0/dist/sweetalert2.all.min.js\"></script>
 
-    <!-- AI Chat JavaScript -->
-    <script src="{{ asset('js/ai-chat.js') }}"></script>
-    <script src="{{ asset('js/ai-chat-state.js') }}"></script>
-    <script src="{{ asset('js/chat-form-debug.js') }}"></script>
-    <script src="{{ asset('js/ai-chat-debug.js') }}"></script>
-    <script src="{{ asset('js/ai-chat-error-tracker.js') }}"></script>
+    <!-- AI Chat JavaScript (only when chat is enabled) -->
+    @if(config('chat.system.enabled', false))
+        <script src="{{ asset('js/ai-chat.js') }}"></script>
+        <script src="{{ asset('js/ai-chat-state.js') }}"></script>
+        <script src="{{ asset('js/chat-form-debug.js') }}"></script>
+        <script src="{{ asset('js/ai-chat-debug.js') }}"></script>
+        <script src="{{ asset('js/ai-chat-error-tracker.js') }}"></script>
+    @endif
 
     <!-- Livewire Scripts -->
     @livewireScripts

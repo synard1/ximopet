@@ -82,18 +82,20 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/chat/send', [ChatMessageController::class, 'sendMessage'])->name('chat.send');
 });
 
-// AI Chat V2 Routes
-Route::middleware(['web', 'auth'])->prefix('ai-chat-v2')->name('ai-chat-v2.')->group(function () {
-    Route::get('/', [App\AiChatV2\Http\Controllers\ChatController::class, 'index'])->name('index');
-    Route::get('/session/{sessionId}', [App\AiChatV2\Http\Controllers\ChatController::class, 'show'])->name('show');
-    Route::post('/session', [App\AiChatV2\Http\Controllers\ChatController::class, 'create'])->name('create');
-    Route::get('/test', function () {
-        return view('ai-chat-v2.test');
-    })->name('test');
-    Route::get('/demo', function () {
-        return view('ai-chat-v2.demo');
-    })->name('demo');
-});
+// AI Chat V2 Routes (only when chat is enabled)
+if (config('chat.system.enabled', false)) {
+    Route::middleware(['web', 'auth'])->prefix('ai-chat-v2')->name('ai-chat-v2.')->group(function () {
+        Route::get('/', [App\AiChatV2\Http\Controllers\ChatController::class, 'index'])->name('index');
+        Route::get('/session/{sessionId}', [App\AiChatV2\Http\Controllers\ChatController::class, 'show'])->name('show');
+        Route::post('/session', [App\AiChatV2\Http\Controllers\ChatController::class, 'create'])->name('create');
+        Route::get('/test', function () {
+            return view('ai-chat-v2.test');
+        })->name('test');
+        Route::get('/demo', function () {
+            return view('ai-chat-v2.demo');
+        })->name('demo');
+    });
+}
 
 // Protected Routes
 Route::middleware(['auth', 'verified'])->group(function () {
