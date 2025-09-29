@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\User;
-use App\Models\StandarBobot;
 use App\Models\LivestockStrain;
 use App\Models\LivestockStrainStandard;
 use App\Models\Company;
@@ -17,8 +16,13 @@ class StrainSeeder extends Seeder
      */
     public function run(): void
     {
-
-        $companyId = Company::where('code', 'SYSTEM')->first()->id;
+        $company = Company::where('code', 'SYSTEM')->first();
+        if (!$company) {
+            $this->command->error("Company with code 'SYSTEM' not found. Cannot create standard weight data.");
+            return;
+        }
+        $companyId = $company->id;
+        
         $supervisor = User::where('email', 'system@peternakan.digital')->first();
         if (!$supervisor) {
             $this->command->error("Supervisor user not found. Cannot create standard weight data.");
