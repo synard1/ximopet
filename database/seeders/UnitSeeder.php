@@ -217,7 +217,6 @@ class UnitSeeder extends Seeder
      * 
      * @param string $companyId Company ID
      * @return string User ID
-     * @throws \Exception If no users found
      */
     private function getDefaultUserId(string $companyId): string
     {
@@ -242,13 +241,25 @@ class UnitSeeder extends Seeder
             return $anyUser->id;
         }
 
-        // Last resort: return null if no users exist (will cause constraint error but shows the issue)
-        $errorMessage = "No users found in database. Please create at least one user before running seeders.";
-        Log::error('UnitSeeder: No users found', [
+        // Last resort: create a temporary system user for seeding purposes
+        Log::warning('UnitSeeder: No users found, creating temporary system user for seeding', [
             'company_id' => $companyId,
-            'error' => $errorMessage
+            'note' => 'This is a fallback during initial database seeding'
         ]);
 
-        throw new \Exception($errorMessage);
+        $tempUser = User::create([
+            'name' => 'Temporary System User',
+            'email' => 'temp-system@seeder.local',
+            'password' => \Illuminate\Support\Facades\Hash::make('temp-password'),
+            'email_verified_at' => now(),
+            'company_id' => $companyId,
+        ]);
+
+        Log::info('UnitSeeder: Created temporary system user', [
+            'user_id' => $tempUser->id,
+            'company_id' => $companyId
+        ]);
+
+        return $tempUser->id;
     }
 }
